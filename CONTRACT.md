@@ -41,6 +41,16 @@ CARD:
  "never_said":{"asks":0,"city_asks":0,"street_asks":0,"as_of":"2026-10-30T09:00-04:00"}}
 ```
 
+### Server additions (accepted 27 Oct, from Agent A)
+
+- Extra result fields: `key`, `cached`, `stored_at`, `note`, `notes` (exact §2.2 copy per active flag), `lanes`, `degraded_reason`.
+- `status` holds the card state (`ok|empty_few|empty_none|needs_input`, or a server state). `dated_only`, `partial` and `no_cache` are **flags**, because a run can be both `ok` and `dated_only`.
+- `loves` query param: a JSON array, or text separated by `|`. `/api/resolve` takes an optional `type`.
+- Token: header or `?token=`. The site passes its own `?token=` through to every `/api/*` call.
+- The server supplies `gemini.ask(prompt)` and `street_check` hooks to the engine.
+- A cold engine: the proxy returns 503 with `Retry-After` → `waking`.
+- The result cache key includes the mode (fake|live) and the live-lane status (live|dated_only).
+
 ## Stream events (one JSON object per line)
 
 `{"type":"status","state":…,"text":…}` · `{"type":"wall_name",…wall item…}` · `{"type":"pool","U":n}` ·
