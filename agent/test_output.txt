@@ -59,4 +59,4 @@ ok · St. Louis: the top 50 of Qloo's taste pool for these loves (119 places aft
   [PASS] missing clientCapabilities -> -32602
 
 server stderr (first lines): [unsaid] ready (mode=fake, kit=/Users/mi11ion/Desktop/qloo/unsaid/engine)
-31 messages, 1.3 s, 0 failed checks; full wire log: transcript.jsonl
+31 messages, 1.2 s, 0 failed checks; full wire log: transcript.jsonl

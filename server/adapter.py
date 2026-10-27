@@ -287,11 +287,14 @@ def wall_items(answers, per=None):
 
 
 # ---------------------------------------------------------------- run
-def run(prep, wall, q, mode, gemini, emit):
+GEMINI_LANES = ("live lane", "street check")   # engine lanes_failed prefixes that are the Gemini lane
+
+
+def run(prep, wall, q, mode, gemini, emit, deadline_s=90.0):
     """One fresh run. `emit(evt)` streams CONTRACT events. Returns the CONTRACT result (no `key`; the server adds it).
     Raises QlooError when Qloo fails; the server turns that into `degraded`."""
     if API:
-        def forward(e):
+        def forward(e):           # every other event, burn's `risen` included, goes out unchanged
             if e.get("type") == "done":
                 return                      # the server sends the one done line, with the key
             if e.get("type") == "wall_name" and e.get("lane") != "live":
@@ -303,7 +306,8 @@ def run(prep, wall, q, mode, gemini, emit):
         lane = _ApiTaste(gemini, prep) if live else False         # False: no engine stand-in, never a fake live answer
         street = _api_street(gemini, prep) if live else False
         return API.run_unsaid(prep["city_text"], prep["loves"], walls_path=wall["path"],
-                              mode=mode, qloo=q, gemini=lane, street_check=street, on_event=forward)
+                              mode=mode, qloo=q, gemini=lane, street_check=street, on_event=forward,
+                              deadline_s=max(1.0, min(90.0, float(deadline_s))))
     return _run_fallback(prep, wall, q, mode, gemini, emit)
 
 
@@ -380,7 +384,7 @@ def _run_fallback(prep, wall, q, mode, gemini, emit):
         for p in picks:
             if p["neighbourhood"] and p["neighbourhood"] not in hoods:
                 hoods.append(p["neighbourhood"])
-        burned_ids = set()
+        burned_ids, risen = set(), set()
         for hood in hoods[:3]:
             a = gemini.ask_street(hood, city["name"], city["id"])
             if not a:
@@ -394,7 +398,12 @@ def _run_fallback(prep, wall, q, mode, gemini, emit):
                     burned_ids.add(cid)
                     b = {"card_id": cid, "by": "gemini", "at": a["asked_at"]}
                     burn["burned"].append(b)
-                    emit(dict(b, type="burn"))
+                    nxt = None
+                    if cid in {x["id"] for x in picks}:     # a burned pick: the next unburned reserve rises
+                        nxt = next((x for x in reserves if x["id"] not in burned_ids and x["id"] not in risen), None)
+                        if nxt is not None:
+                            risen.add(nxt["id"])
+                    emit(dict(b, type="burn", risen=nxt))
         survivors = [x for x in picks + reserves if x["id"] not in burned_ids]
         for x in survivors:   # "m about <its neighbourhood>" (S3): only asks about the card's own street count
             own = sum(1 for b in burn["asked"] if b["neighbourhood"] == x["neighbourhood"])

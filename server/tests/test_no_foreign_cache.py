@@ -219,6 +219,36 @@ class NoForeignCache(unittest.TestCase):
         finally:
             app.GEMINI = old
 
+    def test_engine_live_error_is_dated_only_not_partial(self):
+        """CONTRACT engine additions: diag.live_error -> the dated_only flag with its §2.2 note, never partial."""
+        old = app.GEMINI
+        app.GEMINI = H.make_lane(H.names_transport([]))      # the lane is on for this US visitor
+        picks = [{"id": "L%d" % i, "name": "P%d" % i, "fit_rank": i} for i in range(7)]
+
+        def engine_result(lanes_failed):
+            def fake_run(*a, **k):
+                return {"status": "partial", "flags": ["fake"], "picks": list(picks), "reserves": [], "wall": [],
+                        "diag": {"live_error": "live lane timed out", "lanes_failed": lanes_failed}}
+            return fake_run
+        try:
+            H.clear_results()
+            app.adapter.run = engine_result(["live lane: TimeoutError"])
+            ev, r = H.run(H.SOUL, ip="198.51.100.40", country="US")
+            self.assertEqual(r["status"], "ok")
+            self.assertIn("dated_only", r["flags"])
+            self.assertNotIn("partial", r["flags"])
+            self.assertEqual(r["lanes"]["gemini"]["state"], "dated_only")
+            note = [e["text"] for e in ev if e.get("state") == "dated_only"]
+            self.assertTrue(note and note[0].startswith("All answers dated ") and
+                            note[0].endswith(" · no live ask right now"), note)
+            H.clear_results()                                   # a Qloo lane failing too stays partial
+            app.adapter.run = engine_result(["live lane: TimeoutError", "C4 1 of 6 pool calls"])
+            ev, r = H.run(H.SOUL, ip="198.51.100.41", country="US")
+            self.assertEqual(r["status"], "partial")
+            self.assertIn("dated_only", r["flags"])
+        finally:
+            app.GEMINI = old
+
     def test_needs_input_has_no_cards(self):
         ev, r = H.run([{"text": "Kings of Comedy"}, {"text": "Al Green", "hint": "artist"}])
         self.assertEqual(r["status"], "needs_input")

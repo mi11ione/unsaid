@@ -143,7 +143,14 @@ def lane_flags(result, session, wall):
             result["status"] = "partial"
         result["note"] = adapter.NO_WALL_NOTE
         notes.append(("partial", adapter.NO_WALL_NOTE))
-    if session is not None and session.state != "live":
+    d = result.get("diag") or {}
+    if d.get("live_error"):   # the Gemini lane failed in the engine: dated_only (CONTRACT), not partial
+        failed = d.get("lanes_failed") or []
+        if result.get("status") == "partial" and all(str(f).startswith(adapter.GEMINI_LANES) for f in failed):
+            n = len(result.get("picks") or [])
+            result["status"] = "ok" if n >= adapter.N_PICKS else ("empty_few" if n else "empty_none")
+            flags.discard("partial")
+    if (session is not None and session.state != "live") or d.get("live_error"):
         flags.add("dated_only")
         dated = [a.get("asked_at") for a in (wall or {}).get("answers", []) if a.get("asked_at")]
         notes.append(("dated_only", COPY["dated_only"] % (et(max(dated)) if dated else "earlier")))
@@ -154,7 +161,9 @@ def lane_flags(result, session, wall):
         notes.append(("partial", COPY["partial"] % (answers, len(have))))
     result["flags"] = sorted(flags)
     reasons = [r for r in (session.reasons if session else []) if r]
-    result["lanes"] = {"gemini": {"state": session.state if session else "dated_only",
+    if d.get("live_error"):
+        reasons.append("engine: %s" % str(d["live_error"])[:80])
+    result["lanes"] = {"gemini": {"state": "dated_only" if "dated_only" in flags else "live",
                                   "reason": reasons[0] if reasons else (session.reason if session else "not asked")},
                        "providers": sorted(have)}
     return notes
@@ -263,7 +272,8 @@ def stream_unsaid(city_text, loves, ip, country, emit):
     def worker():
         started = time.monotonic()
         try:
-            r = adapter.run(prep, wall, q, MODE, session, worker_emit)
+            r = adapter.run(prep, wall, q, MODE, session, worker_emit,
+                            deadline_s=max(1.0, deadline - time.monotonic()))
             r["key"] = key
             notes = lane_flags(r, session, wall)
             r["notes"] = [{"state": s, "text": t} for s, t in notes]
