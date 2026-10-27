@@ -253,7 +253,7 @@ class GeminiLane(Lane):
     name, provider, assistant, workers = "gemini", "google", "Gemini", 1
     URL = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent"
     LEDGER = os.path.join(RUNS, ".gemini_ledger.json")
-    BACKOFF = (30, 90, 240)  # seconds between 503 retries
+    BACKOFF = (90,)  # one retry per ask, after 90 s (orchestrator, 28 Oct: 503s are charged)
 
     def __init__(self):
         self.key = os.environ.get("GEMINI_API_KEY", "").strip()
@@ -319,7 +319,7 @@ class GeminiLane(Lane):
     def _post(self, body):
         req = urllib.request.Request(self.URL % self.model, data=json.dumps(body).encode(),
                                      headers={"Content-Type": "application/json", "x-goog-api-key": self.key})
-        with urllib.request.urlopen(req, timeout=300) as r:  # 3.8 Flash took 82 s for one census ask on 27 Oct
+        with urllib.request.urlopen(req, timeout=180) as r:  # answers that worked on 27 Oct took <= 111 s; a longer wait costs a request too
             return json.loads(r.read())
 
     def ask(self, prompt, json_mode=True, functions=None, call_tool=None, **_):

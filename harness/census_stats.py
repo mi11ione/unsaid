@@ -387,10 +387,8 @@ def gems():
             print(line)
             if prov != "claude":
                 tag = FILL[prov] if ck == "stl" else FILL[prov] + "_NYC"
-                if len(H) == 16:
-                    print(f"    {tag} = {hits} of 16 hidden-gem asks ({ck}, {target})")
-                else:
-                    print(f"    {tag} unfilled: {hits} of {len(H)} hidden-gem asks stored so far ({ck}, {target}; 16 planned)")
+                # as stored, never extrapolated: m = hidden-gem asks with a stored answer
+                print(f"    {tag} = {hits} of {len(H)} asked ({ck}, {target}; 16 planned)")
 
 
 if __name__ == "__main__":

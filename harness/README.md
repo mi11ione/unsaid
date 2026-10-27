@@ -41,7 +41,7 @@ Any `web_search` item in the event stream labels the answer `search: "on"`. `COD
 - The model id comes from `modelVersion`. A `groundingMetadata` block would label the answer "search on".
 - Paced at `GEMINI_RPM`. It stops at `GEMINI_HARNESS_FRACTION` (0.8) × `GEMINI_RPD` per Pacific day, counted in `runs/.gemini_ledger.json`.
 - A missing variable prints `needs credential: …` and skips the lane.
-- A 500/503 ("high demand") is retried after 30, 90 and 240 s. Every attempt counts in the ledger, erring low because the live lane shares the quota. A 503 that outlasts the retries is stored `failed` with `transient: true`: it is asked again later and is no strike toward the 3-in-a-row stop.
+- A 500/503 ("high demand") is retried once, after 90 s. The read timeout is 180 s. After 2 slow failures in a row (timeouts or 503s) the queue pauses 10 minutes. Every attempt counts in the ledger, erring low because the live lane shares the quota. A 503 that outlasts the retries is stored `failed` with `transient: true`: it is asked again later and is no strike toward the 3-in-a-row stop.
 
 ### Gemini on the free tier (orchestrator, 28 Oct): 20 RPD, 5 RPM, harness cap 16/day
 
