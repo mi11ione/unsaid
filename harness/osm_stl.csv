@@ -1,0 +1,819 @@
+osm,name,amenity,cuisine,brand,suburb,city,lat,lon
+node/494161024,Lakeside Cafe,restaurant,,,,,38.6355038,-90.2903818
+node/494163059,River Camp Cafe,fast_food,,,,,38.634406,-90.2919835
+node/494178178,Ice Cream Oasis,fast_food,ice_cream,,,,38.634817,-90.2904761
+node/494207140,Carousel Cafe,fast_food,,,,,38.6367511,-90.2894673
+node/557059358,Thai Gaiyang Cafe,restaurant,thai,,,Saint Louis,38.655502,-90.3015789
+node/660878789,,cafe,,,,,38.580263,-90.26892
+node/692717006,Kaldi's Coffee,cafe,coffee_shop,,,Saint Louis,38.6495854,-90.3004236
+node/767555934,Syberg's On Market,restaurant,american,,,Saint Louis,38.6309941,-90.2126376
+node/1246409406,Bar 101 St. Louis,bar,,,,Saint Louis,38.6081742,-90.1998292
+node/1978608479,Steve’s Hot Dogs,fast_food,hot_dog,,,Saint Louis,38.6014659,-90.2426914
+node/1978608480,Black Thorn Pub,pub,,,,Saint Louis,38.599658,-90.2465018
+node/1978608492,Grey Fox Cabaret,bar,,,,,38.5940996,-90.2476696
+node/1978608499,Truc Lam Restaurant,restaurant,vietnamese,,,,38.5919409,-90.2479828
+node/1978608510,Riley's Pub,pub,,,,,38.6022666,-90.2398697
+node/1978608514,The Royale,bar,,,,,38.603998,-90.2691433
+node/2090160177,Mac's Local Eats,restaurant,american;burger,,,Saint Louis,38.6301116,-90.2814069
+node/2104677824,Sasha's on Shaw,bar,,,,,38.6163823,-90.2503604
+node/2104681479,Gallery Pub on Thurman,pub,,,,Saint Louis,38.6107565,-90.2512852
+node/2104757100,El Sito Restaurant and Cofee,restaurant,,,,,38.6484744,-90.2605513
+node/2104761889,Rosie's Place,bar,,,,Saint Louis,38.6403238,-90.2614152
+node/2122538584,Rosalita's Cantina,restaurant,mexican,,,Saint Louis,38.6322181,-90.1980654
+node/2122610029,Mizu Sushi Bar,restaurant,japanese,,,Saint Louis,38.6314415,-90.1944603
+node/2122610031,The Over/Under Bar & Grill,restaurant,,,,Saint Louis,38.6312275,-90.1933678
+node/2122879244,Hair of the Dog,bar,,,,Saint Louis,38.631768,-90.1975228
+node/2122879438,Stanley's Cigar Lounge,bar,,,,Saint Louis,38.6311423,-90.1947797
+node/2123864607,Café Pintxos,cafe,,,,,38.6367406,-90.2286084
+node/2123864848,Triumph Grill,restaurant,,,,,38.6368266,-90.228793
+node/2124813842,Jazz At The Bistro,restaurant,,,,,38.6385391,-90.2311142
+node/2124813843,Lucha Restaurant,restaurant,mexican,,,Saint Louis,38.6386681,-90.2315932
+node/2124813860,The Best Steak House,restaurant,,,,Saint Louis,38.6385572,-90.2316656
+node/2293226103,Sanctuaria,restaurant,spanish,,,,38.627231,-90.2539569
+node/2325760610,Oliva on the Hill,restaurant,italian,,,Saint Louis,38.6164665,-90.2675682
+node/2464029489,Subway,fast_food,sandwich,Subway,,St Louis,38.673415,-90.2027043
+node/2493279486,Urban Chestnut Brewing Company,pub,german,,,Saint Louis,38.637929,-90.225791
+node/2501878860,Moshmellow,bar,,,,Saint Louis,38.5934179,-90.225694
+node/2502354752,Tower Taco,restaurant,mexican,,,,38.5947899,-90.2363606
+node/2534098917,Pueblo Solis,restaurant,mexican;southwestern,,,,38.5845507,-90.2931215
+node/2553435113,Smoking Barrels BBQ,restaurant,barbecue,,,Saint Louis,38.5786778,-90.2823514
+node/2553575175,Hodaks,restaurant,chicken,,,Saint Louis,38.6065388,-90.2182038
+node/2553848037,Imo's Pizza,fast_food,pizza,Imo's Pizza,,Saint Louis,38.579517,-90.2935995
+node/2553858172,Mathew's Kitchen,restaurant,,,,Saint Louis,38.5797781,-90.2939683
+node/2592532811,Jack Patrick's Bar & Grill,restaurant,,,,Saint Louis,38.6290558,-90.1948239
+node/2593615362,Pickles Deli Downtown,fast_food,sandwich,,,Saint Louis,38.6275083,-90.1886482
+node/2593941232,Bridge Tap House & Wine Bar,bar,,,,Saint Louis,38.6298312,-90.1946385
+node/2595831386,Rooster,restaurant,brunch,,,Saint Louis,38.6314872,-90.194689
+node/2602268055,Nami Ramen,restaurant,japanese,,,Saint Louis,38.6497328,-90.300402
+node/2611767192,Iron Barley Restaurant,restaurant,american,,,St. Louis,38.5647909,-90.2459081
+node/2694232533,Drunken Fish,restaurant,sushi,,,,38.6449282,-90.2616613
+node/2694232650,Bowood by Niche,restaurant,american,,,Saint Louis,38.6492327,-90.2570515
+node/2728906168,White Castle,fast_food,burger,White Castle,,,38.6278896,-90.2475692
+node/2747588030,Cardinals Nation,restaurant,american,,,Saint Louis,38.6237476,-90.1922779
+node/2747589079,Budweiser Brew House,restaurant,american,,,Saint Louis,38.6236113,-90.1917228
+node/2807192102,St. Louis Bread Company,cafe,,,,,38.5569862,-90.2621874
+node/2807192104,Starbucks,cafe,coffee_shop,Starbucks,,Saint Louis,38.5575515,-90.2620333
+node/2849317837,Amsterdam Tavern,pub,,,,,38.6019297,-90.2616971
+node/2849350487,Starbucks,cafe,coffee_shop,Starbucks,,Saint Louis,38.592518,-90.2721744
+node/2862733162,Well Met Café,cafe,,,,Saint Louis,38.610482,-90.2516226
+node/2862755901,World's Fair Doughnuts,fast_food,donut,,,Saint Louis,38.6167674,-90.2618396
+node/2867779380,Starbucks,cafe,coffee_shop,Starbucks,,Saint Louis,38.6305763,-90.1918762
+node/2873865905,Starbucks,cafe,coffee_shop,Starbucks,,Saint Louis,38.6327108,-90.2340176
+node/2886365089,Newstead Chop Suey Cat Fish,fast_food,,,,,38.6708401,-90.235493
+node/2888333389,CBGB,bar,,,,St. Louis,38.6007438,-90.2428474
+node/2892663270,Park Avenue Coffee,restaurant,coffee_shop,,,St. Louis,38.6108985,-90.2726024
+node/2921245001,Square One Brewery & Distillery,restaurant,,,,Saint Louis,38.6169,-90.2110272
+node/2924677100,Crown Candy Kitchen,restaurant,ice_cream,,,Saint Louis,38.6513314,-90.1978583
+node/2924678687,La Mancha Coffee House,cafe,cuban,,,Saint Louis,38.6514407,-90.1976258
+node/2924997510,Urban Chestnut Brewing Company,restaurant,german,,,St. Louis,38.6265431,-90.2613255
+node/3134512769,Panera Bread,fast_food,sandwich;bakery,Panera Bread,,Saint Louis,38.6396195,-90.2624513
+node/3180131599,Red Door,restaurant,chinese,,,Saint Louis,38.6278172,-90.1916825
+node/3180141913,Park Avenue,cafe,coffee_shop,Park Avenue,,Saint Louis,38.6281283,-90.1899608
+node/3188980560,Session Taco,restaurant,mexican,,,,38.6557057,-90.3008649
+node/3189028551,Up Late,fast_food,,,,,38.6556004,-90.299497
+node/3189048401,International Tap House,bar,,,,,38.6556665,-90.3003014
+node/3189050730,Blueprint Coffee,cafe,coffee_shop,,,,38.6556738,-90.3006179
+node/3190455226,Subway,fast_food,sandwich,Subway,,St. Louis,38.7690606,-90.1827654
+node/3191071557,Gyro House,restaurant,greek,,,Saint Louis,38.6551044,-90.2980393
+node/3191071559,Kingside Express,restaurant,breakfast;brunch;diner,,,Saint Louis,38.6551628,-90.2986254
+node/3191080329,Puzzles Hookah Lounge,restaurant,,,,,38.6554863,-90.2983529
+node/3393209457,Kitchen House Coffee,cafe,coffee_shop,,,St. Louis,38.609125,-90.2336117
+node/3393209458,Crave Coffeehouse,cafe,coffee_shop,,,Saint Louis,38.6220017,-90.2352943
+node/3393214223,Park Avenue Coffee,cafe,coffee_shop,,,Saint Louis,38.617464,-90.2129155
+node/3428677297,Brasserie by Niche,restaurant,french,,,Saint Louis,38.6401031,-90.2618229
+node/3429705300,Applebee's,restaurant,american,Applebee's Neighborhood Grill & Bar,,Saint Louis,38.6386228,-90.2621296
+node/3429705303,Global Quesadilla Company,restaurant,mexican,,,Saint Louis,38.6387532,-90.2590381
+node/3429705309,Pickles Deli,fast_food,sandwich,,,Saint Louis,38.6407174,-90.2619758
+node/3429705315,Rasoi,restaurant,indian,,,Saint Louis,38.6412997,-90.2621743
+node/3429705317,Subway,fast_food,sandwich,Subway,,Saint Louis,38.6424805,-90.2620181
+node/3429705325,Kingside Diner,restaurant,,,,,38.6445002,-90.2614041
+node/3429705329,Jimmy John's,fast_food,sandwich,Jimmy John's,,Saint Louis,38.6409083,-90.2622714
+node/3429705333,PokeDoke,restaurant,japanese,,,Saint Louis,38.6399243,-90.2624049
+node/3501147741,MoKaBe's Coffeehouse,cafe,coffee_shop,,,St. Louis,38.6026902,-90.2426843
+node/3513706209,Tin Roof Music Joint,restaurant,barbecue,,,Saint Louis,38.6244526,-90.1967272
+node/3513712511,The Midwestern,restaurant,barbecue,,,Saint Louis,38.623273,-90.1959945
+node/3516313380,Yalla on Washington Ave,bar,,,,Saint Louis,38.6314444,-90.1960833
+node/3516315865,Medina Grill,restaurant,mediterranean,,,Saint Louis,38.6324678,-90.1992784
+node/3516316785,Condado Tacos,restaurant,mexican,Condado Tacos,,Saint Louis,38.6240848,-90.1916885
+node/3516328118,Auntie Anne's,fast_food,pretzel,Auntie Anne's,,Saint Louis,38.624191,-90.1920945
+node/3583768897,Thai 202,restaurant,thai,,,Saint Louis,38.6444267,-90.261716
+node/3583768898,Sushi Koi,restaurant,sushi,,,Saint Louis,38.6405064,-90.261986
+node/3583768899,Saigon Cafe,restaurant,vietnamese,,,Saint Louis,38.6406034,-90.2619569
+node/3678263639,,fast_food,,,,,38.6338425,-90.2940758
+node/3678263640,Hippo Hideaway Grill,fast_food,,,,,38.6338427,-90.2944003
+node/3679061187,Tick Tock Tavern,bar,,,,Saint Louis,38.6061291,-90.23907
+node/3679071425,Buzz’s Hawaiian Grill,restaurant,regional,,,Saint Louis,38.6061228,-90.2389882
+node/3680877958,Hayden's Irish Pub,bar,,,,Saint Louis,38.6282865,-90.1898981
+node/3798280799,Gary's Fine Dining,restaurant,,,,Saint Louis,38.6395084,-90.2314447
+node/3819858163,El Chico Bakery,restaurant,baked_goods;dessert,,,Saint Louis,38.5933419,-90.2270805
+node/3915176480,Papa John's,fast_food,pizza,Papa John's,,Saint Louis,38.6357431,-90.240845
+node/3915176481,Jimmy John's,fast_food,sandwich,Jimmy John's,,Saint Louis,38.6357096,-90.2406942
+node/4259710289,The Grand Hall,bar,,,,,38.6291661,-90.2072855
+node/4398327789,VISTA Ramen,restaurant,japanese,,,St. Louis,38.5934394,-90.2259353
+node/4398962091,The mud house,cafe,coffee_shop;breakfast;cookie;tea,,,Saint Louis,38.5929963,-90.2221724
+node/4400541690,Anthonino's Taverna,restaurant,italian;italian_pizza;greek,,,Saint Louis,38.6143657,-90.2779301
+node/4410961609,Starbucks,cafe,coffee_shop,Starbucks,,Saint Louis,38.6260167,-90.1882159
+node/4485906530,El Torito,restaurant,,,,,38.5939309,-90.2298504
+node/4485916710,Whiskey Ring,bar,,,,Saint Louis,38.593663,-90.2275626
+node/4485922459,Taqueria El Bronco,restaurant,mexican,,,Saint Louis,38.5940716,-90.2307351
+node/4485929019,Earthbound Beer,pub,,,,Saint Louis,38.5935666,-90.2286535
+node/4485932735,The B-Side,bar,,,,Saint Louis,38.5936982,-90.2280198
+node/4485944817,Taco Truck Stl,bar,,,,Saint Louis,38.5938512,-90.2291743
+node/4485958602,Seafood,restaurant,,,,,38.5937945,-90.2303459
+node/4485958604,Chaparritos,restaurant,,,,Saint Louis,38.5937901,-90.2302748
+node/4489679876,Sugarfire Smoke House,restaurant,barbecue,,,Saint Louis,38.6304517,-90.1895545
+node/4489679877,Snarf's,restaurant,sandwich,,,,38.6301298,-90.1898433
+node/4712641210,Snarf's Sandwiches,fast_food,sandwich,Snarf's Sandwiches,,Saint Louis,38.6320909,-90.2340941
+node/4712645018,Pickleman's Gourmet Cafe,fast_food,sandwich,,,Saint Louis,38.6352302,-90.2384068
+node/4740637626,Three Sixty,bar,,,,Saint Louis,38.6249991,-90.1907143
+node/4756974187,The Biergarten,bar,,,,,38.5988145,-90.2144888
+node/4763054243,Forest Perk Cafe,cafe,coffee_shop,,,Saint Louis,38.6440223,-90.2837063
+node/4763089185,Amighetti’s,restaurant,american,,,Saint Louis,38.6449257,-90.2859286
+node/4763090893,Panorama,restaurant,,,,,38.6389922,-90.293945
+node/4763103277,Ruthie's,restaurant,,,,,38.6445593,-90.296788
+node/4789060621,Zephyr Salon and Bar,restaurant,,,,Saint Louis,38.5932562,-90.224425
+node/4790112221,Elaine's,restaurant,,,,Saint Louis,38.5932689,-90.2245571
+node/4809984826,Shaw's Coffee,cafe,coffee_shop,,,Saint Louis,38.6180323,-90.2722174
+node/4809991969,Adrianas On The Hill,restaurant,italian,,,Saint Louis,38.6178643,-90.2706281
+node/4810036104,Guidos Pizzeria and Tapas,restaurant,pizza,,,Saint Louis,38.617596,-90.2704267
+node/4810036106,Cha Cha Chow,restaurant,mexican,,,St. Louis,38.617288,-90.2674323
+node/4810036107,Rigazzi's,restaurant,italian,,,St. Louis,38.6165338,-90.2687126
+node/4810036108,Charlie Gitto's,restaurant,italian,,,Saint Louis,38.6179136,-90.2734655
+node/4810074058,Milo's Tavern,bar,,,,St. Louis,38.6158584,-90.2729785
+node/4833667816,Baia,restaurant,italian,,,Saint Louis,38.6274945,-90.2540729
+node/4885984372,,restaurant,italian;american,,,Saint Louis,38.6182611,-90.2744689
+node/5008054787,Perennial Artisan Ales,bar,,,,St. Lois,38.545494,-90.2659529
+node/5054876840,Eclipse Restaurant,restaurant,,,,Saint Louis,38.6555502,-90.2987378
+node/5067596703,Extra Wavy,restaurant,american,,,Saint Louis,38.6212388,-90.2129449
+node/5132000324,Five Bistro,restaurant,french;italian,,,,38.6164253,-90.2709871
+node/5167772155,Gene’s Bar & Grill,bar,,,,Saint Louis,38.6515283,-90.197265
+node/5588495668,Pizza Head,restaurant,pizza,,,St. Louis,38.599339,-90.2426029
+node/5588495686,Cafe Natasha's,restaurant,mediterranean,,,St. Louis,38.598936,-90.2426365
+node/5588515786,Cafe Mochi,restaurant,sushi;japanese,,,St. Louis,38.5984936,-90.2430714
+node/5793269390,Kaldi's Coffee,cafe,breakfast,,,Saint Louis,38.641225,-90.2618969
+node/5793269392,Shake Shack,fast_food,burger,Shake Shack,,Saint Louis,38.6416053,-90.2618429
+node/5793269393,First Watch,restaurant,american;breakfast,First Watch,,Saint Louis,38.6416681,-90.2621464
+node/5793269394,Rush Bowls,fast_food,açaí,Rush Bowls,,Saint Louis,38.644155,-90.2617859
+node/5793269395,Insomnia Cookies,restaurant,cookie,Insomnia Cookies,,,38.6441426,-90.2614558
+node/5793269398,Chick-fil-A,fast_food,chicken,Chick-fil-A,,Saint Louis,38.6368753,-90.2618012
+node/5793269399,Starbucks,cafe,coffee_shop,Starbucks,,Saint Louis,38.6369553,-90.2616867
+node/5793269400,Starbucks,cafe,coffee_shop,Starbucks,,Saint Louis,38.6444761,-90.2612736
+node/5835092176,The Shaved Duck,restaurant,barbecue;regional,,,St. Louis,38.6036281,-90.2360289
+node/5844631788,Vicia,restaurant,american,,,Saint Louis,38.6358114,-90.2519719
+node/5850979879,Urban Eats Cafe,cafe,,,,,38.5806758,-90.2411101
+node/5895947768,Papa John's,fast_food,pizza,Papa John's,,Saint Louis,38.5700478,-90.2845875
+node/5897293107,Jimmy John's,fast_food,sandwich,Jimmy John's,,Saint Louis,38.5933659,-90.3007887
+node/5909691990,Subway,fast_food,sandwich,Subway,,,38.6476757,-90.2282164
+node/5911015024,Jimmy John's,fast_food,sandwich,Jimmy John's,,Saint Louis,38.6269212,-90.1897034
+node/5911015025,Chili Mac's Diner,restaurant,,,,Saint Louis,38.6269657,-90.1899006
+node/5911015035,Planet Sub,fast_food,,,,Saint Louis,38.6284558,-90.1938461
+node/5911015047,Sushi Ai,restaurant,japanese,,,Saint Louis,38.6288532,-90.1939784
+node/5912724240,Crabs Landing,restaurant,,,,Saint Louis,38.6324743,-90.1967357
+node/5917086887,Qdoba,fast_food,mexican,Qdoba,,Saint Louis,38.602533,-90.2420846
+node/5917086899,LA CRAZY Margarita,restaurant,mexican,,,Saint Louis,38.60198,-90.2425564
+node/5917366182,Basil India,restaurant,indian,,,St. Louis,38.5998469,-90.2429045
+node/5917366406,Terror Tacos,restaurant,,,,St. Louis,38.5995993,-90.2429357
+node/5917366430,Meskerem Ethiopian Cuisine,restaurant,ethiopian,,,St. Louis,38.5987336,-90.2426742
+node/5917797012,Behrmann's Tavern,bar,,,,,38.5804874,-90.2396427
+node/5923303249,Muser's Pub,pub,,,,,38.6056704,-90.3035379
+node/5931076434,AAA Fish House,restaurant,fish,,,,38.6773795,-90.2593046
+node/5937495272,Taste of India,restaurant,indian,,,,38.6559077,-90.3008332
+node/5965083246,Boundary,restaurant,american,,,St. Louis,38.6330928,-90.3062986
+node/5965083247,Basso,restaurant,italian;pizza,,,St. Louis,38.6330436,-90.3061573
+node/6030299782,Aubergine - Thai Cuisine,restaurant,thai,,,Saint Louis,38.6300883,-90.1904329
+node/6030299783,Center Cafe,cafe,,,,,38.6306344,-90.1905914
+node/6031119073,Jefferson Chop Suey,fast_food,chinese,,,Saint Louis,38.616358,-90.2204133
+node/6162316611,Chase Club,restaurant,,,,Saint Louis,38.6440583,-90.2642635
+node/6162387946,Lapez Modern Mexican,restaurant,mexican,,,Saint Louis,38.6482294,-90.2608392
+node/6162389444,Ranoush,restaurant,middle_eastern,,,Saint Louis,38.6478602,-90.26089
+node/6326669885,Pizzeoli Wood Fired Pizza,restaurant,pizza,,,Saint Louis,38.6087267,-90.2089818
+node/6326673485,Medina Grill,restaurant,,,,,38.6449594,-90.2618049
+node/6326678986,STL City Grill,restaurant,,,,Saint Louis,38.6318666,-90.1963793
+node/6326681485,Gyro Grill,restaurant,mediterranean,,,,38.6556898,-90.3006893
+node/6328318187,The Pat Connolly Tavern,restaurant,,,,,38.6313585,-90.2925825
+node/6328348985,Failoni's Restaurant and Bar,restaurant,pizza,,,,38.6184473,-90.3035255
+node/6328371485,Brasilia Bar & Restaurant,restaurant,,,,,38.598615,-90.2427215
+node/6336774587,Comet Coffee,cafe,,,,,38.6302579,-90.2818891
+node/6336777987,Neon Greens,restaurant,salad,,,St. Louis,38.62736,-90.2531962
+node/6413247247,Scoops,fast_food,smoothie;ice_cream;popcorn,,,,38.6361948,-90.2917697
+node/6418656458,2nd Shift Brewing,bar,,,,St. Louis,38.6215046,-90.2807846
+node/6543706408,Mother's Fish,restaurant,seafood,,,,38.6548344,-90.2210451
+node/6550017488,One Nite Stand,bar,,,,,38.6035972,-90.2255469
+node/6550017491,City Bistro,restaurant,,,,,38.6033197,-90.226281
+node/6550017498,Kim Van,restaurant,,,,,38.6042586,-90.224993
+node/6550017519,Bugsy's Pizza,restaurant,pizza,,,,38.6066263,-90.2196553
+node/6550017536,A-1 Wok,restaurant,,,,,38.6082131,-90.2140139
+node/6550433604,Time Out Bar & Grill,bar,,,,,38.588825,-90.2569361
+node/6550433637,Almoor Market and Grill,restaurant,,,,,38.5902343,-90.2545048
+node/6550438837,China King,restaurant,chinese,,,,38.593936,-90.2504584
+node/6550438942,New China,restaurant,chinese,,,,38.5953689,-90.2397349
+node/6553700514,Lion's Choice,fast_food,sandwich,Lion's Choice,,,38.5904821,-90.3054643
+node/6554171251,Luckett's Lounge,bar,,,,,38.6508124,-90.2561261
+node/6574712701,The Parlor,pub,,,,,38.6273672,-90.2530384
+node/6583128379,Hong Kong Express,restaurant,chinese,,,,38.6100253,-90.2411112
+node/6726576700,Tower Pub,bar,,,,Saint Louis,38.5997393,-90.2616798
+node/6779563285,AO&Co. Market & Cafe,cafe,,,,,38.6194479,-90.2560428
+node/6814259629,Chao Baan,restaurant,thai,,,,38.6283037,-90.2496238
+node/6814259630,Seoul Taco,restaurant,korean,,,,38.6283954,-90.2498679
+node/7118177950,Tiny Bar,bar,,,,Saint Louis,38.6298706,-90.1947482
+node/7124773242,Expedition,bar,,,,Saint Louis,38.6327221,-90.2004715
+node/7862839609,Goody Cafe,restaurant,chinese,,,,38.6396281,-90.2434162
+node/7885548124,Blueprint Coffee,cafe,coffee_shop,,,Saint Louis,38.5936106,-90.3013201
+node/7885578693,Qdoba,fast_food,mexican,Qdoba,,Saint Louis,38.5939782,-90.2991071
+node/7885602909,Smoothie King,fast_food,juice,Smoothie King,,Saint Louis,38.5936573,-90.2984812
+node/7885730245,Aya Sofia Restaraunt,restaurant,,,,Saint Louis,38.5904053,-90.306837
+node/7885748830,Fortune Express,restaurant,chinese,,,Saint Louis,38.5892213,-90.3082286
+node/7885780146,Subway,fast_food,sandwich,Subway,,Saint Louis,38.5883117,-90.3097455
+node/7885839871,Barney's Sports Pub,bar,,,,Saint Louis,38.5937943,-90.2955583
+node/7885862857,Chick-fil-A,fast_food,chicken,Chick-fil-A,,Saint Louis,38.5948913,-90.2942013
+node/7885879709,Penn Station,fast_food,sandwich,Penn Station,,Saint Louis,38.5944058,-90.2936667
+node/7965423937,Biggie's Restaurant,restaurant,pizza;burger;steak;pasta,,,Saint Louis,38.6016538,-90.2991335
+node/7965448502,Kounter Kulture,restaurant,asian,,,Saint Louis,38.5951119,-90.3014752
+node/7965458502,Pietro's,restaurant,italian,,,Saint Louis,38.5956073,-90.3013292
+node/7965475668,Claudia's Pub,pub,,,,Saint Louis,38.6019979,-90.2990059
+node/7965479650,Trattoria Marcella,restaurant,italian,,,Saint Louis,38.5973287,-90.3003706
+node/7965479872,Cecil Whittaker's Pizzeria,fast_food,pizza,Cecil Whittaker's Pizzeria,,Saint Louis,38.6002733,-90.3003049
+node/7990348332,El Milagro Azteca,restaurant,mexican,,,Saint Louis,38.6120889,-90.2693942
+node/7990349458,China Dish,restaurant,chinese,,,Saint Louis,38.612877,-90.2689323
+node/8122875159,New China,restaurant,chinese,,,Saint Louis,38.5922494,-90.2708728
+node/8122909757,El Maguey Mexican Restaurant,restaurant,mexican,,,Saint Louis,38.5923257,-90.2715853
+node/8443170375,Jimmy John's,fast_food,sandwich,Jimmy John's,,Saint Louis,38.6300932,-90.2822356
+node/8678924882,Kimchi Guys,restaurant,korean,,,Saint Louis,38.6297112,-90.1845042
+node/8751700325,Chong Wah,fast_food,chinese,,,Saint Louis,38.641226,-90.2457697
+node/8751700326,Subway,fast_food,sandwich,Subway,,Saint Louis,38.6414058,-90.2463054
+node/8993197283,The Wildflower Saloon,restaurant,barbecue,,,Saint Louis,38.6401768,-90.262382
+node/8993197285,Taco Twist,restaurant,,,,Saint Louis,38.6410418,-90.2622477
+node/8993197286,Kampai Sushi Bar,restaurant,sushi,,,Saint Louis,38.6422809,-90.2635331
+node/9114810703,Gather,cafe,,,,,38.6089648,-90.214937
+node/9230899035,Legends Bar & Grill,bar,,,,Saint Louis,38.6656327,-90.2497907
+node/9244689797,Confluence Kombucha,restaurant,,,,,38.6264589,-90.2619353
+node/9244750010,Tempus,restaurant,,,,,38.626469,-90.2593947
+node/9244761718,Creole with a Splash of Soul,restaurant,,,,,38.6268931,-90.2587745
+node/9244773237,Sameen Afgan Restaurant,restaurant,,,,,38.62694,-90.2583979
+node/9244777979,Dog On It,restaurant,,,,,38.6266811,-90.2569611
+node/9244805442,Tropical Liqueurs,restaurant,,,,,38.6277226,-90.2505459
+node/9244820411,Amigo Sole,restaurant,mexican;pizza,,,St. Louis,38.630246,-90.2604223
+node/9244827387,Pie Guy Pizza,restaurant,,,,,38.6275939,-90.2535954
+node/9244841699,ShiSha Restaurant & Lounge,restaurant,,,,,38.627333,-90.2554359
+node/9244854382,Grace Meat + Three,restaurant,,,,,38.626884,-90.2567276
+node/9244861609,Sweetwaters Coffee & Tea The Grove,cafe,coffee_shop,,,,38.6282483,-90.249048
+node/9244868343,Sultan Mediterranean Restaurant,restaurant,mediterranean,,,,38.6271991,-90.2543206
+node/9548443317,Tower Pub,pub,,,,,38.5997868,-90.2617509
+node/9681198064,Chipotle,fast_food,mexican,Chipotle,,Saint Louis,38.632567,-90.2338492
+node/9706115081,Salvage Yard Bar & Grill,restaurant,,,,,38.5817486,-90.2931836
+node/9710254622,China King,restaurant,chinese,,,Saint Louis,38.5577074,-90.262304
+node/9710331857,A Touch of Texas BBQ,restaurant,barbecue,,,St. Louis,38.6027659,-90.241958
+node/9735126251,Mama's On The Hill,restaurant,pizza,,,St Louis,38.6149805,-90.275114
+node/9738483365,Subway,fast_food,sandwich,Subway,,Saint Louis,38.6156278,-90.2213035
+node/9765755737,Wingstop,fast_food,wings,Wingstop,,Saint Louis,38.5912301,-90.243798
+node/9793907770,Joyful House,restaurant,,,,,38.5861556,-90.2439936
+node/9793907778,Domino's,fast_food,pizza,Domino's,,Saint Louis,38.6099418,-90.2405803
+node/9793945224,Stage Left Grille,restaurant,,,,Saint Louis,38.6392436,-90.2316676
+node/9793950623,Little Caesars,fast_food,pizza,Little Caesars,,,38.6472056,-90.2276699
+node/9793998938,Little Caesars,fast_food,pizza,Little Caesars,,Saint Louis,38.5577313,-90.2623477
+node/9818779069,St Louis Pizza & Wings,restaurant,pizza,,,,38.5861991,-90.2927987
+node/9873035083,Lucky Accomplice,restaurant,,,,,38.6062035,-90.2230467
+node/9873035084,Coffeestamp,cafe,,,,,38.6059929,-90.2230703
+node/9873035086,Little Fox,restaurant,,,,Saint Louis,38.6080222,-90.227243
+node/9930493626,Off Fifty Five,bar,,,,,38.5644704,-90.2469953
+node/9930595834,Imo's Pizza,fast_food,pizza,Imo's Pizza,,,38.5751775,-90.2544668
+node/9934884362,1 Stop Sushi Express,restaurant,sushi,,,,38.5713671,-90.2835042
+node/9934884366,,restaurant,chinese,,,,38.5687711,-90.2545306
+node/9966694004,China Garden,restaurant,chinese,,,,38.5701099,-90.2845116
+node/9982299768,Onesto Pizza and Trattoria,restaurant,pizza,,,,38.5765477,-90.2868348
+node/10005447243,Louisiana Fish & Chicken,restaurant,,,,Saint Louis,38.5934991,-90.225192
+node/10044064725,China King,restaurant,chinese,,,,38.582705,-90.227198
+node/10110210162,Piper’s Tea & Coffee,cafe,coffee_shop,,,Saint Louis,38.5930248,-90.2724855
+node/10249517761,Old Saint Louis Chop Suey,restaurant,chinese,,,,38.5904789,-90.2703431
+node/10258392402,Subway,fast_food,sandwich,Subway,,St Louis,38.5903068,-90.2704108
+node/10765194228,Thai Country Cafe,restaurant,thai,,,,38.655675,-90.300526
+node/10837538534,Reatreat Gastropub,pub,,,,,38.6372245,-90.2465567
+node/10837538535,Sunday Best,restaurant,american;breakfast,,,St Louis,38.6131178,-90.2867263
+node/10837538536,Shortwave Coffee,cafe,coffee_shop,,,Saint Louis,38.6381354,-90.2465263
+node/10840865292,Royal Kabob,restaurant,,,,,38.5688725,-90.2547717
+node/10866137999,UpBar STL,bar,,,,Saint Louis,38.6344444,-90.2392989
+node/10882084322,Pho Long Restaurant,restaurant,vietnamese,,,,38.6100946,-90.2410926
+node/10882084364,Mariachi’s II,restaurant,mexican,,,,38.5834664,-90.2648283
+node/10892584313,Saucy Porka,restaurant,asian,,,Saint Louis,38.6360311,-90.2421437
+node/10898964142,Taft Street Restaurant,restaurant,,,,,38.5852899,-90.2623581
+node/10926815335,Ciao Cafe Pizzeria,restaurant,pizza;italian;ice_cream,,,Saint Louis,38.6441089,-90.2575855
+node/10949963238,Salt + Smoke,restaurant,barbecue,,,Saint Louis,38.6234031,-90.1912528
+node/10960879257,The Fountain on Locust,restaurant,american;ice_cream,,,Saint Louis,38.6361483,-90.2230531
+node/10960879260,Kain Tayo,restaurant,filipino,,,Saint Louis,38.6344374,-90.2163638
+node/10962679899,The Bellwether,restaurant,american,,,Saint Louis,38.6149361,-90.2077366
+node/10991230617,KFC,fast_food,chicken,KFC,,Saint Louis,38.629568,-90.1979015
+node/10991230622,Papa John's,fast_food,pizza,Papa John's,,Saint Louis,38.629199,-90.1980152
+node/11036381436,Bangkok Cafe,restaurant,thai,,,Saint Louis,38.6387367,-90.2589668
+node/11050090161,The Drawing Board Food and Drink,restaurant,,,,,38.5898163,-90.2565394
+node/11050090231,Good Time,restaurant,,,,,38.5926819,-90.2839749
+node/11070189146,Songbird,restaurant,,,,,38.6026468,-90.2616048
+node/11071968547,Kimchi Guys,restaurant,korean,,,Saint Louis,38.6498179,-90.3003911
+node/11116052455,Commonwealth,restaurant,european;modern,Schulte boutiqe + lifestyle,,Saint Louis,38.6396457,-90.2308447
+node/11121793112,ART Bar,bar,,,,Saint Louis,38.639618,-90.230549
+node/11198879782,Sweet Em's Coffee & Ice Cream,cafe,ice_cream;coffee_shop,,,Saint Louis,38.6284493,-90.292582
+node/11294035031,Speakeasy Cafe,cafe,,,,Saint Louis,38.5590003,-90.2527045
+node/11294035032,Red’s 8th Inning,bar,,,,Saint Louis,38.5576794,-90.2511532
+node/11303291586,,cafe,,,,,38.5866268,-90.2450284
+node/11335047469,Union Loafers,cafe,sandwich;pizza,,,,38.6197877,-90.2559488
+node/11396225687,Saturn Lounge,bar,,,,St. Louis,38.5927498,-90.2193102
+node/11423770098,Snarf's Sandwiches,fast_food,sandwich,Snarf's Sandwiches,,,38.6515935,-90.3001039
+node/11432794680,Lemp Mansion Restaurant,restaurant,american,,,Saint Louis,38.5931843,-90.2159173
+node/11432995670,Bar:PM,bar,,,,Saint Louis,38.5509125,-90.2542392
+node/11481035189,Arzolas,restaurant,mexican;tex-mex,,,Saint Louis,38.6022322,-90.219672
+node/11751049769,K-Bop STL,restaurant,korean,,,Saint Louis,38.6549505,-90.296916
+node/11751073869,Paris Bánh Mì,restaurant,vietnamese,,,Saint Louis,38.6549367,-90.2967735
+node/11758825972,Tesson Station,bar,,,,,38.5445572,-90.260915
+node/11818855241,Thai Pavilion STL,restaurant,thai,,,,38.5730774,-90.2376899
+node/11819468394,Shay's donuts and coffee,cafe,coffee_shop,,,St. Louis,38.5741896,-90.2428721
+node/11819468405,Intertwine Wine Bar,bar,,,,St. Louis,38.5713228,-90.2438484
+node/11819511483,Normitas House,restaurant,,,,St. Louis,38.5674504,-90.2460524
+node/11864573556,Krispy Krunchy Chicken,fast_food,chicken,Krispy Krunchy Chicken,,,38.5724177,-90.2505829
+node/11876890689,Cafe de Blaire,cafe,,,,,38.6294126,-90.1868864
+node/11877269975,K-bop,restaurant,korean,,,St. Louis,38.5934466,-90.226001
+node/11897388996,Hi-Pointe Drive In,restaurant,burger,,,Saint Louis,38.6302563,-90.1903652
+node/11897395279,Ssippi,bar,,,,,38.5941634,-90.2333397
+node/11897439975,Trust,bar,,,,Saint Louis,38.6268756,-90.1883618
+node/11962580917,Black Salt X,restaurant,indian,,,St. Louis,38.613171,-90.2869233
+node/12021404785,The Pitch,restaurant,,,,Saint Louis,38.6295565,-90.2089801
+node/12053417453,UKRAFT Brunch Café,restaurant,brunch;american,,,Saint Louis,38.6265488,-90.1924223
+node/12087992777,Menya Rui,restaurant,ramen,,,,38.599226,-90.292837
+node/12091051821,Domino's,fast_food,pizza,Domino's,,Saint Louis,38.5927301,-90.2840701
+node/12091051822,Qdoba,fast_food,mexican,Qdoba,,Saint Louis,38.6352158,-90.2327469
+node/12091051823,Domino's,fast_food,pizza,Domino's,,Saint Louis,38.6389852,-90.2422142
+node/12091051824,Wingstop,fast_food,wings,Wingstop,,Saint Louis,38.639938,-90.2446916
+node/12091051825,Qdoba,fast_food,mexican,Qdoba,,Saint Louis,38.6399635,-90.2448231
+node/12091051827,Church's Chicken,fast_food,chicken,Church's Chicken,,Saint Louis,38.6530211,-90.2636891
+node/12091051845,Popeyes,fast_food,chicken,Popeyes,,Saint Louis,38.661041,-90.215951
+node/12150472818,Subway,fast_food,sandwich,Subway,,Saint Louis,38.6265184,-90.1969065
+node/12160963432,Chris' @ The Docket,restaurant,breakfast,,,Saint Louis,38.6282738,-90.1975938
+node/12181389810,Brew Tulum,cafe,,,,Saint Louis,38.6301345,-90.1834703
+node/12181389815,The Old Spaghetti Factory,restaurant,italian,The Old Spaghetti Factory,,Saint Louis,38.6306257,-90.1833803
+node/12181389910,Smokestaq Lightning,restaurant,barbecue,,,Saint Louis,38.6305323,-90.1830582
+node/12223559084,Prism,bar,,,,St. Louis,38.6260115,-90.2620783
+node/12223559085,La Finca Coffee,cafe,coffee_shop,,,St. Louis,38.6263098,-90.2607751
+node/12228143793,FanDuel Sports Network Live!,bar,,,,Saint Louis,38.6239049,-90.1919058
+node/12228143794,Fielder's Choice,cafe,breakfast;ice_cream,,,Saint Louis,38.6240085,-90.1910972
+node/12228143798,Katie's Pizza & Pasta,restaurant,italian,,,Saint Louis,38.6239837,-90.1932945
+node/12228143799,Koibito Poké,restaurant,japanese;hawaiian,,,Saint Louis,38.6241416,-90.191907
+node/12228143825,Sports & Social St. Louis,restaurant,tex-mex;american,,,Saint Louis,38.624225,-90.1927977
+node/12228144115,Clark & Bourbon,restaurant,,,,Saint Louis,38.6241098,-90.1938053
+node/12242036266,Sauce on the Side,restaurant,italian,,,Saint Louis,38.6298002,-90.1921331
+node/12292265802,McDonald's,fast_food,burger,McDonald's,,,38.6852475,-90.217882
+node/12297182413,The Daiquiri House STL By Jan & Bas,restaurant,,,,Saint Louis,38.6297618,-90.198886
+node/12297182414,Mozay Restaurant,restaurant,,,,Saint Louis,38.6293878,-90.1990093
+node/12303496583,Arch City Deli,cafe,sandwich,,,Saint Louis,38.6242593,-90.2034488
+node/12306447735,Ballpark Pizza,restaurant,pizza,,,Saint Louis,38.6254008,-90.1911414
+node/12306447736,Starbucks,cafe,coffee_shop,Starbucks,,,38.6248272,-90.190592
+node/12306447737,Market Street Bistro,restaurant,,,,Saint Louis,38.6252404,-90.1904433
+node/12329597152,Lombardo's Trattoria,restaurant,italian,,,Saint Louis,38.6277808,-90.2100071
+node/12363565051,Carmine's Steak House,restaurant,steak_house,,,Saint Louis,38.6243972,-90.1888267
+node/12381021416,The Broadway Boat Bar,bar,,,,Saint Louis,38.638764,-90.1856209
+node/12423289572,Cube Tea Studio,cafe,bubble_tea,,,Saint Louis,38.6298476,-90.1897503
+node/12423353374,Smoothie King,fast_food,juice,Smoothie King,,,38.629655,-90.1982227
+node/12478974835,Rated Test Kitchen,restaurant,,,,Saint Louis,38.6298719,-90.1956551
+node/12479035971,Amigo Sole,restaurant,mexican,,,Saint Louis,38.6549335,-90.2962635
+node/12479333524,Pharaoh's Donuts,fast_food,donut,,,Saint Louis,38.628172,-90.1936144
+node/12479396767,Java Plus Cafe,cafe,,,,Saint Louis,38.6278287,-90.1900589
+node/12479424121,Pennydrop Bar + Kitchen,restaurant,,,,Saint Louis,38.6274299,-90.1883562
+node/12498600800,Polite Society Restaurant and Bar,restaurant,,,,Saint Louis,38.6175094,-90.2130933
+node/12498600802,Baileys' Chocolate Bar,restaurant,dessert,,,Saint Louis,38.6174204,-90.2127652
+node/12499166241,The Honky Tonk STL,bar,,,,Saint Louis,38.6183753,-90.1918065
+node/12499166339,Imo's Pizza,fast_food,pizza,Imo's Pizza,,Saint Louis,38.6174825,-90.1924621
+node/12512902439,Gyro Express,restaurant,greek,,,Saint Louis,38.6291827,-90.1919893
+node/12516948991,Thaxton Speakeasy,bar,,,,Saint Louis,38.6295268,-90.194981
+node/12516954421,Sen Thai Asian Bistro,restaurant,thai,,,Saint Louis,38.6310133,-90.1941407
+node/12517099191,"BLT's - Breakfast, Lunch and Tacos",restaurant,,,,Saint Louis,38.6308148,-90.1889284
+node/12532290889,Pharaoh's Donuts,fast_food,donut,,,Saint Louis,38.644617,-90.2618555
+node/12532303798,Havana's,restaurant,cuban,,,Saint Louis,38.6398569,-90.2621034
+node/12532316097,Brennan's,bar,,,,,38.6452529,-90.2612743
+node/12532320660,Yellowbelly,restaurant,,,,,38.6435396,-90.2614794
+node/12532328914,Taste of Lebanon,restaurant,lebanese,,,Saint Louis,38.6456477,-90.2615806
+node/12532334213,Main Squeeze Juice Company,fast_food,juice,,,,38.6450856,-90.261294
+node/12532335633,Twisted Ranch,restaurant,,,,Saint Louis,38.644728,-90.262234
+node/12532347078,Bubblecup Tea Zone & Ice Cave,cafe,bubble_tea,,,Saint Louis,38.6406238,-90.2622991
+node/12554576819,Mositos On Washington,restaurant,barbecue,,,Saint Louis,38.6323991,-90.1989245
+node/12554576821,The Passport Cocktail and Wine Bar,bar,,,,Saint Louis,38.6324362,-90.1991096
+node/12554576828,Pops Kitchen Downtown,restaurant,,,,Saint Louis,38.6321762,-90.1994693
+node/12554576839,Whisky on Washington,restaurant,,,,Saint Louis,38.6318804,-90.1981441
+node/12563352182,Blood & Sand,restaurant,american,,,Saint Louis,38.6320043,-90.2014177
+node/12591721275,Imo's Pizza,fast_food,pizza,Imo's Pizza,,Saint Louis,38.634857,-90.2028904
+node/12591797806,Gourmet Soul Restaurant and Catering,restaurant,,,,Saint Louis,38.6343474,-90.2021794
+node/12616201134,Edera Italian Eatery,restaurant,italian,,,Saint Louis,38.6449445,-90.2632551
+node/12617328682,The Maryland House,bar,,,,Saint Louis,38.6447889,-90.263108
+node/12617523081,The Preston,restaurant,,,,Saint Louis,38.6444381,-90.2641295
+node/12619859751,Pagan Wine Bar,bar,,,,Saint Louis,38.6444929,-90.2617071
+node/12619859752,Silk Road Lounge,bar,,,,Saint Louis,38.6445499,-90.2617
+node/12688633757,Cheshire Grin Cat Cafe,cafe,coffee_shop,,,,38.592458,-90.2196747
+node/12696903184,Midtown Sushi & Ramen,restaurant,sushi,,,Saint Louis,38.6334779,-90.2371859
+node/12762428619,Touchdown Wings,fast_food,wings,,,Saint Louis,38.6386957,-90.2587743
+node/12762428622,Imo's Pizza,fast_food,pizza,Imo's Pizza,,Saint Louis,38.6386309,-90.2584481
+node/12762428624,Smoothie King,fast_food,juice,Smoothie King,,Saint Louis,38.6385973,-90.2582989
+node/12762449824,Clark Street Taphouse & Grill,restaurant,,,,Saint Louis,38.6239185,-90.1946396
+node/12780201163,Shamrock Pub,pub,,,,Saint Louis,38.6155676,-90.1944031
+node/12812422400,Vegan Deli and Butcher,restaurant,sandwich,,,St Louis,38.5812477,-90.2674954
+node/12813148335,Grand Mediterranean,restaurant,mediterranean,,,Saint Louis,38.6385155,-90.2322134
+node/12813148337,Curtain Call Lounge,bar,,,,Saint Louis,38.6388041,-90.2320083
+node/12900408623,Damn Fine Hand Pies,cafe,,,,Saint Louis,38.6157455,-90.24815
+node/12900408626,iNDO,restaurant,asian,,,Saint Louis,38.6192256,-90.2560907
+node/12900408638,No Ordinary Rabbit,restaurant,,,,Saint Louis,38.6200729,-90.255959
+node/12902571643,Scarlett's Wine Bar,bar,,,,Saint Louis,38.638212,-90.2509823
+node/12902571644,Northwest Coffee Roasting,cafe,coffee_shop,,,Saint Louis,38.6384493,-90.2508106
+node/12952450256,Olympia Kebob House and Taverna,restaurant,greek;mediterranean,,,Saint Louis,38.6240921,-90.3079372
+node/12967422961,Afghan Kabob House,restaurant,middle_eastern,,,Saint Louis,38.5990949,-90.3000998
+node/12969832540,The Moniker,restaurant,american,,,Saint Louis,38.631081,-90.1944664
+node/12998460766,GROW Grill,restaurant,,,,,38.6285421,-90.2710084
+node/13000346618,Nixta,restaurant,mexican,,,Saint Louis,38.6520285,-90.2719257
+node/13007536899,Crafted,pub,,,,,38.6089061,-90.2340861
+node/13012420705,Pineapple Paradise,fast_food,juice,,,,38.6343034,-90.2907301
+node/13013151619,Wild Lemons,fast_food,juice,,,,38.636245,-90.2887198
+node/13013152152,Tundra Treats,fast_food,,,,,38.6352043,-90.2899487
+node/13013152155,Safari Grill,fast_food,,,,,38.6352944,-90.2898693
+node/13013942864,Soulard's Cajun Corner,restaurant,cajun,,,Saint Louis,38.6109043,-90.200993
+node/13013942865,Joyce’s Corner Kitchen,restaurant,american,,,Saint Louis,38.6105953,-90.2011209
+node/13018115427,Cafe Kudu,restaurant,,,,,38.6362855,-90.2919287
+node/13018191975,Pineapple Paradise,fast_food,juice,,,,38.6359568,-90.2918865
+node/13018596940,The Laughing Hyena,fast_food,,,,,38.6347321,-90.2917255
+node/13021743792,East Refreshments,fast_food,,,,,38.6346253,-90.2875091
+node/13059019250,Pizza Hut,restaurant,pizza,Pizza Hut,,,38.5882584,-90.2934465
+node/13116365840,Beffa's Bar & Restaurant,restaurant,,,,Saint Louis,38.6334991,-90.2166856
+node/13116365842,Harvey's Coffee and Cocktails,bar,,,,Saint Louis,38.6335254,-90.2168035
+node/13124157440,Rock Star Tacos,restaurant,latin_american,,,St. Louis,38.6172979,-90.2675136
+node/13136500001,Mountain House Cafe,cafe,,,,,38.6071339,-90.279265
+node/13138329695,Brasas,restaurant,peruvian,,,Saint Louis,38.6550606,-90.2975781
+node/13179451984,Hi-Pointe Drive In,restaurant,burger,,,,38.6321242,-90.3055493
+node/13298348253,Ozzy's Market,restaurant,,,,Saint Louis,38.6341899,-90.2075057
+node/13307237838,Sister Cities Cajun,restaurant,cajun,,,Saint Louis,38.589655,-90.2184027
+node/13322086353,Chuck's Hot Chicken,fast_food,chicken,,,Saint Louis,38.6034534,-90.2697351
+node/13395865766,Scout's,restaurant,,,,Saint Louis,38.6345367,-90.2165102
+node/13398061153,Tacos 4 Life,restaurant,mexican,,,Saint Louis,38.6345948,-90.2400342
+node/13408860044,Bel Air Social,restaurant,,,,Saint Louis,38.6427867,-90.2610802
+node/13408860045,Pizzavia,fast_food,pizza,,,Saint Louis,38.6427218,-90.2607352
+node/13419098439,Mound City Sandwich Shop,fast_food,sandwich,,,Saint Louis,38.6307185,-90.2220478
+node/13431399755,Taste of Persia,restaurant,persian,,,St. Louis,38.5996893,-90.2429078
+node/13431422679,Poke One,restaurant,,,,St. Louis,38.6026518,-90.2424643
+node/13431532370,Mayo Ketchup,restaurant,,,,Saint Louis,38.6357649,-90.2249382
+node/13461637215,Patisserie Svoi,cafe,dessert;cake;ukrainian,,,Saint Louis,38.6399845,-90.2620768
+node/13461637224,West End Wok,restaurant,chinese,,,Saint Louis,38.6403476,-90.2615252
+node/13463108171,Bo.co Cafe,cafe,bubble_tea,,,Saint Louis,38.6382335,-90.2316571
+node/13464668381,Winnie's Wine Bar,bar,,,,Saint Louis,38.6214097,-90.2137779
+node/13464668382,Rhone Rum Bar,bar,,,,Saint Louis,38.6214461,-90.2139349
+node/13480221752,Asian Arch,restaurant,asian,,,Saint Louis,38.6308489,-90.1967598
+node/13480221753,Odditeas Cafe & Artistic Lounge,cafe,,,,Saint Louis,38.6293494,-90.1963581
+node/13482431286,Modern Brewery & The Kings Oak,pub,,,,Saint Louis,38.629261,-90.2731028
+node/13513450311,El Catrin,restaurant,mexican,,,,38.565569,-90.2772585
+node/13604187807,Nicky Slices Pizza Club,restaurant,pizza,,,Saint Louis,38.6136324,-90.2753236
+node/13616235195,Fennel Cooking Studio,restaurant,,,,Saint Louis,38.6355487,-90.2234668
+node/13678594270,Pop's Pizza & Wings,fast_food,pizza;wings,,,Saint Louis,38.6267088,-90.1909765
+node/13678594271,Union 30,restaurant,,,,Saint Louis,38.6285089,-90.1914371
+node/13678594272,Robie's on 8th,restaurant,,,,Saint Louis,38.6299613,-90.1920354
+node/13678594273,Morton's The Steakhouse,restaurant,steak_house,Morton's The Steakhouse,,Saint Louis,38.6332606,-90.1848393
+node/13678594274,Ramsay's Kitchen St. Louis,restaurant,american,,,Saint Louis,38.6327206,-90.1845017
+node/13678594275,The Masala Republic,restaurant,indian,,,Saint Louis,38.6326949,-90.199105
+node/13678594276,Levels,restaurant,african,,,Saint Louis,38.6325633,-90.1998063
+node/13690076389,China Wok Express,fast_food,chinese,,,Saint Louis,38.6191432,-90.2982303
+node/13712545203,Good Company,bar,,,,,38.6270281,-90.2575481
+node/13712546701,Par Lounge,bar,,,,,38.6327013,-90.3049453
+node/13717207985,Gokul Indian Restaurant,restaurant,indian,,,Saint Louis,38.6552881,-90.2962209
+node/13717227115,Nudo House Delmar,restaurant,asian,,,Saint Louis,38.655366,-90.2970216
+node/13731412717,SweetArt Bakeshop + Café,cafe,,,,Saint Louis,38.6383723,-90.2370847
+node/13785395810,Latte Lounge | Midtown,cafe,,,,Saint Louis,38.6357264,-90.2247812
+node/13785395811,Salsa Rosada,restaurant,venezuelan,,,Saint Louis,38.6357463,-90.2248555
+node/13785395913,Hidden Gem,bar,,,,Saint Louis,38.6360989,-90.2239803
+node/13785395925,EGG RESTAURANT AT MIDTOWN,restaurant,breakfast,,,Saint Louis,38.6360236,-90.2236016
+node/13809791288,Caribbean Soul,restaurant,"caribbean, jamacian",,,,38.5594968,-90.2493245
+node/13817940001,Buddy's,bar,,,,,38.6313211,-90.1939745
+node/13818361540,Palomino Lounge,bar,,,,Saint Louis,38.6542876,-90.2896906
+node/13818367808,Soul 2 Soul,bar,,,,Saint Louis,38.6548162,-90.2913121
+node/13818367809,Euphoria Kitchen and Kocktails,restaurant,,,,Saint Louis,38.654421,-90.2912845
+node/13869439603,Taco Buddha,restaurant,mexican,,,Saint Louis,38.619383,-90.2555734
+node/13878013271,Bella's Cafe,cafe,coffee_shop;ice_cream;pastry,,,,38.6314951,-90.1947424
+node/13879370401,Good Strangers,cafe,,,,,38.5932859,-90.2262435
+node/13879570704,Grand Pied,restaurant,,,,,38.6032166,-90.2615086
+node/13905717658,Medina Grill,restaurant,mediterranean,,,Saint Louis,38.6363655,-90.227599
+node/13910210699,STL Steak and Cake,restaurant,,,,Saint Louis,38.6019966,-90.2613763
+node/13920656433,Starbucks,cafe,coffee_shop,Starbucks,,Saint Louis,38.6246213,-90.1933944
+node/13920656434,Starbucks,cafe,coffee_shop,Starbucks,,Saint Louis,38.6329156,-90.1847964
+node/13920656452,Starbucks,cafe,coffee_shop,Starbucks,,Saint Louis,38.6359356,-90.2348666
+node/13920656453,Starbucks,cafe,coffee_shop,Starbucks,,Saint Louis,38.6271721,-90.2359949
+node/13920656462,Starbucks,cafe,coffee_shop,Starbucks,,Saint Louis,38.6364209,-90.2919701
+node/13920656499,Starbucks,cafe,coffee_shop,Starbucks,,Saint Louis,38.5917117,-90.2935937
+node/13920656500,Starbucks,cafe,coffee_shop,Starbucks,,Saint Louis,38.5925072,-90.2953115
+node/13920700430,AVA Garden Bar,bar,,,,Saint Louis,38.6235678,-90.1914815
+node/13926376036,Comet Coffee,cafe,coffee_shop,,,Saint Louis,38.6169496,-90.2611613
+node/13943250693,Everybody  Eats,restaurant,american,,,St. Louis,38.5942751,-90.2202895
+node/13963516505,Crema Coffeehouse,cafe,,,,St. Louis,38.6474244,-90.2745778
+node/14005096801,Amaizing Arepa Bar,restaurant,,,,,38.6318759,-90.1995692
+node/14018737179,"Pop's Chicago Style Steak, Fish, Chicken",restaurant,,,,Saint Louis,38.5909617,-90.2442724
+node/14073757301,Amighetti's at the Top of the Hill,restaurant,italian;sandwich,,,,38.6100922,-90.2783129
+node/14099836953,Eat Today East African Cuisine,restaurant,ethiopian,,,St. Louis,38.5989886,-90.2430103
+node/14099836954,The Gin Room,bar,,,,St. Louis,38.5989627,-90.2426547
+node/14099836955,Sheesh,restaurant,turkish,,,St. Louis,38.5983746,-90.2427689
+node/14099866862,TeeRak Thai,restaurant,thai,,,Saint Louis,38.6116658,-90.2460266
+node/14107533681,The Noble Crown,restaurant,,,,Saint Louis,38.644871,-90.2613083
+node/14107533683,Bar Italia Ristorante,restaurant,italian,,,Saint Louis,38.6450075,-90.2619882
+node/14107533688,Biryani Adda,restaurant,indian,,,Saint Louis,38.6399195,-90.2620891
+node/14107540602,Dunkin',fast_food,donut;coffee_shop,Dunkin',,Saint Louis,38.6386834,-90.25869
+node/14138468201,Up Late,restaurant,,,,Saint Louis,38.6167248,-90.2617681
+node/14166569198,The Heavy Anchor,bar,,,,St Louis,38.5795154,-90.2692042
+node/14167075841,Bud's Pizza & Beer,restaurant,pizza,,,St. Louis,38.5921743,-90.2730652
+node/14178657836,Bellwether Cafe,cafe,,,,,38.6155138,-90.2579914
+node/14178657837,Sassafrass Restaurant,restaurant,,,,,38.6155055,-90.2578259
+node/14181572784,Laney's On Tucker,restaurant,,,,Saint Louis,38.6253614,-90.1987239
+node/14185580427,Cafe Dolce,cafe,,,,St. Louis,38.6169121,-90.2723221
+node/14185580447,Gian-Tony's,restaurant,italian,,,Saint Louis,38.6170734,-90.2769375
+node/14185588301,Chico Bueno,restaurant,mexican,,,Saint Louis,38.627371,-90.2522514
+node/14185588302,Malo,restaurant,mexican,,,Saint Louis,38.6273647,-90.2523443
+node/14185588314,Aperi,restaurant,,,,Saint Louis,38.6270246,-90.2575975
+node/14203780166,Park Avenue Coffee,cafe,,,,Saint Louis,38.6351732,-90.2517583
+node/14280938701,Poke Munch,restaurant,seafood,,,,38.6357857,-90.2422209
+node/14283791528,The Silver Leaf,bar,,,,St. Louis,38.5973046,-90.275475
+node/14301505948,The Link,restaurant,american,,,Saint Louis,38.6329358,-90.2004138
+node/14320009711,Pho Long,restaurant,,,,,38.6010869,-90.2430002
+node/14320221434,IDOL WOLF,restaurant,spanish,,,Saint Louis,38.6314554,-90.2022575
+node/14320230808,Coffeestamp,cafe,coffee_shop,,,Saint Louis,38.6318826,-90.1979834
+way/75035781,Keagan’s Restaurant,restaurant,,,,Saint Louis,38.6347997,-90.2717119
+way/139761158,Wendy's,fast_food,burger,Wendy's,,Saint Louis,38.591961,-90.2497015
+way/156866711,Pizza Hut,restaurant,pizza,Pizza Hut,,Saint Louis,38.6407036,-90.2472843
+way/187115662,Friendly's Bar & Grill,bar,,,,,38.5945564,-90.2540569
+way/201372543,Paddy O's,bar,,,,Saint Louis,38.6209097,-90.1939612
+way/202148882,White Knight Diner,restaurant,diner,,,Saint Louis,38.6316023,-90.2057887
+way/219842629,LemonGrass,restaurant,vietnamese,,,St. Louis,38.6008386,-90.2428904
+way/237843989,Starbucks,cafe,coffee_shop,Starbucks,,Saint Louis,38.6297933,-90.216956
+way/237879557,Maggie O'Brien's,pub,,,,Saint Louis,38.6296722,-90.2095521
+way/238508228,Freddie G's Chicken and Waffle,restaurant,american,,,Saint Louis,38.6612051,-90.2001542
+way/238509292,Cornerstone Cafe,restaurant,american;burger;pizza,,,St. Louis,38.660806,-90.1999895
+way/239253973,Domino's,fast_food,pizza,Domino's,,Saint Louis,38.6402345,-90.1940133
+way/239254210,McDonald's,fast_food,burger,McDonald's,,Saint Louis,38.6369076,-90.1954822
+way/242780430,Imo's Pizza,fast_food,pizza,Imo's Pizza,,Saint Louis,38.5924996,-90.2252
+way/242782615,Tschüss,bar,,,,Saint Louis,38.5942547,-90.2318348
+way/250171305,Gyro Company,restaurant,bosnian;gyros,,,Saint Louis,38.5650627,-90.2924131
+way/253435202,Domino's,fast_food,pizza,Domino's,,Saint Louis,38.630528,-90.1967537
+way/253472064,Brick River Cider St. Louis,pub,,,,Saint Louis,38.6337977,-90.2080843
+way/253658462,Schlafly Tap room,restaurant,,,,Saint Louis,38.6329723,-90.2097845
+way/263900997,Dressel's Pub,pub,,,,Saint Louis,38.6490996,-90.2610745
+way/269707237,Taco Bell,fast_food,tex-mex,Taco Bell,,Saint Louis,38.6173584,-90.1937089
+way/269713595,White Castle,fast_food,burger,White Castle,,Saint Louis,38.6183819,-90.1925074
+way/270603647,Al's Restaurant,restaurant,steak_house,,,Saint Louis,38.6354631,-90.1823944
+way/271294311,White Castle,fast_food,burger,White Castle,,,38.6552557,-90.202084
+way/284919041,Plaza Cafe and Grill,restaurant,,,,,38.6014684,-90.2613405
+way/285709259,Sonic,fast_food,burger,Sonic,,Saint Louis,38.602512,-90.2692477
+way/286008862,Fleur STL,restaurant,,,,Saint Louis,38.6173676,-90.1955871
+way/286008867,Panera Bread,fast_food,sandwich;bakery,Panera Bread,,Saint Louis,38.6060642,-90.2026877
+way/312984365,The Crack Fox,bar,,,,Saint Louis,38.6292602,-90.1963061
+way/312990516,O'Connell's Pub,pub,,,,Saint Louis,38.6174427,-90.2660077
+way/344354881,Hartford Coffee Company,cafe,coffee_shop,,,Saint Louis,38.602551,-90.2524187
+way/344615126,Lona's Lil Eats,restaurant,asian,,,,38.6101654,-90.2267882
+way/346675353,The Marquee Restaurant & Lounge,restaurant,,,,Saint Louis,38.6330879,-90.2072474
+way/363772848,The Gramophone,bar,,,,St. Louis,38.6273008,-90.255855
+way/364000899,,fast_food,,,,,38.6342058,-90.2873341
+way/367173734,Handle Bar,bar,,,,,38.6279728,-90.2512704
+way/374140755,Park Chop Suey,restaurant,chinese,,,Saint Louis,38.6195535,-90.2039123
+way/374781113,Southwest Diner,restaurant,,,,Maplewood,38.61338,-90.3056364
+way/374781237,Picadilly Restaurant,restaurant,,,,St. Louis,38.6042563,-90.3153627
+way/374828082,Saint Louis Bread Co.,fast_food,sandwich;bakery,Panera Bread,,Saint Louis,38.5911839,-90.3050146
+way/374828083,Starbucks,cafe,coffee_shop,Starbucks,,Saint Louis,38.5906328,-90.3050397
+way/374828084,Donut Drive-In,restaurant,donut,,,St. Louis,38.592189,-90.302833
+way/374828087,McDonald's,fast_food,burger,McDonald's,,Saint Louis,38.5930034,-90.2937899
+way/374955860,Starbucks,cafe,coffee_shop,Starbucks,,St. Louis,38.6329887,-90.3057516
+way/375028524,Michael's Bar and Grill,restaurant,american,,,St. Louis,38.6162877,-90.3104828
+way/381171326,Colombo's Tavern,restaurant,bar,,,,38.620551,-90.297148
+way/382517484,Seamus McDaniel's,bar,,,,Saint Louis,38.6281873,-90.292767
+way/382598366,Felix's Pizza Pub,restaurant,pizza,,,Saint Louis,38.6287812,-90.2931129
+way/382598367,Heavy Riff,pub,,,,Saint Louis,38.628931,-90.2933988
+way/386000831,Imo's Pizza,fast_food,pizza,Imo's Pizza,,Saint Louis,38.630623,-90.2865519
+way/386492511,Majeed Mediterranean Restaurant,restaurant,indian,,,,38.5838696,-90.2643232
+way/399545116,Humphrey's Restaurant & Tavern,restaurant,grill,,,Saint Louis,38.6350233,-90.2375493
+way/412503383,Frazer's Restaurant & Lounge,restaurant,international,,,,38.5990548,-90.2163472
+way/448850825,White Castle,fast_food,burger,White Castle,,,38.6521958,-90.2629745
+way/451765869,Yaquis,restaurant,pizza,,,Saint Louis,38.5935593,-90.2290693
+way/451767876,The Little Dipper At The Fortune Teller Bar,bar,,,,Saint Louis,38.5936903,-90.2270011
+way/451772961,La Vallesana,restaurant,,,,,38.5940396,-90.230216
+way/451773734,,restaurant,,,,Saint Louis,38.5930287,-90.222187
+way/477718712,SqWires Restaurant & Market,restaurant,american,,,Saint Louis,38.6160871,-90.2116864
+way/477984540,Arby's,fast_food,sandwich,Arby's,,Saint Louis,38.6399185,-90.2437827
+way/477985191,Jack in the Box,fast_food,burger,Jack in the Box,,Saint Louis,38.6404168,-90.246404
+way/477985193,Five Guys,fast_food,burger,Five Guys,,Saint Louis,38.6407421,-90.2474861
+way/478001906,The Original Uncle Bill's Pancake House,restaurant,breakfast,,,St Louis,38.5969131,-90.2711416
+way/483552670,,restaurant,,,,Saint Louis,38.6398775,-90.2848388
+way/488761095,Sado,restaurant,japanese;seafood,,,,38.6181066,-90.2725754
+way/518617573,Burger King,fast_food,burger,Burger King,,Saint Louis,38.6520157,-90.2645582
+way/518617577,Taco Bell,fast_food,tex-mex,Taco Bell,,Saint Louis,38.6513189,-90.2632895
+way/518705160,KFC,fast_food,chicken,KFC,,Saint Louis,38.6513252,-90.264395
+way/523533996,Arkansas Fried Chicken,restaurant,fried_chicken,,,,38.6597145,-90.2530634
+way/526346065,Platypus,bar,,,,St. Louis,38.6264926,-90.2617699
+way/526471456,Sauce On The Side,restaurant,,,,Saint Louis,38.6272042,-90.2565839
+way/526471695,Vincent van Doughnut,fast_food,donut,,,Saint Louis,38.6273553,-90.2565796
+way/527165471,Confluence Kombucha,restaurant,,,,,38.6264611,-90.2619229
+way/527183212,"Vails Brothers Shrimp, Chicken, & Fish",fast_food,chicken;sandwich,,,St. Louis,38.6263462,-90.2604129
+way/531860703,St. Louis Kitchen,restaurant,,,,,38.6535891,-90.2635115
+way/532961310,Taco Bell,fast_food,tex-mex,Taco Bell,,Saint Louis,38.5935925,-90.2440746
+way/532961311,White Castle,fast_food,burger,White Castle,,Saint Louis,38.5926563,-90.2442648
+way/533901510,Chicken 7,fast_food,chicken;korean,,,,38.5631053,-90.2587923
+way/544359560,Eleven Eleven Mississippi,restaurant,italian,,,Saint Louis,38.6196598,-90.2132181
+way/544618497,Tamm Ave. Grill and Macs Local Eats,restaurant,,,,,38.6277464,-90.2932231
+way/550734684,Joe's Cafe & Art Gallery,cafe,,,,,38.6519686,-90.294681
+way/556787869,Los Patios MX Cocina,restaurant,mexican,,,Saint Louis,38.6379973,-90.2421592
+way/556888409,McDonald's,fast_food,burger,McDonald's,,Saint Louis,38.6391203,-90.2436774
+way/556893769,Rally's,fast_food,burger,Rally's,,Saint Louis,38.6392658,-90.2410976
+way/557184857,Crazy Bowls and Wraps,restaurant,,,,Saint Louis,38.6384974,-90.2404824
+way/559181967,Burger King,fast_food,burger,Burger King,,Saint Louis,38.5569639,-90.2611685
+way/559181968,St. Louis Bread Company,fast_food,,,,,38.5569832,-90.2622967
+way/559190514,Cat's Meow,bar,,,,,38.6015996,-90.2108937
+way/559190517,Big Daddy's,bar,,,,Saint Louis,38.6013133,-90.2100774
+way/559190520,Good Luck Bar and Grill,bar,,,,,38.6019421,-90.2078705
+way/559190523,D's Place,bar,,,,,38.6026772,-90.2073109
+way/559190526,Soulard Gyro,restaurant,greek,,,,38.6045503,-90.2064693
+way/559190527,Hammerstones,bar,,,,,38.6066463,-90.2051441
+way/559190530,Henry's,bar,,,,Saint Louis,38.607605,-90.2047582
+way/559190533,Molly's,bar,,,,,38.6081394,-90.2040546
+way/559190535,Molly's,restaurant,,,,,38.6080925,-90.2038089
+way/559190537,1860's,bar,,,,,38.6085116,-90.204323
+way/559190540,Hardshell Cafe,bar,,,,,38.6084146,-90.2039673
+way/559190544,,bar,,,,,38.6084605,-90.2041466
+way/559190546,Goshen Coffee Roasters,cafe,,,,,38.6084202,-90.2051429
+way/559190550,Chava's,restaurant,mexican,,,Saint Louis,38.6088772,-90.2054496
+way/559190554,Great Grizzly Bear,bar,,,,,38.6092878,-90.2067782
+way/559190560,Duke's,bar,,,,Saint Louis,38.6080165,-90.2073734
+way/559190562,Bastille,bar,,,,,38.6073458,-90.2077335
+way/559190571,Tuckers,restaurant,steak_house,,,Saint Louis,38.607234,-90.2102012
+way/559190573,Eat Crow,bar,american,,,,38.6088833,-90.209402
+way/559190575,Soulard Stable,bar,,,,,38.6089526,-90.2069231
+way/559190577,Llewyln's,bar,,,,,38.609971,-90.2030436
+way/559190579,International Taphouse,bar,,,,,38.6105016,-90.2032918
+way/559190580,Epic Pizza,restaurant,pizza,,,,38.6105182,-90.2031724
+way/559190581,Mission Taco,restaurant,mexican,,,,38.6107322,-90.2032324
+way/559190582,Bogart's Smokehouse,restaurant,barbecue,,,Saint Louis,38.6109378,-90.2028047
+way/559190584,Carson's,bar,,,,,38.6103131,-90.2027867
+way/559190587,,bar,,,,,38.6095356,-90.2010656
+way/559193576,,bar,,,,Saint Louis,38.6000419,-90.2120312
+way/559193578,Pieces Board Game Bar And Restaurant,restaurant,,,,Saint Louis,38.6005728,-90.2137272
+way/561028028,Protagonist Cafe,cafe,coffee_shop,,,,38.6104827,-90.2026195
+way/561046358,McDonald's,fast_food,burger,McDonald's,,Saint Louis,38.6125109,-90.2219432
+way/561309696,Broadway Oyster Bar,bar,,,,Saint Louis,38.6188149,-90.1923596
+way/561322848,Scottish Arms,bar,,,,Saint Louis,38.6367283,-90.2466668
+way/563078104,Trueman's Sport Bar,bar,,,,,38.6028357,-90.2152829
+way/563082376,Domino's,fast_food,pizza,Domino's,,Saint Louis,38.6113301,-90.2024382
+way/563100159,Social Bar & Grill Soulard,restaurant,,,,Saint Louis,38.6106935,-90.1998252
+way/563100167,Bar 101,bar,,,,,38.6081414,-90.1997861
+way/563132893,Joanie's To Go,fast_food,pizza;pasta,,,Saint Louis,38.6060655,-90.2045251
+way/563135632,,bar,,,,Saint Louis,38.6050275,-90.2043551
+way/563136419,Joanies Pizza,restaurant,,,,Saint Louis,38.6070692,-90.2078319
+way/563136421,Hi Hat,bar,,,,,38.6072312,-90.2070571
+way/564435497,Steak 'n Shake,fast_food,burger,Steak 'n Shake,,Saint Louis,38.6272214,-90.2878151
+way/564435509,Taco Bell,fast_food,tex-mex,Taco Bell,,Saint Louis,38.625935,-90.2874055
+way/564435515,Courtesy Diner,restaurant,diner,,,Saint Louis,38.6287801,-90.2876126
+way/564435525,Subway,fast_food,sandwich,Subway,,Saint Louis,38.6281981,-90.2877055
+way/564435528,McDonald's,fast_food,burger,McDonald's,,Saint Louis,38.6244735,-90.2874714
+way/564435547,Nick's Pub,bar,,,,St. Louis,38.6227854,-90.2865668
+way/564436488,Slim Chickens,fast_food,chicken,Slim Chickens,,St. Louis,38.6236392,-90.2885833
+way/567181850,Church's Chicken,fast_food,chicken,Church's Chicken,,Saint Louis,38.6419723,-90.2291283
+way/569791237,JC Supper Club,restaurant,,,,Saint Louis,38.7282977,-90.2230092
+way/578940361,The Wood Shack,restaurant,,,,,38.6090174,-90.2052654
+way/581996073,Hamilton's Urban Steakhouse & Bourbon Bar,restaurant,steak_house,,,Saint Louis,38.6213773,-90.2136293
+way/581999480,Planter's House,bar,,,,Saint Louis,38.6207081,-90.2120342
+way/582713004,Rooster,restaurant,breakfast,,,St. Louis,38.601144,-90.2420166
+way/582713102,The Vine Cafe and Market,restaurant,mediterranean;lebanese,,,St. Louis,38.6003113,-90.2429666
+way/582713103,Tree House,restaurant,,,,St. Louis,38.6002096,-90.243094
+way/583399296,Captain D's,fast_food,seafood,Captain D's,,Saint Louis,38.6262203,-90.2363256
+way/583399299,Rally's,fast_food,burger,Rally's,,Saint Louis,38.6260846,-90.2359627
+way/593856879,Station Grille,restaurant,,,,,38.6293734,-90.2082655
+way/604055529,Ari's Restaurant and Bar,restaurant,greek;american,,,Saint Louis,38.6068571,-90.2893436
+way/604056838,Sandrina's Kitchen and Cocktails,restaurant,sandwich;bar,,,,38.6054704,-90.2757476
+way/604056839,Trophy Room,bar,,,,,38.6058365,-90.2757083
+way/605725382,Amigo Joe's,restaurant,mexican,,,Saint Louis,38.6081491,-90.2872638
+way/605725386,Adam's Smokehouse,restaurant,barbecue,,,Saint Louis,38.6094552,-90.2901188
+way/605725391,Chris' Pancake & Dining,restaurant,american;comfort_food;breakfast,,,Saint Louis,38.6094142,-90.289485
+way/605725399,Hampton Hill Pizza,restaurant,pizza,,,St. Louis,38.6087619,-90.2886835
+way/605725404,Brazie's Ristorante,restaurant,italian,,,,38.607589,-90.292842
+way/605725418,LoRusso's Cucina,restaurant,italian,,,,38.6068416,-90.2936442
+way/605725436,The Hideaway,bar,,,,Saint Louis,38.6066931,-90.288055
+way/615655970,Noteworthy Cafe & Culture,cafe,,,,Saint Louis,38.6470033,-90.2514947
+way/616056302,High Low,cafe,,,,Saint Louis,38.638006,-90.2263219
+way/618084797,Lee's Famous Recipe Chicken,fast_food,chicken,Lee's Famous Recipe Chicken,,Saint Louis,38.6043018,-90.2235265
+way/618371617,Jack in the Box,fast_food,burger,Jack in the Box,,Saint Louis,38.6115961,-90.2408091
+way/618772667,Subway,fast_food,sandwich,Subway,,Saint Louis,38.607974,-90.2022609
+way/619101008,KFC,fast_food,chicken,KFC,,Saint Louis,38.5932609,-90.244124
+way/619101010,Sam’s Southern Eatery,restaurant,regional,,,,38.593564,-90.2429382
+way/619362329,Burger King,fast_food,burger,Burger King,,Saint Louis,38.6765944,-90.2532339
+way/619362330,,fast_food,,,,,38.6770283,-90.252528
+way/619362331,Taco Bell,fast_food,tex-mex,Taco Bell,,Saint Louis,38.6771275,-90.2529071
+way/619362332,,fast_food,,,,,38.675811,-90.2516947
+way/619362333,McDonald's,fast_food,burger,McDonald's,,Saint Louis,38.676211,-90.2506772
+way/619917131,Wendy's,fast_food,burger,Wendy's,,Saint Louis,38.6791262,-90.258983
+way/620205453,Fern Grove,cafe,,,,Saint Louis,38.6303179,-90.2606517
+way/620261593,Church's Chicken,fast_food,chicken,Church's Chicken,,Saint Louis,38.6601044,-90.2180017
+way/620513677,Vails Brothers Shrimp Chicken & Fish,restaurant,chicken,,,Saint Louis,38.654518,-90.2922361
+way/620513681,Yan Wu House Chop Suey,restaurant,chinese,,,Saint Louis,38.6545143,-90.2933168
+way/620526216,Ocean Grill,restaurant,,,,Saint Louis,38.6483466,-90.2850222
+way/620711644,Cafe Ganadara,restaurant,,,,,38.5747866,-90.2949239
+way/620711659,Salt + Smoke,restaurant,barbecue,,,Saint Louis,38.5800106,-90.2939585
+way/620711667,DQ Grill & Chill,fast_food,ice_cream;burger,DQ Grill & Chill,,Saint Louis,38.581687,-90.293683
+way/620711696,Arby's,fast_food,sandwich,Arby's,,Saint Louis,38.5900359,-90.30637
+way/620711725,IHOP,restaurant,breakfast;pancake,IHOP,,Saint Louis,38.5931624,-90.2996451
+way/621900031,Subway,fast_food,sandwich,Subway,,Saint Louis,38.6759707,-90.2501934
+way/621900032,Rally's,fast_food,burger,Rally's,,Saint Louis,38.6758933,-90.250003
+way/622177806,H & M Fish and Chicken,restaurant,,,,Saint Louis,38.5871425,-90.233924
+way/622922578,Stacked STL,restaurant,burger;american,,,,38.5492363,-90.2622387
+way/622922594,Kabul Express STL,restaurant,indian,,,Saint Louis,38.5488144,-90.2622312
+way/623203516,Chipotle,fast_food,mexican,Chipotle,,Saint Louis,38.5970559,-90.2930798
+way/623248809,Steak 'n Shake,fast_food,burger,Steak 'n Shake,,Saint Louis,38.5910498,-90.2715392
+way/623248831,Hook & Reel Cajun Seafood & Bar,restaurant,seafood,,,Saint Louis,38.5911487,-90.2729026
+way/623248834,Jack in the Box,fast_food,burger,Jack in the Box,,Saint Louis,38.5912524,-90.2738337
+way/624361049,McDonald's,fast_food,burger,McDonald's,,Saint Louis,38.5862619,-90.2759969
+way/624361050,White Castle,fast_food,burger,White Castle,,,38.5870355,-90.2759186
+way/624381546,Das Bevo,restaurant,german,,,St Louis,38.5819023,-90.266821
+way/626565818,Southside Fish and Chicken Grill,restaurant,fish;chicken;burger,,,Saint Louis,38.5915323,-90.2517585
+way/626796471,Pho Grand Vietnamese Restaurant,restaurant,vietnamese,,,,38.5994527,-90.2430931
+way/626817292,The Buttery,restaurant,,,,,38.5906775,-90.2444023
+way/627287843,Jack in the Box,fast_food,burger,Jack in the Box,,Saint Louis,38.5682843,-90.2543149
+way/627473805,Babe's,pub,,,,Saint Louis,38.6053529,-90.303946
+way/627473818,Vinnie's Italian Beef & Gyros,restaurant,gyros;italian,,,Saint Louis,38.6054504,-90.3035669
+way/627473827,Pizza-A-Go-Go,fast_food,pizza,,,Saint Louis,38.6060141,-90.3038191
+way/627504298,Farm Haus,restaurant,,,,Saint Louis,38.6041341,-90.3041389
+way/627547675,Rehab Bar & Grill,restaurant,,,,,38.6277076,-90.2499968
+way/627547677,La Calle Mexican Restaurant,restaurant,mexican,,,Saint Louis,38.6280183,-90.251076
+way/627547687,Everest Cafe & Bar,cafe,,,,Saint Louis,38.6278408,-90.2519221
+way/628168512,Himalayan Yeti,restaurant,indian;nepalese,,,Saint Louis,38.595213,-90.2715169
+way/628168514,Lee's Famous Recipe Chicken,fast_food,chicken,Lee's Famous Recipe Chicken,,,38.5961187,-90.2713379
+way/628168515,Taco Bell,fast_food,tex-mex,Taco Bell,,Saint Louis,38.596313,-90.2706031
+way/630012066,Popeyes,fast_food,chicken,Popeyes,,,38.6541351,-90.2634688
+way/631683345,,restaurant,,,,St. Louis,38.6330491,-90.3061895
+way/631683349,Chinese Express,restaurant,chinese,,,St. Louis,38.6329578,-90.3054102
+way/640368496,Rosé By Peno,restaurant,,,,Saint Louis,38.6150603,-90.2117978
+way/640733011,Diner's Delight,restaurant,,,,Saint Louis,38.6193867,-90.231608
+way/663647757,Venice Cafe,bar,,,,,38.599351,-90.2173856
+way/663647760,,bar,,,,,38.5992805,-90.2182108
+way/663647761,Benton Park Cafe,restaurant,,,,Saint Louis,38.5993922,-90.2185874
+way/663647764,Small Change,bar,,,,Saint Louis,38.6025914,-90.2220629
+way/663647766,Sidney Street Cafe,restaurant,american,,,,38.6034399,-90.2178331
+way/663647771,Peacemaker,restaurant,,,,,38.6033428,-90.2154061
+way/663647777,Shameless Grounds,cafe,,,,Saint Louis,38.5953102,-90.2181968
+way/696569441,Jet's Pizza,restaurant,pizza,Jet's Pizza,,Saint Louis,38.5974173,-90.2930317
+way/696569447,Long John Silver's,fast_food,seafood,Long John Silver's,,Saint Louis,38.6027356,-90.2921286
+way/696569448,Burger King,fast_food,burger,Burger King,,Saint Louis,38.6029512,-90.2923267
+way/696569452,Hardee's,fast_food,burger,Hardee's,,Saint Louis,38.6173032,-90.2867952
+way/696569454,Wendy's,fast_food,burger,Wendy's,,Saint Louis,38.6167201,-90.2864986
+way/697453911,Elicia's Pizza,restaurant,pizza,,,Saint Louis,38.5982265,-90.2367056
+way/724634029,Sameem Afghan Restaurant & Catering,restaurant,afghan,,,Saint Louis,38.6269472,-90.2584006
+way/727150267,The Get Down,bar,,,,,38.6245215,-90.2533803
+way/854399586,El Indio Mexican Restaurant,restaurant,mexican,,,Saint Louis,38.6023594,-90.2921946
+way/854407058,SOHA Bar and Grill,fast_food,burger,,,Saint Louis,38.6119097,-90.2881321
+way/854407293,Joey B's on the Hill,restaurant,,,,Saint Louis,38.6123658,-90.287323
+way/855221499,Billy Goat Chip Co,restaurant,,,,Saint Louis,38.6061816,-90.2934387
+way/856995687,Jo Fassi Sausage and Sandwich Factory,fast_food,sandwich,,,Saint Louis,38.6132535,-90.2807217
+way/856997454,Cunetto House of Pasta,restaurant,italian,,,Saint Louis,38.610333,-90.2802961
+way/856998367,Lou Boccardi's Resaurant,restaurant,,,,Saint Louis,38.6098023,-90.2793099
+way/857003378,Southwest Market Cuisine,fast_food,sandwich,,,Saint Louis,38.6107769,-90.2748752
+way/857003693,Favazza's on the Hill,restaurant,italian,,,Saint Louis,38.6114824,-90.2739596
+way/857005331,O'fashion Donuts Inc,fast_food,donut,,,Saint Louis,38.6113392,-90.2724817
+way/879002975,Pappy's Smokehouse,restaurant,barbecue,,,Saint Louis,38.635045,-90.2240788
+way/911705987,Subway,fast_food,sandwich,Subway,,St. Louis,38.627031,-90.2651494
+way/945328644,Raising Cane's,fast_food,chicken,Raising Cane's,,Saint Louis,38.6294477,-90.2463726
+way/958053255,Evangeline's,bar,,,,Saint Louis,38.6500761,-90.2604696
+way/978798628,Crispy Edge,restaurant,asian,,,Saint Louis,38.6020503,-90.2580252
+way/990544107,Starbucks,cafe,coffee_shop,Starbucks,,Saint Louis,38.635627,-90.2899873
+way/996774257,Harold's Chicken Shack,fast_food,chicken,Harold's Chicken Shack,,Saint Louis,38.65783,-90.272201
+way/997335969,Starbucks,cafe,coffee_shop,Starbucks,,Saint Louis,38.6083492,-90.2408087
+way/997801818,Imo's Pizza,fast_food,pizza,Imo's Pizza,,Saint Louis,38.6001282,-90.2614171
+way/997801848,The Headless Bat,bar,,,,Saint Louis,38.6034717,-90.2610013
+way/998267812,Stan's Bar,bar,,,,Saint Louis,38.5848092,-90.2848285
+way/1028104725,Dragon's Place,restaurant,chinese,,,,38.583358,-90.2485195
+way/1028122720,,restaurant,,,,,38.5842194,-90.2501374
+way/1028122724,Meramec Tavern,bar,,,,,38.5831078,-90.2481437
+way/1029053850,Grbic,restaurant,,,,,38.5879025,-90.2567523
+way/1029684423,Burger King,fast_food,burger,Burger King,,Saint Louis,38.5891479,-90.2545967
+way/1040977158,Bellacino’s Pizza & Grinders,restaurant,pizza,,,,38.591577,-90.2938235
+way/1079868194,The Golden Hoosier,restaurant,burger,,,,38.5929381,-90.272597
+way/1083638531,El Paisano Meican Restaurant,restaurant,mexican,,,Saint Louis,38.6022383,-90.2993412
+way/1093698513,Panda Express,fast_food,chinese,Panda Express,,Saint Louis,38.5903896,-90.294174
+way/1093698515,Raising Cane's,fast_food,chicken,Raising Cane's,,,38.5909624,-90.294061
+way/1121556899,Noodles & Company,restaurant,pasta,Noodles & Company,,,38.5917217,-90.2937986
+way/1161511250,Sump Coffee,cafe,coffee_shop,,,,38.5877345,-90.2262463
+way/1209759130,Pizzeria da Gloria,restaurant,pizza,,,,38.6159298,-90.2725526
+way/1209850573,Lorenzo's Trattoria,restaurant,italian,,,,38.6172373,-90.2751497
+way/1268837415,Miami Grill,fast_food,american,Miami Grill,,Saint Louis,38.592605,-90.2830121
+way/1271586113,The Haunt,bar,,,,,38.5710545,-90.247364
+way/1297259666,St. Louis Union Station Soda Fountain,restaurant,burger;ice_cream,,,Saint Louis,38.6273254,-90.2084263
+way/1297259667,Landry's Seafood House,restaurant,seafood,,,Saint Louis,38.6279244,-90.2088362
+way/1348044271,Cafe One,fast_food,,,,,38.6406343,-90.2797878
+way/1350427480,Have A Cow Cattle Co. Cafe and Urban Farm Store,cafe,,,,Saint Louis,38.6150385,-90.2250611
+way/1351000964,Angry Beaver,bar,,,,Saint Louis,38.6189506,-90.1923526
+way/1351011329,Kilroys,bar,,,,Saint Louis,38.6196865,-90.1944511
+way/1356515641,Wave Taco,bar,,,,Saint Louis,38.6339677,-90.1978712
+way/1360928238,Starbucks,cafe,coffee_shop,Starbucks,,Saint Louis,38.6277444,-90.2870564
+way/1392166543,Domino's,fast_food,pizza,Domino's,,Saint Louis,38.6529023,-90.2628907
+way/1393657204,Fiddlehead Fern Cafe,cafe,,,,Saint Louis,38.6142636,-90.2507155
+way/1408443187,Domino's,fast_food,pizza,Domino's,,Saint Louis,38.6046925,-90.2688704
+way/1408818127,Gioia's Deli,restaurant,sandwich;salad,,,Saint Louis,38.6173817,-90.2768178
+way/1411284122,,restaurant,,,,,38.599091,-90.3000956
+way/1415433844,Taco Bell,fast_food,tex-mex,Taco Bell,,Saint Louis,38.5716048,-90.2843503
+way/1463751592,Scooter's Coffee,cafe,coffee_shop,Scooter's Coffee,,,38.5848129,-90.2764025
+way/1482082280,Crazy Bowls & Wraps,restaurant,,,,Saint Louis,38.6100824,-90.2884914
+way/1495249457,Chicago Fish and Chicken Grill,restaurant,,,,,38.6011024,-90.2312625
+way/1528525182,Riverside Diner,restaurant,diner,,,Saint Louis,38.5414529,-90.2600101
+way/1533129184,Fork & Stix,restaurant,thai,,,Saint Louis,38.6547041,-90.296282
+way/1552408020,Dunkin',fast_food,donut;coffee_shop,Dunkin',,Saint Louis,38.5883878,-90.2750338
+way/1552408022,South City Sports Bar,bar,,,,,38.5865609,-90.2760048
+way/1565059609,Cafe Nova,restaurant,greek;mediterranean,,,St. Louis,38.5793172,-90.2815255
+relation/3408660,Penn Station,fast_food,sandwich,Penn Station,,,38.59441,-90.293669
+relation/8869242,John D. McGurk's Irish Pub and Garden,bar,,,,Saint Louis,38.6075828,-90.2101449

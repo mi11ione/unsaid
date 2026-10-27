@@ -1,0 +1,5 @@
+# local state, never published
+runs/.gemini_ledger.json
+runs/.meter.mcp.json
+runs/walls.smoke.json
+__pycache__/

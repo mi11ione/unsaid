@@ -1,0 +1,237 @@
+canonical,display,asks,mentions,hidden_asks,cedric_asks,jason_asks,spellings,osm_match,osm_ids
+gioia,Gioia's Deli,37,37,13,1,5,Gioia's Deli | Gioia's Deli (Hill-style hot salami sandwich) | Gioia's Deli (hot salami sandwich),True,way/1408818127
+pappy,Pappy's Smokehouse,35,36,4,11,1,Pappy's Smokehouse | Pappy's Smokehouse (lunch specials) | Pork steak and ribs BBQ at Pappy's Smokehouse,True,way/879002975
+lee mai,Mai Lee,24,24,13,0,0,Mai Lee,False,
+sidney street,Sidney Street Cafe,23,23,1,1,7,Sidney Street Cafe | Sidney Street Cafe Bar,True,way/663647766
+sugarfire,Sugarfire Smoke House,22,23,4,9,3,Sugarfire Smoke House | Sugarfire Smoke House (Downtown) | Sugarfire Smoke House (Smoked Pastrami & BBQ),True,node/4489679876
+charlie gitto,Charlie Gitto's On The Hill,21,22,0,0,10,Charlie Gitto's Downtown | Charlie Gitto's On The Hill | Charlie Gitto's on The Hill | Charlie Gitto's on the Hill,True,node/4810036108
+blueberry hill,Blueberry Hill,20,20,1,7,1,Blueberry Hill,False,
+vicia,Vicia,14,14,3,0,1,Vicia,True,node/5844631788
+custard drewes frozen ted,Ted Drewes Frozen Custard,13,13,2,2,0,Ted Drewes Frozen Custard,False,
+louie,Louie,13,13,0,0,4,Bar Louie | Louie,False,
+tony,Tony's,13,13,0,0,11,Tony's | Tony's Bar,True,node/14185580447
+salt smoke,Salt + Smoke,12,13,1,9,0,Pork steak and ribs at Salt + Smoke | Salt + Smoke,True,node/10949963238 way/620711659
+planter,Planter's House,11,11,0,0,3,Planter's House,True,way/581999480
+candy crown,Crown Candy Kitchen,10,10,4,2,0,Crown Candy Kitchen,True,node/2924677100
+cunetto pasta,Cunetto House of Pasta,10,10,2,0,5,Cunetto House of Pasta,True,way/856997454
+bogart,Bogart's Smokehouse,10,10,0,10,0,Bogart's Smokehouse,True,way/559190582
+dominic,Dominic's Trattoria,8,8,0,0,8,Dominic's Restaurant | Dominic's Trattoria | Dominic's on The Hill | Dominic's on the Hill,False,
+sardella,Sardella,8,8,5,0,2,Sardella,False,
+joint mission taco,Mission Taco Joint,8,8,3,1,0,Mission Taco Joint,True,way/559190581
+nudo,Nudo House,7,7,6,0,0,Nudo House,True,node/13717227115
+eats lil lona,Lona's Lil Eats,7,7,3,0,0,Lona's Lil Eats,True,way/344615126
+bailey range,Bailey's Range,6,6,2,2,0,Bailey's Range,False,
+lemmons,Lemmons,6,6,3,1,0,Lemmons | Lemmons Restaurant,True,node/13013151619
+campisi mama,Mama Campisi's,6,6,0,0,5,Mama Campisi's | Toasted ravioli at Mama Campisi's,False,
+imo,Imo's Pizza,6,6,0,0,0,"Imo's Pizza | St. Louis-style pizza (Provel, thin cracker crust) at Imo's Pizza",True,node/12499166339 node/12591721275 node/12762428622 node/2553848037 node/9930595834 way/242780430 way/386000831 way/997801818
+cielo,Cielo,6,6,0,0,1,Cielo | Cielo at the Four Seasons,False,
+rooster,Rooster,6,6,1,0,0,Rooster,True,node/2595831386 way/582713004
+sado sushi,Sado Sushi,6,6,6,0,0,Sado Sushi | Sado Sushi Bar,False,
+hammerstone,Hammerstone's,6,6,1,3,1,Hammerstone's | The Hammerstone's,True,way/559190527
+pastaria,Pastaria,6,6,0,0,3,Pastaria,False,
+mango peruvian,Mango Peruvian Cuisine,6,6,6,0,0,Mango Peruvian Cuisine,False,
+hodak,Hodak's,6,6,1,5,0,Hodak's,True,node/2553575175
+sauce,Sauce on the Side,5,5,1,2,0,Sauce on the Side,True,node/12242036266 way/526471456
+annie gunn,Annie Gunn's,5,5,0,0,2,Annie Gunn's,False,
+italia,Bar Italia,5,5,0,0,5,Bar Italia,True,node/12616201134 node/14107533683 way/627473818
+lorenzo,Lorenzo's Trattoria,5,5,0,0,5,Lorenzo's Trattoria,True,way/1209850573
+schlafly,Schlafly Tap Room,5,5,0,0,0,Schlafly Tap Room,True,way/253658462
+bb blues jazz soups,"BB's Jazz, Blues & Soups",5,5,0,5,0,"BB's Jazz, Blues & Soups",False,
+broadway oyster,Broadway Oyster Bar,5,5,0,4,0,Broadway Oyster Bar,True,way/561309696
+jazz,Jazz at the Bistro,5,5,0,3,2,Jazz St. Louis | Jazz at Robbie's House of Jazz | Jazz at the Bistro,True,node/2124813842
+gin,The Gin Room,5,5,0,0,2,The Gin Room,True,node/14099836954
+grand pho,Pho Grand,5,5,5,0,0,Pho Grand,True,way/626796471
+zia,Zia's on The Hill,4,4,0,0,4,Zia's on The Hill | Zia's on the Hill,False,
+bulrush,Bulrush,4,4,0,0,0,Bulrush,False,
+distillery one square,Square One Brewery & Distillery,4,4,0,0,0,Square One Brewery & Distillery,True,node/2921245001
+beale,Beale on Broadway,4,4,0,4,0,Beale on Broadway,False,
+evangeline,Evangeline's,4,4,1,1,1,Evangeline's | Evangeline's Bistro & Pub,True,way/958053255
+seoul taco,Seoul Taco,4,4,1,0,0,Seoul Taco,True,node/6814259630
+scourse,Scourse Bar & Lounge,4,4,0,0,0,Scourse | Scourse Bar & Lounge | Scourse Lounge at Sauce,False,
+blues city,Blues City Deli,4,4,1,3,0,Blues City Deli,False,
+pie sweetie,Sweetie Pie's,4,4,0,3,0,Sweetie Pie's,False,
+mekong,Mekong Restaurant,3,3,2,0,0,Mekong Restaurant | Vietnamese pho and bánh mì at Mekong,False,
+blueprint,Blueprint Coffee,3,3,0,0,0,Blueprint Coffee | Blueprint Coffee & Cafe,True,node/3189050730 node/7885548124
+hendricks,Hendricks BBQ,3,3,0,1,1,Hendricks BBQ | Hendricks Bar,False,
+beast craft,Beast Craft BBQ Co.,3,3,1,2,0,Beast Craft BBQ Co.,False,
+chris ruth,Ruth's Chris Steak House,3,3,0,0,3,Ruth's Chris Steak House,False,
+kemoll,Kemoll's,3,3,0,0,3,Kemoll's,False,
+osage,Cafe Osage,3,3,1,0,0,Cafe Osage,False,
+southwest,Southwest Diner,3,3,0,0,0,Southwest Diner,True,way/374781113 way/857003378
+bottleworks schlafly,Schlafly Bottleworks,3,3,2,0,0,Schlafly Bottleworks | The Schlafly Bottleworks,False,
+farmers market soulard,Soulard Farmers Market,3,3,1,0,0,Soulard Farmers Market,False,
+asian hiro,Hiro Asian Kitchen,3,3,3,0,0,Hiro Asian Kitchen,False,
+blood sand,Blood & Sand,3,3,2,0,0,Blood & Sand,True,node/12563352182
+evil olive,Evil Olive,3,3,1,0,0,Evil Olive,False,
+libertine,The Libertine,3,3,3,0,0,The Libertine,False,
+retreat,Retreat Gastropub,3,3,2,0,0,Retreat Gastropub,True,node/10837538534
+bone comedy funny,Funny Bone Comedy Club,3,3,0,3,0,Funny Bone Comedy Club,False,
+chestnut urban,Urban Chestnut Brewing Company,3,3,0,1,0,Urban Chestnut Brewing Company,True,node/2493279486 node/2924997510
+dark,The Dark Room,3,3,0,3,0,The Dark Room,False,
+marcella,Trattoria Marcella,3,3,0,0,3,Trattoria Marcella,True,node/7965479650
+nixta,Nixta,3,3,3,0,0,Nixta,True,node/13000346618
+niche taste,Taste by Niche,3,3,0,0,1,Taste by Niche,False,
+freres les,Bar Les Frères,3,3,0,0,0,Bar Les Frères,False,
+mathew,Mathew's Kitchen,3,3,3,0,0,Mathew's Kitchen,True,node/2553858172
+publico,Público,3,3,2,0,0,Público,False,
+crossing,Crossing Bakery Café,2,2,1,0,0,Crossing Bakery Café | The Crossing,False,
+charlie rich,Gerber sandwich at Rich & Charlie's,2,2,0,0,1,Gerber sandwich at Rich & Charlie's | Rich & Charlie's,False,
+gus pretzels,Gus' Pretzels (soft pretzels),2,2,1,0,0,Gus' Pretzels | Gus' Pretzels (soft pretzels),False,
+pi,Pi Pizzeria,2,2,0,0,0,Pi Pizzeria,False,
+al,Al's Restaurant,2,2,0,0,2,Al's Restaurant,True,way/270603647
+lombardo,Lombardo's Trattoria,2,2,0,0,2,Lombardo's Trattoria,True,node/12329597152
+anthonino taverna,Anthonino's Taverna,2,2,0,0,2,Anthonino's Taverna,True,node/4400541690
+brasserie niche,Brasserie by Niche,2,2,0,0,1,Brasserie by Niche,True,node/3428677297
+fancy ices plain,Ices Plain & Fancy,2,2,0,0,0,Ices Plain & Fancy,False,
+bronco el taqueria,Taqueria El Bronco,2,2,1,0,0,Taqueria El Bronco,True,node/4485922459
+mad tomato,Mad Tomato,2,2,0,0,0,Mad Tomato,False,
+dogtown,Dogtown Tavern,2,2,0,0,0,Dogtown Tavern,False,
+gringo,Gringo,2,2,0,0,1,Gringo,False,
+sump,Sump Coffee,2,2,2,0,0,Sump Coffee,True,way/1161511250
+beijing tasty,Beijing Tasty House,2,2,2,0,0,Beijing Tasty House,False,
+grace meat three,Grace Meat + Three,2,2,2,0,0,Grace Meat + Three,True,node/9244854382
+dressel,Dressel's Pub,2,2,0,0,2,Dressel's Pub,True,way/263900997
+niche,Niche,2,2,0,0,0,Niche,True,node/2694232650 node/3428677297
+balkan box treat,Balkan Treat Box,2,2,1,0,0,Balkan Treat Box,False,
+ke tai,Tai Ke,2,2,2,0,0,Tai Ke,False,
+rigazzi,Rigazzi's,2,2,0,0,2,Rigazzi's,True,node/4810036107
+dierdorf hart,Dierdorf & Hart's Steakhouse,2,2,0,0,2,Dierdorf & Hart's Steak House | Dierdorf & Hart's Steakhouse,False,
+elmwood,Elmwood,2,2,1,0,0,Elmwood,False,
+o smoki,Smoki O's,2,2,0,2,0,Smoki O's,False,
+baan chao,Chao Baan,2,2,1,0,0,Chao Baan,True,node/6814259629
+ranoush,Ranoush,2,2,1,0,0,Ranoush,True,node/6162389444
+cate chinese zone,Cate Zone Chinese Cafe,2,2,1,0,0,Cate Zone Chinese Cafe,False,
+bellefontaine cemetery,Bellefontaine Cemetery,2,2,2,0,0,Bellefontaine Cemetery,False,
+laumeier park sculpture,Laumeier Sculpture Park,2,2,2,0,0,Laumeier Sculpture Park,False,
+cate zone,Cate Zone Bistro,2,2,2,0,0,Cate Zone Bistro | Cate Zone Diner,False,
+brasil yemanja,Yemanja Brasil,1,1,1,0,0,Yemanja Brasil,False,
+buffet pie soul spot sweetie,Sweetie Pie's Soul Food Buffet Spot,1,1,1,0,0,Sweetie Pie's Soul Food Buffet Spot,False,
+den fortel,Fortel's Pizza Den,1,1,1,0,0,Fortel's Pizza Den,False,
+ruma,Ruma's Deli,1,1,1,0,0,Ruma's Deli,False,
+avenue park,Gooey butter cake at Park Avenue Coffee,1,1,0,0,0,Gooey butter cake at Park Avenue Coffee,True,node/14203780166 node/2892663270 node/3180141913 node/3393214223
+drewes ted,Frozen custard at Ted Drewes,1,1,0,0,0,Frozen custard at Ted Drewes,False,
+grbic,Bosnian ćevapi at Grbic Restaurant,1,1,0,0,0,Bosnian ćevapi at Grbic Restaurant,True,way/1029053850
+shake shake steakburger,Steak 'n Shake steakburger and shake,1,1,0,0,0,Steak 'n Shake steakburger and shake,False,
+slinger,Slinger at Crown Candy Kitchen,1,1,0,0,0,Slinger at Crown Candy Kitchen,True,node/2924677100
+fox park,Fox Park Cafe,1,1,0,0,0,Fox Park Cafe,False,
+pastry piccione,Piccione Pastry,1,1,0,0,0,Piccione Pastry,False,
+drive hi pointe,Hi-Pointe Drive-In,1,1,0,1,0,Hi-Pointe Drive-In,True,node/11897388996 node/13179451984
+gramophone,The Gramophone,1,1,0,1,0,The Gramophone,True,way/363772848
+hill stage,The Hill Stage,1,1,0,1,0,The Hill Stage,False,
+pirate,Pirate's Pub,1,1,0,1,0,Pirate's Pub,False,
+favazza,Favazza's,1,1,0,0,1,Favazza's,True,way/857003693
+mike shannon steaks,Mike Shannon's Steaks and Seafood,1,1,0,0,1,Mike Shannon's Steaks and Seafood,False,
+rosalita,Rosalita's Cantina,1,1,0,0,1,Rosalita's Cantina,True,node/2122538584
+sophia,Sophia's,1,1,0,0,1,Sophia's,False,
+gooey louie,Gooey Louie,1,1,0,0,0,Gooey Louie,False,
+arts eats lemp neighborhood,Lemp Neighborhood Arts & Eats (Cherokee Street),1,1,0,0,0,Lemp Neighborhood Arts & Eats (Cherokee Street),False,
+botanical missouri,Missouri Botanical Garden,1,1,0,0,0,Missouri Botanical Garden,False,
+busch stadium,Busch Stadium (Cardinals game),1,1,0,0,0,Busch Stadium (Cardinals game),False,
+city museum,City Museum,1,1,0,0,0,City Museum,False,
+farmers grove market tower,Tower Grove Farmers Market,1,1,0,0,0,Tower Grove Farmers Market,False,
+forest park,"Forest Park (Art Museum, Zoo, The Muny)",1,1,0,0,0,"Forest Park (Art Museum, Zoo, The Muny)",False,
+bailey,Bailey's Smokehouse,1,1,0,1,0,Bailey's Smokehouse,True,node/12498600802
+kingside,Kingside BBQ,1,1,0,1,0,Kingside BBQ,True,node/3191071559 node/3429705325
+skip,Skip's Smokehouse,1,1,0,1,0,Skip's Smokehouse,False,
+mud,The Mud House,1,1,1,0,0,The Mud House,True,node/4398962091
+jimmy,Jimmy's on the Park,1,1,0,0,1,Jimmy's on the Park,False,
+preston,Preston's Steakhouse,1,1,0,0,1,Preston's Steakhouse,True,node/12617523081
+belly yellow,Yellow Belly,1,1,1,0,0,Yellow Belly,True,node/12532320660
+hamilton heights,Hamilton Heights Tavern,1,1,1,0,0,Hamilton Heights Tavern,False,
+gian tony,Gian-Tony's,1,1,0,0,1,Gian-Tony's,True,node/14185580447
+fiesta mexican,Fiesta Mexican Restaurant,1,1,1,0,0,Fiesta Mexican Restaurant,False,
+han ju,Han Ju,1,1,1,0,0,Han Ju,False,
+pasta porano,Porano Pasta,1,1,0,0,0,Porano Pasta,False,
+eat rite,Eat-Rite Diner,1,1,0,0,0,Eat-Rite Diner,False,
+fountain,The Fountain on Locust,1,1,0,0,0,The Fountain on Locust,True,node/10960879257
+tacos tower,Tower Tacos,1,1,0,0,0,Tower Tacos,False,
+de set vin,Vin de Set,1,1,0,1,0,Vin de Set,False,
+evie mae,Evie Mae's BBQ,1,1,0,1,0,Evie Mae's BBQ,False,
+chinese fortune,Fortune Chinese Restaurant,1,1,1,0,0,Fortune Chinese Restaurant,False,
+dive whitebox,The Whitebox Dive Bar,1,1,1,0,0,The Whitebox Dive Bar,False,
+mayfair,Mayfair Bakery & Café,1,1,1,0,0,Mayfair Bakery & Café,False,
+element,Element,1,1,0,0,0,Element,False,
+mill,The Mill,1,1,0,0,0,The Mill,False,
+campisi mamma,Mamma Campisi's,1,1,0,0,1,Mamma Campisi's,False,
+mirabelle,Mirabelle Bistro,1,1,1,0,0,Mirabelle Bistro,False,
+sarah,Sarah's Bakery & Cafe,1,1,1,0,0,Sarah's Bakery & Cafe,False,
+artist sophie,Sophie's Artist Lounge,1,1,0,0,1,Sophie's Artist Lounge,False,
+chase,The Chase Club (Chase Park Plaza),1,1,0,0,1,The Chase Club (Chase Park Plaza),True,node/6162316611
+parlor,The Parlor at The Chase,1,1,0,0,1,The Parlor at The Chase,True,node/6574712701
+tower,The Tower Tavern,1,1,0,0,1,The Tower Tavern,True,node/2502354752 node/6726576700 node/9548443317
+truffle,Truffle,1,1,0,0,0,Truffle,False,
+fork stix,Fork & Stix,1,1,0,0,0,Fork & Stix,True,way/1533129184
+global market,Global Foods Market Café,1,1,0,0,0,Global Foods Market Café,False,
+kampai sushi,Kampai Sushi Bar,1,1,0,0,0,Kampai Sushi Bar,True,node/8993197286
+my oh pie,Pie Oh My,1,1,0,0,0,Pie Oh My,False,
+oak olive,Olive + Oak,1,1,0,0,0,Olive + Oak,False,
+pepper sweet,Sweet Pepper (Vegan Menu),1,1,0,0,0,Sweet Pepper (Vegan Menu),False,
+tree,Tree House,1,1,0,0,0,Tree House,True,way/582713103
+abbey grove tower,Tower Grove Abbey,1,1,0,0,0,Tower Grove Abbey,False,
+home winslow,Winslow's Home,1,1,0,0,0,Winslow's Home,False,
+blue ocean sushi,Blue Ocean Sushi,1,1,1,0,0,Blue Ocean Sushi,False,
+cajun gras mardi,Mardi Gras Cajun Kitchen,1,1,1,0,0,Mardi Gras Cajun Kitchen,False,
+kounter kulture,Kounter Kulture,1,1,1,0,0,Kounter Kulture,True,node/7965448502
+chicken fried gus,Gus' Fried Chicken,1,1,0,1,0,Gus' Fried Chicken,False,
+savor,Savor,1,1,0,1,0,Savor,False,
+soul,Cafe Soul,1,1,0,1,0,Cafe Soul,True,node/12591797806 node/13809791288 node/13818367808 node/9244761718
+1000 prime,Prime 1000,1,1,0,0,1,Prime 1000,False,
+lemp,Lemp Brewery Tap Room,1,1,0,0,1,Lemp Brewery Tap Room,True,node/11432794680
+grove tower,Tower Grove Tavern,1,1,1,0,0,Tower Grove Tavern,False,
+ventana,Cafe Ventana,1,1,1,0,0,Cafe Ventana,False,
+ribs roper,Roper's Ribs,1,1,0,1,0,Roper's Ribs,False,
+black griot history museum,The Griot Museum of Black History,1,1,0,1,0,The Griot Museum of Black History,False,
+concert sheldon,The Sheldon Concert Hall,1,1,0,1,0,The Sheldon Concert Hall,False,
+delmar,Delmar Hall,1,1,0,1,0,Delmar Hall,True,node/13717227115
+fabulous fox theatre,The Fabulous Fox Theatre,1,1,0,1,0,The Fabulous Fox Theatre,False,
+gaslight theater,Gaslight Theater,1,1,0,1,0,Gaslight Theater,False,
+pageant,The Pageant,1,1,0,1,0,The Pageant,False,
+stifel theatre,Stifel Theatre,1,1,0,1,0,Stifel Theatre,False,
+beauty southern,Southern Beauty Kitchen,1,1,1,0,0,Southern Beauty Kitchen,False,
+beans pork,Pork & Beans BBQ,1,1,1,0,0,Pork & Beans BBQ,False,
+hong noodle wei,Wei Hong Noodle House,1,1,1,0,0,Wei Hong Noodle House,False,
+italiano mangia,Mangia Italiano,1,1,1,0,0,Mangia Italiano,False,
+cicero,Cicero's,1,1,0,0,0,Cicero's,False,
+alton argosy casino,Argosy Casino Alton,1,1,0,0,1,Argosy Casino Alton,False,
+ameristar casino charles resort spa,Ameristar Casino Resort Spa St. Charles,1,1,0,0,1,Ameristar Casino Resort Spa St. Charles,False,
+blue duck,The Blue Duck,1,1,0,0,1,The Blue Duck,False,
+casino hollywood,Hollywood Casino St. Louis,1,1,0,0,1,Hollywood Casino St. Louis,False,
+casino lumiere place,Lumière Place Casino,1,1,0,0,1,Lumière Place Casino,False,
+casino poker rivers,Rivers Casino & Poker Room (Hollywood Casino poker room),1,1,0,0,1,Rivers Casino & Poker Room (Hollywood Casino poker room),False,
+triumph,Triumph Grill,1,1,0,0,1,Triumph Grill,True,node/2123864848
+alternative ballpark free schlafly village,Ballpark Village-Free Alternative: Schlafly Tap Room,1,1,1,0,0,Ballpark Village-Free Alternative: Schlafly Tap Room,False,
+area botanical climatron missouri neighborhood shaw walk,Missouri Botanical Garden's Climatron Area & Shaw Neighborhood Walk,1,1,1,0,0,Missouri Botanical Garden's Climatron Area & Shaw Neighborhood Walk,False,
+arts center district grand,Grand Center Arts District (Pulitzer Arts Foundation),1,1,1,0,0,Grand Center Arts District (Pulitzer Arts Foundation),False,
+cahokia historic mounds site state,Cahokia Mounds State Historic Site,1,1,1,0,0,Cahokia Mounds State Historic Site,False,
+cherokee street,Cherokee Street,1,1,1,0,0,Cherokee Street,False,
+city citygarden museum neighbor park sculpture,City Museum's Neighbor: Citygarden Sculpture Park,1,1,1,0,0,City Museum's Neighbor: Citygarden Sculpture Park,False,
+farmers grove market park sunday tower,Tower Grove Park & Sunday Farmers Market,1,1,1,0,0,Tower Grove Park & Sunday Farmers Market,False,
+hill,The Hill (Italian bakeries and delis),1,1,1,0,0,The Hill (Italian bakeries and delis),True,node/14073757301 node/2325760610 node/4809991969 node/9735126251 way/605725399 way/854407293 way/857003693
+dogs hot jims,Jims Hot Dogs,1,1,1,0,0,Jims Hot Dogs,False,
+ethiopian mesob,Mesob Ethiopian Restaurant,1,1,1,0,0,Mesob Ethiopian Restaurant,False,
+duck shaved,The Shaved Duck,1,1,0,1,0,The Shaved Duck,True,node/5835092176
+market,Smoke House Market,1,1,0,1,0,Smoke House Market,True,node/12306447737 node/13298348253 node/6550433637 node/6779563285 node/767555934 way/477718712 way/582713102 way/857003378
+alley truck vietnamese,"Vietnamese Food Truck Alley on South Grand (Mekong, Pho Grand)",1,1,1,0,0,"Vietnamese Food Truck Alley on South Grand (Mekong, Pho Grand)",False,
+boccardi lou,Lou Boccardi's,1,1,1,0,0,Lou Boccardi's,True,way/856998367
+cellar maplewood project side,Maplewood Brewing Company / Side Project Cellar,1,1,1,0,0,Maplewood Brewing Company / Side Project Cellar,False,
+companion,Companion Bakery Wine Bar at Urban Chestnut Brewing,1,1,1,0,0,Companion Bakery Wine Bar at Urban Chestnut Brewing,True,node/2493279486 node/2924997510
+earthbound,Earthbound Beer,1,1,1,0,0,Earthbound Beer,True,node/4485929019
+kayak,Kayak's Coffee,1,1,0,0,0,Kayak's Coffee,False,
+butter cake gooey gooey louie,Gooey Louie's Gooey Butter Cake at Park Avenue Coffee,1,1,0,0,0,Gooey Louie's Gooey Butter Cake at Park Avenue Coffee,True,node/14203780166 node/2892663270 node/3180141913 node/3393214223
+bean behind,Behind the Bean,1,1,0,0,0,Behind the Bean,False,
+blueberry duck hill,Blueberry Hill Duck Room,1,1,0,0,0,Blueberry Hill Duck Room,False,
+ring whiskey,The Whiskey Ring,1,1,0,0,0,The Whiskey Ring,True,node/4485916710
+alley annex city museum rooftop,City Museum Rooftop Annex Alley,1,1,1,0,0,City Museum Rooftop Annex Alley,False,
+antique cherokee murals row street,Cherokee Street Murals & Antique Row,1,1,1,0,0,Cherokee Street Murals & Antique Row,False,
+area botanical climatron gardens hidden missouri,Missouri Botanical Garden's Climatron Area Hidden Gardens,1,1,1,0,0,Missouri Botanical Garden's Climatron Area Hidden Gardens,False,
+arts foundation pulitzer,The Pulitzer Arts Foundation,1,1,1,0,0,The Pulitzer Arts Foundation,False,
+ballpark patio sugarfire village,Sugarfire Smoke House Ballpark Village Patio,1,1,1,0,0,Sugarfire Smoke House Ballpark Village Patio,False,
+cahokia mounds overlook trail,Cahokia Mounds Overlook Trail,1,1,1,0,0,Cahokia Mounds Overlook Trail,False,
+farmers grove market park tower,Tower Grove Park Farmers' Market,1,1,1,0,0,Tower Grove Park Farmers' Market,False,
+candicci,Candicci's,1,1,0,0,1,Candicci's,False,
+italian night sugarfire,Sugarfire Smoke House Italian Night,1,1,0,0,1,Sugarfire Smoke House Italian Night,False,
+chauhan indian,Chauhan Indian Restaurant,1,1,1,0,0,Chauhan Indian Restaurant,False,
+ethiopian meskerem,Meskerem Ethiopian Restaurant,1,1,1,0,0,Meskerem Ethiopian Restaurant,True,node/5917366430
+international jay,Jay's International Foods,1,1,1,0,0,Jay's International Foods,False,
+seoul,Seoul Garden,1,1,1,0,0,Seoul Garden,True,node/6814259630
+lucas park,Lucas Park Grille,1,1,0,1,0,Lucas Park Grille,False,

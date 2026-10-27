@@ -1,0 +1,1154 @@
+[
+ {
+  "id": "nyc-cedric-10",
+  "city": "nyc",
+  "family": "taste",
+  "person": "cedric",
+  "phrasing": "I love rib tips and old school comedy, where should I eat in Manhattan or Brooklyn",
+  "prompt": "I love rib tips and old school comedy, where should I eat in Manhattan or Brooklyn Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 0
+ },
+ {
+  "id": "stl-hidden-09",
+  "city": "stl",
+  "family": "hidden",
+  "person": null,
+  "phrasing": "tell me somewhere to eat in St. Louis that nobody else would tell me",
+  "prompt": "tell me somewhere to eat in St. Louis that nobody else would tell me Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 1
+ },
+ {
+  "id": "nyc-stranger-08",
+  "city": "nyc",
+  "family": "stranger",
+  "person": null,
+  "phrasing": "food snob from Chicago visiting New York, impress me",
+  "prompt": "food snob from Chicago visiting New York, impress me Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 2
+ },
+ {
+  "id": "nyc-cedric-02",
+  "city": "nyc",
+  "family": "taste",
+  "person": "cedric",
+  "phrasing": "best rib tips in NYC?",
+  "prompt": "best rib tips in NYC? Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 3
+ },
+ {
+  "id": "stl-generic-13",
+  "city": "stl",
+  "family": "generic",
+  "person": null,
+  "phrasing": "what do people from St. Louis actually eat, and where",
+  "prompt": "what do people from St. Louis actually eat, and where Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 4
+ },
+ {
+  "id": "stl-generic-04",
+  "city": "stl",
+  "family": "generic",
+  "person": null,
+  "phrasing": "what are the must-try restaurants in St. Louis",
+  "prompt": "what are the must-try restaurants in St. Louis Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 5
+ },
+ {
+  "id": "nyc-jason-02",
+  "city": "nyc",
+  "family": "taste",
+  "person": "jason",
+  "phrasing": "where's the Carbone of New York?",
+  "prompt": "where's the Carbone of New York? Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 6
+ },
+ {
+  "id": "nyc-hidden-13",
+  "city": "nyc",
+  "family": "hidden",
+  "person": null,
+  "phrasing": "local secret spots to eat in New York",
+  "prompt": "local secret spots to eat in New York Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 7
+ },
+ {
+  "id": "stl-stranger-03",
+  "city": "stl",
+  "family": "stranger",
+  "person": null,
+  "phrasing": "taking my two kids (6 and 9) to St. Louis, where do we eat that won't be a nightmare",
+  "prompt": "taking my two kids (6 and 9) to St. Louis, where do we eat that won't be a nightmare Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 8
+ },
+ {
+  "id": "stl-generic-07",
+  "city": "stl",
+  "family": "generic",
+  "person": null,
+  "phrasing": "best food in St Louis",
+  "prompt": "best food in St Louis Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 9
+ },
+ {
+  "id": "stl-cedric-07",
+  "city": "stl",
+  "family": "taste",
+  "person": "cedric",
+  "phrasing": "I'm into Kings of Comedy, Maze, and good barbecue. restaurants and bars in St. Louis?",
+  "prompt": "I'm into Kings of Comedy, Maze, and good barbecue. restaurants and bars in St. Louis? Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 10
+ },
+ {
+  "id": "nyc-generic-01",
+  "city": "nyc",
+  "family": "generic",
+  "person": null,
+  "phrasing": "where should I eat in New York?",
+  "prompt": "where should I eat in New York? Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 11
+ },
+ {
+  "id": "nyc-generic-07",
+  "city": "nyc",
+  "family": "generic",
+  "person": null,
+  "phrasing": "best food in Manhattan or Brooklyn",
+  "prompt": "best food in Manhattan or Brooklyn Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 12
+ },
+ {
+  "id": "stl-jason-06",
+  "city": "stl",
+  "family": "taste",
+  "person": "jason",
+  "phrasing": "steakhouses and red sauce Italian in STL, Sinatra playing ideally",
+  "prompt": "steakhouses and red sauce Italian in STL, Sinatra playing ideally Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 13
+ },
+ {
+  "id": "stl-jason-01",
+  "city": "stl",
+  "family": "taste",
+  "person": "jason",
+  "phrasing": "restaurants in St. Louis for someone who loves Carbone",
+  "prompt": "restaurants in St. Louis for someone who loves Carbone Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 14
+ },
+ {
+  "id": "stl-generic-00",
+  "city": "stl",
+  "family": "generic",
+  "person": null,
+  "phrasing": "best places to eat and drink in St. Louis",
+  "prompt": "best places to eat and drink in St. Louis Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 15
+ },
+ {
+  "id": "nyc-stranger-04",
+  "city": "nyc",
+  "family": "stranger",
+  "person": null,
+  "phrasing": "in New York for a work conference, need somewhere good to take a client and a bar after",
+  "prompt": "in New York for a work conference, need somewhere good to take a client and a bar after Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 16
+ },
+ {
+  "id": "stl-generic-09",
+  "city": "stl",
+  "family": "generic",
+  "person": null,
+  "phrasing": "first time in St. Louis, what are the places I have to eat at",
+  "prompt": "first time in St. Louis, what are the places I have to eat at Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 17
+ },
+ {
+  "id": "nyc-hidden-11",
+  "city": "nyc",
+  "family": "hidden",
+  "person": null,
+  "phrasing": "I've already done all the famous spots in New York. where do I go now?",
+  "prompt": "I've already done all the famous spots in New York. where do I go now? Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 18
+ },
+ {
+  "id": "stl-stranger-06",
+  "city": "stl",
+  "family": "stranger",
+  "person": null,
+  "phrasing": "just moved to St. Louis, where should I go to feel like a local",
+  "prompt": "just moved to St. Louis, where should I go to feel like a local Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 19
+ },
+ {
+  "id": "nyc-generic-02",
+  "city": "nyc",
+  "family": "generic",
+  "person": null,
+  "phrasing": "top restaurants in New York",
+  "prompt": "top restaurants in New York Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 20
+ },
+ {
+  "id": "stl-cedric-01",
+  "city": "stl",
+  "family": "taste",
+  "person": "cedric",
+  "phrasing": "where can I get good rib tips in St. Louis",
+  "prompt": "where can I get good rib tips in St. Louis Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 21
+ },
+ {
+  "id": "stl-hidden-14",
+  "city": "stl",
+  "family": "hidden",
+  "person": null,
+  "phrasing": "under the radar restaurants and bars in St Louis",
+  "prompt": "under the radar restaurants and bars in St Louis Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 22
+ },
+ {
+  "id": "nyc-cedric-03",
+  "city": "nyc",
+  "family": "taste",
+  "person": "cedric",
+  "phrasing": "I'm a huge Frankie Beverly and Maze fan, where should I go out to eat and drink in New York",
+  "prompt": "I'm a huge Frankie Beverly and Maze fan, where should I go out to eat and drink in New York Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 23
+ },
+ {
+  "id": "stl-jason-00",
+  "city": "stl",
+  "family": "taste",
+  "person": "jason",
+  "phrasing": "I love Frank Sinatra, Rounders and Carbone. where should I eat and drink in St. Louis?",
+  "prompt": "I love Frank Sinatra, Rounders and Carbone. where should I eat and drink in St. Louis? Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 24
+ },
+ {
+  "id": "nyc-cedric-04",
+  "city": "nyc",
+  "family": "taste",
+  "person": "cedric",
+  "phrasing": "places in New York for someone who loves The Original Kings of Comedy",
+  "prompt": "places in New York for someone who loves The Original Kings of Comedy Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 25
+ },
+ {
+  "id": "nyc-hidden-07",
+  "city": "nyc",
+  "family": "hidden",
+  "person": null,
+  "phrasing": "places to eat in New York most visitors never hear of",
+  "prompt": "places to eat in New York most visitors never hear of Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 26
+ },
+ {
+  "id": "nyc-generic-00",
+  "city": "nyc",
+  "family": "generic",
+  "person": null,
+  "phrasing": "best places to eat and drink in New York",
+  "prompt": "best places to eat and drink in New York Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 27
+ },
+ {
+  "id": "nyc-generic-13",
+  "city": "nyc",
+  "family": "generic",
+  "person": null,
+  "phrasing": "what do people from New York actually eat, and where",
+  "prompt": "what do people from New York actually eat, and where Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 28
+ },
+ {
+  "id": "stl-cedric-05",
+  "city": "stl",
+  "family": "taste",
+  "person": "cedric",
+  "phrasing": "rib tips, old school R&B, stand-up comedy. plan where I eat and drink in St. Louis",
+  "prompt": "rib tips, old school R&B, stand-up comedy. plan where I eat and drink in St. Louis Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 29
+ },
+ {
+  "id": "nyc-cedric-07",
+  "city": "nyc",
+  "family": "taste",
+  "person": "cedric",
+  "phrasing": "I'm into Kings of Comedy, Maze, and good barbecue. restaurants and bars in New York?",
+  "prompt": "I'm into Kings of Comedy, Maze, and good barbecue. restaurants and bars in New York? Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 30
+ },
+ {
+  "id": "stl-hidden-06",
+  "city": "stl",
+  "family": "hidden",
+  "person": null,
+  "phrasing": "most underrated bars and restaurants STL",
+  "prompt": "most underrated bars and restaurants STL Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 31
+ },
+ {
+  "id": "nyc-jason-04",
+  "city": "nyc",
+  "family": "taste",
+  "person": "jason",
+  "phrasing": "I'm a big Sinatra fan, where should I eat and drink in New York",
+  "prompt": "I'm a big Sinatra fan, where should I eat and drink in New York Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 32
+ },
+ {
+  "id": "nyc-jason-00",
+  "city": "nyc",
+  "family": "taste",
+  "person": "jason",
+  "phrasing": "I love Frank Sinatra, Rounders and Carbone. where should I eat and drink in New York?",
+  "prompt": "I love Frank Sinatra, Rounders and Carbone. where should I eat and drink in New York? Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 33
+ },
+ {
+  "id": "stl-jason-02",
+  "city": "stl",
+  "family": "taste",
+  "person": "jason",
+  "phrasing": "where's the Carbone of St. Louis?",
+  "prompt": "where's the Carbone of St. Louis? Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 34
+ },
+ {
+  "id": "stl-hidden-03",
+  "city": "stl",
+  "family": "hidden",
+  "person": null,
+  "phrasing": "not touristy places to eat in St. Louis",
+  "prompt": "not touristy places to eat in St. Louis Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 35
+ },
+ {
+  "id": "nyc-cedric-00",
+  "city": "nyc",
+  "family": "taste",
+  "person": "cedric",
+  "phrasing": "I love Frankie Beverly & Maze, The Original Kings of Comedy and rib tips. where should I eat and drink in New York?",
+  "prompt": "I love Frankie Beverly & Maze, The Original Kings of Comedy and rib tips. where should I eat and drink in New York? Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 36
+ },
+ {
+  "id": "stl-stranger-00",
+  "city": "stl",
+  "family": "stranger",
+  "person": null,
+  "phrasing": "visiting my mom in St. Louis next week, she's 74 and doesn't like loud places. where should we eat?",
+  "prompt": "visiting my mom in St. Louis next week, she's 74 and doesn't like loud places. where should we eat? Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 37
+ },
+ {
+  "id": "stl-stranger-07",
+  "city": "stl",
+  "family": "stranger",
+  "person": null,
+  "phrasing": "nurse working nights in St. Louis, where can I get good food late",
+  "prompt": "nurse working nights in St. Louis, where can I get good food late Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 38
+ },
+ {
+  "id": "nyc-generic-10",
+  "city": "nyc",
+  "family": "generic",
+  "person": null,
+  "phrasing": "what's good to eat around New York",
+  "prompt": "what's good to eat around New York Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 39
+ },
+ {
+  "id": "nyc-hidden-00",
+  "city": "nyc",
+  "family": "hidden",
+  "person": null,
+  "phrasing": "hidden gems to eat and drink in New York",
+  "prompt": "hidden gems to eat and drink in New York Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 40
+ },
+ {
+  "id": "stl-generic-08",
+  "city": "stl",
+  "family": "generic",
+  "person": null,
+  "phrasing": "where to get a drink in St. Louis tonight",
+  "prompt": "where to get a drink in St. Louis tonight Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 41
+ },
+ {
+  "id": "stl-cedric-00",
+  "city": "stl",
+  "family": "taste",
+  "person": "cedric",
+  "phrasing": "I love Frankie Beverly & Maze, The Original Kings of Comedy and rib tips. where should I eat and drink in St. Louis?",
+  "prompt": "I love Frankie Beverly & Maze, The Original Kings of Comedy and rib tips. where should I eat and drink in St. Louis? Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 42
+ },
+ {
+  "id": "nyc-hidden-10",
+  "city": "nyc",
+  "family": "hidden",
+  "person": null,
+  "phrasing": "where to eat in New York, but skip anything every AI would say",
+  "prompt": "where to eat in New York, but skip anything every AI would say Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 43
+ },
+ {
+  "id": "stl-hidden-00",
+  "city": "stl",
+  "family": "hidden",
+  "person": null,
+  "phrasing": "hidden gems to eat and drink in St. Louis",
+  "prompt": "hidden gems to eat and drink in St. Louis Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 44
+ },
+ {
+  "id": "nyc-jason-07",
+  "city": "nyc",
+  "family": "taste",
+  "person": "jason",
+  "phrasing": "where would Frank Sinatra eat in New York today?",
+  "prompt": "where would Frank Sinatra eat in New York today? Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 45
+ },
+ {
+  "id": "stl-stranger-04",
+  "city": "stl",
+  "family": "stranger",
+  "person": null,
+  "phrasing": "in St. Louis for a work conference, need somewhere good to take a client and a bar after",
+  "prompt": "in St. Louis for a work conference, need somewhere good to take a client and a bar after Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 46
+ },
+ {
+  "id": "nyc-generic-04",
+  "city": "nyc",
+  "family": "generic",
+  "person": null,
+  "phrasing": "what are the must-try restaurants in New York",
+  "prompt": "what are the must-try restaurants in New York Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 47
+ },
+ {
+  "id": "nyc-cedric-08",
+  "city": "nyc",
+  "family": "taste",
+  "person": "cedric",
+  "phrasing": "best soul food and barbecue in New York, I live for rib tips",
+  "prompt": "best soul food and barbecue in New York, I live for rib tips Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 48
+ },
+ {
+  "id": "nyc-hidden-14",
+  "city": "nyc",
+  "family": "hidden",
+  "person": null,
+  "phrasing": "under the radar restaurants and bars in Manhattan or Brooklyn",
+  "prompt": "under the radar restaurants and bars in Manhattan or Brooklyn Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 49
+ },
+ {
+  "id": "nyc-jason-10",
+  "city": "nyc",
+  "family": "taste",
+  "person": "jason",
+  "phrasing": "if I like Carbone what should I try in Manhattan or Brooklyn",
+  "prompt": "if I like Carbone what should I try in Manhattan or Brooklyn Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 50
+ },
+ {
+  "id": "nyc-hidden-05",
+  "city": "nyc",
+  "family": "hidden",
+  "person": null,
+  "phrasing": "underrated restaurants in New York",
+  "prompt": "underrated restaurants in New York Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 51
+ },
+ {
+  "id": "nyc-jason-06",
+  "city": "nyc",
+  "family": "taste",
+  "person": "jason",
+  "phrasing": "steakhouses and red sauce Italian in NYC, Sinatra playing ideally",
+  "prompt": "steakhouses and red sauce Italian in NYC, Sinatra playing ideally Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 52
+ },
+ {
+  "id": "stl-jason-08",
+  "city": "stl",
+  "family": "taste",
+  "person": "jason",
+  "phrasing": "I love Rounders, poker, Sinatra and a great veal parm. dinner and drinks in St. Louis?",
+  "prompt": "I love Rounders, poker, Sinatra and a great veal parm. dinner and drinks in St. Louis? Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 53
+ },
+ {
+  "id": "nyc-generic-11",
+  "city": "nyc",
+  "family": "generic",
+  "person": null,
+  "phrasing": "recommend some restaurants and bars in New York",
+  "prompt": "recommend some restaurants and bars in New York Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 54
+ },
+ {
+  "id": "stl-hidden-07",
+  "city": "stl",
+  "family": "hidden",
+  "person": null,
+  "phrasing": "places to eat in St. Louis most visitors never hear of",
+  "prompt": "places to eat in St. Louis most visitors never hear of Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 55
+ },
+ {
+  "id": "stl-jason-09",
+  "city": "stl",
+  "family": "taste",
+  "person": "jason",
+  "phrasing": "classic swanky bars in St. Louis for a Sinatra guy",
+  "prompt": "classic swanky bars in St. Louis for a Sinatra guy Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 56
+ },
+ {
+  "id": "nyc-cedric-06",
+  "city": "nyc",
+  "family": "taste",
+  "person": "cedric",
+  "phrasing": "where would a Frankie Beverly & Maze fan eat in New York?",
+  "prompt": "where would a Frankie Beverly & Maze fan eat in New York? Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 57
+ },
+ {
+  "id": "stl-stranger-05",
+  "city": "stl",
+  "family": "stranger",
+  "person": null,
+  "phrasing": "anniversary dinner in St. Louis, 10 years, want somewhere special",
+  "prompt": "anniversary dinner in St. Louis, 10 years, want somewhere special Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 58
+ },
+ {
+  "id": "stl-stranger-02",
+  "city": "stl",
+  "family": "stranger",
+  "person": null,
+  "phrasing": "my girlfriend is vegan and I'm not, where can we both eat in St. Louis",
+  "prompt": "my girlfriend is vegan and I'm not, where can we both eat in St. Louis Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 59
+ },
+ {
+  "id": "nyc-hidden-01",
+  "city": "nyc",
+  "family": "hidden",
+  "person": null,
+  "phrasing": "New York hidden gem restaurants",
+  "prompt": "New York hidden gem restaurants Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 60
+ },
+ {
+  "id": "nyc-hidden-09",
+  "city": "nyc",
+  "family": "hidden",
+  "person": null,
+  "phrasing": "tell me somewhere to eat in New York that nobody else would tell me",
+  "prompt": "tell me somewhere to eat in New York that nobody else would tell me Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 61
+ },
+ {
+  "id": "stl-generic-02",
+  "city": "stl",
+  "family": "generic",
+  "person": null,
+  "phrasing": "top restaurants in St. Louis",
+  "prompt": "top restaurants in St. Louis Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 62
+ },
+ {
+  "id": "stl-hidden-04",
+  "city": "stl",
+  "family": "hidden",
+  "person": null,
+  "phrasing": "where to eat in St. Louis that isn't touristy",
+  "prompt": "where to eat in St. Louis that isn't touristy Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 63
+ },
+ {
+  "id": "stl-cedric-06",
+  "city": "stl",
+  "family": "taste",
+  "person": "cedric",
+  "phrasing": "where would a Frankie Beverly & Maze fan eat in St. Louis?",
+  "prompt": "where would a Frankie Beverly & Maze fan eat in St. Louis? Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 64
+ },
+ {
+  "id": "nyc-jason-01",
+  "city": "nyc",
+  "family": "taste",
+  "person": "jason",
+  "phrasing": "restaurants in New York for someone who loves Carbone",
+  "prompt": "restaurants in New York for someone who loves Carbone Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 65
+ },
+ {
+  "id": "stl-jason-03",
+  "city": "stl",
+  "family": "taste",
+  "person": "jason",
+  "phrasing": "best old-school Italian in St. Louis, like Carbone",
+  "prompt": "best old-school Italian in St. Louis, like Carbone Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 66
+ },
+ {
+  "id": "nyc-hidden-04",
+  "city": "nyc",
+  "family": "hidden",
+  "person": null,
+  "phrasing": "where to eat in New York that isn't touristy",
+  "prompt": "where to eat in New York that isn't touristy Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 67
+ },
+ {
+  "id": "nyc-hidden-03",
+  "city": "nyc",
+  "family": "hidden",
+  "person": null,
+  "phrasing": "not touristy places to eat in New York",
+  "prompt": "not touristy places to eat in New York Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 68
+ },
+ {
+  "id": "nyc-generic-09",
+  "city": "nyc",
+  "family": "generic",
+  "person": null,
+  "phrasing": "first time in New York, what are the places I have to eat at",
+  "prompt": "first time in New York, what are the places I have to eat at Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 69
+ },
+ {
+  "id": "nyc-stranger-01",
+  "city": "nyc",
+  "family": "stranger",
+  "person": null,
+  "phrasing": "broke college student in New York, where can I eat well for under $15",
+  "prompt": "broke college student in New York, where can I eat well for under $15 Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 70
+ },
+ {
+  "id": "stl-jason-04",
+  "city": "stl",
+  "family": "taste",
+  "person": "jason",
+  "phrasing": "I'm a big Sinatra fan, where should I eat and drink in St. Louis",
+  "prompt": "I'm a big Sinatra fan, where should I eat and drink in St. Louis Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 71
+ },
+ {
+  "id": "nyc-stranger-07",
+  "city": "nyc",
+  "family": "stranger",
+  "person": null,
+  "phrasing": "nurse working nights in New York, where can I get good food late",
+  "prompt": "nurse working nights in New York, where can I get good food late Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 72
+ },
+ {
+  "id": "nyc-jason-05",
+  "city": "nyc",
+  "family": "taste",
+  "person": "jason",
+  "phrasing": "places in New York for a guy whose favorite movie is Rounders",
+  "prompt": "places in New York for a guy whose favorite movie is Rounders Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 73
+ },
+ {
+  "id": "nyc-generic-03",
+  "city": "nyc",
+  "family": "generic",
+  "person": null,
+  "phrasing": "best bars in New York",
+  "prompt": "best bars in New York Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 74
+ },
+ {
+  "id": "stl-hidden-05",
+  "city": "stl",
+  "family": "hidden",
+  "person": null,
+  "phrasing": "underrated restaurants in St. Louis",
+  "prompt": "underrated restaurants in St. Louis Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 75
+ },
+ {
+  "id": "stl-cedric-08",
+  "city": "stl",
+  "family": "taste",
+  "person": "cedric",
+  "phrasing": "best soul food and barbecue in St. Louis, I live for rib tips",
+  "prompt": "best soul food and barbecue in St. Louis, I live for rib tips Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 76
+ },
+ {
+  "id": "nyc-jason-03",
+  "city": "nyc",
+  "family": "taste",
+  "person": "jason",
+  "phrasing": "best old-school Italian in New York, like Carbone",
+  "prompt": "best old-school Italian in New York, like Carbone Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 77
+ },
+ {
+  "id": "nyc-hidden-08",
+  "city": "nyc",
+  "family": "hidden",
+  "person": null,
+  "phrasing": "restaurants in New York that tourists never find out about",
+  "prompt": "restaurants in New York that tourists never find out about Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 78
+ },
+ {
+  "id": "nyc-stranger-03",
+  "city": "nyc",
+  "family": "stranger",
+  "person": null,
+  "phrasing": "taking my two kids (6 and 9) to New York, where do we eat that won't be a nightmare",
+  "prompt": "taking my two kids (6 and 9) to New York, where do we eat that won't be a nightmare Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 79
+ },
+ {
+  "id": "nyc-hidden-02",
+  "city": "nyc",
+  "family": "hidden",
+  "person": null,
+  "phrasing": "best hidden gems in Manhattan or Brooklyn for food",
+  "prompt": "best hidden gems in Manhattan or Brooklyn for food Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 80
+ },
+ {
+  "id": "nyc-generic-05",
+  "city": "nyc",
+  "family": "generic",
+  "person": null,
+  "phrasing": "going to New York this weekend, where should we eat and drink",
+  "prompt": "going to New York this weekend, where should we eat and drink Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 81
+ },
+ {
+  "id": "nyc-generic-08",
+  "city": "nyc",
+  "family": "generic",
+  "person": null,
+  "phrasing": "where to get a drink in New York tonight",
+  "prompt": "where to get a drink in New York tonight Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 82
+ },
+ {
+  "id": "nyc-stranger-09",
+  "city": "nyc",
+  "family": "stranger",
+  "person": null,
+  "phrasing": "group of 8 for a birthday in New York, where do we eat and then drink",
+  "prompt": "group of 8 for a birthday in New York, where do we eat and then drink Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 83
+ },
+ {
+  "id": "stl-cedric-04",
+  "city": "stl",
+  "family": "taste",
+  "person": "cedric",
+  "phrasing": "places in St. Louis for someone who loves The Original Kings of Comedy",
+  "prompt": "places in St. Louis for someone who loves The Original Kings of Comedy Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 84
+ },
+ {
+  "id": "stl-hidden-13",
+  "city": "stl",
+  "family": "hidden",
+  "person": null,
+  "phrasing": "local secret spots to eat in St. Louis",
+  "prompt": "local secret spots to eat in St. Louis Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 85
+ },
+ {
+  "id": "nyc-hidden-06",
+  "city": "nyc",
+  "family": "hidden",
+  "person": null,
+  "phrasing": "most underrated bars and restaurants NYC",
+  "prompt": "most underrated bars and restaurants NYC Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 86
+ },
+ {
+  "id": "stl-hidden-01",
+  "city": "stl",
+  "family": "hidden",
+  "person": null,
+  "phrasing": "St. Louis hidden gem restaurants",
+  "prompt": "St. Louis hidden gem restaurants Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 87
+ },
+ {
+  "id": "stl-generic-01",
+  "city": "stl",
+  "family": "generic",
+  "person": null,
+  "phrasing": "where should I eat in St. Louis?",
+  "prompt": "where should I eat in St. Louis? Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 88
+ },
+ {
+  "id": "stl-generic-11",
+  "city": "stl",
+  "family": "generic",
+  "person": null,
+  "phrasing": "recommend some restaurants and bars in St. Louis",
+  "prompt": "recommend some restaurants and bars in St. Louis Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 89
+ },
+ {
+  "id": "stl-cedric-10",
+  "city": "stl",
+  "family": "taste",
+  "person": "cedric",
+  "phrasing": "I love rib tips and old school comedy, where should I eat in St Louis",
+  "prompt": "I love rib tips and old school comedy, where should I eat in St Louis Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 90
+ },
+ {
+  "id": "stl-jason-05",
+  "city": "stl",
+  "family": "taste",
+  "person": "jason",
+  "phrasing": "places in St. Louis for a guy whose favorite movie is Rounders",
+  "prompt": "places in St. Louis for a guy whose favorite movie is Rounders Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 91
+ },
+ {
+  "id": "stl-cedric-03",
+  "city": "stl",
+  "family": "taste",
+  "person": "cedric",
+  "phrasing": "I'm a huge Frankie Beverly and Maze fan, where should I go out to eat and drink in St. Louis",
+  "prompt": "I'm a huge Frankie Beverly and Maze fan, where should I go out to eat and drink in St. Louis Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 92
+ },
+ {
+  "id": "nyc-stranger-06",
+  "city": "nyc",
+  "family": "stranger",
+  "person": null,
+  "phrasing": "just moved to New York, where should I go to feel like a local",
+  "prompt": "just moved to New York, where should I go to feel like a local Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 93
+ },
+ {
+  "id": "nyc-stranger-02",
+  "city": "nyc",
+  "family": "stranger",
+  "person": null,
+  "phrasing": "my girlfriend is vegan and I'm not, where can we both eat in New York",
+  "prompt": "my girlfriend is vegan and I'm not, where can we both eat in New York Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 94
+ },
+ {
+  "id": "stl-cedric-11",
+  "city": "stl",
+  "family": "taste",
+  "person": "cedric",
+  "phrasing": "hidden gems in St. Louis for a rib tips and Frankie Beverly kind of person",
+  "prompt": "hidden gems in St. Louis for a rib tips and Frankie Beverly kind of person Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 95
+ },
+ {
+  "id": "stl-stranger-08",
+  "city": "stl",
+  "family": "stranger",
+  "person": null,
+  "phrasing": "food snob from Chicago visiting St. Louis, impress me",
+  "prompt": "food snob from Chicago visiting St. Louis, impress me Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 96
+ },
+ {
+  "id": "stl-hidden-11",
+  "city": "stl",
+  "family": "hidden",
+  "person": null,
+  "phrasing": "I've already done all the famous spots in St. Louis. where do I go now?",
+  "prompt": "I've already done all the famous spots in St. Louis. where do I go now? Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 97
+ },
+ {
+  "id": "stl-hidden-08",
+  "city": "stl",
+  "family": "hidden",
+  "person": null,
+  "phrasing": "restaurants in St. Louis that tourists never find out about",
+  "prompt": "restaurants in St. Louis that tourists never find out about Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 98
+ },
+ {
+  "id": "stl-jason-07",
+  "city": "stl",
+  "family": "taste",
+  "person": "jason",
+  "phrasing": "where would Frank Sinatra eat in St. Louis today?",
+  "prompt": "where would Frank Sinatra eat in St. Louis today? Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 99
+ },
+ {
+  "id": "stl-cedric-02",
+  "city": "stl",
+  "family": "taste",
+  "person": "cedric",
+  "phrasing": "best rib tips in STL?",
+  "prompt": "best rib tips in STL? Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 100
+ },
+ {
+  "id": "stl-hidden-12",
+  "city": "stl",
+  "family": "hidden",
+  "person": null,
+  "phrasing": "off the beaten path food and drinks in St. Louis",
+  "prompt": "off the beaten path food and drinks in St. Louis Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 101
+ },
+ {
+  "id": "nyc-hidden-12",
+  "city": "nyc",
+  "family": "hidden",
+  "person": null,
+  "phrasing": "off the beaten path food and drinks in New York",
+  "prompt": "off the beaten path food and drinks in New York Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 102
+ },
+ {
+  "id": "nyc-cedric-01",
+  "city": "nyc",
+  "family": "taste",
+  "person": "cedric",
+  "phrasing": "where can I get good rib tips in New York",
+  "prompt": "where can I get good rib tips in New York Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 103
+ },
+ {
+  "id": "nyc-jason-09",
+  "city": "nyc",
+  "family": "taste",
+  "person": "jason",
+  "phrasing": "classic swanky bars in New York for a Sinatra guy",
+  "prompt": "classic swanky bars in New York for a Sinatra guy Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 104
+ },
+ {
+  "id": "nyc-cedric-05",
+  "city": "nyc",
+  "family": "taste",
+  "person": "cedric",
+  "phrasing": "rib tips, old school R&B, stand-up comedy. plan where I eat and drink in New York",
+  "prompt": "rib tips, old school R&B, stand-up comedy. plan where I eat and drink in New York Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 105
+ },
+ {
+  "id": "nyc-stranger-00",
+  "city": "nyc",
+  "family": "stranger",
+  "person": null,
+  "phrasing": "visiting my mom in New York next week, she's 74 and doesn't like loud places. where should we eat?",
+  "prompt": "visiting my mom in New York next week, she's 74 and doesn't like loud places. where should we eat? Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 106
+ },
+ {
+  "id": "stl-stranger-01",
+  "city": "stl",
+  "family": "stranger",
+  "person": null,
+  "phrasing": "broke college student in St. Louis, where can I eat well for under $15",
+  "prompt": "broke college student in St. Louis, where can I eat well for under $15 Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 107
+ },
+ {
+  "id": "nyc-hidden-15",
+  "city": "nyc",
+  "family": "hidden",
+  "person": null,
+  "phrasing": "places in New York that aren't on every list",
+  "prompt": "places in New York that aren't on every list Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 108
+ },
+ {
+  "id": "stl-generic-10",
+  "city": "stl",
+  "family": "generic",
+  "person": null,
+  "phrasing": "what's good to eat around St. Louis",
+  "prompt": "what's good to eat around St. Louis Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 109
+ },
+ {
+  "id": "stl-generic-05",
+  "city": "stl",
+  "family": "generic",
+  "person": null,
+  "phrasing": "going to St. Louis this weekend, where should we eat and drink",
+  "prompt": "going to St. Louis this weekend, where should we eat and drink Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 110
+ },
+ {
+  "id": "nyc-cedric-11",
+  "city": "nyc",
+  "family": "taste",
+  "person": "cedric",
+  "phrasing": "hidden gems in New York for a rib tips and Frankie Beverly kind of person",
+  "prompt": "hidden gems in New York for a rib tips and Frankie Beverly kind of person Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 111
+ },
+ {
+  "id": "nyc-generic-06",
+  "city": "nyc",
+  "family": "generic",
+  "person": null,
+  "phrasing": "good dinner spots NYC",
+  "prompt": "good dinner spots NYC Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 112
+ },
+ {
+  "id": "nyc-jason-08",
+  "city": "nyc",
+  "family": "taste",
+  "person": "jason",
+  "phrasing": "I love Rounders, poker, Sinatra and a great veal parm. dinner and drinks in New York?",
+  "prompt": "I love Rounders, poker, Sinatra and a great veal parm. dinner and drinks in New York? Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 113
+ },
+ {
+  "id": "stl-jason-11",
+  "city": "stl",
+  "family": "taste",
+  "person": "jason",
+  "phrasing": "hidden gems in St. Louis for a Carbone and Sinatra kind of guy",
+  "prompt": "hidden gems in St. Louis for a Carbone and Sinatra kind of guy Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 114
+ },
+ {
+  "id": "stl-stranger-09",
+  "city": "stl",
+  "family": "stranger",
+  "person": null,
+  "phrasing": "group of 8 for a birthday in St. Louis, where do we eat and then drink",
+  "prompt": "group of 8 for a birthday in St. Louis, where do we eat and then drink Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 115
+ },
+ {
+  "id": "nyc-jason-11",
+  "city": "nyc",
+  "family": "taste",
+  "person": "jason",
+  "phrasing": "hidden gems in New York for a Carbone and Sinatra kind of guy",
+  "prompt": "hidden gems in New York for a Carbone and Sinatra kind of guy Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 116
+ },
+ {
+  "id": "stl-generic-03",
+  "city": "stl",
+  "family": "generic",
+  "person": null,
+  "phrasing": "best bars in St. Louis",
+  "prompt": "best bars in St. Louis Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 117
+ },
+ {
+  "id": "stl-hidden-15",
+  "city": "stl",
+  "family": "hidden",
+  "person": null,
+  "phrasing": "places in St. Louis that aren't on every list",
+  "prompt": "places in St. Louis that aren't on every list Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 118
+ },
+ {
+  "id": "stl-generic-12",
+  "city": "stl",
+  "family": "generic",
+  "person": null,
+  "phrasing": "where do locals eat in St. Louis?",
+  "prompt": "where do locals eat in St. Louis? Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 119
+ },
+ {
+  "id": "stl-jason-10",
+  "city": "stl",
+  "family": "taste",
+  "person": "jason",
+  "phrasing": "if I like Carbone what should I try in St Louis",
+  "prompt": "if I like Carbone what should I try in St Louis Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 120
+ },
+ {
+  "id": "nyc-stranger-05",
+  "city": "nyc",
+  "family": "stranger",
+  "person": null,
+  "phrasing": "anniversary dinner in New York, 10 years, want somewhere special",
+  "prompt": "anniversary dinner in New York, 10 years, want somewhere special Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 121
+ },
+ {
+  "id": "nyc-generic-12",
+  "city": "nyc",
+  "family": "generic",
+  "person": null,
+  "phrasing": "where do locals eat in New York?",
+  "prompt": "where do locals eat in New York? Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 122
+ },
+ {
+  "id": "stl-hidden-10",
+  "city": "stl",
+  "family": "hidden",
+  "person": null,
+  "phrasing": "where to eat in St. Louis, but skip anything every AI would say",
+  "prompt": "where to eat in St. Louis, but skip anything every AI would say Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 123
+ },
+ {
+  "id": "stl-hidden-02",
+  "city": "stl",
+  "family": "hidden",
+  "person": null,
+  "phrasing": "best hidden gems in St Louis for food",
+  "prompt": "best hidden gems in St Louis for food Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 124
+ },
+ {
+  "id": "nyc-cedric-09",
+  "city": "nyc",
+  "family": "taste",
+  "person": "cedric",
+  "phrasing": "where to eat in New York if your favorite song is Before I Let Go",
+  "prompt": "where to eat in New York if your favorite song is Before I Let Go Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 125
+ },
+ {
+  "id": "stl-generic-06",
+  "city": "stl",
+  "family": "generic",
+  "person": null,
+  "phrasing": "good dinner spots STL",
+  "prompt": "good dinner spots STL Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 126
+ },
+ {
+  "id": "stl-cedric-09",
+  "city": "stl",
+  "family": "taste",
+  "person": "cedric",
+  "phrasing": "where to eat in St. Louis if your favorite song is Before I Let Go",
+  "prompt": "where to eat in St. Louis if your favorite song is Before I Let Go Reply with only JSON: an array of 8-12 objects like {\"name\": \"...\", \"neighbourhood\": \"...\"}. No other text.",
+  "order": 127
+ }
+]

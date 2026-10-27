@@ -1,0 +1,335 @@
+canonical,display,asks,mentions,hidden_asks,cedric_asks,jason_asks,spellings,osm_match,osm_ids
+delicatessen katz,Katz's Delicatessen,16,16,1,0,1,Katz's Delicatessen | Katz's Delicatessen (split a sandwich),True,node/1915398676
+di fara,Di Fara Pizza,16,16,6,0,0,Di Fara Pizza,True,node/10617089797 node/13574795162 node/2473718326 node/7091113349
+lucali,Lucali,15,15,9,0,0,Lucali,True,node/4196029141
+joe,Joe's Pizza,14,14,0,0,0,Joe's Pizza | Joe's Pizza (Greenwich Ave),True,node/10064144417 node/10797403545 node/10830968028 node/11479001567 node/11521280861 node/11593160325 node/11687210350 node/11872851264 node/12102901861 node/12806870185 node/12946798001 node/12947673801 node/13143970801 node/13504500620 node/13563215324 node/13631309602 node/2183010458 node/2308955289 node/2358048509 node/2377128167 node/2409398832 node/2547200402 node/2549884902 node/2555137420 node/2562062426 node/2568142019 node/2826470599 node/2839699877 node/2889066126 node/3573482103 node/3674112983 node/3674126477 node/3874983057 node/4416202291 node/4664765789 node/4762031974 node/4816185281 node/4851501923 node/4924481993 node/5443670322 node/5500393532 node/5520366543 node/5625774814 node/5821349507 node/5842396231 node/5859940717 node/5862744811 node/6027534885 node/6201492297 node/6421845186 node/6462387667 node/6937498381 node/6955003385 node/7041755289 node/7239728455 node/8333736486 node/8534476567 node/8785244239 node/9129531424 node/931799207 node/9503346180 node/9543907017 node/9581876702 node/9586083804 node/9879124792 way/247862508
+hometown,Hometown Bar-B-Que,13,13,7,6,0,Hometown Bar-B-Que,True,node/4509660391
+daughters russ,Russ & Daughters Cafe,13,13,1,0,0,Russ & Daughters | Russ & Daughters Cafe | Russ & Daughters Café,True,node/2555126595
+luger peter,Peter Luger Steak House,13,13,0,0,2,Peter Luger Steak House,True,node/2483716076
+carbone,Carbone,12,12,0,0,5,Carbone,True,node/6418378714 node/661889865
+sripraphai,Sripraphai,12,12,11,0,0,Sripraphai,False,
+bernardin le,Le Bernardin,10,10,0,0,0,Le Bernardin,True,node/3932353663
+carota via,Via Carota,10,10,0,0,3,Via Carota,True,node/2562463952
+rao,Rao's,9,9,0,0,9,Rao's,True,node/2765449317
+dinosaur,Dinosaur Bar-B-Que,8,8,0,8,0,Dinosaur Bar-B-Que,True,node/2479519219
+burger superiority,Superiority Burger,8,8,0,0,0,Superiority Burger,True,node/6278128485
+dead rabbit,Dead Rabbit,8,8,0,0,1,Dead Rabbit | The Dead Rabbit,True,node/4843854724
+employees only,Employees Only,8,8,0,0,2,Employees Only,True,node/4146399196
+gramercy,Gramercy Tavern,8,8,0,0,0,Gramercy Tavern,True,node/2704023647 node/2704040262 node/4357574290 node/4947722221 node/7362999642 node/8202108199 node/8792307152 node/9579194112
+sylvia,Sylvia's Restaurant,8,8,0,8,0,Sylvia's Restaurant,True,node/4231923696
+attaboy,Attaboy,8,8,2,0,0,Attaboy,True,node/4146280790
+angie don,Don Angie,7,7,0,0,6,Don Angie,True,node/4527086687
+1 los no tacos,Los Tacos No. 1,7,7,2,0,0,Los Tacos No. 1,True,node/11833502509 node/12055614728 node/12854312940 node/13060137002 node/14191960232 node/2564522333 node/4300475590 node/4811903022 node/4860141724 node/5415641570 node/5987980586 node/8644302518
+nom parlor tea wah,Nom Wah Tea Parlor,7,7,3,0,0,Nom Wah Tea Parlor,True,node/4284811306
+famous xian,Xi'an Famous Foods,7,7,0,0,0,Xi'an Famous Foods,True,node/10923192180 node/12438085769 node/14160190821 node/2985673609 node/3874076273 node/5266897272 node/5978558013 node/6582979194 node/6615272828 node/7024236397 node/8851723958 node/9241571160 node/9890798670
+harlem red rooster,Red Rooster Harlem,7,7,0,7,0,Red Rooster Harlem,True,way/271798850
+casa enrique,Casa Enrique,7,7,7,0,0,Casa Enrique,False,
+bemelmans,Bemelmans Bar,7,7,0,0,5,Bemelmans Bar | Bemelmans Bar at The Carlyle,True,node/4822836522
+jackson,Jackson Diner,6,6,5,0,0,Jackson Diner,True,node/11094243741 node/3043957739
+dante,Dante,6,6,1,0,2,Dante,True,node/5216127223 node/5978556807 node/9064514717
+fette sau,Fette Sau,5,5,0,5,0,Fette Sau,False,
+mighty quinn,Mighty Quinn's BBQ,5,5,0,5,0,Mighty Quinn's | Mighty Quinn's BBQ | Mighty Quinn's Barbeque,True,node/11492713480 node/12924977455 node/4043594359 node/6238366159 node/6400825486 node/7085164539
+beach pig,Pig Beach,5,5,0,5,0,Pig Beach,True,node/14031356031
+ballato emilio,Emilio's Ballato,5,5,0,0,5,Emilio's Ballato,False,
+court grocers street,Court Street Grocers,5,5,4,0,0,Court Street Grocers,True,node/4382630247 node/6314905334 node/9966553542
+eleven madison park,Eleven Madison Park,5,5,0,0,0,Eleven Madison Park,True,node/3932353662
+marea,Marea,5,5,0,0,2,Marea,True,node/8333740825
+napoletana una,Una Pizza Napoletana,5,5,1,0,0,Una Pizza Napoletana,True,node/7087039285
+melba,Melba's,5,5,0,5,0,Melba's,True,node/13370072999 node/1667412535
+italian patsy,Patsy's Italian Restaurant,5,5,0,0,5,Patsy's Italian Restaurant,False,
+monte,Monte's Trattoria,5,5,0,0,5,Monte's Trattoria,True,node/8197411876
+charles chicken fried pan,Charles' Pan-Fried Chicken,5,5,0,5,0,Charles Pan-Fried Chicken | Charles' Pan-Fried Chicken,True,node/14300255201 node/2768128864 node/6296852085
+roberta,Roberta's,5,5,2,0,0,Roberta's,True,node/11506163553 node/12189238901 node/2838575984 node/5726231038 node/8445979143
+kyclades taverna,Taverna Kyclades,5,5,5,0,0,Taverna Kyclades,False,
+mamak,Mamak,5,5,4,0,0,Mamak | Mamak Kitchen | Mamak's Kitchen,False,
+country hill market,Hill Country Barbecue Market,4,4,0,4,0,Hill Country Barbecue Market,True,node/2621558446
+joint smoke,Smoke Joint,4,4,0,4,0,Smoke Joint | The Smoke Joint,False,
+atomix,Atomix,4,4,0,0,0,Atomix,False,
+mogador,Cafe Mogador,4,4,4,0,0,Cafe Mogador,True,node/4551157295 way/279778320
+pisellino,Bar Pisellino,4,4,0,0,0,Bar Pisellino,True,node/4320014581
+nyonya,Nyonya,4,4,4,0,0,Nyonya,True,node/10312046520
+keens,Keens Steakhouse,4,4,0,0,4,Keens Steakhouse,True,node/3068326556
+sparks,Sparks Steak House,4,4,0,0,4,Sparks Steak House,True,node/3976832398
+hothouse peaches,Peaches HotHouse,4,4,0,4,0,Peaches HotHouse,True,node/2457196622
+goto,Bar Goto,4,4,2,0,0,Bar Goto,True,node/8220976347
+carolines,Carolines on Broadway,3,3,0,3,0,Carolines on Broadway,False,
+cellar comedy,Comedy Cellar,3,3,0,3,0,Comedy Cellar | The Comedy Cellar,False,
+comedy gotham,Gotham Comedy Club,3,3,0,3,0,Gotham Comedy Club,False,
+il mulino,Il Mulino,3,3,0,0,3,Il Mulino,True,node/13062628801 node/13517110252
+rubirosa,Rubirosa,3,3,0,0,2,Rubirosa,True,node/4305816205
+torrisi,Torrisi,3,3,0,0,3,Torrisi,True,node/11943260737
+modern,The Modern,3,3,0,0,0,The Modern,True,node/10697603105 node/12307831703 node/13953195501 node/2192621389 node/4140591018 node/5620855721 node/5779070778 node/6356748087 node/8333736496
+apollo theater,Apollo Theater,3,3,0,3,0,Apollo Theater,False,
+bronco el tacos,Tacos El Bronco,3,3,3,0,0,Tacos El Bronco,True,node/2561887725 node/9501190627
+mfiro,Mfiro,3,3,3,0,0,Mfiro,False,
+adela casa,Casa Adela,3,3,3,0,0,Casa Adela,True,node/5243548103
+di di,Di An Di,3,3,3,0,0,Di An Di,True,node/10617089797 node/13574795162 node/14027091584 node/2473718326 node/2550029153 node/4011732603 node/4092436131 node/4301475089 node/5401946289 node/5726883079 node/5737743043 node/5871114517 node/7091113349 node/8914342617
+amy ruth,Amy Ruth's,3,3,0,3,0,Amy Ruth's,True,node/4987134521 node/6308814785
+lilia,Lilia,3,3,0,0,2,Lilia,True,node/2842523508
+rezdora,Rezdôra,3,3,1,0,1,Rezdôra,True,node/7149223689
+jacob pickles,Jacob's Pickles,3,3,0,2,0,Jacob's Pickles,True,node/10000660270 node/6815431436
+zaab zaab,Zaab Zaab,3,3,3,0,0,Zaab Zaab,True,node/4466534299
+joe shanghai,Joe's Shanghai,2,2,1,0,0,Joe's Shanghai,True,node/8333736486
+delaney,Delaney Barbecue,2,2,0,2,0,Delaney Barbecue,True,node/7191405785 node/9128276521
+fletcher,Fletcher's Brooklyn Barbecue,2,2,0,2,0,Fletcher's Brooklyn Barbecue,False,
+georges jean,Jean-Georges,2,2,0,0,1,Jean-Georges,True,node/2226852197
+son win,Win Son,2,2,1,0,0,Win Son,True,node/12253456376 node/2838510034
+campbell,The Campbell,2,2,0,0,1,The Campbell,True,node/2838720789 node/5319150021
+arthur avenue market retail,Arthur Avenue Retail Market,2,2,1,0,0,Arthur Avenue Retail Market,False,
+cemetery green wood,Green-Wood Cemetery,2,2,2,0,0,Green-Wood Cemetery,False,
+crawl heights jackson,Jackson Heights Food Crawl (Roosevelt Ave & 37th Rd),2,2,1,0,0,Jackson Heights Food Crawl (Roosevelt Ave & 37th Rd) | Jackson Heights Food Crawl (Roosevelt Ave),False,
+hill wave,Wave Hill,2,2,2,0,0,Wave Hill,False,
+jumel mansion morris,Morris-Jumel Mansion,2,2,2,0,0,Morris-Jumel Mansion,False,
+museum noguchi,Noguchi Museum,2,2,2,0,0,Noguchi Museum,False,
+daniel,Daniel,2,2,0,0,0,Daniel,True,node/2723661031 node/5728821437
+per se,Per Se,2,2,0,0,0,Per Se,True,node/3932353665
+blues paris,Paris Blues,2,2,0,2,0,Paris Blues,True,node/5266906129
+minton playhouse,Minton's Playhouse,2,2,0,2,0,Minton's Playhouse,True,node/9482649821
+mamak village,Mamak Village,2,2,2,0,0,Mamak Village,False,
+blue smoke,Blue Smoke,2,2,0,2,0,Blue Smoke,True,node/1934502370
+daisy may,Daisy May's BBQ USA,2,2,0,2,0,Daisy May's BBQ USA,True,node/13063730288
+21,21 Club,2,2,0,0,2,21 Club,True,node/10073864129 node/11868399779 node/2825288960
+carlyle,Café Carlyle,2,2,0,0,2,Café Carlyle,True,node/2723953331
+gallagher,Gallagher's Steakhouse,2,2,0,0,2,Gallagher's Steakhouse,True,node/4278330892
+sardi,Sardi's,2,2,0,0,2,Sardi's,True,way/266149332
+chop frank,Frank's Chop House,2,2,0,0,2,Frank's Chop House,False,
+jazz showman,Showman's Jazz Club,2,2,0,2,0,Showman's Jazz Club,False,
+mamie miss spoonbread too,Miss Mamie's Spoonbread Too,2,2,0,2,0,Miss Mamie's Spoonbread Too,True,node/2583212038
+minton,Minton's,2,2,0,2,0,Minton's,True,node/9482649821
+annie sunny,Sunny & Annie's,2,2,2,0,0,Sunny & Annie's | Sunny & Annie's Deli,True,node/2549926661
+hanoi,Hanoi House,2,2,2,0,0,Hanoi House,True,node/5193382596
+ayat,Ayat,2,2,2,0,0,Ayat,True,node/12084131484 node/12251081140 node/2494264419 node/2561900270 node/5643052165
+del posto,Del Posto,2,2,0,0,2,Del Posto,True,node/5538175004
+gene,Gene's,2,2,0,0,2,Gene's,False,
+rolo,Rolo's,2,2,2,0,0,Rolo's,False,
+457 frankie spuntino,Frankie's 457 Spuntino,2,2,0,0,1,Frankie's 457 Spuntino,True,node/4194059611
+death,Death & Co,2,2,0,0,0,Death & Co,True,node/4146369290 node/6564102311 node/6833456285
+chick sweet,Sweet Chick,2,2,0,2,0,Sweet Chick,True,node/11509837680 node/2701690248 node/2759055341 node/2839699869 node/7125925887
+cervo,Cervo's,2,2,2,0,0,Cervo's,False,
+gage tollner,Gage & Tollner,2,2,0,0,1,Gage & Tollner,True,node/2494254644
+raoul,Raoul's,2,2,0,0,2,Raoul's,True,node/2477336967
+ramirez taqueria,Taqueria Ramirez,2,2,2,0,0,Taqueria Ramirez,True,node/2842929288
+shack shake,Shake Shack (Madison Square Park),2,2,0,0,0,Shake Shack (Madison Square Park),True,node/10836117227 node/10995386321 node/10998186056 node/11842373513 node/11872731412 node/13360795105 node/13625909897 node/1802297281 node/1888172061 node/1899033656 node/1934501367 node/2550060368 node/2596227488 node/2629371831 node/2717355372 node/2767369780 node/2826715678 node/3174844884 node/3830892127 node/4035588419 node/4300001394 node/6121853241 node/6437021178 node/6677440689 way/265038907 way/651652780
+cuban sophie,Sophie's Cuban Cuisine,2,2,0,0,0,Sophie's Cuban Cuisine,True,node/11258926652 node/11734409650 node/13695599913 node/4927169621 node/6453371199 node/6670244847 node/7678152126
+falafel mamoun,Mamoun's Falafel,2,2,0,0,0,Mamoun's Falafel,True,node/3506087029 node/9642113264
+veselka,Veselka,2,2,0,0,0,Veselka,True,node/12070736700 node/5700167968
+absolute bagels,Absolute Bagels,2,2,0,0,0,Absolute Bagels,False,
+ellen stardust,Ellen's Stardust Diner,2,2,0,0,0,Ellen's Stardust Diner,True,node/2678783479
+chumley,Chumley's,2,2,0,0,2,Chumley's,False,
+dont please tell,Please Don't Tell,2,2,0,0,0,Please Don't Tell | Please Don't Tell (PDT),True,node/4146358992
+julius,Julius',2,2,0,0,0,Julius',True,node/2562439843
+alimentari buco il,Il Buco Alimentari,2,2,0,0,0,Il Buco Alimentari,True,node/6622185985 node/9668165673
+ginny supper,Ginny's Supper Club,2,2,0,2,0,Ginny's Supper Club,False,
+union,Union Hall,1,1,0,1,0,Union Hall,True,node/2465884892 node/4176635091 node/5265747977 node/5319005167 node/5544159819 node/5557724695 node/7161294640 node/7360048873 node/9165725161 way/248158548 way/312354296
+atoboy,Atoboy,1,1,0,0,0,Atoboy,True,node/7596986631
+nakazawa sushi,Sushi Nakazawa,1,1,0,0,0,Sushi Nakazawa,True,node/10830817798
+eastside georgia,Georgia's Eastside BBQ,1,1,0,1,0,Georgia's Eastside BBQ,False,
+clam zz,ZZ's Clam Bar,1,1,0,0,1,ZZ's Clam Bar,False,
+locanda verde,Locanda Verde,1,1,0,0,1,Locanda Verde,True,node/4739202153
+kebab,Kebab Cafe,1,1,1,0,0,Kebab Cafe,True,node/10357823724 node/10690152493 node/11931618256 node/12660808463 node/12662579801 node/13970570901 node/2552604088 node/2562969471 node/4252890214 node/6649647161 node/6752564947 node/6981865793 node/9374707282 way/247925864 way/280081156
+malaysian mamak,Mamak Malaysian,1,1,1,0,0,Mamak Malaysian,False,
+1 franklin los no park tacos tacos,Franklin Park Tacos / Los Tacos No. 1,1,1,0,0,0,Franklin Park Tacos / Los Tacos No. 1,True,node/11833502509 node/12055614728 node/12854312940 node/13060137002 node/14191960232 node/2564522333 node/4300475590 node/4811903022 node/4860141724 node/5415641570 node/5987980586 node/8644302518 way/674136717
+juliana,Juliana's Pizza,1,1,0,0,0,Juliana's Pizza,True,way/245118651
+cote korean,Cote Korean Steakhouse,1,1,0,0,0,Cote Korean Steakhouse,False,
+botanical center cultural harbor snug,Snug Harbor Cultural Center & Botanical Garden,1,1,1,0,0,Snug Harbor Cultural Center & Botanical Garden,False,
+city industry,Industry City,1,1,1,0,0,Industry City,True,node/5500383167
+city island,City Island,1,1,1,0,0,City Island,False,
+cloisters,The Cloisters,1,1,1,0,0,The Cloisters,True,node/5711589045
+corona flushing meadows museum park,Flushing Meadows Corona Park & Queens Museum,1,1,1,0,0,Flushing Meadows Corona Park & Queens Museum,False,
+four freedoms island park roosevelt,Roosevelt Island Four Freedoms Park,1,1,1,0,0,Roosevelt Island Four Freedoms Park,False,
+blue note,Blue Note,1,1,0,1,0,Blue Note,False,
+chez lucienne,Chez Lucienne,1,1,0,1,0,Chez Lucienne,False,
+hill sugar supper,Sugar Hill Supper Club,1,1,0,1,0,Sugar Hill Supper Club,True,node/5281909155
+lenox saphire,Lenox Saphire,1,1,0,1,0,Lenox Saphire,False,
+marcus samuelsson streetbird,Marcus Samuelsson's Streetbird,1,1,0,1,0,Marcus Samuelsson's Streetbird,False,
+zinc,Zinc Bar,1,1,0,1,0,Zinc Bar,True,node/3581036299
+barclays center,Barclays Center,1,1,0,1,0,Barclays Center,False,
+bell,Bell House,1,1,0,1,0,Bell House,True,node/11084661115 node/11255243799 node/11293344182 node/11575223442 node/11963527190 node/12488728938 node/12531179036 node/13346761051 node/13761505070 node/13812678563 node/14137609342 node/2547205386 node/2552762147 node/2552836880 node/2562449473 node/2563512938 node/2629371832 node/2724066791 node/2761671638 node/2761822769 node/2825071740 node/3805991008 node/4195507701 node/5087641962 node/5577592712 node/5709973043 node/6622136387 node/663387602 node/7678152127 node/8333828563 node/9344068499 node/9622672881 node/9656421342 node/9845268955 node/9920099979
+comedy,New York Comedy Club,1,1,0,1,0,New York Comedy Club,True,node/11583954373 node/11629642322 node/14300028501 node/2714986494 node/5512656726 node/9717341632
+dangerfield,Dangerfield's,1,1,0,1,0,Dangerfield's,False,
+madison square,Madison Square Garden,1,1,0,1,0,Madison Square Garden,False,
+stand up,Stand Up NY,1,1,0,1,0,Stand Up NY,True,node/3863914558
+indian mehfil,Mehfil Indian Restaurant,1,1,1,0,0,Mehfil Indian Restaurant,False,
+latticini leo,Leo's Latticini (Mama's),1,1,1,0,0,Leo's Latticini (Mama's),False,
+morelos tacos,Tacos Morelos,1,1,1,0,0,Tacos Morelos,True,node/5215491822 node/8568005076
+tanoreen,Tanoreen,1,1,1,0,0,Tanoreen,True,node/13067634242
+al pastor tacos,Tacos al pastor,1,1,0,0,0,Tacos al pastor,True,node/7045370991
+bacon cheese egg,"Bacon, egg and cheese on a roll (bodega)",1,1,0,0,0,"Bacon, egg and cheese on a roll (bodega)",True,node/13972378444
+bagel cheese cream lox,Bagel with lox and cream cheese,1,1,0,0,0,Bagel with lox and cream cheese,True,node/12756515779
+black cheesecake cookie white,Cheesecake and black-and-white cookie,1,1,0,0,0,Cheesecake and black-and-white cookie,False,
+burger chimichurri dominican,Dominican chimichurri burger,1,1,0,0,0,Dominican chimichurri burger,False,
+cart chicken halal over rice,Halal cart chicken over rice,1,1,0,0,0,Halal cart chicken over rice,True,node/14258927788 node/5400684948
+cart dog from hot street,Hot dog from a street cart,1,1,0,0,0,Hot dog from a street cart,False,
+cheese chopped sandwich,Chopped cheese sandwich,1,1,0,0,0,Chopped cheese sandwich,True,node/10969584343
+cheese dollar slice,Dollar slice of cheese pizza,1,1,0,0,0,Dollar slice of cheese pizza,False,
+chicken jamaican jerk oxtail,Jamaican jerk chicken and oxtail,1,1,0,0,0,Jamaican jerk chicken and oxtail,True,node/5209289787
+dumplings soup,Soup dumplings,1,1,0,0,0,Soup dumplings,True,node/11027006805 node/5797335695 node/5799332005 node/5891429762
+pastrami,Pastrami on rye,1,1,0,0,0,Pastrami on rye,True,node/2709493872
+beau,Bar Beau,1,1,0,1,0,Bar Beau,True,node/7173763932
+caribbean gladys,Gladys Caribbean,1,1,0,1,0,Gladys Caribbean,False,
+delta,Delta Grill,1,1,0,1,0,Delta Grill,False,
+jilly,Jilly's Saloon (historic site; Sinatra's old haunt),1,1,0,0,1,Jilly's Saloon (historic site; Sinatra's old haunt),False,
+palm,The Palm,1,1,0,0,1,The Palm,True,node/11092315005 node/2783626530
+pete,Pete's Tavern,1,1,0,0,1,Pete's Tavern,True,node/10773959533 node/6403009246 node/6967870385 node/9762844875 node/9773399368 node/9811576285
+rainbow,The Rainbow Room,1,1,0,0,1,The Rainbow Room,True,node/2998996502 node/6498949989
+dpush,Dpush,1,1,0,0,1,Dpush,False,
+homestead old,Old Homestead Steakhouse,1,1,0,0,1,Old Homestead Steakhouse,True,node/2985573624
+minetta,Minetta Tavern,1,1,0,0,1,Minetta Tavern,True,node/4429201691
+polo,The Polo Bar,1,1,0,0,1,The Polo Bar,True,node/2357685321 node/6371402485
+blvd,BLVD Bistro,1,1,0,1,0,BLVD Bistro,True,node/5266905521 node/9553068948
+hill sugar,Sugar Hill Bistro,1,1,0,1,0,Sugar Hill Bistro,True,node/10762002911 node/5281909155 way/250319335
+pitmaster,Pitmaster's BBQ Smokehouse,1,1,0,1,0,Pitmaster's BBQ Smokehouse,False,
+cheng dumplings mimi,Mimi Cheng's Dumplings,1,1,1,0,0,Mimi Cheng's Dumplings,True,node/10224616959
+dutch kills,Dutch Kills Bar,1,1,1,0,0,Dutch Kills Bar,False,
+oenology,Brooklyn Oenology,1,1,1,0,0,Brooklyn Oenology,False,
+dhamaka,Dhamaka,1,1,1,0,0,Dhamaka,True,node/9374707296
+korean mapo,Mapo Korean BBQ,1,1,1,0,0,Mapo Korean BBQ,False,
+becco,Becco,1,1,0,0,1,Becco,True,node/11105983005 node/5026582327
+four seasons,The Four Seasons Restaurant,1,1,0,0,1,The Four Seasons Restaurant,True,node/13634945565 node/13885523903
+gallaghers,Gallaghers Steakhouse,1,1,0,0,1,Gallaghers Steakhouse,True,node/4278330892
+anthony fish,Anthony's Fish Bar,1,1,1,0,0,Anthony's Fish Bar,False,
+da dumpling fay,Fay Da Bakery & Dumpling House,1,1,1,0,0,Fay Da Bakery & Dumpling House,False,
+dimes,Dimes,1,1,1,0,0,Dimes,True,node/5215515121
+fish game rseparate,Rseparate Fish & Game,1,1,1,0,0,Rseparate Fish & Game,False,
+sunday,Sunday in Brooklyn,1,1,1,0,0,Sunday in Brooklyn,True,node/3212413923 node/3819492771 node/4848257934 node/9807347129
+taverna zenon,Zenon Taverna,1,1,1,0,0,Zenon Taverna,False,
+lartusi,L'Artusi,1,1,0,0,1,L'Artusi,False,
+scarpetta,Scarpetta,1,1,0,0,1,Scarpetta,False,
+baby ugly,Ugly Baby,1,1,1,0,0,Ugly Baby,True,node/2494177862
+huong pho viet,Pho Viet Huong,1,1,1,0,0,Pho Viet Huong,False,
+roumanian sammy,Sammy's Roumanian Steakhouse,1,1,1,0,0,Sammy's Roumanian Steakhouse,False,
+dominick,Dominick's,1,1,0,0,1,Dominick's,True,node/2561492380
+don peppe,Don Peppe,1,1,0,0,1,Don Peppe,False,
+frankie johnnie,Frankie & Johnnie's Steakhouse,1,1,0,0,1,Frankie & Johnnie's Steakhouse,True,node/2717293865
+pitti,Bar Pitti,1,1,0,0,0,Bar Pitti,True,node/3573482094
+barbetta soul,Barbetta Soul Food Kitchen,1,1,0,1,0,Barbetta Soul Food Kitchen,False,
+negril village,Negril Village,1,1,0,1,0,Negril Village,False,
+rotisserie streetbird,Streetbird Rotisserie,1,1,0,1,0,Streetbird Rotisserie,False,
+jeepney,Jeepney,1,1,1,0,0,Jeepney,False,
+lucien,Lucien,1,1,1,0,0,Lucien,True,node/11761689742 node/13162330401 node/6910758323
+empanadas mama,Mama's Empanadas,1,1,1,0,0,Mama's Empanadas,True,node/10793950969 node/5401978051 node/7062657176 node/9543909617
+grand hunan sichuan,Hunan Kitchen of Grand Sichuan,1,1,1,0,0,Hunan Kitchen of Grand Sichuan,True,node/2703169719
+persia taste,Taste of Persia,1,1,1,0,0,Taste of Persia,False,
+estela,Estela,1,1,0,0,1,Estela,True,node/6371442486
+i sodi,I Sodi,1,1,0,0,1,I Sodi,True,node/5193554969
+pastis,Pastis,1,1,0,0,1,Pastis,True,node/6575701885 node/6757143486
+pol tia,Tia Pol,1,1,1,0,0,Tia Pol,True,node/11842272663
+corner mamak,Mamak's Corner,1,1,1,0,0,Mamak's Corner,False,
+dhaba,Dhaba,1,1,1,0,0,Dhaba,True,node/2611479035 node/5218361626
+els,Els Bar,1,1,1,0,0,Els Bar,False,
+bagel hole,Bagel Hole,1,1,0,0,0,Bagel Hole,True,node/5775345821
+ippudo,Ippudo NY,1,1,0,0,0,Ippudo NY,True,node/13429529829 node/3577652948 node/4151778391 node/7093921941
+cart guys halal mighty quinn,Mighty Quinn's / Halal Guys Cart,1,1,0,0,0,Mighty Quinn's / Halal Guys Cart,True,node/11492713480 node/12924977455 node/14258927788 node/3676953898 node/4043594359 node/5400684948 node/6238366159 node/6400825486 node/7085164539
+corp hong kong,Hong Kong Food Corp (Fish Ball Noodle),1,1,0,0,0,Hong Kong Food Corp (Fish Ball Noodle),True,node/13084700285 node/13983404571 node/2568117463 node/8333736484
+dumpling vanessa,Vanessa's Dumpling House,1,1,0,0,0,Vanessa's Dumpling House,True,node/10096271927 node/11622197425 node/1884473154 way/241837976
+taim,Taim,1,1,0,0,0,Taim,True,node/10727041492 node/12569712669 node/3090706627 node/4250503821 node/4757294821 node/6179753683
+baekjeong dong ho kang,Kang Ho Dong Baekjeong,1,1,0,0,0,Kang Ho Dong Baekjeong,True,node/4947761822
+gray papaya,Gray's Papaya,1,1,0,0,0,Gray's Papaya,True,node/2143413378
+hestia,Cafe Hestia,1,1,0,0,0,Cafe Hestia,True,node/11399352965 node/5254559385 node/9753289208
+utopia,Utopia Diner,1,1,0,0,0,Utopia Diner,True,node/13965635844 node/4479637590 node/6347916313 node/9752127120
+back,The Back Room,1,1,0,0,1,The Back Room,True,node/13781153305 node/2494292509 node/2709931392 node/4146329789
+chess park square washington,Washington Square Park Chess Tables,1,1,0,0,1,Washington Square Park Chess Tables,False,
+dennehy mr,Mr. Dennehy's,1,1,0,0,1,Mr. Dennehy's,False,
+knish,Knish Shop (Mallen Street Knish Nosh),1,1,0,0,1,Knish Shop (Mallen Street Knish Nosh),True,node/2486570141
+mohegan poker sun,Mohegan Sun Poker Room at Hell's Kitchen (Lucky Strike-style poker night venues),1,1,0,0,1,Mohegan Sun Poker Room at Hell's Kitchen (Lucky Strike-style poker night venues),False,
+park square stuyvesant,Stuyvesant Square Park,1,1,0,0,1,Stuyvesant Square Park,False,
+chicken double please,Double Chicken Please,1,1,0,0,0,Double Chicken Please,True,node/12366546101
+katana kitten,Katana Kitten,1,1,0,0,0,Katana Kitten,True,node/9655048217
+overstory,Overstory,1,1,0,0,0,Overstory,True,node/12366551501
+barbetta,Barbetta,1,1,0,0,1,Barbetta,False,
+carmine,Carmine's,1,1,0,0,1,Carmine's,True,node/2312065724 node/2562454139 node/2717293824 node/2761499681 node/617740844 node/9696064166 way/249665508
+italian specialties torrisi,Torrisi Italian Specialties,1,1,0,0,1,Torrisi Italian Specialties,False,
+le rivage,Le Rivage,1,1,0,0,1,Le Rivage,True,node/11918781631
+afghan bamiyan,Bamiyan Afghan Cuisine,1,1,1,0,0,Bamiyan Afghan Cuisine,False,
+nur thai,Nur Thai,1,1,1,0,0,Nur Thai,False,
+place sac,Sac's Place,1,1,1,0,0,Sac's Place,False,
+ruby,Ruby's Cafe,1,1,1,0,0,Ruby's Cafe,True,node/1691452282 node/2296369157 node/2547241584 node/2549933013 node/2839699811 node/4080306997 node/9579352615
+zhao,Zhao's Kitchen,1,1,1,0,0,Zhao's Kitchen,False,
+3 serendipity,Serendipity 3,1,1,0,0,0,Serendipity 3,True,node/4352204390 node/4353160594
+bubby pie,Bubby's Pie Company,1,1,0,0,0,Bubby's Pie Company,False,
+chelsea market,Chelsea Market,1,1,0,0,0,Chelsea Market,True,node/2495710933 node/2902914463
+eataly flatiron,Eataly NYC Flatiron,1,1,0,0,0,Eataly NYC Flatiron,False,
+juniper,Juniper's Pizza,1,1,0,0,0,Juniper's Pizza,True,node/5812466172
+market out time,Time Out Market New York,1,1,0,0,0,Time Out Market New York,False,
+bao gua taiwanese,Taiwanese Gua Bao Shop (Baohaus),1,1,1,0,0,Taiwanese Gua Bao Shop (Baohaus),True,node/10689052120 node/12909830713 node/2704104197
+birds sey wild,Sey Coffee & Wild Birds Bar,1,1,1,0,0,Sey Coffee & Wild Birds Bar,False,
+hummus mimi,Mimi's Hummus,1,1,1,0,0,Mimi's Hummus,True,node/2494144969
+ksubmarine,Ksubmarine,1,1,1,0,0,Ksubmarine,False,
+la newyorkina,La Newyorkina,1,1,1,0,0,La Newyorkina,False,
+mama too,Mama's Too,1,1,1,0,0,Mama's Too,True,node/13260302501 node/9496920117
+corner jimmy,Jimmy's Corner,1,1,0,0,0,Jimmy's Corner,True,node/3974095816
+maison premiere,Maison Premiere,1,1,0,0,0,Maison Premiere,True,node/10838671326
+rooftop,Rooftop at The Standard (Boom Boom Room),1,1,0,0,0,Rooftop at The Standard (Boom Boom Room),True,node/10154000117 node/10866135205 node/12309214382 node/12818145480 node/12898340499 node/12973789901 node/2568824892 node/2985849342 node/3618193491 node/4243439483 node/4416209989 node/4423853595 node/4423853596 node/4423874390 node/4957663866 node/6457983889 node/6597932385 node/6943963085 node/6943977885 node/6944119885 node/7047049185 node/7047644285 node/7047831585 node/7047832885 node/7047864187 node/7062675586 node/9518146176
+balthazar,Balthazar,1,1,0,0,0,Balthazar,True,node/3608032646
+branch little,Little Branch,1,1,0,0,0,Little Branch,True,node/5994163587
+high line standard,The Standard High Line (Boom Boom Room),1,1,0,0,0,The Standard High Line (Boom Boom Room),False,
+bete,Bar Bête,1,1,1,0,0,Bar Bête,True,node/2549996761
+birdie,Birdie's,1,1,1,0,0,Birdie's,True,node/12799671733
+picnic tijuana,Tijuana Picnic,1,1,1,0,0,Tijuana Picnic,False,
+45 hudson park pier river walk,Hudson River Park Pier 45 Walk,1,1,0,0,0,Hudson River Park Pier 45 Walk,False,
+astoria park,Astoria Park,1,1,0,0,0,Astoria Park,False,
+book store strand,Strand Book Store,1,1,0,0,0,Strand Book Store,False,
+farmers market park prospect,Prospect Park Farmers Market (Grand Army Plaza),1,1,0,0,0,Prospect Park Farmers Market (Grand Army Plaza),False,
+hop smith street,Smith Street Bar Hop,1,1,0,0,0,Smith Street Bar Hop,True,node/5558007851
+park square washington,Washington Square Park,1,1,0,0,0,Washington Square Park,False,
+smorgasburg,Smorgasburg,1,1,0,0,0,Smorgasburg,False,
+79 candle,Candle 79,1,1,0,0,0,Candle 79,False,
+avant,Avant Garden,1,1,0,0,0,Avant Garden,True,node/6458026085 node/7038487815
+blossom,Blossom,1,1,0,0,0,Blossom,True,node/14050057109 node/2839699845 node/3497534425 node/4070145531 node/5166457633 node/5754840634 node/6606935746
+candy dirt,Dirt Candy,1,1,0,0,0,Dirt Candy,True,node/4300313491
+cosme,Cosme,1,1,0,0,0,Cosme,True,node/5181119423
+els mediterranean,Els Mediterranean Kitchen,1,1,0,0,0,Els Mediterranean Kitchen,False,
+hangawi,Hangawi,1,1,0,0,0,Hangawi,True,node/6013503383
+jajaja mexicana plantas,Jajaja Plantas Mexicana,1,1,0,0,0,Jajaja Plantas Mexicana,True,node/11867099054 node/6231529909
+noodles united,United Noodles,1,1,0,0,0,United Noodles,False,
+park soho,Soho Park,1,1,0,0,0,Soho Park,False,
+peacefood,Peacefood Cafe,1,1,0,0,0,Peacefood Cafe,True,node/2758640952 node/9848992562
+alley counter mogador tasting,Cafe Mogador Alley Tasting Counter (Russ & Daughters on Orchard alt: Katz's Tiny Bar),1,1,1,0,0,Cafe Mogador Alley Tasting Counter (Russ & Daughters on Orchard alt: Katz's Tiny Bar),False,
+annex court dumpling galaxy square,Court Square Diner Annex Dumpling Galaxy,1,1,1,0,0,Court Square Diner Annex Dumpling Galaxy,False,
+arepa lady,Arepa Lady,1,1,1,0,0,Arepa Lady,False,
+back east ukrainian veselka village,Ukrainian East Village Veselka Back Bar,1,1,1,0,0,Ukrainian East Village Veselka Back Bar,True,node/3583482794 node/6473303178
+cellar mezcal picnic tijuana,Tijuana Picnic Mezcal Cellar,1,1,1,0,0,Tijuana Picnic Mezcal Cellar,False,
+chinese mission secret tea,Mission Chinese Food Secret Tea Room,1,1,1,0,0,Mission Chinese Food Secret Tea Room,True,node/13926420801
+court marketplace mitsuwa,Mitsuwa Marketplace Food Court,1,1,1,0,0,Mitsuwa Marketplace Food Court,False,
+mamak roti stall,Mamak Roti Stall at Jackson Heights Night Market,1,1,1,0,0,Mamak Roti Stall at Jackson Heights Night Market,False,
+nowon,Nowon,1,1,1,0,0,Nowon,False,
+sunny,Sunny's Bar,1,1,1,0,0,Sunny's Bar,True,node/10270363605 node/2549926661 node/357620442 node/4870096921 node/4884445809 node/6237394819 node/9780448977
+bark,Bark Barbecue,1,1,0,1,0,Bark Barbecue,False,
+real virgil,Virgil's Real BBQ,1,1,0,1,0,Virgil's Real BBQ,True,node/13874600395 node/4447034701
+carlyle carlyle,The Carlyle's Café Carlyle,1,1,0,0,1,The Carlyle's Café Carlyle,True,node/2723953331
+cloud hotel knickerbocker rooftop,The Knickerbocker Hotel's St. Cloud Rooftop,1,1,0,0,1,The Knickerbocker Hotel's St. Cloud Rooftop,True,node/12309214382 node/7047049185
+cole king,King Cole Bar,1,1,0,0,1,King Cole Bar,True,node/2716011967
+five rainbow sixty,The Rainbow Room's Sixty Five,1,1,0,0,1,The Rainbow Room's Sixty Five,False,
+jazz standard,Jazz Standard Bar at Blue Note,1,1,0,0,1,Jazz Standard Bar at Blue Note,True,node/3955492426
+oak,The Oak Room,1,1,0,0,1,The Oak Room,True,node/11484261985 node/4218407489 node/5082647022 node/6236943854 way/248164300
+rainbow roosevelt,The Roosevelt's Rainbow Room,1,1,0,0,1,The Roosevelt's Rainbow Room,False,
+jazz smoke supper,Smoke Jazz & Supper Club,1,1,0,1,0,Smoke Jazz & Supper Club,True,node/2312065757
+stand,The Stand,1,1,0,1,0,The Stand,True,node/5215527122
+aquavit,Aquavit,1,1,0,0,0,Aquavit,True,node/3213784371
+boathouse loeb,The Loeb Boathouse,1,1,0,0,0,The Loeb Boathouse,True,relation/3698871
+boulud,Café Boulud,1,2,0,0,0,Bar Boulud | Café Boulud,True,node/10281405382 node/2824696370 node/6418373475
+des fetes place,Place des Fêtes,1,1,0,0,0,Place des Fêtes,True,node/6204656994
+green,Tavern on the Green,1,1,0,0,0,Tavern on the Green,True,node/10642744091 node/11236742641 node/11281762405 node/11481202129 node/11860537157 node/12065422572 node/12251325070 node/12349005604 node/12365598708 node/12450362420 node/12684907461 node/13961021498 node/2020724922 node/2237276258 node/2276324841 node/2723749688 node/2949606712 node/3356363293 node/4305803511 node/4423874390 node/5093178522 node/5220904072 node/6206645059 node/6319618552 node/7124755712 node/8333736458 node/8641328557 node/9543824655 node/9595690718 node/9711419117 relation/7459068 way/417593856
+maialino,Maialino,1,1,0,0,0,Maialino,True,node/5005918101
+writing,The Writing Room,1,1,0,0,0,The Writing Room,True,node/5553460385
+alice austen,Alice Austen House,1,1,1,0,0,Alice Austen House,False,
+armstrong museum,Louis Armstrong House Museum,1,1,1,0,0,Louis Armstrong House Museum,False,
+army terminal,Brooklyn Army Terminal,1,1,1,0,0,Brooklyn Army Terminal,False,
+block island life museum park roosevelt southpoint tenement,Tenement Museum Shop Life Block: Roosevelt Island Southpoint Park,1,1,1,0,0,Tenement Museum Shop Life Block: Roosevelt Island Southpoint Park,False,
+center cultural harbor snug,Snug Harbor Cultural Center,1,1,1,0,0,Snug Harbor Cultural Center,False,
+grange hamilton memorial national,Hamilton Grange National Memorial,1,1,1,0,0,Hamilton Grange National Memorial,False,
+green kingsland roof wildflower,Kingsland Wildflower Green Roof,1,1,1,0,0,Kingsland Wildflower Green Roof,False,
+merchant museum,Merchant's House Museum,1,1,1,0,0,Merchant's House Museum,False,
+cheryl global soul,Cheryl's Global Soul,1,1,0,1,0,Cheryl's Global Soul,True,node/4774165530
+cricket,Manhattan Cricket Club,1,1,0,0,1,Manhattan Cricket Club,False,
+john luncheonette old,Old John's Luncheonette,1,1,0,0,1,Old John's Luncheonette,True,node/14181474078
+mulberry street,Mulberry Street Bar,1,1,0,0,1,Mulberry Street Bar,False,
+parm,Parm,1,1,0,0,1,Parm,True,node/4930944423 node/6568736486
+crisis marie,Marie's Crisis Cafe,1,1,0,0,1,Marie's Crisis Cafe,False,
+dominick rao,Rao's (if you can get in) / Dominick's,1,1,0,0,1,Rao's (if you can get in) / Dominick's,False,
+ear,The Ear Inn,1,1,0,0,1,The Ear Inn,True,node/2123472747
+espresso pastry rocco,Rocco's Pastry Shop & Espresso Bar,1,1,0,0,1,Rocco's Pastry Shop & Espresso Bar,False,
+aska,Aska,1,1,0,0,0,Aska,False,
+gabriel kreuther,Gabriel Kreuther,1,1,0,0,0,Gabriel Kreuther,False,
+river,The River Café,1,1,0,0,0,The River Café,True,node/10771532496 node/11063835466 node/1227678751 node/14174270639 node/2035810358 node/2676420982 node/2717293822 node/5599364192 node/5630477424
+pies thighs,Pies 'n' Thighs,1,1,0,1,0,Pies 'n' Thighs,True,node/2488562093 node/2712066273
