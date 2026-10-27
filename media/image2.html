@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>UNSAID image 2</title>
+<link rel="stylesheet" href="../site/css/unsaid.css">
+<style>
+  html, body { overflow: hidden; }
+  #stage { width: 1600px; height: 1000px; position: relative; padding: 0 40px; background: var(--bg); }
+  .top { height: 56px; min-height: 0; padding: 0; }
+  h1.hl { font: 400 84px/1 var(--serif); letter-spacing: -.015em; margin: 44px 0 12px; }
+  h1.hl .any { color: var(--dim); }
+  .subl { color: var(--dim); font-size: 15px; }
+  .grid { display: grid; grid-template-columns: 380px 1fr; gap: 48px; margin-top: 34px; }
+  .card { cursor: default; min-height: 360px; padding: 18px; gap: 8px; animation: none; }
+  .card .name { font-size: 28px; }
+  .card .what { font-size: 13px; }
+  .card .rk { font-size: 13px; } .card .rk b { font-size: 40px; }
+  .card .because { font-size: 12px; } .card .because b { font-size: 13px; }
+  .go2 { margin-top: 16px; display: flex; gap: 14px; align-items: center; }
+  .go2 p { margin: 0; color: var(--ink); font-size: 13px; }
+  .back .sh h2 { font-size: 12px; }
+  .back p { font-size: 15px; margin: 10px 0 0; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 36px; margin-top: 26px; }
+  .slider { height: 64px; } .slider .tl { font-size: 14px; }
+  .big1 { font-size: 28px; }
+  .logs { position: absolute; left: 40px; right: 40px; bottom: 34px; border-top: 1px solid var(--rule2); padding-top: 10px; font-size: 12px; line-height: 1.75; color: var(--dim); }
+  .logs .v { color: var(--ink); }
+  .logs .h { color: var(--ink); font-weight: 700; letter-spacing: .2em; font-size: 11px; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<script src="../site/js/map.js"></script>
+<script>
+/* image2.html[?src=<results>&card=0]   Devpost image 2 (UNSAID.md §6.3): one card, front left, back right.
+   Headline "#⟦FIT⟧ for you. #⟦ANY⟧ for anyone."; one ⟦U⟧ in the header, slider and log; a raw-log strip of four lines
+   taken from the results file. One count on the image: the card's pair and its ask count. */
+(async function () {
+  const { el, esc, ph, et } = UM;
+  const SRC = UM.param('src', '../site/data/mock/stl-cedric.ndjson'), K = +UM.param('card', 0);
+  const [R, CFG] = await Promise.all([UM.result(SRC), UM.json('../site/data/config.json')]);
+  const c = R.picks[K], fake = (R.flags || []).includes('fake'), flat = (R.flags || []).includes('flat');
+  const U = c.U ?? (R.counts && R.counts.U), Rmi = R.counts && R.counts.R_mi, ns = c.never_said || {};
+  const city = (R.city && R.city.name) || 'St. Louis';
+  const loves = (R.loves || []).filter(l => !l.dead).map(l => esc(l.label));
+  const name = c.name ? esc(c.name) : ph(null, `place ${K + 1}`);
+  const S = document.getElementById('stage');
+  el(S, 'div', '', `<span class="mark"><s>UN</s>SAID</span><span class="slug">${esc(city)} · card ${K + 1} of ${R.picks.length} · for ${loves.join(', ')}</span><span class="grow"></span>` +
+    (fake ? '<span class="mock">mock data · no Qloo results yet</span>' : '')).className = 'top';
+  const fit = c.tied ? null : c.fit_rank;
+  el(S, 'h1', '', `#${ph(fit, 'FIT')} for you.` + (flat ? '' : ` <span class="any">#${ph(c.any_rank, 'ANY')} for anyone.</span>`)).className = 'hl';
+  el(S, 'div', '', `Qloo ranks the same ${ph(U, 'U')} places twice: once for these three loves, once by popularity.`).className = 'subl';
+  const g = el(S, 'div', ''); g.className = 'grid';
+  const L = el(g, 'div', '');
+  L.innerHTML = `<div class="card">
+      <div class="row1"><span>01</span><span>${c.rating == null ? ph(null, 'rating') : Number(c.rating).toFixed(1)} · ${c.open ? 'open' : ph(null, 'open')}</span></div>
+      <div class="hood">${ph(c.neighbourhood, 'neighbourhood')}</div>
+      <div class="name">${name}</div>
+      <div class="what">${ph(c.what, 'what it is')}</div>
+      <div class="rk"><b>#${ph(fit, 'FIT')}</b>for you${flat ? '' : `<span class="any">#${ph(c.any_rank, 'ANY')} for anyone</span>`}</div>
+      <div class="because">because you love<b>${ph(c.because, 'love')}</b></div></div>
+    <div class="go2">${c.url ? '<span class="btn solid">Go ↗</span>' : `<span class="btn off">Go ↗ ${ph(null, 'url')}</span>`}<p>No place can pay to be picked.</p></div>`;
+  const pct = r => Math.max(0, Math.min(100, ((r - 1) / Math.max(1, (U || 1) - 1)) * 100));
+  const lab = r => pct(r) < 12 ? `left:${pct(r)}%;transform:none` : pct(r) > 88 ? `right:${100 - pct(r)}%;transform:none` : `left:${pct(r)}%`;
+  const holds = c.holds != null && c.holds >= c.n_loves ? 'holds even if you drop any one love' : `holds without ${c.holds_without ? c.holds_without.map(esc).join(' or ') : ph(null, 'love')}`;
+  const B = el(g, 'div', ''); B.className = 'back';
+  B.innerHTML = `<div class="sh"><h2>Never said</h2></div>
+      <p>Named 0 times in ${ph(ns.asks, 'ASKS')} asks: ${ph(ns.city_asks, 'n')} about ${esc(city)}, ${ph(ns.street_asks, 'm')} about ${ph(c.neighbourhood, 'neighbourhood')} · ${ph(et(ns.as_of), 'date')}.</p>
+    <div class="two"><div><div class="sh"><h2>Fits you</h2></div>
+      <div class="slider"><div class="track"></div>
+        ${fit != null ? `<div class="tick" style="left:${pct(fit)}%"></div><div class="tl" style="${lab(fit)}">#${fit} for you</div>` : ''}
+        ${!flat && c.any_rank != null ? `<div class="tick any" style="left:${pct(c.any_rank)}%"></div><div class="tl any" style="${lab(c.any_rank)}">#${c.any_rank} for anyone</div>` : ''}
+        <div class="end" style="left:0">#1</div><div class="end" style="right:0">#${ph(U, 'U')}</div></div>
+      <p class="dim" style="font-size:12.5px">of the same places within ${ph(Rmi, 'R')} mi, rated ${CFG.floor.rating}+, open. ‘Anyone’ is Qloo’s popularity order of the same places.</p></div>
+    <div><div class="sh"><h2>Because</h2></div><div class="big1">${ph(c.because, 'love')}</div><p class="dim">${holds}</p></div></div>`;
+  // the raw-log strip: three real asks behind the wall, then this card's line (U appears here, its third time)
+  const asks = []; const seen = new Set();
+  for (const w of R.wall || []) { const k = w.provider + w.phrasing_id; if (!seen.has(k)) { seen.add(k); asks.push(w); } if (asks.length >= 3) break; }
+  const lines = asks.map(a => `${ph(et(a.asked_at), 'time')} · <span class="v">${esc(a.provider)}</span> ${esc(a.model || '')} · ${a.lane === 'live' ? 'live' : 'dated'} · “${esc(a.phrasing)}” → named ${R.wall.filter(w => w.phrasing_id === a.phrasing_id && w.provider === a.provider).length} new names`);
+  lines.push(`card · qloo id <span class="v">${esc(c.id)}</span> · for you #${ph(fit, 'FIT')} of ${ph(U, 'U')} · popularity #${ph(c.any_rank, 'ANY')} · named in 0 of ${ph(ns.asks, 'ASKS')} answers`);
+  el(S, 'div', '', `<div class="h">RAW LOG</div>` + lines.map(l => `<div>${l}</div>`).join('')).className = 'logs';
+  window.__ready = true;
+})().catch(e => { window.__error = String(e && e.stack || e); window.__ready = true; document.body.insertAdjacentHTML('beforeend', `<pre style="color:#ff2d3d">${e}</pre>`); });
+</script>
+</body>
+</html>

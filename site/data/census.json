@@ -1,0 +1,188 @@
+{
+ "_": "Every figure here is a census figure; \"src\" is the census_stats.txt line it is checked against by build_data.py.",
+ "model": "Claude Sonnet 5.5",
+ "model_id": "claude-sonnet-5-5",
+ "date": "27 Oct 2026",
+ "web_search": false,
+ "preregistered": true,
+ "stl": {
+  "city": "St. Louis",
+  "asks": {
+   "n": 64,
+   "src": "census_stats.txt:3"
+  },
+  "gem": {
+   "name": "Gioia's Deli",
+   "hits": 13,
+   "of": 16,
+   "hood": "The Hill",
+   "src": "census_stats.txt:58"
+  },
+  "gem_family": {
+   "n": 16,
+   "src": "census_stats.txt:51"
+  },
+  "plain": {
+   "hits": 11,
+   "of": 14,
+   "src": "census_stats.txt:46 (generic first) + census_stats.txt:52"
+  },
+  "second": {
+   "name": "Pappy's Smokehouse",
+   "src": "census_stats.txt:49"
+  },
+  "said": {
+   "n": 236,
+   "src": "census_stats.txt:20"
+  },
+  "k50": {
+   "n": 29,
+   "src": "census_stats.txt:44"
+  },
+  "strangers_shared": {
+   "n": 9,
+   "src": "census_stats.txt:76"
+  },
+  "osm": {
+   "n": 818,
+   "src": "census_stats.txt:81"
+  },
+  "gem_asks": [
+   {
+    "id": "stl-hidden-09",
+    "ask": "tell me somewhere to eat in St. Louis that nobody else would tell me",
+    "hit": true,
+    "pos": 4,
+    "n": 11
+   },
+   {
+    "id": "stl-hidden-14",
+    "ask": "under the radar restaurants and bars in St Louis",
+    "hit": true,
+    "pos": 3,
+    "n": 12
+   },
+   {
+    "id": "stl-hidden-06",
+    "ask": "most underrated bars and restaurants STL",
+    "hit": true,
+    "pos": 5,
+    "n": 12
+   },
+   {
+    "id": "stl-hidden-03",
+    "ask": "not touristy places to eat in St. Louis",
+    "hit": true,
+    "pos": 5,
+    "n": 12
+   },
+   {
+    "id": "stl-hidden-00",
+    "ask": "hidden gems to eat and drink in St. Louis",
+    "hit": true,
+    "pos": 2,
+    "n": 12
+   },
+   {
+    "id": "stl-hidden-07",
+    "ask": "places to eat in St. Louis most visitors never hear of",
+    "hit": true,
+    "pos": 7,
+    "n": 12
+   },
+   {
+    "id": "stl-hidden-04",
+    "ask": "where to eat in St. Louis that isn't touristy",
+    "hit": true,
+    "pos": 5,
+    "n": 12
+   },
+   {
+    "id": "stl-hidden-05",
+    "ask": "underrated restaurants in St. Louis",
+    "hit": true,
+    "pos": 9,
+    "n": 12
+   },
+   {
+    "id": "stl-hidden-13",
+    "ask": "local secret spots to eat in St. Louis",
+    "hit": true,
+    "pos": 3,
+    "n": 12
+   },
+   {
+    "id": "stl-hidden-01",
+    "ask": "St. Louis hidden gem restaurants",
+    "hit": true,
+    "pos": 4,
+    "n": 12
+   },
+   {
+    "id": "stl-hidden-11",
+    "ask": "I've already done all the famous spots in St. Louis. where do I go now?",
+    "hit": false,
+    "pos": null,
+    "n": 12
+   },
+   {
+    "id": "stl-hidden-08",
+    "ask": "restaurants in St. Louis that tourists never find out about",
+    "hit": true,
+    "pos": 7,
+    "n": 12
+   },
+   {
+    "id": "stl-hidden-12",
+    "ask": "off the beaten path food and drinks in St. Louis",
+    "hit": true,
+    "pos": 4,
+    "n": 12
+   },
+   {
+    "id": "stl-hidden-15",
+    "ask": "places in St. Louis that aren't on every list",
+    "hit": false,
+    "pos": null,
+    "n": 12
+   },
+   {
+    "id": "stl-hidden-10",
+    "ask": "where to eat in St. Louis, but skip anything every AI would say",
+    "hit": false,
+    "pos": null,
+    "n": 12
+   },
+   {
+    "id": "stl-hidden-02",
+    "ask": "best hidden gems in St Louis for food",
+    "hit": true,
+    "pos": 1,
+    "n": 12
+   }
+  ]
+ },
+ "nyc": {
+  "city": "New York",
+  "asks": {
+   "n": 64,
+   "src": "census_stats.txt:92"
+  },
+  "gem": {
+   "name": "Sripraphai",
+   "hits": 11,
+   "of": 16,
+   "first": 6,
+   "hood": "Woodside, Queens",
+   "src": "census_stats.txt:147 + census_stats.txt:136"
+  },
+  "said": {
+   "n": 334,
+   "src": "census_stats.txt:109"
+  },
+  "osm": {
+   "n": 11959,
+   "src": "census_stats.txt:170"
+  }
+ }
+}

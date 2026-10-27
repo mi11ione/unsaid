@@ -1,0 +1,43 @@
+{
+ "sets": [
+  {
+   "id": "stl-cedric",
+   "label": "Cedric · St. Louis",
+   "city": "st-louis",
+   "loves": [
+    "Frankie Beverly & Maze",
+    "The Original Kings of Comedy",
+    "rib tips"
+   ],
+   "ran": null,
+   "src": "data/mock/stl-cedric.ndjson",
+   "mock": true
+  },
+  {
+   "id": "stl-jason",
+   "label": "Jason · St. Louis",
+   "city": "st-louis",
+   "loves": [
+    "Frank Sinatra",
+    "Rounders",
+    "Carbone"
+   ],
+   "ran": null,
+   "src": null,
+   "mock": false
+  },
+  {
+   "id": "nyc-khruangbin",
+   "label": "Khruangbin · New York",
+   "city": "new-york",
+   "loves": [
+    "Khruangbin",
+    null,
+    null
+   ],
+   "ran": null,
+   "src": null,
+   "mock": false
+  }
+ ]
+}

@@ -1,0 +1,108 @@
+{
+ "_": "MOCK answers for GET /api/resolve when no server is up. Keys are norm(text).",
+ "love": {
+  "frankie beverly and maze": {
+   "status": "ok",
+   "chip": {
+    "id": null,
+    "label": "Frankie Beverly & Maze",
+    "kind": "entity",
+    "type": "artist"
+   },
+   "alternatives": [
+    {
+     "id": null,
+     "label": "Maze",
+     "kind": "entity",
+     "type": "artist"
+    }
+   ]
+  },
+  "original kings of comedy": {
+   "status": "ok",
+   "chip": {
+    "id": null,
+    "label": "The Original Kings of Comedy",
+    "kind": "entity",
+    "type": "movie"
+   },
+   "alternatives": []
+  },
+  "rib tips": {
+   "status": "needs_input",
+   "chip": {
+    "id": null,
+    "label": "Rib tips",
+    "kind": "tag",
+    "type": "dish"
+   },
+   "alternatives": [
+    {
+     "id": null,
+     "label": "Rib Tips (album)",
+     "kind": "entity",
+     "type": "album"
+    }
+   ]
+  },
+  "khruangbin": {
+   "status": "ok",
+   "chip": {
+    "id": null,
+    "label": "Khruangbin",
+    "kind": "entity",
+    "type": "artist"
+   },
+   "alternatives": []
+  }
+ },
+ "city": {
+  "st louis": {
+   "status": "ok",
+   "city": {
+    "id": null,
+    "name": "St. Louis",
+    "slug": "st-louis",
+    "region": "Missouri"
+   },
+   "alternatives": []
+  },
+  "stl": {
+   "status": "ok",
+   "city": {
+    "id": null,
+    "name": "St. Louis",
+    "slug": "st-louis",
+    "region": "Missouri"
+   },
+   "alternatives": []
+  },
+  "new york": {
+   "status": "ok",
+   "city": {
+    "id": null,
+    "name": "New York",
+    "slug": "new-york",
+    "region": "New York"
+   },
+   "alternatives": []
+  },
+  "richmond": {
+   "status": "needs_input",
+   "city": {
+    "id": null,
+    "name": "Staten Island",
+    "slug": null,
+    "region": "New York"
+   },
+   "alternatives": [
+    {
+     "id": null,
+     "name": "Richmond, Virginia",
+     "slug": "richmond-va",
+     "region": "Virginia"
+    }
+   ]
+  }
+ }
+}

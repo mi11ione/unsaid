@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Hidden gem clip</title>
+<link rel="stylesheet" href="css/media.css">
+<style>
+  #stage { width: 1920px; height: 1080px; }
+  .eyebrow { position: absolute; left: 72px; top: 96px; width: 700px; font: 50px/1.12 var(--serif); color: var(--ink); }
+  .rows { position: absolute; left: 72px; top: 260px; width: 720px; }
+  .row { height: 28px; display: flex; align-items: center; gap: 14px; font: 15px/1 var(--mono); color: var(--dim); white-space: nowrap; }
+  .row .m { flex: 0 0 11px; height: 11px; border: 1.5px solid var(--faint); border-radius: 50%; }
+  .row.hit .m { background: var(--red); border-color: var(--red); }
+  .row.hit .q { color: #c9c6bd; }
+  .row .x { color: var(--faint); margin-left: 4px; }
+  .blk { position: absolute; left: 72px; top: 0; width: 760px; }
+  .gem { font: 96px/1 var(--serif); color: var(--red); letter-spacing: -.015em; display: inline-block; position: relative; white-space: nowrap; }
+  .gem::after { content: ''; position: absolute; left: -.04em; top: 56%; height: .068em; width: calc(var(--k, 0) * (100% + .08em)); background: var(--red); box-shadow: 0 0 0 .022em var(--bg); }
+  .tally { font: 40px/1.2 var(--serif); color: var(--red); margin-top: 18px; font-variant-numeric: lining-nums; }
+  .also { font: 32px/1.2 var(--serif); color: var(--dim); }
+  .hr { position: absolute; left: 72px; width: 400px; height: 1px; background: var(--rule2); }
+  .yours { position: absolute; left: 72px; font: 96px/1 var(--serif); color: var(--white); letter-spacing: -.015em; white-space: nowrap; }
+  .loves { position: absolute; left: 72px; width: 590px; font: 21px/1.45 var(--mono); color: var(--dim); }
+  .loves b { font-weight: 400; color: var(--ink); }
+  .loves .cur { display: inline-block; width: .6em; height: 1em; background: var(--white); vertical-align: -3px; margin-left: 2px; }
+  .lab { text-shadow: 0 0 3px #0b0b0b, 0 0 6px #0b0b0b; }
+  .lab.white .pn { font-family: var(--serif); }
+  .top { position: absolute; left: 72px; top: 40px; display: flex; gap: 26px; align-items: baseline; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<script src="../site/js/map.js"></script>
+<script>
+/* clip.html[?src=<results>]: the 10-second clip, "Ask an AI for a hidden gem", 1920×1080, one timeline.
+   Kept from research/round4/proto/clip5.html; now data-driven: the 16 asks from site/data/census.json (built from the
+   census answers; census_stats.txt:58 says 13 of 16), the map from site/data/map/stl.json, and the seven, their
+   neighbourhoods and the loves from the results file (default: the MOCK stream, marked MOCK).
+   The 16 real hidden-gem asks land one by one; 13 of them on Gioia's Deli. Then the strike, then the seven.
+   window.seek(t) draws the frame at t seconds (0..10). ?t=6.6 freezes a frame, ?play=1 plays in real time. */
+(async function () {
+  const { C, el, esc } = UM;
+  const [CEN, M, RES] = await Promise.all([UM.json('../site/data/census.json'), UM.json('../site/data/map/stl.json'),
+    UM.result(UM.param('src', '../site/data/mock/stl-cedric.ndjson'))]);
+  const S = CEN.stl;
+  // G: the shape clip5 used. hits/of: census_stats.txt:58 · plain: :46 + :52 · allAsks: :3
+  const G = { asks: S.gem_asks, hits: S.gem.hits, of: S.gem.of, plainHits: S.plain.hits, plainAsks: S.plain.of, allAsks: S.asks.n };
+  const R = { places: M.places, ai: M.ai.slice().sort((a, b) => b.count - a.count), lat0: M.lat0, latMax: M.latMax };
+  const fake = (RES.flags || []).includes('fake');
+  const PICKS = RES.picks || [];
+  const TITLE = new Set(['movie', 'tv_show', 'book', 'podcast', 'videogame', 'film', 'show']);
+  const tl = c => c && (c.type_label || (c.type ? String(c.type).split(':').pop() : null));
+  const LV = (RES.loves || []).filter(l => !l.dead).slice().sort((a, b) => TITLE.has(tl(a)) - TITLE.has(tl(b)));
+  const ITAL = LV.filter(l => TITLE.has(tl(l))).map(l => l.label);
+  const stage = document.getElementById('stage');
+  const W = 1920, H = 1080;
+  const ctx = UM.canvas(stage, W, H);
+  const P = UM.projection(R, { x: 960, y: 70, w: 640, h: 930 });
+  const b = P.bounds;
+  const cmax = R.ai[0].count;
+  const gioia = R.ai.find(a => a.name === S.gem.name), [gx, gy] = P(gioia.lon, gioia.lat), gr = UM.discD(gioia.count, cmax, 40, 5) / 2;
+
+  // ---- timeline (seconds) ----
+  const t0 = 1.3, slow = 2, dSlow = .5, dFast = .25;
+  const askT = G.asks.map((_, i) => t0 + Math.min(i, slow) * dSlow + Math.max(0, i - slow) * dFast);
+  const asksEnd = askT[askT.length - 1] + dFast + .1;
+  const T = { also: asksEnd + .1, strike: [asksEnd + .5, asksEnd + 1.1], slide: [asksEnd + 1.2, asksEnd + 1.8], yours: asksEnd + 1.8,
+    type: [asksEnd + 2.1, asksEnd + 2.8], ignite: asksEnd + 2.5 };
+  const LAND = .17; // line travel time
+  const clamp = (x, a = 0, z = 1) => Math.max(a, Math.min(z, x));
+  const ease = x => 1 - Math.pow(1 - clamp(x), 3);
+  const easeIO = x => { x = clamp(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+  const [cx, cy] = P(-90.19, 38.627);
+  const delay = R.places.map(([lon, lat]) => { const [x, y] = P(lon, lat); return Math.hypot(x - cx, y - cy) / 900 * 0.7; });
+
+  // ---- overlay ----
+  el(stage, 'div', '', `<span class="mark" style="font-size:16px"><s>UN</s>SAID</span><span class="slug" style="font-size:13px">St. Louis · eat &amp; drink</span>`).className = 'top';
+  if (fake) el(stage, 'div', 'position:absolute;right:56px;top:36px;transform:scale(1.3);transform-origin:right top', `<span class="mock">mock · white: not real cards yet</span>`);
+  const eye = el(stage, 'div', '', `Ask an AI for a hidden gem in ${esc(S.city).replace(' ', '&nbsp;')}.`); eye.className = 'eyebrow';
+  const rows = el(stage, 'div', ''); rows.className = 'rows';
+  const rowEls = G.asks.map(a => {
+    const r = el(rows, 'div', 'opacity:0', `<span class="m"></span><span class="q">“${a.ask}”</span>` + (a.hit ? '' : `<span class="x">no ${esc(S.gem.name.split(' ')[0]).replace("'", '’')}</span>`));
+    r.className = 'row'; return r;
+  });
+  const ROW0 = 260, ROWH = 28;
+  const blk = el(stage, 'div', ''); blk.className = 'blk';
+  const gem = el(blk, 'div', '', esc(S.gem.name).replace("'", '’')); gem.className = 'gem';
+  const tally = el(blk, 'div', '', ''); tally.className = 'tally';
+  const also = el(blk, 'div', '', `also on ${G.plainHits} of its ${G.plainAsks} plain lists`); also.className = 'also';
+  const BLK0 = 744, BLK1 = 258; // block top while the asks run, and at rest (where the asks were)
+  const hr = el(stage, 'div', 'top:0'); hr.className = 'hr';
+  const yours = el(stage, 'div', '', `${PICKS.length} for you`); yours.className = 'yours';
+  // "ranked by Qloo for" / the loves, titles last; line breaks before the last love
+  const LOVES = 'ranked by Qloo for\n|' + (LV.length > 1 ? LV.slice(0, -1).map(l => l.label).join(', ') + '\nand ' : '') + (LV.length ? LV[LV.length - 1].label : '');
+  const loves = el(stage, 'div', ''); loves.className = 'loves';
+  el(stage, 'div', 'position:absolute;left:72px;top:1012px;font-size:12.5px;line-height:1.6;color:var(--dim)',
+    `red: places the AI named, sized by mentions · census of ${esc(CEN.model)}, no web search, ${G.allAsks} ${esc(S.city)} asks incl. the ${G.of} hidden-gem phrasings shown and ${G.plainAsks} plain “where to eat” ones, ${esc(CEN.date)}, pre-registered<br>${esc(M.credit)} · white: ${fake ? 'placeholders, no Qloo ranking yet' : `the ${PICKS.length}, ranked by Qloo for these loves`}`).className = 'attr';
+
+  // the seven: labels on the map's sides
+  const mid = (b.x0 + b.x1) / 2;
+  const items = PICKS.map((s, idx) => { const [x, y] = P(s.lon, s.lat); return { s, idx, x, y, side: x < mid ? 'L' : 'R', h: 52 }; });
+  UM.stack(items, 90, 1000, 12);
+  items.forEach(i => {
+    const L = i.side === 'L', lx = L ? b.x0 - 30 : b.x1 + 30;
+    i.lx = lx; i.L = L;
+    i.node = el(stage, 'div', `top:${i.ly}px;${L ? `right:${W - lx}px;text-align:right` : `left:${lx}px`};font-size:24px;line-height:1;opacity:0`,
+      `<div class="pn">${i.s.name ? esc(i.s.name) : UM.ph(null, `place ${i.idx + 1}`)}</div><div style="font-size:14px;margin-top:6px;color:var(--dim)">${i.s.neighbourhood ? esc(i.s.neighbourhood) : UM.ph(null, 'neighbourhood')}</div>`);
+    i.node.className = 'lab white';
+  });
+
+  function seek(t) {
+    ctx.clearRect(0, 0, W, H);
+    const dimK = ease((t - T.strike[0] - .2) / .8);
+    const slideK = easeIO((t - T.slide[0]) / (T.slide[1] - T.slide[0]));
+    // city and the AI's places
+    UM.dots(ctx, R, P, { d: 4.4, alpha: .95, color: '#6a6a6a', glow: 19, reveal: i => ease((t - delay[i]) / 0.35) });
+    const discK = ease((t - .6) / .6);
+    if (discK > 0) R.ai.slice().reverse().forEach(a => { const [x, y] = P(a.lon, a.lat); UM.disc(ctx, x, y, UM.discD(a.count, cmax, 40, 5) * (.6 + .4 * discK), .88 * discK * (1 - .68 * dimK)); });
+    eye.style.opacity = ease((t - .2) / .5);
+    // asks
+    let hits = 0, shown = 0, lastLand = -9;
+    const rowsK = 1 - ease((t - T.slide[0]) / .35);
+    rows.style.opacity = rowsK;
+    G.asks.forEach((a, i) => {
+      const ti = askT[i], r = rowEls[i];
+      const inK = ease((t - ti) / .12);
+      r.style.opacity = inK;
+      r.style.transform = `translateX(${(1 - inK) * -14}px)`;
+      if (t >= ti) shown = i + 1;
+      const lk = clamp((t - ti - .08) / LAND);
+      r.classList.toggle('hit', a.hit && lk >= 1);
+      if (a.hit && lk > 0) {
+        const x0 = 72 + 24 + r.querySelector('.q').offsetWidth + 14, y0 = ROW0 + i * ROWH + ROWH / 2;
+        const ang = Math.atan2(gy - y0, gx - x0), x1 = gx - Math.cos(ang) * (gr + 9), y1 = gy - Math.sin(ang) * (gr + 9);
+        const e = ease(lk);
+        ctx.globalAlpha = (lk < 1 ? .95 : .38) * (1 - .75 * dimK) * rowsK; ctx.strokeStyle = C.red; ctx.lineWidth = lk < 1 ? 2 : 1.25;
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0 + (x1 - x0) * e, y0 + (y1 - y0) * e); ctx.stroke(); ctx.globalAlpha = 1;
+        if (lk >= 1) { hits++; lastLand = Math.max(lastLand, ti + .08 + LAND); }
+      }
+    });
+    // Gioia's ring, pulsing on each landing
+    const ringK = ease((t - askT[0] - .25) / .2);
+    if (ringK > 0) {
+      const pk = clamp((t - lastLand) / .35);
+      ctx.strokeStyle = C.red; ctx.lineWidth = 2;
+      ctx.globalAlpha = ringK * (1 - .6 * dimK); ctx.beginPath(); ctx.arc(gx, gy, gr + 9, 0, 7); ctx.stroke();
+      if (pk < 1) { ctx.globalAlpha = (1 - pk) * .8; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(gx, gy, gr + 9 + 26 * ease(pk), 0, 7); ctx.stroke(); }
+      ctx.globalAlpha = 1;
+    }
+    // the block: Gioia's Deli and the tally
+    const firstLand = askT[0] + .08 + LAND;
+    blk.style.opacity = ease((t - firstLand) / .25);
+    blk.style.top = (BLK0 + (BLK1 - BLK0) * slideK) + 'px';
+    tally.textContent = `${hits} time${hits === 1 ? '' : 's'} out of ${shown}`;
+    also.style.opacity = ease((t - T.also) / .4);
+    gem.style.setProperty('--k', easeIO((t - T.strike[0]) / (T.strike[1] - T.strike[0])));
+    // 7 for you
+    const blkH = blk.offsetHeight, yTop = BLK1 + blkH + 44;
+    hr.style.top = yTop + 'px'; hr.style.opacity = ease((t - T.yours + .1) / .4);
+    yours.style.top = (yTop + 36) + 'px';
+    const yk = ease((t - T.yours) / .45);
+    yours.style.opacity = yk; yours.style.transform = `translateY(${(1 - yk) * 14}px)`;
+    loves.style.top = (yTop + 36 + 96 + 26) + 'px';
+    const [lead, rest] = LOVES.split('|'), full = lead + rest;
+    const n = Math.round(clamp((t - T.type[0]) / (T.type[1] - T.type[0])) * full.length);
+    const txt = full.slice(0, n), esc2 = s => s.replace(/&/g, '&amp;').replace(/\n/g, '<br>');
+    loves.innerHTML = t < T.type[0] ? '' : esc2(txt.slice(0, lead.length)) + (n > lead.length ? '<b>' + ITAL.reduce((h, t) => h.replace(esc2(t), '<i>' + esc2(t) + '</i>'), esc2(txt.slice(lead.length))) + '</b>' : '') +
+      (t < T.type[1] + .6 && Math.floor(t * 3) % 2 === 0 ? '<span class="cur"></span>' : '');
+    // the seven ignite, with their labels
+    items.forEach(i => {
+      const tt = t - T.ignite - i.idx * .14, ig = ease(tt / .3);
+      i.node.style.opacity = ig;
+      if (ig <= 0) return;
+      const flash = Math.max(0, 1 - Math.abs(tt - .15) / .25);
+      if (flash > 0) { ctx.globalAlpha = .25 * flash; ctx.fillStyle = C.white; ctx.beginPath(); ctx.arc(i.x, i.y, 10 + 24 * flash, 0, 7); ctx.fill(); ctx.globalAlpha = 1; }
+      UM.leader(ctx, i.x + (i.L ? -9 : 9), i.y, i.lx + (i.L ? 6 : -6), i.ly + 12, C.white, .55 * ig);
+      UM.seven(ctx, i.x, i.y, ig, 13, 4.5);
+    });
+  }
+  window.seek = seek;
+  seek(+UM.param('t', 0));
+  if (UM.param('play')) { const s0 = performance.now(); const f = () => { const t = (performance.now() - s0) / 1000; seek(Math.min(t, 10)); if (t < 10.5) requestAnimationFrame(f); }; requestAnimationFrame(f); }
+  window.__T = { askT, ...T };
+  window.__ready = true;
+})().catch(e => { window.__error = String(e && e.stack || e); window.__ready = true; });
+</script>
+</body>
+</html>

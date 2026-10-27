@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UNSAID for agents</title>
+<meta name="theme-color" content="#0b0b0b">
+<link rel="stylesheet" href="css/unsaid.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="top"><a class="mark" href="./"><s>UN</s>SAID</a><span class="slug">for agents</span></header>
+  <main class="doc">
+    <h1>Call it from your agent.</h1>
+    <p>One tool, <code>unsaid_places(loves, city)</code>. It crosses out every place ChatGPT, Claude and Gemini name for that city, and returns up to seven that Qloo ranks for those loves, each with its Qloo ID, “#k for you · #j for anyone”, the love behind it and how many AI answers named it.</p>
+
+    <h2>curl</h2>
+    <pre id="curl"></pre>
+    <p class="dim"><code>loves</code> is a JSON array of up to three items: plain text, <code>{"text": "...", "type": "movie"}</code>, or a chip from <code>/api/resolve</code>. A <code>|</code>-separated list also works. The reply is NDJSON; the last line is <code>{"type":"done","result":{...}}</code>. <code>GET /api/health</code> never needs the token.</p>
+
+    <h2>Token</h2>
+    <p><b>Until 30 Oct 23:45 ET the API needs a token.</b> It is in the Devpost testing instructions. After that the token is removed and the API is open, rate-limited to 3 fresh runs per hour per address. Repeat queries are cached and free.</p>
+    <p class="dim">Send it as <code>Authorization: Bearer …</code>, as <code>X-Unsaid-Token: …</code>, or as <code>&amp;token=…</code>. In a browser, add <code>?token=…</code> to this site’s address and the page passes it on.</p>
+
+    <h2>MCP</h2>
+    <pre>claude mcp add unsaid -e UNSAID_MODE=fake -- python3 -I /path/to/unsaid/agent/unsaid_mcp.py</pre>
+    <pre>{
+  "mcpServers": {
+    "unsaid": {
+      "command": "python3",
+      "args": ["-I", "/path/to/unsaid/agent/unsaid_mcp.py"],
+      "env": { "UNSAID_MODE": "fake" }
+    }
+  }
+}</pre>
+    <p class="dim">The MCP server runs locally over stdio, so it needs no token. Two tools: <code>unsaid_places(loves, city)</code> returns the places no AI names, ranked by Qloo. <code>qloo_places(loves, city)</code> returns Qloo’s top 50 for the same loves with nothing crossed out; it is the meter’s “with” arm. A remote <code>/mcp</code> endpoint, if it ships, sits behind the same token.</p>
+
+    <h2>Meter</h2>
+    <p id="meter"></p>
+  </main>
+  <footer class="foot"><span>© OpenStreetMap contributors, ODbL (map)</span><span>ranks by Qloo</span><a class="link" href="./">UNSAID</a></footer>
+</div>
+<script src="js/map.js"></script>
+<script>
+(async function () {
+  const o = location.origin.startsWith('http') ? location.origin : 'https://unsaid.pages.dev';
+  const loves = JSON.stringify(['Frankie Beverly & Maze', 'rib tips']);
+  document.getElementById('curl').textContent =
+    `curl -N -H "Authorization: Bearer $UNSAID_TOKEN" \\\n  "${o}/api/unsaid?city=st-louis&loves=${encodeURIComponent(loves)}"`;
+  const m = await UM.json('data/meter.json');
+  // "alone ⟦M_ALONE⟧ of 12 on the everyone-list · with Qloo ⟦M_QLOO⟧" (UNSAID.md §6.3)
+  // TOKEN_NOTE.md: "The meter line: ⟦M_ALONE⟧ → ⟦M_QLOO⟧" (filled from k10_meter.py via data/meter.json)
+  document.getElementById('meter').innerHTML =
+    `Picks on the other AIs’ everyone-list, of ${m.of}: alone ${UM.ph(m.m_alone, 'M_ALONE')} → with Qloo ${UM.ph(m.m_qloo, 'M_QLOO')} (${m.sets} sets, ${m.assistants} assistants).`;
+  window.__ready = true;
+})();
+</script>
+</body>
+</html>

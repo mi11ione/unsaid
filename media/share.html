@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>UNSAID share</title>
+<style>html, body { margin: 0; background: #0b0b0b; overflow: hidden; } #stage { width: 1080px; height: 1350px; } canvas { display: block; width: 1080px; height: 1350px; }</style>
+</head>
+<body>
+<div id="stage"><canvas id="cv"></canvas></div>
+<script src="../site/js/map.js"></script>
+<script src="../site/js/share.js"></script>
+<script>
+/* share.html[?src=<results>]: the same share image the site draws on its "share" sheet (site/js/share.js), for render.sh. */
+(async function () {
+  const R = await UM.result(UM.param('src', '../site/data/mock/stl-cedric.ndjson'));
+  await document.fonts.ready;
+  Share.draw(document.getElementById('cv'), R);
+  window.__ready = true;
+})().catch(e => { window.__error = String(e && e.stack || e); window.__ready = true; });
+</script>
+</body>
+</html>

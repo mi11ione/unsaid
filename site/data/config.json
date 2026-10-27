@@ -1,0 +1,24 @@
+{
+ "lanes": [
+  "ChatGPT",
+  "Claude",
+  "Gemini"
+ ],
+ "cities": {
+  "st-louis": {
+   "name": "St. Louis",
+   "map": "data/map/stl.json",
+   "wall": "data/walls/stl.json",
+   "census": "stl"
+  },
+  "new-york": {
+   "name": "New York",
+   "map": null,
+   "wall": null,
+   "census": "nyc"
+  }
+ },
+ "floor": {
+  "rating": 4.3
+ }
+}
