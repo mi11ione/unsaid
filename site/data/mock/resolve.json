@@ -12,9 +12,9 @@
    "alternatives": [
     {
      "id": null,
-     "label": "Maze",
+     "label": null,
      "kind": "entity",
-     "type": "artist"
+     "type": null
     }
    ]
   },
@@ -39,9 +39,9 @@
    "alternatives": [
     {
      "id": null,
-     "label": "Rib Tips (album)",
+     "label": null,
      "kind": "entity",
-     "type": "album"
+     "type": null
     }
    ]
   },

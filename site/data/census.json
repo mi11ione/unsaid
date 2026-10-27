@@ -160,7 +160,12 @@
     "pos": 1,
     "n": 12
    }
-  ]
+  ],
+  "asked": {
+   "first": "2026-10-27T12:05:34+00:00",
+   "last": "2026-10-27T12:10:37+00:00",
+   "src": "claude_answers.jsonl t_start"
+  }
  },
  "nyc": {
   "city": "New York",
@@ -183,6 +188,11 @@
   "osm": {
    "n": 11959,
    "src": "census_stats.txt:170"
+  },
+  "asked": {
+   "first": "2026-10-27T12:05:34+00:00",
+   "last": "2026-10-27T12:10:32+00:00",
+   "src": "claude_answers.jsonl t_start"
   }
  }
 }

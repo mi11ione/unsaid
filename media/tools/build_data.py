@@ -83,6 +83,7 @@ census = {
         'strangers_shared': {'n': 9, 'src': cite(76, r'Cedric∩Jason = (\d+)', 9)},
         'osm': {'n': 818, 'src': cite(81, r'OSM roster: (\d+) features', 818)},
         'gem_asks': gem_asks,
+        'asked': {'first': stl[0]['t_start'], 'last': max(r['t_start'] for r in stl), 'src': 'claude_answers.jsonl t_start'},
     },
     'nyc': {
         'city': 'New York',
@@ -145,11 +146,49 @@ jdump(SITE / 'walls' / 'stl.json', {
     'city': 'st-louis', 'as_of': max(a['asked_at'] for a in answers), 'source': 'Claude census, claude -p, no web search',
     'answers': answers, 'distinct': len(wall_items)})
 
+# ---------------------------------------------------------------- New York: map (Manhattan, Brooklyn, Queens) + wall ----
+import csv  # noqa: E402
+nyc = sorted([r for r in rows if r['city'] == 'nyc'], key=lambda r: r['order'])
+nyc_answers = [{'provider': 'Claude', 'model': r['model'], 'phrasing_id': r['id'], 'phrasing': r['phrasing'], 'family': r['family'],
+                'asked_at': r['t_start'], 'lane': 'dated', 'names': [clean(n) for n in names_of(r)]} for r in nyc]
+jdump(SITE / 'walls' / 'nyc.json', {'city': 'new-york', 'as_of': max(a['asked_at'] for a in nyc_answers),
+                                    'source': 'Claude census, claude -p, no web search', 'answers': nyc_answers})
+census['nyc']['asked'] = {'first': nyc[0]['t_start'], 'last': max(r['t_start'] for r in nyc), 'src': 'claude_answers.jsonl t_start'}
+jdump(SITE / 'census.json', census, 1)
+osm_nyc = MEDIA / 'osm-nyc.json'
+NYC_MAP = None
+if osm_nyc.exists():
+    O = json.load(open(osm_nyc))
+    feats = O['features']
+    by_id = {f['osm']: f for f in feats}
+    by_norm = {}
+    for f in feats:
+        if f['name']:
+            by_norm.setdefault(norm(f['name']), []).append(f)
+    discs, unplaced = [], []
+    for row in csv.DictReader(open(EXP / 'claude_named_nyc.csv')):
+        hit = next((by_id[i] for i in row['osm_ids'].split() if i in by_id), None)
+        if not hit:
+            cands = by_norm.get(norm(row['display']), [])
+            hit = cands[0] if len(cands) == 1 else None
+        if hit:
+            discs.append({'name': row['display'], 'count': int(row['mentions']), 'lat': hit['lat'], 'lon': hit['lon']})
+        else:
+            unplaced.append(row['display'])
+    gem = census['nyc']['gem']['name']
+    assert any(d['name'] == gem for d in discs), f'{gem} not found on the NYC map'
+    NYC_MAP = {'city': 'New York', 'lat0': 40.72, 'places': [[round(f['lon'], 5), round(f['lat'], 5)] for f in feats],
+               'ai': discs, 'callouts': [gem],
+               'credit': 'grey: {n} mapped places to eat and drink in Manhattan, Brooklyn and Queens, © OpenStreetMap contributors, ODbL'.format(n=f"{len(feats):,}"),
+               'osm_as_of': O.get('osm_base'), 'unplaced': len(unplaced)}
+    jdump(SITE / 'map' / 'nyc.json', NYC_MAP)
+    print(f"nyc map: {len(feats)} dots, {len(discs)} discs placed, {len(unplaced)} census names not placed")
+
 # ---------------------------------------------------------------- config + try-these ------------------
 jdump(SITE / 'config.json', {
     'lanes': ['ChatGPT', 'Claude', 'Gemini'],
     'cities': {'st-louis': {'name': 'St. Louis', 'map': 'data/map/stl.json', 'wall': 'data/walls/stl.json', 'census': 'stl'},
-               'new-york': {'name': 'New York', 'map': None, 'wall': None, 'census': 'nyc'}},
+               'new-york': {'name': 'New York', 'map': 'data/map/nyc.json' if NYC_MAP else None, 'wall': 'data/walls/nyc.json', 'census': 'nyc'}},
     'floor': {'rating': 4.3},
 }, 1)
 jdump(SITE / 'try.json', {'sets': [
@@ -159,7 +198,7 @@ jdump(SITE / 'try.json', {'sets': [
     {'id': 'stl-jason', 'label': 'Jason · St. Louis', 'city': 'st-louis', 'loves': ['Frank Sinatra', 'Rounders', 'Carbone'],
      'ran': None, 'src': None, 'mock': False},
     {'id': 'nyc-khruangbin', 'label': 'Khruangbin · New York', 'city': 'new-york', 'loves': ['Khruangbin', None, None],
-     'ran': None, 'src': None, 'mock': False},
+     'ran': None, 'src': 'data/mock/nyc-khruangbin.ndjson' if NYC_MAP else None, 'mock': bool(NYC_MAP)},
 ]}, 1)
 
 # ---------------------------------------------------------------- MOCK streams -------------------------
@@ -187,32 +226,29 @@ MOCK_CARDS = [
 seven = roster['seven']
 spots = [(s['hood'], s['lon'], s['lat']) for s in seven] + [(h, *label_pt[h]) for h in ('The Ville', 'Old North Saint Louis', 'Soulard')]
 U, R_MI = 196, 10
-AS_OF = '2026-10-27T08:05:00-04:00'
+AS_OF = None  # a mock run never happened: no invented timestamps (the UI shows ⟦date⟧)
 
 
-def card(i, tied=False):
+STL_CITY = {'id': None, 'name': 'St. Louis', 'slug': 'st-louis', 'center': [-90.199, 38.627], 'radius_mi': R_MI}
+
+
+def card(i, tied=False, spot_list=None, src_answers=None):
+    spot_list, src_answers = spot_list or spots, src_answers or answers
     what, love, fit, anyr, rating, holds = MOCK_CARDS[i]
-    hood, lon, lat = spots[i]
+    hood, lon, lat = spot_list[i]
     cid = 'mock-' + hashlib.sha1(f'card{i}'.encode()).hexdigest()[:8]
     return {'id': cid, 'name': None, 'what': what, 'because': LOVES[love]['label'], 'fit_rank': None if tied else fit,
             'any_rank': anyr, 'U': U, 'rating': rating, 'open': True, 'neighbourhood': hood, 'address': None,
             'lat': lat, 'lon': lon, 'url': None, 'holds': holds, 'n_loves': 3, 'tied': tied,
-            'never_said': {'asks': len(answers) + 3, 'city_asks': len(answers), 'street_asks': 3, 'as_of': AS_OF}}
+            'never_said': {'asks': len(src_answers) + 3, 'city_asks': len(src_answers), 'street_asks': 3, 'as_of': AS_OF}}
 
 
-def outcome_of(k):
-    """MOCK outcome per wall name (deterministic): mostly struck, some dimmed with each of the spec's reasons."""
-    h = int(hashlib.sha1(k.encode()).hexdigest(), 16) % 100
-    if h < 74:
-        return 'struck', 'in pool'
-    if h < 88:
-        return 'dimmed', 'not in pool'
-    if h < 93:
-        return 'dimmed', 'closed (Qloo)'
-    return 'dimmed', 'not found in Qloo'
+# MOCK outcomes. A real business from the census is only ever struck, reason "mock", no Qloo ID: nothing about it is
+# claimed. The dimmed reasons are shown only on fictional placeholder items (name null -> the UI draws ⟦dimmed n⟧).
+DIMMED_DEMO = ['closed (Qloo)', 'not found in Qloo', 'not in pool']
 
 
-def stream(name, *, status='ok', n_picks=7, n_res=3, flags=(), loves=LOVES, tied=(), burn=True, pre=(), lanes_answers=None,
+def stream(name, *, status='ok', n_picks=7, n_res=3, flags=(), loves=LOVES, tied=(), burn=True, pre=(), lanes_answers=None, city=None, ans_src=None, spot_list=None,
            degraded_as_of=None, known=False, end_early=None, diag_extra=None):
     ev, t = [], 0
 
@@ -225,11 +261,12 @@ def stream(name, *, status='ok', n_picks=7, n_res=3, flags=(), loves=LOVES, tied
         push(e.pop('dt', 0), e)
     if end_early:
         push(400, {'type': 'done', 'result': {'status': end_early, 'flags': ['fake'], 'loves': loves,
-                   'city': {'id': None, 'name': 'St. Louis', 'slug': 'st-louis', 'center': [-90.199, 38.627], 'radius_mi': R_MI},
+                   'city': city or STL_CITY,
                    'picks': [], 'reserves': [], 'wall': [], 'counts': None, 'burn': None,
                    'diag': {'qloo_calls': 0, 'engine_v': 'mock', 'as_of': AS_OF}}})
         return ev
-    ans = answers if lanes_answers is None else answers[:lanes_answers]
+    ans_src = ans_src or answers
+    ans = ans_src if lanes_answers is None else ans_src[:lanes_answers]
     wall = []
     seen2 = set()
     for a in ans:
@@ -238,10 +275,13 @@ def stream(name, *, status='ok', n_picks=7, n_res=3, flags=(), loves=LOVES, tied
             if not k or k in seen2:
                 continue
             seen2.add(k)
-            o, why = outcome_of(k)
             wall.append({'name': n, 'norm': k, 'provider': a['provider'], 'model': a['model'], 'phrasing_id': a['phrasing_id'],
-                         'phrasing': a['phrasing'], 'asked_at': a['asked_at'], 'lane': a['lane'], 'outcome': o, 'reason': why,
-                         'qloo_id': ('mock-q' + hashlib.sha1(k.encode()).hexdigest()[:6]) if why == 'in pool' else None})
+                         'phrasing': a['phrasing'], 'asked_at': a['asked_at'], 'lane': a['lane'], 'outcome': 'struck', 'reason': 'mock',
+                         'qloo_id': None})
+    for i, why in enumerate(DIMMED_DEMO):  # fictional items, one per dimmed reason
+        wall.append({'name': None, 'ph': f'dimmed {i + 1}', 'norm': f'mock dimmed {i + 1}', 'provider': None, 'model': None,
+                     'phrasing_id': None, 'phrasing': None, 'asked_at': None, 'lane': 'dated', 'outcome': 'dimmed', 'reason': why,
+                     'qloo_id': None})
     total = 27
     push(0, {'type': 'calls', 'done': 0, 'total': total})
     for i, w in enumerate(wall):  # the dated wall lands within a second
@@ -252,8 +292,8 @@ def stream(name, *, status='ok', n_picks=7, n_res=3, flags=(), loves=LOVES, tied
         push(5, {'type': 'strike', 'norm': w['norm'], 'outcome': w['outcome'], 'reason': w['reason'], 'qloo_id': w['qloo_id']})
     for d in (9, 12, 15, 18, 21, 24, 27):
         push(700, {'type': 'calls', 'done': d, 'total': total})
-    picks = [card(i, tied=i in tied) for i in range(n_picks)]
-    reserves = [card(7 + i) for i in range(n_res)]
+    picks = [card(i, tied=i in tied, spot_list=spot_list, src_answers=ans_src) for i in range(n_picks)]
+    reserves = [card(7 + i, spot_list=spot_list, src_answers=ans_src) for i in range(n_res)]
     live = [l['label'] for l in loves if not l['dead']]
     for c in picks + reserves:  # a because-line only ever names a live love of this set
         if c['because'] not in live:
@@ -276,22 +316,22 @@ def stream(name, *, status='ok', n_picks=7, n_res=3, flags=(), loves=LOVES, tied
         reserves = reserves[1:]
     wall_n = len(wall)
     struck = sum(1 for w in wall if w['outcome'] == 'struck')
+    assert all(w['name'] is None or (w['outcome'] == 'struck' and w['reason'] == 'mock' and w['qloo_id'] is None) for w in wall)
     res = {
         'status': status, 'flags': ['fake'] + list(flags), 'loves': loves,
-        'city': {'id': None, 'name': 'St. Louis', 'slug': 'st-louis', 'center': [-90.199, 38.627], 'radius_mi': R_MI},
+        'city': city or STL_CITY,
         'picks': picks, 'reserves': reserves, 'wall': wall,
         'counts': {'wall': wall_n, 'asks': len(ans) + len(asked), 'P': 241, 'U': U, 'S': U - struck, 'R_mi': R_MI,
                    'answers': len(ans), 'ais': sorted({a['provider'] for a in ans}),
                    'floor': {'closed': 6, 'below_43': 22, 'outside_R': 11, 'not_venue': 6}},
         'burn': {'asked': asked, 'burned': burned} if asked else None,
-        'diag': {'qloo_calls': total, 'calls': {'pool': 6, 'rescore': 15, 'ids': 5, 'cap': 1},
+        'diag': {'qloo_calls': total, 'calls': {'pool': 6, 'rescore': 15, 'ids': 5, 'cap': 1, 'total': total},
                  'rho_tp': 0.41, 'rho_res': 0.12, 'cap_keep': 23, 'cap_shared': 1,
-                 'struck_obscure': [w['name'] for w in wall if w['outcome'] == 'struck'][-6:],
-                 'kept_known': [None, None],
+                 'obscure_names': [None] * 4, 'known_names': [None] * 2,  # never real names in a mock: that would be a claim
                  'engine_v': 'mock', 'as_of': degraded_as_of or AS_OF, 'trace_url': None, **(diag_extra or {})},
     }
     if known:
-        res['known'] = [card(i) for i in range(3)]
+        res['known'] = [card(i, spot_list=spot_list, src_answers=ans_src) for i in range(3)]
     push(500, {'type': 'done', 'result': res})
     return ev
 
@@ -303,7 +343,7 @@ MOCKS = {
     'stl-partial': stream('stl-partial', status='partial', lanes_answers=16,
                           pre=[{'type': 'status', 'state': 'partial', 'text': None}]),
     'stl-dated': stream('stl-dated', status='dated_only', pre=[{'type': 'status', 'state': 'dated_only', 'text': None}]),
-    'stl-degraded': stream('stl-degraded', status='degraded', burn=False, degraded_as_of='2026-10-27T08:05:00-04:00',
+    'stl-degraded': stream('stl-degraded', status='degraded', burn=False, degraded_as_of=None,
                            pre=[{'type': 'status', 'state': 'degraded', 'text': None}]),
     'stl-down': stream('stl-down', end_early='degraded'),
     'stl-queued': stream('stl-queued', pre=[{'type': 'status', 'state': 'queued', 'ahead': 2, 'eta_s': 40, 'text': None},
@@ -315,6 +355,16 @@ MOCKS = {
                        loves=[LOVES[0], LOVES[2]] + [{'id': None, 'label': 'Anthony Anderson', 'kind': 'entity', 'type': 'person', 'dead': True}]),
     'stl-slow': stream('stl-slow'),  # 'ranking': the client stretches this one past 20 s (see api.js MOCK_SLOW)
 }
+if NYC_MAP:
+    # MOCK New York set: placeholder cards at ten OSM places in Queens/Brooklyn that no census answer names (neighbourhood null)
+    named = {norm(n) for a in nyc_answers for n in a['names']}
+    pool = [f for f in json.load(open(osm_nyc))['features'] if f['name'] and norm(f['name']) not in named and f['amenity'] in ('restaurant', 'bar')]
+    nyc_spots = [(None, pool[j]['lon'], pool[j]['lat']) for j in range(0, len(pool), max(1, len(pool) // 10))][:10]
+    MOCKS['nyc-khruangbin'] = stream('nyc-khruangbin', burn=False, ans_src=nyc_answers, spot_list=nyc_spots,
+        city={'id': None, 'name': 'New York', 'slug': 'new-york', 'center': [-73.95, 40.72], 'radius_mi': 8},
+        loves=[{'id': None, 'label': 'Khruangbin', 'kind': 'entity', 'type': 'artist', 'dead': False},
+               {'id': None, 'label': None, 'kind': 'entity', 'type': None, 'dead': False},
+               {'id': None, 'label': None, 'kind': 'tag', 'type': None, 'dead': False}])
 for k, ev in MOCKS.items():
     (SITE / 'mock' / f'{k}.ndjson').write_text(''.join(json.dumps(e, ensure_ascii=False) + '\n' for e in ev))
 
@@ -322,11 +372,11 @@ jdump(SITE / 'mock' / 'resolve.json', {
     '_': 'MOCK answers for GET /api/resolve when no server is up. Keys are norm(text).',
     'love': {
         'frankie beverly and maze': {'status': 'ok', 'chip': {'id': None, 'label': 'Frankie Beverly & Maze', 'kind': 'entity', 'type': 'artist'},
-                                     'alternatives': [{'id': None, 'label': 'Maze', 'kind': 'entity', 'type': 'artist'}]},
+                                     'alternatives': [{'id': None, 'label': None, 'kind': 'entity', 'type': None}]},
         'original kings of comedy': {'status': 'ok', 'chip': {'id': None, 'label': 'The Original Kings of Comedy', 'kind': 'entity', 'type': 'movie'},
                                      'alternatives': []},
         'rib tips': {'status': 'needs_input', 'chip': {'id': None, 'label': 'Rib tips', 'kind': 'tag', 'type': 'dish'},
-                     'alternatives': [{'id': None, 'label': 'Rib Tips (album)', 'kind': 'entity', 'type': 'album'}]},
+                     'alternatives': [{'id': None, 'label': None, 'kind': 'entity', 'type': None}]},
         'khruangbin': {'status': 'ok', 'chip': {'id': None, 'label': 'Khruangbin', 'kind': 'entity', 'type': 'artist'}, 'alternatives': []},
     },
     'city': {

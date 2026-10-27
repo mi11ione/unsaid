@@ -91,7 +91,7 @@ gastropub steakhouse steak seafood cuisine chef table tables`.split(/\s+/));
      1. the name's head as a phrase (a leading "the" optional);
      2. else every distinctive token (>= 2 of them) inside a short window;
      3. else a single distinctive token of >= 4 letters on its own (when unsure, strike). */
-  function locate(tt, name) {
+  function locate(tt, name, phraseOnly) {
     const nt = tokens(head(name));
     if (!nt.length) return null;
     for (let i = 0; i + nt.length <= tt.length; i++) {
@@ -99,6 +99,7 @@ gastropub steakhouse steak seafood cuisine chef table tables`.split(/\s+/));
       for (let k = 0; k < nt.length && ok; k++) ok = tokEq(nt[k], tt[i + k].t);
       if (ok) return [tt[i].s, tt[i + nt.length - 1].e];
     }
+    if (phraseOnly) return null;   // rule 1 only: for striking names inside prose (image 3), never a lone word
     const d = distinctive(head(name));
     if (!d.length) return null;
     if (d.length >= 2) {
@@ -120,11 +121,11 @@ gastropub steakhouse steak seafood cuisine chef table tables`.split(/\s+/));
     return null;
   }
 
-  // names: array of strings (nulls skipped). Returns [{name, index, at:[s,e]}]
-  function find(text, names) {
+  // names: array of strings (nulls skipped). Returns [{name, index, at:[s,e]}]. opt.phraseOnly: rule 1 only.
+  function find(text, names, opt = {}) {
     const tt = textTokens(text || '');
     const out = [];
-    (names || []).forEach((n, i) => { if (!n) return; const at = locate(tt, n); if (at) out.push({ name: n, index: i, at }); });
+    (names || []).forEach((n, i) => { if (!n) return; const at = locate(tt, n, opt.phraseOnly); if (at) out.push({ name: n, index: i, at }); });
     return out;
   }
 

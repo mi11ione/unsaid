@@ -60,24 +60,14 @@
   el(S, 'h1', '', 'Everything the AIs tell everyone, <s>crossed out</s>.').className = 'hl';
   const g = el(S, 'div', ''); g.className = 'cols3';
 
-  // ---- left: the answer, wall names struck (proper-noun phrase matches only, so prose words stay)
-  const wallNames = [...new Set((R.wall || []).map(w => w.name))];
+  // ---- left: the answer; a span is struck only where the matcher (site/js/matcher.js) finds a wall name by its phrase rule (R1);
+  //      the fuzzy rules that over-strike in the dare box would strike plain words here ("soul" for Cafe Soul)
+  const wallNames = [...new Set((R.wall || []).map(w => w.name).filter(Boolean))];
   const text = A.answer || '';
-  const tt = Matcher.textTokens(text);
   const spans = [];
-  for (const n of wallNames) {
-    const d = Matcher.distinctive(Matcher.head(n)), full = Matcher.tokens(Matcher.head(n));
-    const cands = [full, d];
-    for (let k = d.length - 1; k >= 2; k--) cands.push(d.slice(0, k));
-    let hit = null;
-    for (const c of cands) {
-      if (!c.length || (c.length === 1 && c[0].length < 4)) continue;
-      for (let i = 0; i + c.length <= tt.length && !hit; i++) {
-        if (c.every((x, j) => Matcher.tokEq(x, tt[i + j].t)) && /^[A-Z]/.test(text.slice(tt[i].s, tt[i].e))) hit = [tt[i].s, tt[i + c.length - 1].e, n];
-      }
-      if (hit) break;
-    }
-    if (hit && !spans.some(s => hit[0] < s[1] && s[0] < hit[1])) spans.push(hit);
+  for (const h of Matcher.find(text, wallNames, { phraseOnly: true })) {
+    const hit = [h.at[0], h.at[1], h.name];
+    if (!spans.some(s => hit[0] < s[1] && s[0] < hit[1])) spans.push(hit);
   }
   spans.sort((a, b) => a[0] - b[0]);
   window.__struck = spans.map(s => s[2] + ' ← ' + text.slice(s[0], s[1]));
@@ -93,9 +83,9 @@
     return l.trim() ? `<p>${l}</p>` : '';
   }).join('').replace(/\u0001/g, '<span class="x">').replace(/\u0002/g, '</span>');
   const left = el(g, 'div', '');
-  left.innerHTML = `<div class="chat"><div class="who">assistant<span>${esc(A.model || '')} · no tools</span></div>
+  left.innerHTML = `<div class="chat"><div class="who">assistant<span>${A.model ? esc(A.model) + ' · ' : ''}no tools</span></div>
       <div class="u">${esc(A.prompt)}</div><div class="a">${html}</div></div>
-    <div class="cap3">Asked to avoid what every AI says. <span class="red">Struck</span>: every name already on ${esc(city)}’s everyone-list.</div>`;
+    <div class="cap3">Asked to avoid what every AI says. <span class="red">Struck</span>: names found, by exact phrase, on ${esc(city)}’s everyone-list.</div>`;
 
   // ---- right: the seven
   const right = el(g, 'div', ''); right.className = 'seven';
@@ -109,7 +99,7 @@
   const D = R.diag || {}, CL = D.calls || {};
   const loves = (R.loves || []).filter(l => !l.dead).map(l => JSON.stringify(l.label)).join(', ');
   const tr = el(S, 'div', ''); tr.className = 'trace';
-  tr.innerHTML = `<div class="t"><b>${ph(D.qloo_calls, 'QLOO_CALLS')} Qloo calls</b> · your pool ×${ph(CL.pool, '6')} → same places, each love alone ×${ph(CL.rescore, '15')} → names → IDs ×${ph(CL.ids, '5')} → popularity cap ×${ph(CL.cap, '1')}</div>
+  tr.innerHTML = `<div class="t"><b>${ph(CL.total ?? D.qloo_calls, 'QLOO_CALLS')} Qloo calls</b> · your pool ×${ph(CL.pool, '6')} → same places, each love alone ×${ph(CL.rescore, '15')} → names → IDs ×${ph(CL.ids, '5')} → popularity cap ×${ph(CL.cap, '1')}</div>
     <div class="tool"><div class="c">Other agents call this.</div>tool_use · unsaid_places({ loves: [${esc(loves)}], city: "${esc(city)}" })</div>`;
   if (MT.featured) el(S, 'div', '', `alone ${ph(MT.m_alone, 'M_ALONE')} of ${MT.of} on the everyone-list · with Qloo ${ph(MT.m_qloo, 'M_QLOO')}`).className = 'meter';
   window.__ready = true;

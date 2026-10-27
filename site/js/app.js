@@ -19,7 +19,7 @@
   function topbar({ city, loves, mock } = {}) {
     topEl.innerHTML = `<a class="mark" href="#/"><s>UN</s>SAID</a>` +
       (city ? `<span class="slug">${esc(city)} · eat &amp; drink</span>` : '') +
-      (loves ? `<span class="chips">${loves.map(l => `<span class="chip${l.dead ? ' dead' : ''}">${esc(l.label)}${tl(l) ? ` <i>${esc(tl(l))}</i>` : ''}</span>`).join('')}</span>` : '') +
+      (loves ? `<span class="chips">${loves.map(l => `<span class="chip${l.dead ? ' dead' : ''}">${l.label == null ? ph(null, 'love') : esc(l.label)}${tl(l) ? ` <i>${esc(tl(l))}</i>` : ''}</span>`).join('')}</span>` : '') +
       `<span class="grow"></span>` + (mock ? `<span class="mock">${esc(mock)}</span>` : '');
   }
 
@@ -201,6 +201,7 @@
 
     // ---- the field
     const fieldEl = $('#field');
+    const wn = w => w.name ? esc(w.name) : ph(null, w.ph || 'name');  // a wall item with no name is a fictional placeholder (mock)
     function addAsk(w) {
       const key = (w.provider || '') + '|' + (w.phrasing_id || '') + '|' + (w.asked_at || '');
       if (!st.asks.has(key)) st.asks.set(key, { provider: w.provider, model: w.model, phrasing: w.phrasing, asked_at: w.asked_at, lane: w.lane, names: 0 });
@@ -211,7 +212,7 @@
       addAsk(w);
       if (st.wall.has(k)) { const o = st.wall.get(k); o.n = (o.n || 1) + 1; if (o.lane !== 'live' && w.lane === 'live') { o.lane = 'live'; o.el.classList.add('live'); } return; }
       const o = { ...w, norm: k, n: 1, outcome: null };
-      o.el = el(fieldEl, 'span', null, `<button title="">${esc(w.name)}</button>`);
+      o.el = el(fieldEl, 'span', null, `<button title="">${wn(w)}</button>`);
       o.el.className = 'nm' + (w.lane === 'live' ? ' live' : '');
       o.el.querySelector('button').addEventListener('click', () => nameSheet(o));
       st.wall.set(k, o);
@@ -260,7 +261,7 @@
       if (s === 'queued') { const a = st.status.ahead; return `${a == null ? ph(null, 'n') : word(a, true)} run${a === 1 ? '' : 's'} ahead of yours · about ${ph(st.status.eta_s, 's')} s`; }
       if (API.health === 'waking' && !st.firstServerEvent) return 'waking the ranker · about a minute';
       const items = [...st.asks.values()];
-      const datedAt = items.filter(a => a.lane !== 'live').map(a => a.asked_at).filter(Boolean).sort().pop() || null;
+      const datedAt = items.filter(a => a.lane !== 'live' && a.provider).map(a => a.asked_at).filter(Boolean).sort().pop() || null;
       const fl = (R && R.flags) || [];
       if (s === 'dated_only' || (R && R.status === 'dated_only') || fl.includes('dated_only')) return `All answers dated ${ph(et(datedAt), 'date')} · no live ask right now`;
       if (R && (R.status === 'partial' || fl.includes('partial'))) {
@@ -269,8 +270,8 @@
         return `${ph(n, 'answers')} answers · ${ais} of ${CFG.lanes.length} AIs`;
       }
       const order = p => { const i = CFG.lanes.indexOf(p); return i < 0 ? 99 : i; };
-      const dated = [...new Set(items.filter(a => a.lane !== 'live').map(a => a.provider))].sort((a, b) => order(a) - order(b));
-      const live = [...new Set(items.filter(a => a.lane === 'live').map(a => a.provider))].sort((a, b) => order(a) - order(b));
+      const dated = [...new Set(items.filter(a => a.lane !== 'live' && a.provider).map(a => a.provider))].sort((a, b) => order(a) - order(b));
+      const live = [...new Set(items.filter(a => a.lane === 'live' && a.provider).map(a => a.provider))].sort((a, b) => order(a) - order(b));
       const parts = [];
       if (dated.length) parts.push(`${dated.map(esc).join(', ')}: asked ${ph(et(datedAt), 'date')}`);
       if (live.length) parts.push(`${live.map(esc).join(', ')}: asked just now`);
@@ -302,7 +303,7 @@
         b.innerHTML = st.burned.map(x => {
           const c = st.cards.get(x.card_id) || {}, r = x.replaced_by && st.cards.get(x.replaced_by);
           const ci = cardNo(x.card_id), ri = r ? cardNo(r.id) : null;
-          return `<span class="red">${esc(x.by || 'An AI')} just named ${c.name ? esc(c.name) : ph(null, `place ${ci}`)}</span> when asked about ${ph(c.neighbourhood ?? x.neighbourhood, 'neighbourhood')} · ${esc(x.at ? UM.et(x.at, false).replace(' ET', '') : x.seen)} · burned.` +
+          return `<span class="red">${esc(x.by || 'An AI')} just named ${c.name ? esc(c.name) : ph(null, `place ${ci}`)}</span> when asked about ${ph(c.neighbourhood ?? x.neighbourhood, 'neighbourhood')} · ${x.at ? esc(UM.et(x.at, false).replace(' ET', '')) : (st.fake || st.mock ? ph(null, 'time') : esc(x.seen))} · burned.` +
             (r ? ` ${r.name ? esc(r.name) : ph(null, `place ${ri}`)} takes its place.` : '');
         }).join('<br>');
       } else if (st.done && st.result && st.result.burn && st.result.burn.asked && st.result.burn.asked.length) {
@@ -383,7 +384,7 @@
         const known = (R.known || []).slice(0, 3);
         body.innerHTML = `<p class="empty">Everything here that fits you, the AIs already say.</p><div class="cap" style="margin-top:18px">you already know these</div>` +
           `<div class="cards known">${known.length ? known.map((c, i) => cardHTML(c, i, true)).join('') :
-            [...st.wall.values()].filter(w => w.reason === 'in pool').slice(0, 3).map(w => `<div class="card"><div class="name">${esc(w.name)}</div></div>`).join('')}</div>`;
+            [...st.wall.values()].filter(w => w.reason === 'in pool').slice(0, 3).filter(w => w.name).map(w => `<div class="card"><div class="name">${esc(w.name)}</div></div>`).join('')}</div>`;
         return;
       }
       const lead = R.status === 'empty_few'
@@ -484,7 +485,7 @@
           ${c.any_rank != null ? `<div class="tick any" style="left:${pos(c.any_rank)}"></div><div class="tl any" style="${lab(c.any_rank)}">#${c.any_rank} for anyone</div>` : ''}
           <div class="end" style="left:0">#1</div><div class="end" style="right:0">#${U}</div></div>`;
       const holds = c.holds != null && c.n_loves != null && c.holds >= c.n_loves ? 'holds even if you drop any one love'
-        : `holds without ${c.holds_without ? c.holds_without.map(esc).join(' or ') : ph(null, 'love')}`;
+        : `holds without ${c.holds_without ? [].concat(c.holds_without).map(esc).join(' or ') : ph(null, 'love')}`;
       const st3 = st.struck.get(id);
       openSheet(`
         <div class="cap">${esc(cityName)} · card ${cardNo(id)} · ${c.name ? esc(c.name) : ph(null, `place ${cardNo(id)}`)} · ${ph(c.neighbourhood, 'neighbourhood')}</div>
@@ -505,24 +506,25 @@
     function rawLog(c) {
       const R = st.result, D = R.diag || {}, U = c.U ?? (R.counts && R.counts.U);
       const L = [];
-      L.push(`<div class="k">every ask behind the wall (${st.asks.size})</div>`);
-      [...st.asks.values()].sort((a, b) => String(a.asked_at).localeCompare(String(b.asked_at))).forEach(a =>
+      const asks = [...st.asks.values()].filter(a => a.provider);
+      L.push(`<div class="k">every ask behind the wall (${asks.length})</div>`);
+      asks.sort((a, b) => String(a.asked_at).localeCompare(String(b.asked_at))).forEach(a =>
         L.push(`<div>${ph(et(a.asked_at), 'time')} · <span class="v">${esc(a.provider)}</span> ${esc(a.model || '')} · ${a.lane === 'live' ? 'live' : 'dated'} · “${esc(a.phrasing || '')}” → ${a.names} names</div>`));
       L.push(`<div class="k" style="margin-top:8px">every name and the Qloo ID it resolved to (${st.wall.size})</div>`);
-      [...st.wall.values()].forEach(w => L.push(`<div><span class="v">${esc(w.name)}</span> → ${w.qloo_id ? esc(w.qloo_id) : '—'} · ${esc(w.outcome || 'pending')}${w.reason ? ' · ' + esc(w.reason) : ''}</div>`));
+      [...st.wall.values()].forEach(w => L.push(`<div><span class="v">${wn(w)}</span> → ${w.qloo_id ? esc(w.qloo_id) : '—'} · ${esc(w.outcome || 'pending')}${w.reason ? ' · ' + esc(w.reason) : ''}</div>`));
       L.push(`<div class="k" style="margin-top:8px">this card</div>`);
       const pct = c.any_rank != null && U ? Math.round(100 * c.any_rank / U) : null;
       L.push(`<div>qloo id <span class="v">${esc(c.id)}</span> · popularity #${ph(c.any_rank, 'ANY')} of ${ph(U, 'U')} (top ${ph(pct, '%')}%) · for you #${ph(c.fit_rank, 'FIT')} · holds ${ph(c.holds, 'h')} of ${ph(c.n_loves, 'n')}</div>`);
       ((R.burn && R.burn.asked) || []).filter(a => a.neighbourhood === c.neighbourhood).forEach(a =>
         L.push(`<div>street ask · ${esc(a.provider || '')} · ${esc(a.lane || '')} · ${ph(et(a.asked_at), 'time')} · “${esc(a.neighbourhood)}” → ${a.named && a.named.length ? 'named this card' : 'not named'}</div>`));
       L.push(`<div class="k" style="margin-top:8px">request URLs</div>`);
-      (c.requests || []).forEach(u => L.push(`<div>${esc(u)}</div>`));
+      (c.request_urls || c.requests || []).forEach(u => L.push(`<div>${esc(u)}</div>`));
       L.push(`<div>${D.trace_url ? `<a href="${esc(D.trace_url)}">${esc(D.trace_url)}</a>` : ph(null, 'trace_url')} · engine ${esc(D.engine_v || '')} · ${ph(D.qloo_calls, 'N')} Qloo calls</div>`);
       return L.join('');
     }
     function nameSheet(o) {
-      openSheet(`<div class="cap">everyone gets these</div><h1 style="font-size:32px"><span style="text-decoration:line-through;text-decoration-color:var(--red);text-decoration-thickness:2px">${esc(o.name)}</span></h1>
-        <p class="dim">${esc(o.provider)} ${esc(o.model || '')} · ${o.lane === 'live' ? 'asked just now' : 'dated, asked ' + ph(et(o.asked_at), 'date')}</p>
+      openSheet(`<div class="cap">everyone gets these</div><h1 style="font-size:32px"><span style="text-decoration:line-through;text-decoration-color:var(--red);text-decoration-thickness:2px">${wn(o)}</span></h1>
+        <p class="dim">${o.provider ? esc(o.provider) + ' ' + esc(o.model || '') : '<span class="mock">mock</span>'} · ${o.lane === 'live' ? 'asked just now' : 'dated, asked ' + ph(et(o.asked_at), 'date')}</p>
         <p>“${esc(o.phrasing || '')}”</p><p class="dim">named in ${o.n} answer${o.n === 1 ? '' : 's'} here · ${o.qloo_id ? 'Qloo ID ' + esc(o.qloo_id) : 'no Qloo ID'}${o.reason ? ' · ' + esc(o.reason) : ''}</p>`);
     }
 
@@ -533,8 +535,8 @@
       const nm = n => n == null ? null : (typeof n === 'object' ? n.name : n);
       const list = (xs, x) => xs == null ? `<li>${ph(null, 'names')}</li>` : !xs.length ? '<li class="dim">none</li>' : xs.map(n => `<li class="${x ? 'x' : ''}"><span>${nm(n) == null ? ph(null, 'name') : esc(nm(n))}</span></li>`).join('');
       openSheet(`<div class="cap">${esc(cityName)}</div><h1>Not a popularity filter.</h1>
-        <div class="cols"><div><div class="sh"><h2>Struck though obscure</h2></div><ul>${list(D.obscure ?? D.struck_obscure, true)}</ul></div>
-          <div><div class="sh"><h2>Kept though known</h2></div><ul>${list(D.known ?? D.kept_known, false)}</ul></div></div>
+        <div class="cols"><div><div class="sh"><h2>Struck though obscure</h2></div><ul>${list(D.obscure_names ?? D.obscure, true)}</ul></div>
+          <div><div class="sh"><h2>Kept though known</h2></div><ul>${list(D.known_names ?? D.known, false)}</ul></div></div>
         <div class="blk"><p>A popularity cap cutting the same ${ph(cut, 'S')} would keep ${ph(D.cap_keep, 'CAP_KEEP')} of the places the AIs named. Its ${st.slots.length} and yours share ${ph(D.cap_shared, 'CAP_SHARED')}.</p>
           <p>Taste vs popularity ρ ${ph(D.rho_tp, 'RHO_TP')}; after the city’s own order is taken away, ρ ${ph(D.rho_res, 'RHO_RES')}.</p>
           <p class="dim">${ph(K.P, 'P')} → ${ph(K.U, 'U')} (closed ${ph(F.closed, 'c')}, below ${CFG.floor.rating} ${ph(F.below_43, 'f')}, outside ${ph(K.R_mi, 'R')} mi ${ph(F.outside_R, 'd')}, not a restaurant or bar ${ph(F.not_venue, 'v')}).</p></div>`);
@@ -554,7 +556,7 @@
     }
     function shareData() {
       const R = st.result;
-      return { ...R, picks: liveIds().map(id => ({ ...st.cards.get(id), _ph: `place ${cardNo(id)}` })), wallNames: [...st.wall.values()].filter(w => w.outcome === 'struck').map(w => w.name) };
+      return { ...R, picks: liveIds().map(id => ({ ...st.cards.get(id), _ph: `place ${cardNo(id)}` })), wallNames: [...st.wall.values()].filter(w => w.outcome === 'struck' && w.name).map(w => w.name) };
     }
     window.__shareData = shareData;
 
@@ -576,14 +578,16 @@
       story.innerHTML = `<div style="font:400 ${phone ? 20 : 26}px/1.15 var(--serif)">Ask an AI for a hidden gem in ${esc(cen.city)}.</div>
         <div style="margin-top:10px"><span style="position:relative;font:400 ${phone ? 40 : 54}px/1 var(--serif);color:var(--red);white-space:nowrap">${esc(cen.gem.name).replace("'", '’')}<span style="position:absolute;left:-.04em;right:-.04em;top:56%;height:.07em;background:var(--red);box-shadow:0 0 0 .022em var(--bg)"></span></span></div>
         <div style="margin-top:10px;font:400 ${phone ? 16 : 19}px/1.3 var(--serif)"><span class="red">${cen.gem.hits} times out of ${cen.gem.of}</span>` +
-        (cen.plain ? `<br><span class="dim">also on ${cen.plain.hits} of its ${cen.plain.of} plain lists</span>` : '') + '</div>';
+        (cen.plain ? `<br><span class="dim">also on ${cen.plain.hits} of its ${cen.plain.of} plain lists</span>`
+          : cen.gem.first != null ? `<br><span class="dim">named first in ${cen.gem.first}</span>` : '') + '</div>';
       const H = phone ? 320 : 430, mw = phone ? W : W * .56;
       const holder = el(box, 'div', `position:relative;height:${H}px;width:${phone ? W : W}px`);
       if (!phone) { box.style.height = H + 'px'; holder.style.position = 'absolute'; holder.style.left = '0'; holder.style.top = '0'; } else box.style.height = 'auto';
       const ctx = UM.canvas(holder, mw, H);
       const P = UM.projection(M, { x: mw * .22, y: 10, w: mw * .7, h: H - 20 });
       const ai = M.ai, cmax = Math.max(...ai.map(a => a.count)), dmax = phone ? 22 : 28;
-      UM.dots(ctx, M, P, { d: phone ? 2.2 : 2.8, glow: phone ? 7 : 10 });
+      const dense = M.places.length > 3000;   // New York: ~20k dots, smaller and without the haze
+      UM.dots(ctx, M, P, dense ? { d: phone ? 1 : 1.3, alpha: .55 } : { d: phone ? 2.2 : 2.8, glow: phone ? 7 : 10 });
       ai.slice().sort((a, b) => a.count - b.count).forEach(a => { const [x, y] = P(a.lon, a.lat); UM.disc(ctx, x, y, UM.discD(a.count, cmax, dmax, 3), st.done ? .55 : .85); });
       const g = ai.find(a => a.name === cen.gem.name);
       if (g) {

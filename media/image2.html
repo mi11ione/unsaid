@@ -76,7 +76,7 @@
     <div><div class="sh"><h2>Because</h2></div><div class="big1">${ph(c.because, 'love')}</div><p class="dim">${holds}</p></div></div>`;
   // the raw-log strip: three real asks behind the wall, then this card's line (U appears here, its third time)
   const asks = []; const seen = new Set();
-  for (const w of R.wall || []) { const k = w.provider + w.phrasing_id; if (!seen.has(k)) { seen.add(k); asks.push(w); } if (asks.length >= 3) break; }
+  for (const w of (R.wall || []).filter(w => w.provider)) { const k = w.provider + w.phrasing_id; if (!seen.has(k)) { seen.add(k); asks.push(w); } if (asks.length >= 3) break; }
   const lines = asks.map(a => `${ph(et(a.asked_at), 'time')} · <span class="v">${esc(a.provider)}</span> ${esc(a.model || '')} · ${a.lane === 'live' ? 'live' : 'dated'} · “${esc(a.phrasing)}” → named ${R.wall.filter(w => w.phrasing_id === a.phrasing_id && w.provider === a.provider).length} new names`);
   lines.push(`card · qloo id <span class="v">${esc(c.id)}</span> · for you #${ph(fit, 'FIT')} of ${ph(U, 'U')} · popularity #${ph(c.any_rank, 'ANY')} · named in 0 of ${ph(ns.asks, 'ASKS')} answers`);
   el(S, 'div', '', `<div class="h">RAW LOG</div>` + lines.map(l => `<div>${l}</div>`).join('')).className = 'logs';

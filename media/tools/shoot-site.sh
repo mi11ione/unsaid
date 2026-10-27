@@ -40,3 +40,8 @@ shot "$B/index.html?mock=stl-queued#/r?city=st-louis" $OUT/state-queued-1600.png
 shot "$B/index.html?mock=stl-cedric&health=waking#/r?city=st-louis" $OUT/state-waking-1600.png 1600 0 1 "$(AT 1500)"
 shot "$B/index.html?mock=stl-slow#/r?city=st-louis" $OUT/state-ranking-21s-1600.png 1600 0 1 "$(AT 21000)"
 shot "$B/index.html?mock=stl-cedric&speed=8#/r?city=st-louis" $OUT/s2-dare-1600.png 1600 0 1 "$DONE.then(()=>{const t=document.getElementById('dare');t.value='Try Gioia’s Deli on the Hill and Pappy’s Smokehouse.';t.dispatchEvent(new Event('input'));return new Promise(r=>setTimeout(r,500))})"
+# New York: the map header with Queens and the Sripraphai callout (MOCK set)
+if [[ -f ../site/data/map/nyc.json ]]; then
+  shot "$B/index.html?speed=8#/r?set=nyc-khruangbin" $OUT/s2-nyc-1600.png 1600 0 1 "$DONE"
+  shot "$B/index.html?speed=8#/r?set=nyc-khruangbin" $OUT/s2-nyc-390.png 390 0 2 "$DONE"
+fi
