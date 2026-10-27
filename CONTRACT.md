@@ -51,6 +51,15 @@ CARD:
 - A cold engine: the proxy returns 503 with `Retry-After` → `waking`.
 - The result cache key includes the mode (fake|live) and the live-lane status (live|dated_only).
 
+### Engine additions (accepted 27 Oct, from Agent D)
+
+- `run_unsaid` kwargs: `street_check`, `last_seen`, `set_id`, `use_cache`, `deadline_s`.
+- Result keys: `needs`, `fallback` (empty_none's 3 best struck places), `counts.struck_in_U`, extra `diag` fields; loves gain `dead_line` and `type_label`.
+- Wall reason `"not checked (Qloo busy)"`: a 429 is never "not found in Qloo".
+- Burn events carry `risen` (the reserve that takes the place).
+- A failed Gemini lane sets `diag.live_error`; the server maps it to the `dated_only` flag, not `partial`.
+- One Qloo client per run. `diag.rho_res` is null when undefined.
+
 ## Stream events (one JSON object per line)
 
 `{"type":"status","state":…,"text":…}` · `{"type":"wall_name",…wall item…}` · `{"type":"pool","U":n}` ·
