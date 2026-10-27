@@ -85,7 +85,7 @@ The console shows 20 requests a day and 5 a minute per model per project. Creden
 `walls_cli.py build --walls 1` writes `data/walls/wall-1.json` (set `city` = city wall + street asks; one entry per set with its taste answers and loves) and `data/walls/census.json` (set `census`, every provider's census).
 - The server merges every `*.json` in `data/walls/`, so the census lives in one file only.
 - A non-numeric label writes `<label>.json`. `--out FILE` writes one combined file instead.
-- `data/walls/smoke.json` holds the 27 Oct smoke asks (5). Delete it before the dated walls go public if it shouldn't count.
+- `--census-only` writes only `census.json`. Smoke answers never go in `data/walls/`: `build` refuses a `smoke` label without `--out`.
 
 ## Credentials (Roman only)
 

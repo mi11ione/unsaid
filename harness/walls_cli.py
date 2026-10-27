@@ -7,7 +7,8 @@ walls.json in the kit's contract (engine/unsaid/walls.py).
   python3 -I walls_cli.py ask --lane claude,codex --kind street --wall 1 --go     # every neighbourhood
   python3 -I walls_cli.py ask --lane claude --kind street --hoods "Soulard,The Ville" --city stl --wall 1 --go
   python3 -I walls_cli.py build --walls 1,2,3        # -> ../data/walls/wall-1.json ... + census.json (server reads the dir)
-  python3 -I walls_cli.py build --walls smoke --out ../data/walls/smoke.json --no-census
+  python3 -I walls_cli.py build --census-only        # -> ../data/walls/census.json only
+  python3 -I walls_cli.py build --walls smoke --out runs/walls.smoke.json   # smoke never goes in data/walls/
   python3 -I walls_cli.py status
 
 Taste sets per wall (orchestrator, 27 Oct): wall 1 asks all 20 sets; every other wall asks only the sets marked
@@ -252,6 +253,10 @@ def cmd_build(args):
     """Default: one file per wall label in data/walls/ (wall-<N>.json, or <label>.json for a non-numeric label) plus
     data/walls/census.json; the server merges every *.json in that directory, so the census lives in one file only.
     --out: one combined file with the census too (unless --no-census)."""
+    if args.census_only:
+        args.walls = []
+    if not args.out and any(w.lower().startswith("smoke") for w in args.walls):
+        sys.exit("refusing: smoke answers never go in data/walls/ (the server serves every *.json there); pass --out")
     fh = fresh_hashes()
     per = {}
     for w in args.walls:
@@ -337,6 +342,7 @@ def main():
     b.add_argument("--sets-file", default=None)
     b.add_argument("--out", default=None, help="one combined file instead of data/walls/<label>.json + census.json")
     b.add_argument("--no-census", action="store_true")
+    b.add_argument("--census-only", action="store_true", help="write only data/walls/census.json (or --out)")
     b.add_argument("--no-street", action="store_true")
     q = sp.add_parser("queue", help="gemini-priority: spend exactly today's remaining Gemini allowance, in priority order")
     q.add_argument("name")
