@@ -32,11 +32,6 @@ sys.path.insert(0, KIT)
 from unsaid import engine as E, seeds as SD, walls as W, matcher as M  # noqa: E402
 from unsaid.qloo import Qloo, QlooError, prop  # noqa: E402
 
-_CONS = os.environ.get("UNSAID_CONSENSUS") or os.path.normpath(os.path.join(HERE, "..", "..", "research", "exp",
-                                                                              "consensus.py"))
-if not os.path.exists(getattr(W, "CONSENSUS", "") or "") and os.path.exists(_CONS):
-    W.CONSENSUS = _CONS
-
 SERVER_INFO = {"name": "unsaid", "title": "UNSAID", "version": "0.5.0"}
 MODERN = ["2026-07-28"]
 LEGACY = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"]

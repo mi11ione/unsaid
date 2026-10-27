@@ -28,10 +28,48 @@ if os.path.exists(os.path.join(ENGINE, "unsaid", "api.py")):
         API, API_ERROR = None, "%s: %s" % (type(e).__name__, e)
         print("[adapter] engine api.py failed to import, using the fallback: %s" % API_ERROR, file=sys.stderr)
 
-# The kit's default consensus path assumes the old research/ layout; point it at the real file when present.
-_CONS = os.environ.get("UNSAID_CONSENSUS") or os.path.normpath(os.path.join(ROOT, "..", "research", "exp", "consensus.py"))
-if not os.path.exists(getattr(W, "CONSENSUS", "") or "") and os.path.exists(_CONS):
-    W.CONSENSUS = _CONS
+# The dated walls: env UNSAID_WALLS (a walls JSON file or a directory of them), else the repo's data/walls/.
+# Never research/, and never the engine's day-1 fixtures: with no wall file the run is `partial`, said plainly.
+WALLS_DEFAULT = os.path.join(ROOT, "data", "walls")
+NO_WALL_NOTE = "No dated AI answers are loaded on this host yet, so nothing was crossed out."
+_MERGED = {"sig": None, "path": None}
+
+
+def walls_file(cache_dir):
+    """One walls JSON path for this host, or None when there is no wall file. A directory's *.json files are
+    merged (their "walls" lists concatenated, in name order) into <cache_dir>/walls_merged.json."""
+    src = os.environ.get("UNSAID_WALLS") or WALLS_DEFAULT
+    if os.path.isfile(src):
+        return src
+    if not os.path.isdir(src):
+        return None
+    files = sorted(os.path.join(src, f) for f in os.listdir(src) if f.endswith(".json"))
+    if not files:
+        return None
+    sig = [(f, os.path.getmtime(f), os.path.getsize(f)) for f in files]
+    if _MERGED["sig"] != sig or not os.path.exists(_MERGED["path"] or ""):
+        import json
+        walls = []
+        for f in files:
+            with open(f) as fh:
+                walls += (json.load(fh) or {}).get("walls") or []
+        out = os.path.join(cache_dir, "walls_merged.json")
+        os.makedirs(cache_dir, exist_ok=True)
+        with open(out + ".tmp", "w") as fh:
+            json.dump({"walls": walls}, fh)
+        os.replace(out + ".tmp", out)
+        _MERGED.update(sig=sig, path=out)
+    return _MERGED["path"]
+
+
+def empty_walls_file(cache_dir):
+    """Handed to the engine when there is no wall, so it never falls back to its fixtures."""
+    p = os.path.join(cache_dir, "walls_empty.json")
+    if not os.path.exists(p):
+        os.makedirs(cache_dir, exist_ok=True)
+        with open(p, "w") as fh:
+            fh.write('{"walls": []}')
+    return p
 
 ENGINE_V = getattr(API, "ENGINE_V", None) or "kit-v3+server-fallback-1"
 BACKEND = "api" if API else "fallback"
@@ -190,13 +228,23 @@ def _seed_sid(ck, labels):
     return None
 
 
-def wall_for(city, chips):
-    """The dated wall for this (city, loves): static data, no network. {"answers": [...], "source": ...}."""
+def wall_for(city, chips, cache_dir):
+    """The dated wall for this (city, loves): static data, no network.
+    {"answers": [...], "source": ..., "path": <walls file handed to the engine>, "missing": bool}."""
+    path = walls_file(cache_dir)
+    if path is None:
+        return {"answers": [], "source": "no wall file", "path": empty_walls_file(cache_dir), "missing": True}
+    w = _wall_from(city, chips, path)
+    w.update(path=path, missing=False)
+    return w
+
+
+def _wall_from(city, chips, path):
     if API and hasattr(API, "match_set"):   # the same wall the engine will load (api.run_unsaid's own choice)
         ck = (city or {}).get("key") or CITY_KEY.get((city or {}).get("slug"))
         try:
             sid = API.match_set(ck, [API._love_from_chip(c) for c in chips])
-            w = W.wall_for(ck, sid, os.environ.get("UNSAID_WALLS"))
+            w = W.wall_for(ck, sid, path)
             return {"answers": [dict(a, lane=a.get("lane", "dated")) for a in w["answers"]], "source": w.get("source")}
         except (OSError, ValueError, KeyError, AttributeError) as e:
             return {"answers": [], "source": "wall unavailable: %s" % type(e).__name__}
@@ -205,7 +253,7 @@ def wall_for(city, chips):
         return {"answers": [], "source": "no dated wall for this city yet"}
     sid = _seed_sid(ck, [c.get("label") or c.get("text") or "" for c in chips]) or "__generic__"
     try:
-        w = W.wall_for(ck, sid, os.environ.get("UNSAID_WALLS"))
+        w = W.wall_for(ck, sid, path)
     except (OSError, KeyError, ValueError):
         return {"answers": [], "source": "no dated wall available on this host"}
     answers = []
@@ -254,7 +302,7 @@ def run(prep, wall, q, mode, gemini, emit):
             gemini.reasons.append(gemini.reason)
         lane = _ApiTaste(gemini, prep) if live else False         # False: no engine stand-in, never a fake live answer
         street = _api_street(gemini, prep) if live else False
-        return API.run_unsaid(prep["city_text"], prep["loves"], walls_path=os.environ.get("UNSAID_WALLS"),
+        return API.run_unsaid(prep["city_text"], prep["loves"], walls_path=wall["path"],
                               mode=mode, qloo=q, gemini=lane, street_check=street, on_event=forward)
     return _run_fallback(prep, wall, q, mode, gemini, emit)
 

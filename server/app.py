@@ -127,12 +127,22 @@ def shell(status, prep=None, wall=None, note=None, flags=()):
     return r
 
 
+def has_live(result):
+    return any((i or {}).get("lane") == "live" for i in (result or {}).get("wall") or [])
+
+
 def lane_flags(result, session, wall):
     """dated_only and partial (§2.2), decided by the server from the lanes it actually had."""
     flags = set(result.get("flags") or [])
     if MODE == "fake":
         flags.add("fake")
     notes = []
+    if (wall or {}).get("missing"):            # no wall file on this host: say so, never a silent empty wall
+        flags.update(("partial", "no_wall"))
+        if result.get("status") in ("ok", "empty_few", "empty_none"):
+            result["status"] = "partial"
+        result["note"] = adapter.NO_WALL_NOTE
+        notes.append(("partial", adapter.NO_WALL_NOTE))
     if session is not None and session.state != "live":
         flags.add("dated_only")
         dated = [a.get("asked_at") for a in (wall or {}).get("answers", []) if a.get("asked_at")]
@@ -157,6 +167,10 @@ def stream_unsaid(city_text, loves, ip, country, emit):
 
     def done(result, cached=False, stored_at=None):
         result = public(result)
+        if session.geo_gated and has_live(result):   # unreachable by key design; refuse rather than leak
+            print("[unsaid] refused a lane=live result to a geo-gated visitor", file=sys.stderr)
+            result = shell("degraded", prep, wall, COPY["degraded_none"], flags=["no_cache"])
+            cached, stored_at = False, None
         if cached:
             for n in result.get("notes") or []:
                 emit({"type": "status", "state": n["state"], "text": n["text"]})
@@ -169,6 +183,8 @@ def stream_unsaid(city_text, loves, ip, country, emit):
     def status(state, text, **kw):
         emit(dict({"type": "status", "state": state, "text": text}, **kw))
 
+    session = GEMINI.for_country(country)
+    prep, wall = None, None
     q = adapter.make_qloo(MODE, CACHE_DIR, BUCKET, QUOTA, FAKE_PACE)
     try:
         prep = adapter.prepare(city_text, loves, q, MODE)
@@ -183,11 +199,12 @@ def stream_unsaid(city_text, loves, ip, country, emit):
         status("needs_input", "needs_input")
         return done(r)
 
-    wall = adapter.wall_for(prep["city"], prep["loves"])
+    wall = adapter.wall_for(prep["city"], prep["loves"], CACHE_DIR)
     for it in adapter.wall_items(wall["answers"]):                    # the dated wall first, from static data
         emit(dict(it, type="wall_name"))
+    lane = "live" if session.live else "dated_only"                   # decided before the key, never after
     key = C.result_key(adapter.ENGINE_V, MODE, prep["city"]["id"], [c["id"] for c in prep["loves"]], "unsaid",
-                       C.wall_hash(wall["answers"]))
+                       C.wall_hash(wall["answers"]), lane)
     rec = RESULTS.get(key)
     if rec and rec["fresh"]:
         for p in rec["result"].get("picks") or []:
@@ -233,7 +250,6 @@ def stream_unsaid(city_text, loves, ip, country, emit):
             return done(fl["result"], cached=True)
         return from_stale("qloo") if rec else no_cache("qloo")
 
-    session = GEMINI.for_country(country)
     box = {"result": None, "error": None, "pool_U": None}
     lock = threading.Lock()
 
@@ -427,6 +443,8 @@ class Handler(BaseHTTPRequestHandler):
                 if not C.KEY_RE.match(key):
                     return self._json(400, {"status": "bad_key"})
                 rec = RESULTS.get(key)
+                if rec and GEMINI.for_country(self.country()).geo_gated and has_live(rec["result"]):
+                    rec = None                    # a live Gemini answer is never shown in EEA/UK/CH or unknown
                 if not rec:
                     return self._json(404, {"status": "not_found", "key": key})
                 r = dict(rec["result"], cached=True, stored_at=et(rec["stored_at"]))

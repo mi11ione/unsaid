@@ -29,5 +29,5 @@ services:
         sync: false
       - key: GEMINI_RPD             # the model's requests/day from the AI Studio console
         sync: false
-      - key: UNSAID_WALLS           # path to the dated walls JSON on this host
+      - key: UNSAID_WALLS           # optional: a walls JSON file or directory; default data/walls/ in the repo
         sync: false

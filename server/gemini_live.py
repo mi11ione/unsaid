@@ -224,6 +224,11 @@ class LaneSession:
         return None
 
     @property
+    def geo_gated(self):
+        """EEA, UK, CH or unknown: this visitor may never see a live Gemini answer, cached or not."""
+        return not self.country or self.country in ("XX", "T1") or self.country in GATED
+
+    @property
     def live(self):
         return self.reason is None
 

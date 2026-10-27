@@ -113,22 +113,7 @@ class Guards(unittest.TestCase):
 
 class Gemini(unittest.TestCase):
     def lane(self, transport, **env):
-        old = {k: os.environ.get(k) for k in ("GEMINI_API_KEY", "GEMINI_MODEL", "GEMINI_RPD")}
-        os.environ.update({"GEMINI_API_KEY": "k", "GEMINI_MODEL": "gemini-test-flash", "GEMINI_RPD": "10"})
-        for k, v in env.items():
-            if v is None:
-                os.environ.pop(k, None)
-            else:
-                os.environ[k] = v
-        try:
-            d = os.path.join(H.TMP, "g%d" % time.monotonic_ns())
-            return G.GeminiLane(d, transport=transport)
-        finally:
-            for k, v in old.items():
-                if v is None:
-                    os.environ.pop(k, None)
-                else:
-                    os.environ[k] = v
+        return H.make_lane(transport, **dict({"GEMINI_RPD": "10"}, **env))
 
     @staticmethod
     def ok_transport(calls):
@@ -225,6 +210,38 @@ class Gemini(unittest.TestCase):
         self.assertEqual(p0["never_said"]["street_asks"],
                          sum(1 for b in r["burn"]["asked"] if b["neighbourhood"] == p0["neighbourhood"]))
         self.assertTrue(any(e["type"] == "burn" for e in ev))
+
+
+class Walls(unittest.TestCase):
+    def tearDown(self):
+        os.environ["UNSAID_WALLS"] = H.WALLS_DIR
+
+    def test_no_wall_file_is_partial_with_a_note(self):
+        H.reset_limits()
+        os.environ["UNSAID_WALLS"] = os.path.join(H.TMP, "nowhere")
+        ev, r = H.run(H.CEDRIC, ip="192.0.2.70")
+        self.assertEqual(r["status"], "partial")
+        self.assertIn("no_wall", r["flags"])
+        self.assertEqual(r["note"], app.adapter.NO_WALL_NOTE)
+        self.assertTrue(any(e.get("state") == "partial" and e["text"] == app.adapter.NO_WALL_NOTE for e in ev))
+        self.assertFalse([e for e in ev if e["type"] == "wall_name"])
+
+    def test_directory_is_merged_and_default_is_data_walls(self):
+        d = os.path.join(H.TMP, "wdir")
+        os.makedirs(d, exist_ok=True)
+        for i in (1, 2):
+            with open(os.path.join(d, "w%d.json" % i), "w") as f:
+                json.dump({"walls": [{"city": "stl", "set": "city", "answers": [
+                    {"provider": "claude", "asked_at": "2026-10-28T09:00:00Z", "lane": "dated",
+                     "names": [{"name": "Place %d" % i}]}]}]}, f)
+        os.environ["UNSAID_WALLS"] = d
+        city = {"key": "stl", "slug": "st-louis", "id": "x"}
+        w = app.adapter.wall_for(city, [], H.TMP)
+        self.assertFalse(w["missing"])
+        self.assertEqual(sorted(n["name"] for a in w["answers"] for n in a["names"]), ["Place 1", "Place 2"])
+        os.environ.pop("UNSAID_WALLS")
+        self.assertEqual(app.adapter.WALLS_DEFAULT, os.path.join(os.path.dirname(H.SERVER), "data", "walls"))
+        self.assertNotIn("research", app.adapter.WALLS_DEFAULT)
 
 
 if __name__ == "__main__":

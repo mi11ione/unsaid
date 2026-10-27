@@ -1,8 +1,10 @@
 """Exact-key result cache (UNSAID.md §3.5). Memory plus ephemeral disk under server/.cache/ (gitignored).
 
-key = sha256(engine_v, mode, locality, sorted love IDs, kind, wall-snapshot hash)
+key = sha256(engine_v, mode, locality, sorted love IDs, kind, wall-snapshot hash, lane)
 
 `mode` (fake|live) is added to the §3.5 tuple so a fake result can never answer a live key.
+`lane` (live|dated_only) is the Gemini lane state of the run, so a visitor gated to dated_only (EEA, UK, CH or an
+unknown country) is never served a result that contains a lane=live Gemini answer.
 Exact keys only: a lookup returns the record stored under that key or nothing. There is no nearest match,
 no prefix match and no "any result for this city". Every stored record embeds its key, and a read whose
 embedded key differs from the requested one is treated as a miss.
@@ -21,11 +23,16 @@ KEY_RE = re.compile(r"^[0-9a-f]{64}$")
 FRESH_S = int(os.environ.get("UNSAID_RESULT_FRESH_S", str(24 * 3600)))  # insights TTL; older = stale fallback only
 
 
-def result_key(engine_v, mode, locality, love_ids, kind, wall_hash):
+LANES = ("live", "dated_only")
+
+
+def result_key(engine_v, mode, locality, love_ids, kind, wall_hash, lane):
     if not locality or not love_ids or any(not i for i in love_ids):
         raise ValueError("a result key needs a locality and resolved love IDs")
+    if lane not in LANES:
+        raise ValueError("lane is live or dated_only")
     blob = json.dumps([str(engine_v), str(mode), str(locality), sorted(str(i) for i in love_ids), str(kind),
-                       str(wall_hash)], separators=(",", ":"))
+                       str(wall_hash), lane], separators=(",", ":"))
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()
 
 

@@ -23,7 +23,7 @@ ok · St. Louis: AIs named 62 distinct places in 8 answers (8 were in this taste
 Everyone else gets: Pappy's Smokehouse, Blueberry Hill, BB's Jazz, Blues & Soups, Bogart's Smokehouse, Broadway Oyster Bar, Crown Candy Kitchen, Hodak's, Sweetie Pie's
 FAKE MODE: pick names and ranks come from the kit's synthetic Qloo world and prove the code path only. The wall is real saved AI answers (fixtures/consensus.py STL Cedric (8 answers)).
   wall: {"distinct_names": 62, "answers": 8, "struck_in_pool": 8, "top_names": ["Pappy's Smokehouse", "Blueberry Hill", "BB's Jazz, Blues & Soups", "Bogart's Smokehouse", "Broadway Oyster Bar", "Crown Candy Kitchen", "Hodak's", "Sweetie Pie's"], "source": "fixtures/consensus.py STL Cedric (8 answers)"}
-  qloo_calls: {"loves /search+/v2/tags": 3, "taste pool /v2/insights": 4, "AI names -> Qloo ids /search": 2, "same places, each love dropped /v2/insights": 9, "CAP": 1, "total": 19, "from_cache": 0}
+  qloo_calls: {"loves /search+/v2/tags": 3, "taste pool /v2/insights": 4, "AI names -> Qloo ids /search": 2, "same places, each love dropped /v2/insights": 9, "CAP": 1, "total": 19, "from_cache": 19}
   loves resolved: [["Frankie Beverly & Maze", "entity", "ok"], ["Kings of Comedy", "entity", "ok"], ["rib tips", "tag", "ok"]]
   [PASS] qloo_places: isError=false, validates against its outputSchema
   [PASS] qloo_places: top 50 of the taste pool, ranked 1..n
@@ -59,4 +59,4 @@ ok · St. Louis: the top 50 of Qloo's taste pool for these loves (119 places aft
   [PASS] missing clientCapabilities -> -32602
 
 server stderr (first lines): [unsaid] ready (mode=fake, kit=/Users/mi11ion/Desktop/qloo/unsaid/engine)
-31 messages, 1.4 s, 0 failed checks; full wire log: transcript.jsonl
+31 messages, 1.3 s, 0 failed checks; full wire log: transcript.jsonl

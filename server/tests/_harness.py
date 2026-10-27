@@ -14,7 +14,53 @@ if SERVER not in sys.path:
     sys.path.insert(0, SERVER)
 
 import app  # noqa: E402
+import gemini_live as G  # noqa: E402
 import limits as L  # noqa: E402
+from unsaid import walls as W  # noqa: E402  (the engine's own module; app put it on the path)
+
+
+def _walls_fixture():
+    """A walls JSON in the harness contract, built from the engine's day-1 fixtures: STL's generic answers."""
+    import json
+    gen = W.wall_for("stl", "__generic__")
+    p = os.path.join(TMP, "walls", "stl.json")
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    with open(p, "w") as f:
+        json.dump({"walls": [{"city": "stl", "set": "city", "answers": gen["answers"]}]}, f)
+    return os.path.dirname(p)
+
+
+WALLS_DIR = _walls_fixture()
+os.environ["UNSAID_WALLS"] = WALLS_DIR
+
+
+def make_lane(transport, **env):
+    """A GeminiLane with a fake transport (never the network). env overrides GEMINI_* for its construction."""
+    import time
+    base = {"GEMINI_API_KEY": "k", "GEMINI_MODEL": "gemini-test-flash", "GEMINI_RPD": "1000"}
+    base.update(env)
+    old = {k: os.environ.get(k) for k in base}
+    for k, v in base.items():
+        if v is None:
+            os.environ.pop(k, None)
+        else:
+            os.environ[k] = v
+    try:
+        return G.GeminiLane(os.path.join(TMP, "g%d" % time.monotonic_ns()), transport=transport)
+    finally:
+        for k, v in old.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+
+
+def names_transport(names):
+    import json
+
+    def t(prompt):
+        return 200, {"candidates": [{"content": {"parts": [{"text": json.dumps(names)}]}}]}
+    return t
 
 CEDRIC = [{"text": "Frankie Beverly & Maze"}, {"text": "The Original Kings of Comedy", "hint": "movie"},
           {"text": "rib tips", "hint": "tag"}]

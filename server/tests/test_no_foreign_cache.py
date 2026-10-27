@@ -56,14 +56,16 @@ class NoForeignCache(unittest.TestCase):
 
     # ---- the key
     def test_key_is_exact(self):
-        base = ("v1", "fake", "loc", ["a", "b", "c"], "unsaid", "w")
+        base = ("v1", "fake", "loc", ["a", "b", "c"], "unsaid", "w", "live")
         k = C.result_key(*base)
-        self.assertEqual(k, C.result_key("v1", "fake", "loc", ["c", "a", "b"], "unsaid", "w"), "love order matters")
-        for i, alt in enumerate(["v2", "live", "loc2", ["a", "b", "d"], "qloo_places", "w2"]):
+        self.assertEqual(k, C.result_key("v1", "fake", "loc", ["c", "a", "b"], "unsaid", "w", "live"),
+                         "love order matters")
+        for i, alt in enumerate(["v2", "live", "loc2", ["a", "b", "d"], "qloo_places", "w2", "dated_only"]):
             args = list(base)
             args[i] = alt
             self.assertNotEqual(k, C.result_key(*args), "field %d is not in the key" % i)
-        self.assertRaises(ValueError, C.result_key, "v1", "fake", "loc", ["a", None], "unsaid", "w")
+        self.assertRaises(ValueError, C.result_key, "v1", "fake", "loc", ["a", None], "unsaid", "w", "live")
+        self.assertRaises(ValueError, C.result_key, "v1", "fake", "loc", ["a"], "unsaid", "w", "maybe")
 
     def test_a_ran_and_was_cached(self):
         self.assertEqual(self.res_a["status"], "ok")
@@ -182,6 +184,40 @@ class NoForeignCache(unittest.TestCase):
         self.assertEqual(H.card_ids(ev), ids_b)
         self.assertNoA(ev, "degraded with cache")
         self.assertIsNotNone(rec)
+
+    def test_geo_gated_visitor_never_gets_a_live_answer(self):
+        """US runs with the live lane on; DE (and an unknown country) with the same loves get no lane=live item."""
+        old = app.GEMINI
+        app.GEMINI = H.make_lane(H.names_transport([{"name": "Live Lane Bistro", "neighbourhood": "Soulard"}]))
+        H.clear_results()
+        try:
+            ev_us, r_us = H.run(H.CEDRIC, ip="198.51.100.20", country="US")
+            live = lambda evs: [e for e in evs if e["type"] == "wall_name" and e.get("lane") == "live"] + \
+                [i for i in evs[-1]["result"].get("wall") or [] if i.get("lane") == "live"]  # noqa: E731
+            self.assertTrue(live(ev_us), "the US run should carry a live Gemini answer")
+            self.assertTrue(app.RESULTS.get(r_us["key"]))
+            for cc in ("DE", "GB", ""):
+                ev, r = H.run(H.CEDRIC, ip="198.51.100.21", country=cc)
+                self.assertEqual(live(ev), [], "%r received a lane=live answer" % cc)
+                self.assertNotEqual(r["key"], r_us["key"])
+                self.assertIn("dated_only", r["flags"])
+            # /api/result/<the US key>: a DE visitor gets 404, a US visitor gets it
+            srv = app.make_server("127.0.0.1", 0)
+            threading.Thread(target=srv.serve_forever, daemon=True).start()
+            import urllib.error
+            import urllib.request
+            url = "http://127.0.0.1:%d/api/result/%s" % (srv.server_address[1], r_us["key"])
+            codes = {}
+            for cc in ("DE", "US"):
+                try:
+                    with urllib.request.urlopen(urllib.request.Request(url, headers={"CF-IPCountry": cc})) as resp:
+                        codes[cc] = resp.status
+                except urllib.error.HTTPError as e:
+                    codes[cc] = e.code
+            srv.shutdown()
+            self.assertEqual(codes, {"DE": 404, "US": 200})
+        finally:
+            app.GEMINI = old
 
     def test_needs_input_has_no_cards(self):
         ev, r = H.run([{"text": "Kings of Comedy"}, {"text": "Al Green", "hint": "artist"}])
