@@ -27,7 +27,10 @@ SEED_SETS = {
         ("S10", [("Kendrick Lamar", "artist"), ("Atlanta", "tv_show"), ("Popeyes", "brand")]),
     ],
 }
-CITY_QUERY = {"nyc": ("New York City", "New York"), "stl": ("St. Louis", "Missouri")}
+SEED_SETS["la"] = [  # Cedric's fallback city if St. Louis fails gate B (UNSAID.md §4)
+    ("cedric", [("The Original Kings of Comedy", "movie"), ("Frankie Beverly & Maze", "artist"), ("rib tips", "tag")]),
+]
+CITY_QUERY = {"nyc": ("New York City", "New York"), "stl": ("St. Louis", "Missouri"), "la": ("Los Angeles", "California")}
 STRANGERS = ("stl", "cedric", "jason")  # the two-strangers test
 
 

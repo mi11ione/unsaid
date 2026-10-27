@@ -1,4 +1,4 @@
-"""K4 offline: the matcher over the 136 labelled names (research/exp/labels.py), no key needed.
+"""K4 offline: the matcher over the 136 labelled names (fixtures/labels.py, from research/exp/labels.py), no key needed.
 
 Run:  python3 -I tests/test_matcher.py        (from the kit folder, or with any cwd)
 Hard gate: zero false survivors (a pool member a human marks as named that is not struck).
@@ -16,7 +16,7 @@ sys.path.insert(0, KIT)
 from unsaid import matcher as M          # noqa: E402
 from fixtures import matcher_catalog as C  # noqa: E402
 
-LABELS = os.environ.get("UNSAID_LABELS") or os.path.join(KIT, "..", "..", "..", "exp", "labels.py")
+LABELS = os.environ.get("UNSAID_LABELS") or os.path.join(KIT, "fixtures", "labels.py")
 CLASSES = {"A": "clean", "V": "alias/embedded", "M": "multi-location", "G": "common-word",
            "N": "not eat/drink", "X": "closed", "U": "unverifiable", "S": "seed"}
 

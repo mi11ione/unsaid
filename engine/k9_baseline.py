@@ -1,48 +1,31 @@
-"""K9 baseline: does the no-signal call with filter.results.entities (same filters as the pool) return every ID,
-in a real order? Checks coverage, distinct affinities, anchor drift across chunks, and rho with the popularity field.
-Decision printed: rescoring baseline, or the popularity field (0 calls) when they are the same order (rho >= 0.98)
-or when rescoring fails. Also tries the whole U in ONE filter.results.entities list paged by take=50 (URL ~7.5 KB)."""
+"""K9 baseline fallback check (P12's '+5 calls' branch, UNSAID.md §3.2): if the no-signal order is NOT popularity,
+UNSAID rescores U with no signal instead. This checks that branch works: coverage >= 0.95, distinct scores, anchor drift,
+and rho with popularity. PASS: the no-signal rescoring is usable (or not needed: rho >= 0.98 = popularity)."""
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from unsaid import cli, engine as E, stats as ST  # noqa: E402
-from unsaid.qloo import QlooError, affinity  # noqa: E402
 
 args = cli.parser(__doc__).parse_args()
 q = cli.client(args, "k9_baseline")
+T = cli.tag(args)
 oks = []
 for city in cli.cities(args):
     c = cli.city_obj(q, city)
     sid, spec = cli.sets(args, city)[0]
-    loves = [E.resolve_love(q, t, h) for t, h in spec]
-    pool, _, _ = E.taste_pool(q, c, loves)
-    U, _ = E.floor(pool)
+    loves = cli.loves(q, spec)
+    pool, _ = E.per_love_pools(q, c, loves)
+    U, _ = E.floor(pool, c)
     ids = [e["entity_id"] for e in U]
-    rs = E.rescore(q, c, loves, ids, None, "K9 nosignal")
+    rs = E.rescore(q, c, loves, ids, None, "K9 no-signal")
     nr = E.ranks_from(rs["aff"], ids)
-    pr = ST.rank({e["entity_id"]: e.get("popularity") or 0 for e in U})
+    pr = ST.rank({e["entity_id"]: E.popularity(e) for e in U})
     rho = ST.spearman(nr, pr)
     ok = rs["coverage"] >= 0.95 and rs["distinct"] >= 0.5 * len(ids) and rs["drift"] <= E.CFG["ANCHOR_DRIFT_MAX"]
-    oks.append(ok)
-    dec = ("popularity field (same order, 0 calls)" if ok and rho >= 0.98 else
-           "no-signal rescoring" if ok else "popularity field (fallback)")
-    print("  %s/%s: N=%d coverage %s (missing %d) distinct %d drift %s calls %d rho(nosignal,popularity) %s -> %s; baseline = %s%s" % (
-        city.upper(), sid, len(ids), cli.f(rs["coverage"]), len(rs["missing"]), rs["distinct"], cli.f(rs["drift"], 4),
-        rs["calls"], cli.f(rho), cli.verdict(ok), dec, cli.tag(args)))
-    # single-list variant: all of U in one filter.results.entities, paged
-    p = E.base_filters(c, loves)
-    p["filter.results.entities"] = sorted(ids)
-    p["take"] = 50
-    got = []
-    try:
-        for k in range(1, 6):
-            p["page"] = k
-            ents = (q.insights(dict(p), label="K9 one-list p%d" % k).get("results") or {}).get("entities") or []
-            got += [e["entity_id"] for e in ents]
-            if len(ents) < 50:
-                break
-        print("    one-list paging: %d returned, %d distinct of %d -> %s" % (len(got), len(set(got)), len(ids),
-              "usable (no chunk merge needed)" if len(set(got)) >= 0.95 * len(ids) else "not usable; keep chunks"))
-    except QlooError as e:
-        print("    one-list paging: HTTP %s (URL too long or rejected); keep chunks" % e.status)
-print("K9 baseline:", cli.verdict(all(oks)) + cli.tag(args), "| fallback: popularity-field rank from the pool responses (0 calls)")
+    oks.append(ok or rho >= 0.98)
+    dec = ("popularity (same order, 0 calls)" if rho >= 0.98 else "no-signal rescoring (+%d calls)" % rs["calls"]
+           if ok else "popularity (rescoring unusable)")
+    print("  %s/%s: N=%d coverage %s (missing %d) distinct %d drift %s calls %d rho(no-signal, popularity) %s -> "
+          "anyone = %s%s" % (city.upper(), sid, len(ids), cli.f(rs["coverage"]), len(rs["missing"]), rs["distinct"],
+                             cli.f(rs["drift"], 4), rs["calls"], cli.f(rho), dec, T))
+print("K9 baseline:", cli.verdict(all(oks)) + T, "| P12 decides; this checks the +5-call branch")
 cli.finish(q, args, "k9_baseline")

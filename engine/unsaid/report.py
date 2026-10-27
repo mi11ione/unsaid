@@ -1,18 +1,21 @@
-"""README call trace, generated from a real run (never hand-written). Template described in engine-v3.md §13."""
+"""README call trace, generated from a real run (never hand-written): every request URL (the key travels in the
+X-Api-Key header and never appears), the floor line, the popularity section (``## Is this just
+`filter.popularity.max`?``) and the placeholders it fills (UNSAID.md §6.0)."""
 import re
 import time
 from collections import OrderedDict
 
-from unsaid import matcher as M
+from unsaid.qloo import redact
 
 STEP_DOC = OrderedDict([
-    ("C1 city", "locality, region checked against input"),
+    ("C1 city", "the locality (NYC: UUID, region checked; STL/LA: POINT, no call)"),
     ("C2 love", "entity ID per love (exact name first)"),
     ("C2 love tag", "tag ID for a dish/drink love"),
-    ("C4 pool", "taste pool P, server order = taste rank"),
-    ("C5 baseline", "no-signal rank of every member of U (same filters)"),
-    ("C7 name", "wall name -> Qloo ID, city-scoped"),
-    ("C6 drop", "drop-one rank over S"),
+    ("C4 pool", "per-love pool, offsets 0 and 50 (explainability on page 1 only, raw log)"),
+    ("C6'", "fixed-set rescoring: 48 of U + 2 anchors, one love's signal per call"),
+    ("C5 no-signal", "no-signal rescoring of U (only if P12 says popularity is not the city order)"),
+    ("C7 name", "AI name -> Qloo ID, city-scoped (only names sharing a token with U)"),
+    ("CAP", "the popularity cap: entity loves + filter.popularity.max removing |struck| members of U"),
 ])
 
 
@@ -21,13 +24,14 @@ def short_url(u):
     def cut(m):
         ids = m.group(2).split(",")
         return m.group(1) + (",".join(ids[:2]) + ",…(+%d)" % (len(ids) - 2) if len(ids) > 3 else m.group(2))
-    return re.sub(r"((?:filter\.results\.entities|filter\.exclude\.entities|signal\.interests\.entities)=)([^&]+)", cut, u)
+    return re.sub(r"((?:filter\.results\.entities|filter\.exclude\.entities|signal\.interests\.entities)=)([^&]+)",
+                  cut, redact(u))
 
 
 def _group(trace):
     g = OrderedDict()
     for r in trace:
-        key = next((k for k in STEP_DOC if r["label"].startswith(k)), r["label"])
+        key = next((k for k in STEP_DOC if r["label"].startswith(k)), r["label"].split(" ")[0])
         x = g.setdefault(key, {"n": 0, "net": 0, "ms": 0, "ex": r["url"], "res": 0})
         x["n"] += 1
         x["net"] += 0 if r["cache"] else 1
@@ -36,93 +40,139 @@ def _group(trace):
     return g
 
 
-def markdown(res, q, city_label, loves_spec, wall, fake):
-    d = res["diag"]
-    R = res.get("_R") or {}
-    L = []
-    L.append("# UNSAID call trace%s" % (" [FAKE: canned responses, numbers prove code paths only]" if fake else ""))
+def _f(x, nd=2):
+    return "n/a" if x is None or x != x else "%.*f" % (nd, x)
+
+
+def placeholders(r):
+    d, cn = r["diag"], r["counts"]
+    p = r["picks"]
+    ph = OrderedDict([
+        ("WALL", cn.get("wall")), ("ASKS", cn.get("asks")), ("U", cn.get("U")), ("R", cn.get("R_mi")),
+        ("FIT", p[0]["fit_rank"] if p else None), ("ANY", p[0]["any_rank"] if p else None),
+        ("QLOO_CALLS", d.get("qloo_calls")),
+        ("A", p[0]["name"] if len(p) > 0 else None), ("B", p[1]["name"] if len(p) > 1 else None),
+        ("C", p[2]["name"] if len(p) > 2 else None),
+        ("CAP_KEEP", d.get("cap_keep")), ("CAP_SHARED", d.get("cap_shared")),
+        ("OBSCURE", len(d.get("obscure") or [])), ("KNOWN", len(d.get("known") or [])),
+        ("RHO_TP", _f(d.get("rho_tp"))), ("RHO_RES", _f(d.get("rho_res"))),
+    ])
+    return ph
+
+
+def markdown(r, trace, city_label, loves_text, fake, set_id=None):
+    d, cn = r["diag"], r["counts"]
+    T = " [FAKE]" if fake else ""
+    L = ["# UNSAID call trace%s" % (" [FAKE: canned responses; numbers prove code paths, not Qloo]" if fake else ""), ""]
+    L.append("Query: **%s** · set `%s` · loves: %s · %s · as of %s · ran %s" % (
+        city_label, set_id or "-", ", ".join(loves_text), d.get("engine_v"), d.get("as_of"),
+        time.strftime("%Y-%m-%d %H:%M %Z")))
     L.append("")
-    L.append("Query: **%s** · loves: %s · engine v3 · %s · base `%s`" % (
-        city_label, ", ".join(t for t, _ in loves_spec), time.strftime("%Y-%m-%d %H:%M"), q.base))
+    L.append("Status **%s** · flags: %s · %d Qloo calls (%d over the network) in %s s." % (
+        r["status"], ", ".join(r.get("flags") or []) or "none", d.get("qloo_calls") or 0, d.get("qloo_network") or 0,
+        d.get("elapsed_s")))
     L.append("")
-    L.append("## 1. Every call")
+    L.append("## Call trace")
     L.append("")
-    L.append("| step | calls (network / cache) | sum ms | results | what it became | example request (`X-Api-Key` header, never in the URL) |")
+    L.append("| step | calls (network / cache) | sum ms | results | what it became | example request |")
     L.append("|---|---|---|---|---|---|")
-    for k, x in _group(q.trace).items():
+    for k, x in _group(trace).items():
         L.append("| %s | %d (%d / %d) | %d | %d | %s | `%s` |" % (k, x["n"], x["net"], x["n"] - x["net"], x["ms"], x["res"],
                                                              STEP_DOC.get(k, ""), short_url(x["ex"])))
     L.append("")
-    L.append("Totals: %d calls, %d over the network, %d from the content-hash cache." % (
-        len(q.trace), q.calls["network"], q.calls["cache"]))
+    L.append("<details><summary>Every request (%d), in order. The key is sent in the X-Api-Key header only.</summary>" %
+             len(trace))
     L.append("")
-    L.append("## 2. The set every rank is taken over")
+    L.append("| # | step | status | ms | cache | n | request |")
+    L.append("|---|---|---|---|---|---|---|")
+    for i, t in enumerate(trace, 1):
+        L.append("| %d | %s | %s | %s | %s | %s | `%s` |" % (i, t["label"], t["status"], t["ms"],
+                                                           "hit" if t["cache"] else "net", t["n"], short_url(t["url"])))
     L.append("")
-    dr = d.get("drops", {})
-    L.append("P = %d places from the taste call (restaurant ∪ bar, rating ≥ 4 server side, seed places excluded). "
-             "U = %d after the client floor (closed %d, rating < 4.3: %d, no rating %d). Every rank on a card is a rank "
-             "inside this one U. Paging: %s." % (d.get("P", 0), d.get("U", 0), dr.get("closed", 0), dr.get("rating", 0),
-                                                 dr.get("no_rating", 0), (d.get("pool") or {}).get("paging")))
+    L.append("</details>")
     L.append("")
-    L.append("## 3. Leakage panel (is this taste, or just fame?)")
+    L.append("## The set every rank is taken over")
     L.append("")
-    b = d.get("baseline_rescore") or {}
-    rows = [
-        ("Spearman(taste rank, city rank) over U", d.get("rho_taste_base"), "≤ 0.90 means taste moves the order (K2a)"),
-        ("Spearman(taste rank, popularity rank)", d.get("rho_taste_pop"), "popularity leakage; ρ² = share of the taste order explained by fame"),
-        ("Spearman(no-signal rank, popularity rank)", d.get("rho_nosignal_pop"), "≥ 0.98: the city order *is* popularity"),
-        ("AUC(popularity → named by an AI)", d.get("auc_pop_struck"), "0.5 = the AIs' wall is unrelated to popularity"),
-        ("wall ∩ popularity cap of the same size", d.get("popcap_overlap"), "≤ 0.80: the wall is not just a popularity cut (K2b)"),
-        ("baseline rescoring coverage / anchor drift", "%s / %s" % (_f(b.get("coverage")), _f(b.get("drift"), 4)),
-         "all IDs back, scores merge across chunks"),
-        ("explainability warning rate over U", d.get("explain_warn_rate"), "< 0.30 (K7)"),
-    ]
-    L.append("| measure | value | reading |")
-    L.append("|---|---|---|")
-    for a, v, c in rows:
-        L.append("| %s | %s | %s |" % (a, v if isinstance(v, str) else _f(v), c))
-    agg = (d.get("explain_agg") or {}).get("shares", {}).get("top_10") or {}
-    if agg:
+    fl = cn.get("floor") or {}
+    L.append("%s → %s (closed %s, below 4.3 %s, outside %s mi %s, not a restaurant or bar %s).%s" % (
+        cn.get("P"), cn.get("U"), fl.get("closed"), fl.get("below_43"), cn.get("R_mi"), fl.get("outside_R"),
+        fl.get("not_venue"), T))
+    L.append("")
+    L.append("Pools: one per entity love, offsets 0 and 50, `urn:tag:category:place:restaurant` ∪ `…:bar`, "
+             "`business_rating.min=4` server side then ≥ 4.3 − 1e-4 client side, `bias.trends=off`. Every rank on a "
+             "card is a rank inside this one U. %s. Tie share at Qloo's default affinity: %s (thin_taste above 0.30)."
+             % (d.get("baseline"), _f(d.get("tie_share"))))
+    L.append("")
+    L.append("| love | rescoring calls | coverage | anchor drift | tied | ρ(order, popularity) | live? |")
+    L.append("|---|---|---|---|---|---|---|")
+    dead = {l["label"]: l for l in r["loves"] if l.get("dead")}
+    for l in r["loves"]:
+        rs = (d.get("rescore") or {}).get(l["label"]) or next(
+            (v for k, v in (d.get("rescore") or {}).items() if k.lower() == (l["label"] or "").lower()), {})
+        L.append("| %s (%s) | %s | %s | %s | %s | %s | %s |" % (
+            l["label"], l.get("type_label"), rs.get("calls", 0), _f(rs.get("coverage")), _f(rs.get("drift"), 4),
+            _f(rs.get("tie_share")), _f(rs.get("rho_pop")),
+            "dead: %s" % dead[l["label"]].get("dead_reason") if l["label"] in dead else "yes"))
+    for l in r["loves"]:
+        if l.get("dead_line"):
+            L.append("")
+            L.append("> %s%s" % (l["dead_line"], T))
+    L.append("")
+    L.append("## Is this just `filter.popularity.max`?")
+    L.append("")
+    cap_ok = d.get("cap_overlap") is not None and d["cap_overlap"] <= 0.80
+    L.append("- A popularity cap cutting the same %s would keep **%s** of the places the AIs named. Its 7 and yours "
+             "share **%s**.%s" % (cn.get("struck_in_U") or "%s" % (cn.get("U", 0) - cn.get("S", 0)),
+                                  d.get("cap_keep"), d.get("cap_shared"), T))
+    L.append("- Taste vs popularity ρ **%s**; after the city's own order is taken away, ρ **%s**.%s" % (
+        _f(d.get("rho_tp")), _f(d.get("rho_res")), T))
+    L.append("  - ρ_tp = Spearman(for-you RRF order, popularity) over U. ρ_res = Spearman(mean over live loves of "
+             "affinity_i ÷ popularity, popularity): HouseFull's division by the city order.")
+    L.append("- The cap's 7: %s." % (", ".join(x["name"] or x["id"] for x in d.get("cap7") or []) or "n/a"))
+    L.append("")
+    L.append("| STRUCK THOUGH OBSCURE (%d) | KEPT THOUGH KNOWN (%d) |" % (len(d.get("obscure") or []),
+                                                                     len(d.get("known") or [])))
+    L.append("|---|---|")
+    ob, kn = d.get("obscure") or [], d.get("known") or []
+    for i in range(max(len(ob), len(kn), 1)):
+        L.append("| %s | %s |" % (ob[i]["name"] if i < len(ob) else "", kn[i]["name"] if i < len(kn) else ""))
+    L.append("")
+    L.append("C · not a cap: cap overlap %s (gate ≤ 0.80) → %s%s; cap's 7 share %s with ours (≤ 2 is the 0.50-odds "
+             "bar)." % (_f(d.get("cap_overlap")), "PASS" if cap_ok else "FAIL", T, d.get("cap_shared")))
+    L.append("")
+    L.append("## The wall")
+    L.append("")
+    st = {}
+    for w in r["wall"]:
+        st[w["reason"]] = st.get(w["reason"], 0) + 1
+    provs = sorted({"%s (%s)" % (w["provider"], w["lane"]) for w in r["wall"]})
+    L.append("%s distinct names from %s asks (%s). Source: %s. Name outcomes: %s." % (
+        cn.get("wall"), cn.get("asks"), ", ".join(provs) or "none", d.get("wall_source"),
+        ", ".join("%s %d" % kv for kv in sorted(st.items()))))
+    if d.get("reverse_struck"):
         L.append("")
-        L.append("What drives the top 10 (aggregate explainability): " + " · ".join(
-            "%s %.2f" % kv for kv in sorted(agg.items(), key=lambda kv: -kv[1])))
+        L.append("Reverse check struck: %s." % ", ".join(x["name"] for x in d["reverse_struck"]))
     L.append("")
-    L.append("## 4. The wall")
+    L.append("## The cards (for-you order)")
     L.append("")
-    w = d.get("wall", {})
-    L.append("%d answers, %d distinct names (source: %s). Struck in U: %d. Name status: %s." % (
-        w.get("answers", 0), w.get("names", 0), w.get("source"), w.get("struck", 0),
-        ", ".join("%s %d" % kv for kv in sorted((w.get("status") or {}).items()))))
-    L.append("")
-    L.append("S = U − struck = %d. Kept (holds in ≥ n−1 drop-one runs) = %d. Flags: %s. Status: **%s**." % (
-        d.get("S", 0), d.get("kept", 0), ", ".join(res.get("flags") or []) or "none", res["status"]))
-    L.append("")
-    L.append("## 5. The cards")
-    L.append("")
-    L.append("| # | place | neighbourhood | fits you | city order | holds | because (source) | AI answers naming it |")
-    L.append("|---|---|---|---|---|---|---|---|")
-    for i, c in enumerate(res["cards"], 1):
-        bc = c["because"]
-        L.append("| %d | %s | %s | %s | %s | %s | %s (%s%s) | %d of %d |" % (
-            i, c["name"], c["neighbourhood"], c["fits"], c["city_order"], c["holds"], bc["line"], bc["source"],
-            ", %.2f" % bc["share"] if bc.get("share") is not None else "", c["ai"]["named"], c["ai"]["asked"]))
-    if res["cards"]:
-        c = res["cards"][0]
+    L.append("| # | place | what | for you | for anyone | holds | because | rating | never said in |")
+    L.append("|---|---|---|---|---|---|---|---|---|")
+    for i, c in enumerate(r["picks"], 1):
+        L.append("| %d | %s | %s | #%s | %s | %s | %s | %s | %s asks (%s street) |" % (
+            i, c["name"], c["what"], c["fit_rank"], "#%s" % c["any_rank"] if c["any_rank"] else "—",
+            "%s of %s" % (c["holds"], c["n_loves"]) if c["holds"] is not None else "n/a",
+            c["because"], _f(c["rating"], 1), c["never_said"]["asks"], c["never_said"]["street_asks"]))
+    if r["reserves"]:
         L.append("")
-        L.append("## 6. Raw log for card 1 (%s, `%s`)" % (c["name"], c["qloo_id"]))
-        L.append("")
-        per = res.get("_per") or {}
-        near = sorted(per.items(), key=lambda kv: -M.overlap(M.distinctive(kv[0]), M.distinctive(c["name"] or "")))[:5]
-        L.append("- Named by 0 of %d answers. Closest wall names and what each resolved to:" % c["ai"]["asked"])
-        for raw, info in near:
-            L.append("  - \"%s\" → %s %s" % (raw, info["status"], info.get("resolved") or ""))
-        L.append("- Every answer, its provider, model, phrasing and timestamp: `out/<run>.wall.json`.")
-    sk = d.get("skeptic") or {}
+        L.append("Reserves: %s." % ", ".join("%s (#%s)" % (c["name"], c["fit_rank"]) for c in r["reserves"]))
+    b = r.get("burn") or {}
     L.append("")
-    L.append("Skeptic: %s." % ("burned %s" % ([b["name"] for b in sk.get("burned", [])] or "none") if sk.get("run")
-                               else "not run (no LLM attached)"))
+    L.append("Street check: %d asks over %d neighbourhoods; burned: %s." % (
+        len(b.get("asked") or []), len({a["neighbourhood"] for a in b.get("asked") or []}),
+        ", ".join("%s (by %s, %s)" % (x["name"], x["by"], x["neighbourhood"]) for x in b.get("burned") or []) or "none"))
+    L.append("")
+    L.append("## Placeholders this run fills (UNSAID.md §6.0)%s" % T)
+    L.append("")
+    for k, v in placeholders(r).items():
+        L.append("- ⟦%s⟧ = %s%s" % (k, v, T))
     return "\n".join(L) + "\n"
-
-
-def _f(x, nd=2):
-    return "n/a" if x is None or x != x else "%.*f" % (nd, x)

@@ -1,48 +1,62 @@
-"""K3 survivors (+ K2b, explainability-vs-drop-one agreement): the full pipeline per seed set.
-kept = open, rated >= 4.3, not named by the wall, holds in >= 2 of 3 drop-one runs.
-PASS: >= 7 kept in >= 8 of 10 NYC sets and >= 6 of 10 STL sets.
-K2b: of the struck pool members, <= 80% would also be cut by a popularity cap removing the same number.
-Wall: --walls JSON from the harness, else exp/consensus.py (one model from memory; 4 generic answers where no list)."""
+"""Gate B · survivors (UNSAID.md §4). Full pipeline per seed set against its wall. A set passes when |U| >= 150,
+7 cards + 3 reserves survive, no card is junk (closed, below 4.3, outside R, or an allowlist kind), and the tie share
+at Qloo's default affinity is < 30%. PASS: >= 8 of 10 NYC sets and >= 6 of 10 STL sets.
+Also prints the cap overlap per set (gate C's measure; run_query.py reports gate C)."""
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from unsaid import cli, engine as E, walls as W  # noqa: E402
-from unsaid.qloo import explain_items  # noqa: E402
+from unsaid import cities as C  # noqa: E402
 
+NEED = {"nyc": 8, "stl": 6, "la": 6}
 args = cli.parser(__doc__).parse_args()
 q = cli.client(args, "k3_survivors")
-need = {"nyc": 8, "stl": 6}
-ok_all, k2b = True, []
-agree, agree_n = 0, 0
+T = cli.tag(args)
+
+
+def junk(card, city):
+    bad = []
+    if not card["open"]:
+        bad.append("closed")
+    if card["rating"] is None or card["rating"] < E.CFG["RATING_CLIENT"] - E.CFG["RATING_EPS"]:
+        bad.append("rating")
+    if card["lat"] is not None and C.haversine_mi((card["lat"], card["lon"]), city["center_latlon"]) > city["radius_mi"]:
+        bad.append("distance")
+    return bad
+
+
+ok_all, caps = True, []
 for city in cli.cities(args):
     c = cli.city_obj(q, city)
     hits, n = 0, 0
     print("  %s" % city.upper())
     for sid, spec in cli.sets(args, city):
-        wall = W.wall_for(city, sid, args.walls)
-        r = E.run(q, c, spec, wall)
+        loves = cli.loves(q, spec)
+        if loves is None:
+            print("    %-8s a love is not in Qloo%s" % (sid, T)); continue
+        r = E.run(q, c, loves, W.wall_for(city, sid, args.walls))
         d = r["diag"]
-        if r["status"] == "needs_input":
-            print("    %-8s needs_input" % sid); continue
+        if r["status"] in ("needs_input", "degraded"):
+            print("    %-8s %s%s" % (sid, r["status"], T)); continue
         n += 1
-        hits += d["kept"] >= 7
-        k2b.append(d["popcap_overlap"])
+        U = {e["entity_id"]: e for e in r["_U"]}
+        bad = {x["name"]: junk(x, c) + (["kind"] if E.excluded_kind(U[x["id"]]) else []) for x in r["picks"] + r["reserves"]}
+        bad = {k: v for k, v in bad.items() if v}
+        passed = d["N"] >= 150 and len(r["picks"]) >= 7 and len(r["reserves"]) >= 3 and not bad and d["tie_share"] < 0.30
+        hits += passed
+        caps.append(d.get("popcap_overlap"))
         st = d["wall"]["status"]
-        print("    %-8s U=%3d wall %2d answers/%3d names -> struck %3d (not found %d, outside pool %d) S=%3d kept=%3d -> %s cards | "
-              "popcap overlap %s AUC(pop->struck) %s%s" % (
-                  sid, d["U"], d["wall"]["answers"], d["wall"]["names"], d["wall"]["struck"], st.get("not_found", 0),
-                  st.get("outside_pool", 0), d["S"], d["kept"], r["status"], cli.f(d["popcap_overlap"]),
-                  cli.f(d["auc_pop_struck"]), " FLAGS " + ",".join(r["flags"]) if r["flags"] else ""))
-        for card in r["cards"]:  # does explainability's top love agree with the drop-one counterfactual?
-            dl = r["_deltas"].get(card["qloo_id"]) or {}
-            if card["because"]["source"] == "explainability" and dl:
-                agree_n += 1
-                agree += max(dl.items(), key=lambda kv: kv[1])[0] == card["because"]["love"]
-    ok = n > 0 and hits >= need[city] * n / 10.0
+        print("    %-8s U=%3d wall %2d answers/%3d names -> struck %3d (C7 %d calls, %d skipped) S=%3d kept=%3d -> "
+              "%d+%d %s | tie %s | junk %s | cap overlap %s%s -> %s%s" % (
+                  sid, d["N"], d["wall"]["answers"], d["wall"]["names"], d["wall"]["struck"], d["wall"]["c7_calls"],
+                  d["wall"]["c7_skipped"], d["S"], d["kept"], len(r["picks"]), len(r["reserves"]), r["status"],
+                  cli.f(d["tie_share"]), bad or "none", cli.f(d.get("popcap_overlap")),
+                  " FLAGS " + ",".join(r["flags"]) if r["flags"] else "", cli.verdict(passed), T))
+    ok = n > 0 and hits >= NEED.get(city, 8) * n / 10.0
     ok_all &= ok
-    print("  %s: >=7 kept in %d of %d sets (gate %d of 10) -> %s%s" % (city.upper(), hits, n, need[city], cli.verdict(ok), cli.tag(args)))
-vals = [v for v in k2b if v == v]
-med = sorted(vals)[len(vals) // 2] if vals else float("nan")
-print("K3 survivors:", cli.verdict(ok_all) + cli.tag(args), "| fallback: empty-few state; widen to metro; allow holds 2 of 3")
-print("because-line cross-check: explainability's top love = the love whose drop moves the card most in %d of %d cards" % (agree, agree_n))
-print("K2b wall vs popularity cap: median overlap %s (gate <=0.80) -> %s%s" % (cli.f(med), cli.verdict(med <= 0.8), cli.tag(args)))
+    print("  %s: %d of %d sets pass (gate %d of 10) -> %s%s" % (city.upper(), hits, n, NEED.get(city, 8),
+                                                              cli.verdict(ok), T))
+vals = [v for v in caps if v is not None and v == v]
+print("B survivors:", cli.verdict(ok_all) + T, "| if FAIL: widen R, holds 2 of 3, empty_few shown; STL < 5 -> NYC hero")
+print("  cap overlap median %s over %d sets (gate C <= 0.80; run_query.py reports gate C)%s" % (
+    cli.f(cli.median(vals)), len(vals), T))
 cli.finish(q, args, "k3_survivors")

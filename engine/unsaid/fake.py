@@ -12,12 +12,17 @@ Shapes follow the docs:
 - /entities -> {"success", "results": {"entities": [...]}}
 Unknowns are modelled one way and flagged (engine-v3.md §U): the top-level aggregate explainability shape;
 no-signal order (= popularity here); a non-enum business_rating.min (silently ignored here, like other bad params).
-Knobs: FAKE_TASTE_WEIGHT (default 0.55) sets how much taste moves ranks; FAKE_FLAKY=1 injects a 429 every 17th call.
+Knobs: FAKE_TASTE_WEIGHT (default 0.55) sets how much taste moves ranks; FAKE_FLAKY=1 injects a 429 every 17th call;
+FAKE_TIE_SHARE (default 0.08) sets the share of (place, love) scores at Qloo's default affinity.
+v4 additions (UNSAID.md §3.1-3.3): category tags restaurant/bar, allowlist junk (fast food, food courts, hotels) inside
+the category filter, POINT + radius, float32-looking ratings, hours, Los Angeles fillers, popularity-only "dead" seeds
+(Starbucks, Budweiser, Popeyes), a vibe tag, and invented rate-limit headers (names are FAKE; P9 records the real ones).
 """
 import hashlib
 import json
 import math
 import os
+import struct
 import sys
 import urllib.parse
 import uuid
@@ -57,7 +62,15 @@ CITIES = {
             "disamb": "St. Louis, Missouri, United States of America",
             "hoods": ["Central West End", "The Hill", "Soulard", "Lafayette Square", "The Grove", "Tower Grove",
                       "Delmar Loop", "Downtown", "Benton Park", "Cherokee Street", "Midtown", "North City"]},
+    "la": {"name": "Los Angeles", "lat": 34.0522, "lon": -118.2437, "admin1": "California", "metro": "Los Angeles",
+           "disamb": "Los Angeles, California, United States of America",
+           "hoods": ["Silver Lake", "Echo Park", "Koreatown", "Highland Park", "Leimert Park", "Arts District",
+                     "Boyle Heights", "Venice", "Los Feliz", "Chinatown", "Inglewood", "West Adams"]},
 }
+DEFAULT_AFF = 0.7649962877984056
+FILLERS = 700                 # per city; with the catalog this gives |U| in the 150-300 target band
+WORLD_V = "v4.1"              # part of the fake cache key: changing the world never serves stale responses
+DEAD_SEEDS = ("starbucks", "budweiser", "popeyes")   # fake: their signal is pure popularity (dead love by rho)
 LOCALITY_IDS = {c: uid("locality:" + c) for c in CITIES}
 EXTRA_LOCALITIES = [  # the Richmond trap entrants hit: the first "Richmond" is on Staten Island
     {"key": "richmond-si", "name": "Richmond", "lat": 40.5795, "lon": -74.1502, "disamb": "Staten Island, New York, United States of America"},
@@ -73,6 +86,13 @@ TAG = {
     "music": ("urn:tag:category:place:live_music_venue", "Live music venue", "urn:tag:category:place"),
     "comedy": ("urn:tag:category:place:comedy_club", "Comedy club", "urn:tag:category:place"),
     "hotel": ("urn:tag:genre:place:hotel", "Hotel", "urn:tag:genre:place"),
+    "catrest": ("urn:tag:category:place:restaurant", "Restaurant", "urn:tag:category:place"),
+    "fastfood": ("urn:tag:category:place:fast_food", "Fast Food", "urn:tag:category:place"),
+    "foodcourt": ("urn:tag:genre:place:restaurant:food_court", "Food Court", "urn:tag:genre:place:restaurant"),
+    "hotelcat": ("urn:tag:category:place:hotel", "Hotel", "urn:tag:category:place"),
+    "soul": ("urn:tag:genre:place:restaurant:soul_food", "Soul Food", "urn:tag:genre:place:restaurant"),
+    "cocktail": ("urn:tag:genre:place:restaurant:cocktail_bar", "Cocktail Bar", "urn:tag:genre:place:restaurant"),
+    "livemusic": ("urn:tag:amenity:place:live_music", "Live Music", "urn:tag:amenity:place"),
 }
 SEED_TAGS = {  # /v2/tags answers for food-ish loves
     "rib tips": ("urn:tag:specialty_dish:place:rib_tips", "Rib Tips", "urn:tag:specialty_dish:place", "bbq"),
@@ -81,6 +101,7 @@ SEED_TAGS = {  # /v2/tags answers for food-ish loves
     "tacos al pastor": ("urn:tag:specialty_dish:place:tacos_al_pastor", "Tacos al pastor", "urn:tag:specialty_dish:place", None),
     "natural wine": ("urn:tag:dining_option:qloo:wine_bar", "Wine Bar", "urn:tag:dining_option:qloo", "bar"),
     "ramen": ("urn:tag:cuisine:qloo:ramen", "Ramen", "urn:tag:cuisine:qloo", None),
+    "cozy": ("urn:tag:vibe:place:cozy", "Cozy", "urn:tag:vibe:place", None),   # vibe: dead on arrival
 }
 CLOSED_TRUTH = {"Sweetie Pie's": True, "Mike Shannon's Steaks and Seafood": True,
                 "Grace Meat & Three": False}  # Grace: modelled as a stale record (closed 13 Sep 2026, still open here)
@@ -99,33 +120,44 @@ def _place(city, name, key, kind_tags, closed=False):
     u = h(key, 1)
     pop = 1 - 10 ** (-(0.35 + 2.9 * u))           # bunches towards 1, like the live API
     rating = round(3.7 + 1.2 * h(key, 2), 1)
+    if rating == 4.3 and h(key, 13) < 0.5:
+        rating = 4.2999997                          # float32 noise just under 4.3 (live: 4.1999998)
+    rating = struct.unpack("f", struct.pack("f", rating))[0]
     hood = c["hoods"][int(h(key, 3) * len(c["hoods"]))]
     lat = c["lat"] + (h(key, 4) - 0.5) * 0.12
     lon = c["lon"] + (h(key, 5) - 0.5) * 0.12
     tags = [{"id": TAG[t][0], "name": TAG[t][1], "type": TAG[t][2]} for t in kind_tags]
-    return {"name": name, "entity_id": eid, "type": "urn:entity", "subtype": "urn:entity:place",
+    out = {"name": name, "entity_id": eid, "type": "urn:entity", "subtype": "urn:entity:place",
             "properties": {"address": "%d Example St, %s" % (int(h(key, 6) * 900) + 10, c["name"]),
                            "business_rating": rating, "is_closed": closed, "neighborhood": hood,
                            "geocode": {"name": c["name"], "city": c["name"], "admin1_region": c["admin1"],
                                        "country_code": "US", "metro": c["metro"]},
                            "website": "https://example.invalid/%s" % eid[:8]},
+            "_hours": h(key, 14) >= 0.04,
             "location": {"lat": lat, "lon": lon, "geohash": "fake%s" % eid[:6].lower()},
             "popularity": pop, "tags": tags, "_city": city, "_vec": vec("place:" + key)}
+    if out.pop("_hours"):
+        out["properties"]["hours"] = {"Monday": [{"opens": "T11:00", "closes": "T22:00"}]}
+    return out
 
 
 def _kind_for(name):
     n = name.lower()
-    k = ["restaurant"]
+    k = ["restaurant", "catrest"]
     if any(w in n for w in BAR_WORDS):
         k += ["bar", "catbar"]
     if any(w in n for w in BBQ_WORDS):
-        k.append("bbq")
+        k += ["bbq", "soul"] if h(n, 15) < 0.5 else ["bbq"]
+    if "cocktail" in n or "lounge" in n:
+        k.append("cocktail")
+    if h(n, 16) < 0.15:
+        k.append("livemusic")
     return k
 
 
 def build_world():
     places = []
-    for city, table in (("nyc", MC.NYC), ("stl", MC.STL)):
+    for city, table in (("nyc", MC.NYC), ("stl", MC.STL), ("la", {})):
         for raw, recs in table.items():
             for j, (qname, inpool) in enumerate(recs):
                 key = "%s#%d" % (raw, j)
@@ -137,23 +169,31 @@ def build_world():
                         kt += ["bar", "catbar"]  # case A's NYC list is bars
                 closed = CLOSED_TRUTH.get(qname, False)
                 places.append(_place(city, qname, key, kt, closed))
-        for d in MC.DECOYS[city]:
+        for d in MC.DECOYS.get(city, []):
             places.append(_place(city, d, "decoy:" + d, _kind_for(d)))
         if city == "stl":
             places.append(_place(city, "Mike Shannon's Steaks and Seafood", "mike-shannon", ["restaurant"], True))
         syl = ["mar", "vel", "tor", "quin", "bel", "sor", "dra", "lin", "fen", "osk", "pell", "rav", "zan", "thu",
-               "corb", "esk", "lom", "nyr", "vash", "ilo", "brin", "cael"]
+               "corb", "esk", "lom", "nyr", "vash", "ilo", "brin", "cael", "dun", "gath", "hollo", "jun", "kess",
+               "mira", "ost", "prae"]
         suf = ["Tavern", "Kitchen", "Bar", "Cafe", "Room", "Social", "Provisions", "Wine Bar", "Grill", "House",
                "Smokehouse", "Trattoria", "Noodle Bar", "Oyster Bar"]
         n = 0
         for i in range(len(syl)):
             for j in range(len(syl)):
-                if i == j or n >= 330:
+                if i == j or n >= FILLERS:
                     continue
                 nm = "%s%s %s" % (syl[i].capitalize(), syl[j], suf[(i * 5 + j * 3 + (city == "stl")) % len(suf)])
                 kt = _kind_for(nm)
                 if "trattoria" in nm.lower():
                     kt.append("italian")
+                j = h(city + nm, 12)    # junk that carries the restaurant category (the allowlist's job)
+                if j < 0.03:
+                    kt.append("fastfood")
+                elif j < 0.05:
+                    kt.append("foodcourt")
+                elif j < 0.06:
+                    kt.append("hotelcat")
                 closed = h(city + nm, 9) < 0.03
                 places.append(_place(city, nm, "filler:" + nm, kt, closed))
                 n += 1
@@ -189,6 +229,8 @@ class FakeQloo:
         self.n = 0
         self.flaky = os.environ.get("FAKE_FLAKY") == "1"
         self.w = float(os.environ.get("FAKE_TASTE_WEIGHT", "0.55"))
+        self.tie = float(os.environ.get("FAKE_TIE_SHARE", "0.08"))
+        self.dead = {uid("seed:" + k) for k in DEAD_SEEDS}
 
     # ---- transport interface -------------------------------------------
     def get(self, url):
@@ -197,6 +239,17 @@ class FakeQloo:
             return 429, json.dumps({"code": 429, "reason": "Too Many Requests"}), {"Retry-After": "0"}
         u = urllib.parse.urlsplit(url)
         params = dict(urllib.parse.parse_qsl(u.query, keep_blank_values=True))
+        st, body, hd = self._route(u, params)
+        hd = dict(hd)
+        hd.update(self.rate_headers())
+        return st, body, hd
+
+    def rate_headers(self):
+        """Invented names and values, so the quota guard's code path runs in fake mode. [FAKE]"""
+        return {"X-Fake-RateLimit-Limit-Second": "5", "X-Fake-RateLimit-Remaining-Second": "4",
+                "X-Fake-RateLimit-Limit-Month": "10000", "X-Fake-RateLimit-Remaining-Month": str(max(0, 9000 - self.n))}
+
+    def _route(self, u, params):
         try:
             if u.path == "/v2/insights":
                 return self.insights(params)
@@ -241,6 +294,8 @@ class FakeQloo:
                 return c
         if loc.upper().startswith("POINT("):
             lon, lat = [float(x) for x in loc[6:-1].split()]
+            if not (-180 <= lon <= 180) or abs(lat) > 90 or abs(lat) > abs(lon) and abs(lon) < 60:
+                return None   # POINT(lat lon) returns 0 live: lon first
         elif "," in loc:
             lat, lon = [float(x) for x in loc.split(",")]
         else:
@@ -275,7 +330,7 @@ class FakeQloo:
             qn = q.lower()
             for c, d in CITIES.items():
                 if qn in d["name"].lower() or d["name"].lower() in qn or (c == "stl" and "louis" in qn) or (
-                        c == "nyc" and qn in ("new york", "nyc")):
+                        c == "nyc" and qn in ("new york", "nyc")) or (c == "la" and qn in ("la", "los angeles")):
                     res.append({"name": d["name"], "entity_id": LOCALITY_IDS[c], "type": "urn:entity",
                                 "subtype": "urn:entity:locality", "types": ["urn:entity:locality"],
                                 "location": {"lat": d["lat"], "lon": d["lon"]}, "disambiguation": d["disamb"],
@@ -321,7 +376,15 @@ class FakeQloo:
         if take > 50:
             raise _Bad("take must be <= 50")
         city = self._city_of(p.get("filter.location"))
-        cand = [pl for pl in self.places if city is None or pl["_city"] == city]
+        if p.get("filter.location") and city is None:
+            cand = []
+        else:
+            cand = [pl for pl in self.places if city is None or pl["_city"] == city]
+        loc = p.get("filter.location") or ""
+        if loc.upper().startswith("POINT(") and p.get("filter.location.radius"):
+            lon0, lat0 = [float(x) for x in loc[6:-1].split()]
+            rad = float(p["filter.location.radius"])
+            cand = [pl for pl in cand if _dist_m(lat0, lon0, pl["location"]["lat"], pl["location"]["lon"]) <= rad]
         if p.get("filter.tags"):
             want = set(p["filter.tags"].split(","))
             op = p.get("operator.filter.tags", "union")
@@ -356,14 +419,20 @@ class FakeQloo:
                 a = pl["popularity"]  # fake model of the no-signal order (unknown live: K9)
                 scored.append((a, pl, None))
                 continue
+            popz = (pl["popularity"] - 0.5) / 0.5
+            if len(seed_vecs) == 1 and h(pl["entity_id"] + seed_vecs[0][0], 11) < self.tie:
+                scored.append((DEFAULT_AFF, pl, None))      # Qloo's default affinity: a tie, not a rank
+                continue
             contrib = []
             for sid, v in seed_vecs:
+                if sid in self.dead:
+                    contrib.append((sid, popz))
+                    continue
                 c = cos(v, pl["_vec"])
                 if sid in tag_boost and any(t["id"] == tag_boost[sid] for t in pl["tags"]):
                     c += 0.8
                 contrib.append((sid, c))
             taste = sum(c for _, c in contrib) / len(contrib)
-            popz = (pl["popularity"] - 0.5) / 0.5
             s = (1 - self.w) * popz + self.w * (taste + 1) / 2
             a = 0.55 + 0.44 / (1 + math.exp(-4 * (s - 0.5))) + 1e-6 * h(pl["entity_id"], 8)
             expl = None
@@ -401,3 +470,10 @@ class FakeQloo:
 
 class _Bad(Exception):
     pass
+
+
+def _dist_m(la1, lo1, la2, lo2):
+    p1, p2 = math.radians(la1), math.radians(la2)
+    dp, dl = p2 - p1, math.radians(lo2 - lo1)
+    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return 2 * 6371008.8 * math.asin(math.sqrt(a))
