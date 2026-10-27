@@ -169,7 +169,7 @@
 
     const st = {
       slug, cityName, loves, wall: new Map(), asks: new Map(), U: null, calls: null, cards: new Map(), result: null, status: null,
-      burnAsking: false, burned: [], struck: new Map(), slots: [], reserves: [], risen: new Map(), done: false, fake: false,
+      burned: [], struck: new Map(), slots: [], reserves: [], risen: new Map(), done: false, fake: false,
       mock: false, t0: Date.now(), firstServerEvent: false, order: [],
     };
     topbar({ city: cityName, loves });
@@ -274,7 +274,8 @@
       const live = [...new Set(items.filter(a => a.lane === 'live' && a.provider).map(a => a.provider))].sort((a, b) => order(a) - order(b));
       const parts = [];
       if (dated.length) parts.push(`${dated.map(esc).join(', ')}: asked ${ph(et(datedAt), 'date')}`);
-      if (live.length) parts.push(`${live.map(esc).join(', ')}: asked just now`);
+      // the live lane names its model from the data: "Gemini (gemini-3-flash-preview): asked just now"
+      if (live.length) parts.push(live.map(p => { const m = items.find(a => a.lane === 'live' && a.provider === p && a.model); return esc(p) + (m ? ` (${esc(m.model)})` : ''); }).join(', ') + ': asked just now');
       const U = (R && R.counts && R.counts.U) ?? st.U;
       if (st.done && R && R.counts) parts.push(`Qloo ranked your ${ph(U, 'U')} places · ${ph(D && D.qloo_calls, 'N')} calls`);
       else if (st.calls) parts.push(`Qloo is ranking your ${U != null ? U + ' ' : ''}places · ${st.calls.done} of ${ph(st.calls.total, 'N')} calls`);
@@ -296,20 +297,26 @@
       $('#notes').innerHTML = out.map(t => `<div>${t}</div>`).join('');
     }
 
-    // ---- burn beat
+    // ---- burn beat: street checks are DATED (asked in advance), so the line states a result and never moves
     function burnLine() {
       const b = $('#burn');
+      const asked = (st.result && st.result.burn && st.result.burn.asked) || [];
+      const askOf = hood => asked.find(a => a.neighbourhood === hood) || {};
       if (st.burned.length) {
         b.innerHTML = st.burned.map(x => {
           const c = st.cards.get(x.card_id) || {}, r = x.replaced_by && st.cards.get(x.replaced_by);
+          const hood = c.neighbourhood ?? x.neighbourhood, a = askOf(hood);
+          const who = x.by || a.provider, when = et(x.at || a.asked_at);
           const ci = cardNo(x.card_id), ri = r ? cardNo(r.id) : null;
-          return `<span class="red">${esc(x.by || 'An AI')} just named ${c.name ? esc(c.name) : ph(null, `place ${ci}`)}</span> when asked about ${ph(c.neighbourhood ?? x.neighbourhood, 'neighbourhood')} · ${x.at ? esc(UM.et(x.at, false).replace(' ET', '')) : (st.fake || st.mock ? ph(null, 'time') : esc(x.seen))} · burned.` +
+          // "⟦provider⟧ named ⟦X⟧ when asked about ⟦Soulard⟧ · ⟦date⟧ · burned. ⟦Y⟧ takes its place."
+          return `<span class="red">${ph(who, 'provider')} named ${c.name ? esc(c.name) : ph(null, `place ${ci}`)}</span> when asked about ${ph(hood, 'neighbourhood')} · ${ph(when, 'date')} · burned.` +
             (r ? ` ${r.name ? esc(r.name) : ph(null, `place ${ri}`)} takes its place.` : '');
         }).join('<br>');
-      } else if (st.done && st.result && st.result.burn && st.result.burn.asked && st.result.burn.asked.length) {
-        b.innerHTML = `Asked about all ${st.result.burn.asked.length} streets. None named.`;
-      } else if (st.burnAsking) b.innerHTML = '<span class="dots">Asking about each card’s street</span>';
-      else b.innerHTML = '';
+      } else if (st.done && asked.length) {
+        // "Asked about all 7 streets · ⟦date⟧. None named."
+        const when = asked.map(a => a.asked_at).filter(Boolean).sort().pop() || null;
+        b.innerHTML = `Asked about all ${asked.length} streets · ${ph(et(when), 'date')}. None named.`;
+      } else b.innerHTML = '';
     }
     const cardNo = id => { const i = st.order.indexOf(id); return i < 0 ? '?' : i + 1; };
 
@@ -325,7 +332,6 @@
         case 'calls': st.calls = e; break;
         case 'card': st.cards.set(e.id, e); if (!st.order.includes(e.id)) st.order.push(e.id); mapDraw(); break;
         case 'burn':
-          if (e.phase === 'asking') st.burnAsking = true;
           if (e.card_id) { st.burned.push({ ...e, seen: hhmm() }); }
           burnLine(); mapDraw(); break;
         case 'done': finish(e.result); break;

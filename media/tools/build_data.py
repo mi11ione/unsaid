@@ -303,13 +303,12 @@ def stream(name, *, status='ok', n_picks=7, n_res=3, flags=(), loves=LOVES, tied
     burned = []
     asked = []
     if burn and n_picks >= 7:
-        push(600, {'type': 'burn', 'phase': 'asking', 'neighbourhoods': [c['neighbourhood'] for c in picks]})
         for c in picks:
-            asked.append({'neighbourhood': c['neighbourhood'], 'lane': 'live', 'provider': 'Gemini', 'asked_at': None, 'named': []})
+            asked.append({'neighbourhood': c['neighbourhood'], 'lane': 'dated', 'provider': None, 'asked_at': None, 'named': []})  # MOCK: no provider, no date
         # MOCK: one card burns on its street and the first reserve takes its place
         victim, riser = picks[2], reserves[0]
         asked[2]['named'] = [victim['name']]
-        burned.append({'card_id': victim['id'], 'by': 'Gemini', 'at': None, 'neighbourhood': victim['neighbourhood'], 'replaced_by': riser['id']})
+        burned.append({'card_id': victim['id'], 'by': None, 'at': None, 'neighbourhood': victim['neighbourhood'], 'replaced_by': riser['id']})
         push(1800, {'type': 'burn', **burned[0]})
         picks = picks[:2] + picks[3:] + [riser]
         picks.sort(key=lambda c: (c['fit_rank'] is None, c['fit_rank'] or 0))
