@@ -4,6 +4,7 @@
 Runs both eras: legacy (initialize -> notifications/initialized -> tools/list -> tools/call) and modern 2026-07-28
 (server/discover -> tools/list -> tools/call, per-request _meta), plus error paths. Validates structuredContent
 against the tool's outputSchema with a small JSON-Schema subset validator."""
+import ast
 import json
 import os
 import subprocess
@@ -92,7 +93,8 @@ CEDRIC = {"loves": ["Frankie Beverly & Maze", {"text": "Kings of Comedy", "type"
 def show_call(r, title):
     res = r.get("result", {})
     print("\n--- %s ---" % title)
-    print(res["content"][0]["text"] if res.get("content") else json.dumps(r)[:400])
+    text = res["content"][0]["text"] if res.get("content") else json.dumps(r)[:400]
+    print("\n".join(text.splitlines()[:12]))
 
 
 def run_legacy():
@@ -105,8 +107,10 @@ def run_legacy():
     c.notify("notifications/initialized")
     r = c.req("tools/list")
     tools = r["result"]["tools"]
-    check([t["name"] for t in tools] == ["unsaid_places"], "tools/list returns exactly unsaid_places")
+    check([t["name"] for t in tools] == ["unsaid_places", "qloo_places"],
+          "tools/list returns exactly unsaid_places and qloo_places")
     schema = tools[0]["outputSchema"]
+    qschema = tools[1]["outputSchema"]
     r = c.req("tools/call", {"name": "unsaid_places", "arguments": CEDRIC})
     res = r["result"]
     sc = res.get("structuredContent", {})
@@ -125,6 +129,7 @@ def run_legacy():
     print("  wall: %s" % json.dumps(sc["wall"]))
     print("  qloo_calls: %s" % json.dumps(sc["qloo_calls"]))
     print("  loves resolved: %s" % json.dumps([(l["text"], l["kind"], l["status"]) for l in sc["loves"]]))
+    run_qloo_places(c, qschema, sc)
     r = c.req("tools/call", {"name": "unsaid_places", "arguments": {"loves": ["Kings of Comedy", "rib tips", "Frankie Beverly & Maze"],
                                                                     "city": "St. Louis"}})
     sc2 = r["result"]["structuredContent"]
@@ -143,6 +148,31 @@ def run_legacy():
     return err
 
 
+def run_qloo_places(c, qschema, unsaid_sc):
+    """The meter's "with" arm: Qloo's taste pool, top 50, nothing subtracted, never via unsaid_places."""
+    r = c.req("tools/call", {"name": "qloo_places", "arguments": CEDRIC})
+    res = r["result"]
+    sc = res.get("structuredContent", {})
+    errs = validate(sc, qschema)
+    check(res.get("isError") is False and not errs,
+          "qloo_places: isError=false, validates against its outputSchema" + ("" if not errs else ": %s" % errs[:3]))
+    U = sc.get("pool", {}).get("U")
+    check(sc["status"] == "ok" and len(sc["places"]) == min(50, U) and
+          [p["rank"] for p in sc["places"]] == list(range(1, len(sc["places"]) + 1)),
+          "qloo_places: top %d of the taste pool, ranked 1..n" % len(sc["places"]))
+    us = unsaid_sc["pool"]
+    check(sc["subtraction"] == "none" and "wall" not in sc and U == us["U"] and us["after_strike"] < us["U"],
+          "qloo_places: nothing subtracted (same pool U=%s that unsaid_places strikes down to %s)" % (U, us["after_strike"]))
+    src = open(os.path.join(HERE, "unsaid_mcp.py")).read()
+    fn = next(n for n in ast.walk(ast.parse(src)) if isinstance(n, ast.FunctionDef) and n.name == "qloo_places")
+    called = {(x.func.attr if isinstance(x.func, ast.Attribute) else getattr(x.func, "id", ""))
+              for x in ast.walk(fn) if isinstance(x, ast.Call)}
+    banned = called & {"unsaid_places", "run", "match_wall", "wall_for", "strike", "names"}
+    check(not banned, "qloo_places never calls unsaid_places, the engine run, the wall or the matcher%s"
+          % ("" if not banned else ": calls %s" % sorted(banned)))
+    show_call(r, "tools/call qloo_places (legacy) -> content[0], first lines")
+
+
 def run_modern():
     print("\n== modern era (MCP 2026-07-28): no handshake, per-request _meta, server/discover")
     meta = {"io.modelcontextprotocol/protocolVersion": "2026-07-28",
@@ -153,9 +183,12 @@ def run_modern():
     check("2026-07-28" in r["result"]["supportedVersions"] and r["result"]["resultType"] == "complete",
           "server/discover -> DiscoverResult with 2026-07-28, resultType complete")
     r = c.req("tools/list", {"_meta": meta})
-    check(r["result"]["tools"][0]["name"] == "unsaid_places" and "_meta" in r["result"], "tools/list (stateless) ok, serverInfo in _meta")
+    check([t["name"] for t in r["result"]["tools"]] == ["unsaid_places", "qloo_places"] and "_meta" in r["result"],
+          "tools/list (stateless) ok, serverInfo in _meta")
     r = c.req("tools/call", {"name": "unsaid_places", "arguments": CEDRIC, "_meta": meta})
     check(r["result"]["structuredContent"]["status"] == "ok", "tools/call (stateless) ok")
+    r = c.req("tools/call", {"name": "qloo_places", "arguments": CEDRIC, "_meta": meta})
+    check(r["result"]["structuredContent"]["status"] == "ok" and "_meta" in r["result"], "tools/call qloo_places (stateless) ok")
     bad = dict(meta, **{"io.modelcontextprotocol/protocolVersion": "1900-01-01"})
     r = c.req("tools/list", {"_meta": bad})
     check(r.get("error", {}).get("code") == -32022, "unknown version -> -32022 UnsupportedProtocolVersion, data=%s"

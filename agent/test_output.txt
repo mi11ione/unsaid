@@ -1,7 +1,7 @@
 == legacy era (what Claude Desktop / Claude Code send today): initialize handshake
   [PASS] initialize negotiates 2025-11-25
   [PASS] server declares the tools capability
-  [PASS] tools/list returns exactly unsaid_places
+  [PASS] tools/list returns exactly unsaid_places and qloo_places
   [PASS] tools/call isError=false
   [PASS] structuredContent validates against outputSchema
   [PASS] serialized JSON TextContent == structuredContent
@@ -12,21 +12,39 @@
   [PASS] no pick is on the wall's top names
 
 --- tools/call unsaid_places (legacy) -> content[0] ---
-ok · St. Louis: AIs named 62 distinct places in 8 answers (31 were in this taste pool, all struck). 7 left for these loves, ranked by Qloo:
-1. Eskpell Grill (Midtown) · #1 for you · #86 for anyone · holds 3 of 3 · because you love rib tips · named by 0 of 8 AI answers · qloo:3C027D8F-E065-5B34-B179-9F6B9986B76A
-2. Ravthu Trattoria (Downtown) · #5 for you · #110 for anyone · holds 3 of 3 · because you love rib tips · named by 0 of 8 AI answers · qloo:D9183238-755A-5CA7-A727-39A4B09C5A9E
-3. Dravash Kitchen (Delmar Loop) · #8 for you · #148 for anyone · holds 3 of 3 · because you love rib tips · named by 0 of 8 AI answers · qloo:E7E1F4D8-54B7-55A2-AE0D-4623E0CD5842
-4. Torpell Oyster Bar (North City) · #13 for you · #127 for anyone · holds 3 of 3 · because you love Frankie Beverly & Maze · named by 0 of 8 AI answers · qloo:27F97D42-EB73-5DC6-81D2-40C3A216E99A
-5. Osktor Smokehouse (Downtown) · #14 for you · #170 for anyone · holds 3 of 3 · because you love rib tips · named by 0 of 8 AI answers · qloo:8FD06827-81EC-5FFB-9529-4738658F3DE3
-6. Dranyr Noodle Bar (Midtown) · #39 for you · #162 for anyone · holds 2 of 3 · because you love rib tips · named by 0 of 8 AI answers · qloo:2BD1F0A1-DF6B-56EB-A317-26CDF2BB1450
-7. Beldra Trattoria (Midtown) · #66 for you · #153 for anyone · holds 2 of 3 · because you love Frankie Beverly & Maze · named by 0 of 8 AI answers · qloo:CE7C4B64-212C-5CDF-9DC9-74693FD7A771
+ok · St. Louis: AIs named 62 distinct places in 8 answers (8 were in this taste pool, all struck). 7 left for these loves, ranked by Qloo:
+1. Linpell Smokehouse (The Hill) · #3 for you · #81 for anyone · holds 3 of 3 · because you love Frankie Beverly & Maze · named by 0 of 8 AI answers · qloo:55C47E29-C723-5A8E-8F1E-3901A44B2185
+2. Quinzan Smokehouse (Delmar Loop) · #8 for you · #75 for anyone · holds 2 of 3 · because you love Rib Tips · named by 0 of 8 AI answers · qloo:ECEF77A3-17EA-5187-BAC0-FA4211A2E688
+3. Dravash Kitchen (Delmar Loop) · #10 for you · #112 for anyone · holds 2 of 3 · because you love Rib Tips · named by 0 of 8 AI answers · qloo:E7E1F4D8-54B7-55A2-AE0D-4623E0CD5842
+4. Osktor Smokehouse (Downtown) · #13 for you · #119 for anyone · holds 2 of 3 · because you love Rib Tips · named by 0 of 8 AI answers · qloo:8FD06827-81EC-5FFB-9529-4738658F3DE3
+5. Ravprae Cafe (The Hill) · #17 for you · #106 for anyone · holds 2 of 3 · because you love Rib Tips · named by 0 of 8 AI answers · qloo:67C0ECE0-3AF1-55FB-9C72-15A14CDC8102
+6. Ilofen Grill (Midtown) · #21 for you · #111 for anyone · holds 2 of 3 · because you love Frankie Beverly & Maze · named by 0 of 8 AI answers · qloo:C2DFAB6C-A92E-5706-8758-F73846BB6BE1
+7. Ravthu Trattoria (Downtown) · #24 for you · #92 for anyone · holds 2 of 3 · because you love Rib Tips · named by 0 of 8 AI answers · qloo:D9183238-755A-5CA7-A727-39A4B09C5A9E
 Everyone else gets: Pappy's Smokehouse, Blueberry Hill, BB's Jazz, Blues & Soups, Bogart's Smokehouse, Broadway Oyster Bar, Crown Candy Kitchen, Hodak's, Sweetie Pie's
-FAKE MODE: pick names and ranks come from the kit's synthetic Qloo world and prove the code path only. The wall is real saved AI answers (exp/consensus.py STL Cedric (8 answers)).
-  wall: {"distinct_names": 62, "answers": 8, "struck_in_pool": 31, "top_names": ["Pappy's Smokehouse", "Blueberry Hill", "BB's Jazz, Blues & Soups", "Bogart's Smokehouse", "Broadway Oyster Bar", "Crown Candy Kitchen", "Hodak's", "Sweetie Pie's"], "source": "exp/consensus.py STL Cedric (8 answers)"}
-  qloo_calls: {"city /search": 1, "loves /search+/v2/tags": 3, "taste pool /v2/insights": 6, "same places, no taste /v2/insights": 5, "AI names -> Qloo ids /search": 37, "same places, each love dropped /v2/insights": 12, "total": 64, "from_cache": 63}
+FAKE MODE: pick names and ranks come from the kit's synthetic Qloo world and prove the code path only. The wall is real saved AI answers (fixtures/consensus.py STL Cedric (8 answers)).
+  wall: {"distinct_names": 62, "answers": 8, "struck_in_pool": 8, "top_names": ["Pappy's Smokehouse", "Blueberry Hill", "BB's Jazz, Blues & Soups", "Bogart's Smokehouse", "Broadway Oyster Bar", "Crown Candy Kitchen", "Hodak's", "Sweetie Pie's"], "source": "fixtures/consensus.py STL Cedric (8 answers)"}
+  qloo_calls: {"loves /search+/v2/tags": 3, "taste pool /v2/insights": 4, "AI names -> Qloo ids /search": 2, "same places, each love dropped /v2/insights": 9, "CAP": 1, "total": 19, "from_cache": 0}
   loves resolved: [["Frankie Beverly & Maze", "entity", "ok"], ["Kings of Comedy", "entity", "ok"], ["rib tips", "tag", "ok"]]
+  [PASS] qloo_places: isError=false, validates against its outputSchema
+  [PASS] qloo_places: top 50 of the taste pool, ranked 1..n
+  [PASS] qloo_places: nothing subtracted (same pool U=119 that unsaid_places strikes down to 111)
+  [PASS] qloo_places never calls unsaid_places, the engine run, the wall or the matcher
+
+--- tools/call qloo_places (legacy) -> content[0], first lines ---
+ok · St. Louis: the top 50 of Qloo's taste pool for these loves (119 places after the quality floor). Nothing removed.
+1. Oskfen Tavern (Midtown) · Restaurant, Restaurant, Bar · qloo:1395AB35-4E46-577F-A4BC-FE001F629580
+2. Brinjun Grill (Lafayette Square) · Restaurant, Restaurant · qloo:9934CC79-5D9E-50D2-84BB-DA3E1E1D7AD1
+3. Ilofen Grill (Midtown) · Restaurant, Restaurant · qloo:C2DFAB6C-A92E-5706-8758-F73846BB6BE1
+4. Quincael House (Lafayette Square) · Restaurant, Restaurant · qloo:EDBBF6B6-5D4D-5E9C-9729-36F97401AEFF
+5. Hollovel Noodle Bar (Central West End) · Restaurant, Restaurant, Bar · qloo:86F8B435-EE9B-5B57-ACC9-B99754063832
+6. Eskdun Bar (Downtown) · Restaurant, Restaurant, Bar · qloo:EFE11207-F7AA-5777-9E3C-86F800E51E73
+7. Linpell Smokehouse (The Hill) · Restaurant, Restaurant, Barbecue · qloo:55C47E29-C723-5A8E-8F1E-3901A44B2185
+8. Lombel House (North City) · Restaurant, Restaurant · qloo:99772F79-8952-5C42-A935-49FC01CD2869
+9. Caellin Kitchen (Downtown) · Restaurant, Restaurant · qloo:28727232-DE9D-53BF-90DF-2B6976957A5A
+10. Fenmira Smokehouse (Midtown) · Restaurant, Restaurant, Barbecue · qloo:3C9DFAAA-47AB-535F-9ED3-B5A04EAA6524
+11. Zanlom Trattoria (Midtown) · Restaurant, Restaurant, Italian · qloo:FBDF604F-2D93-58C4-A142-F1709C1F64AF
   [PASS] untyped ambiguous love -> ok (FAKE MODE: pick names and ranks come from the kit's synthetic Qloo world and prove the cod)
-  [PASS] ambiguous city -> needs_input: 'Richmond' is ambiguous; add the region: Richmond (Staten Island, New York, United States of America); Richmon
+  [PASS] ambiguous city -> needs_input: 'Richmond' is ambiguous: Richmond (Staten Island, New York); Richmond (Richmond, Virginia)
   [PASS] empty loves -> tool execution error (isError=true), model can self-correct
   [PASS] unknown tool -> JSON-RPC -32602
   [PASS] ping -> {}
@@ -36,8 +54,9 @@ FAKE MODE: pick names and ranks come from the kit's synthetic Qloo world and pro
   [PASS] server/discover -> DiscoverResult with 2026-07-28, resultType complete
   [PASS] tools/list (stateless) ok, serverInfo in _meta
   [PASS] tools/call (stateless) ok
+  [PASS] tools/call qloo_places (stateless) ok
   [PASS] unknown version -> -32022 UnsupportedProtocolVersion, data={"supported": ["2026-07-28", "2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"], "requested": "1900-01-01"}
   [PASS] missing clientCapabilities -> -32602
 
-server stderr (first lines): [unsaid] ready (mode=fake, kit=/Users/mi11ion/Desktop/qloo/research/round3/engine/kit)
-27 messages, 0.7 s, 0 failed checks; full wire log: transcript.jsonl
+server stderr (first lines): [unsaid] ready (mode=fake, kit=/Users/mi11ion/Desktop/qloo/unsaid/engine)
+31 messages, 1.4 s, 0 failed checks; full wire log: transcript.jsonl

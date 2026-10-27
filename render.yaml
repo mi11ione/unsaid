@@ -1,0 +1,33 @@
+# Render Blueprint: the UNSAID engine host (UNSAID.md §3.9). Free web service, standard library only.
+# Values are set in the Render dashboard, never here. See server/DEPLOY.md.
+services:
+  - type: web
+    name: unsaid-engine
+    runtime: python
+    plan: free
+    region: ohio
+    buildCommand: python3 -c "import sys; print(sys.version)"
+    startCommand: python3 -I server/app.py
+    healthCheckPath: /api/health
+    autoDeploy: false
+    envVars:
+      - key: UNSAID_MODE            # fake | live
+        sync: false
+      - key: UNSAID_TOKEN           # REST/MCP token until Thu 30 Oct 23:45 ET
+        sync: false
+      - key: UNSAID_PROXY_SECRET    # same value as the Pages secret PROXY_SECRET
+        sync: false
+      - key: QLOO_API_KEY
+        sync: false
+      - key: QLOO_QUOTA_HEADERS     # "<remaining header>,<limit header>" once probe P9 names them
+        sync: false
+      - key: QLOO_MONTHLY_QUOTA
+        sync: false
+      - key: GEMINI_API_KEY         # AI Studio key, project with no billing linked
+        sync: false
+      - key: GEMINI_MODEL           # one pinned free Flash model id
+        sync: false
+      - key: GEMINI_RPD             # the model's requests/day from the AI Studio console
+        sync: false
+      - key: UNSAID_WALLS           # path to the dated walls JSON on this host
+        sync: false

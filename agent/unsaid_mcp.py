@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
-"""UNSAID as an MCP tool: `unsaid_places(loves, city)` over stdio. Standard library only (Python 3.9+), zero install.
+"""UNSAID as MCP tools over stdio. Standard library only (Python 3.9+), zero install.
+
+- `unsaid_places(loves, city)`: the product. Qloo's taste pool minus every place the AIs name, ranked by Qloo.
+- `qloo_places(loves, city)`: the meter's "with" arm (UNSAID.md §3.8). The top 50 of the same Qloo taste pool,
+  with NO subtraction: no wall, no strike. It never calls unsaid_places, which would make the arm true by construction.
 
 Dual-era per the MCP spec 2026-07-28 ("Versioning and Compatibility"):
 - modern clients: `server/discover` and per-request `_meta["io.modelcontextprotocol/protocolVersion"]`, stateless;
 - legacy clients (Claude Desktop / Claude Code / most SDKs on 2025-11-25 and earlier): `initialize` handshake.
 
-Backed by the round-3 engine kit (research/round3/engine/kit). Mode:
+Backed by the engine kit in ../engine (override with UNSAID_KIT). Mode:
 - UNSAID_MODE=fake (default): the kit's FakeQloo world. Place names and numbers prove code paths, not Qloo.
-  The wall is real: the frontier-model answers saved in research/exp/consensus.py.
+  The wall is real: the frontier-model answers saved in the consensus file.
 - UNSAID_MODE=live + QLOO_API_KEY: the same code path against hackathon.api.qloo.com (untested here: no key yet).
   UNSAID_WALLS=<walls.json> points at the consensus harness output.
 
@@ -22,13 +26,18 @@ import time
 import traceback
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-KIT = os.environ.get("UNSAID_KIT") or os.path.normpath(os.path.join(HERE, "..", "..", "round3", "engine", "kit"))
+KIT = os.environ.get("UNSAID_KIT") or os.path.normpath(os.path.join(HERE, "..", "engine"))
 sys.path.insert(0, KIT)
 
 from unsaid import engine as E, seeds as SD, walls as W, matcher as M  # noqa: E402
-from unsaid.qloo import Qloo, QlooError  # noqa: E402
+from unsaid.qloo import Qloo, QlooError, prop  # noqa: E402
 
-SERVER_INFO = {"name": "unsaid", "title": "UNSAID", "version": "0.4.0"}
+_CONS = os.environ.get("UNSAID_CONSENSUS") or os.path.normpath(os.path.join(HERE, "..", "..", "research", "exp",
+                                                                              "consensus.py"))
+if not os.path.exists(getattr(W, "CONSENSUS", "") or "") and os.path.exists(_CONS):
+    W.CONSENSUS = _CONS
+
+SERVER_INFO = {"name": "unsaid", "title": "UNSAID", "version": "0.5.0"}
 MODERN = ["2026-07-28"]
 LEGACY = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"]
 MODE = os.environ.get("UNSAID_MODE", "fake").lower()
@@ -40,7 +49,8 @@ INSTRUCTIONS = (
     "UNSAID returns places to eat and drink that fit a person's taste and that no major AI assistant names for "
     "that city. Call unsaid_places when a user wants recommendations that are personal and not the usual list. "
     "Every pick is a Qloo entity ranked by Qloo; do not suggest other places to eat or drink. You may name "
-    "places from `wall.top_names` as what every assistant tells everyone.")
+    "places from `wall.top_names` as what every assistant tells everyone. qloo_places returns Qloo's own taste "
+    "ranking for the same loves and city with nothing crossed out.")
 
 TYPES = ["artist", "movie", "tv_show", "book", "podcast", "videogame", "brand", "place", "tag"]
 
@@ -120,6 +130,42 @@ TOOL["outputSchema"] = {
         "as_of": {"type": "string"},
     },
 }
+
+QLOO_TOOL = {
+    "name": "qloo_places",
+    "title": "Qloo: places ranked for your taste",
+    "description": (
+        "Given up to three things a person loves (music, film, TV, books, brands, a place, or a dish/cuisine/vibe) "
+        "and a city, returns the top 50 places to eat and drink that Qloo ranks for those loves, in Qloo's order, "
+        "each with its Qloo id, neighbourhood, rating and what it is. Nothing is removed: this is Qloo's taste "
+        "ranking as is. If status is needs_input, fix the input it names and call again."),
+    "inputSchema": json.loads(json.dumps(TOOL["inputSchema"])),
+    "annotations": dict(TOOL["annotations"]),
+}
+PLACE_SCHEMA = {
+    "type": "object", "required": ["rank", "qloo_id", "name"],
+    "properties": {"rank": {"type": "integer"}, "qloo_id": {"type": "string"}, "name": {"type": "string"},
+                   "neighbourhood": {"type": ["string", "null"]}, "what": {"type": "array", "items": {"type": "string"}},
+                   "rating": {"type": ["number", "null"]}, "open": {"type": ["boolean", "null"]}},
+}
+QLOO_TOOL["outputSchema"] = {
+    "type": "object",
+    "required": ["status", "mode", "city", "loves", "places", "subtraction", "qloo_calls", "as_of"],
+    "properties": {
+        "status": {"type": "string", "enum": ["ok", "empty_none", "needs_input"]},
+        "mode": {"type": "string", "enum": ["fake", "live"]},
+        "message": {"type": "string"},
+        "city": {"type": ["object", "null"]},
+        "loves": {"type": "array"},
+        "places": {"type": "array", "items": PLACE_SCHEMA},
+        "subtraction": {"type": "string", "enum": ["none"]},
+        "pool": {"type": "object"},
+        "qloo_calls": {"type": "object"},
+        "as_of": {"type": "string"},
+    },
+}
+TOOLS = [TOOL, QLOO_TOOL]
+QLOO_TOP = 50
 
 STATES = {"mo": "Missouri", "ny": "New York", "va": "Virginia", "il": "Illinois", "ca": "California"}
 _CACHE = {}
@@ -252,15 +298,75 @@ def unsaid_places(loves, city):
                qloo_calls=_calls(q.trace))
     if res.get("fallback"):
         out["fallback_known"] = res["fallback"]
-    if FAKE and os.environ.get("UNSAID_REHEARSAL") == "1":  # demo rehearsal: lets the host write the live-shaped answer
-        out["message"] = ("REHEARSAL: pick names are placeholders from a synthetic Qloo world, standing in for the "
-                          "live picks. Present the plan exactly as you would live; add one short line at the end "
-                          "saying the names are rehearsal placeholders. The wall is real saved AI answers.")
-    elif FAKE:
+    if FAKE:
         out["message"] = ("FAKE MODE: pick names and ranks come from the kit's synthetic Qloo world and prove the "
                           "code path only. The wall is real saved AI answers (%s)." % d["wall"]["source"])
     _CACHE[key] = out
     return out
+
+
+def qloo_places(loves, city):
+    """The meter's "with" arm: Qloo's taste pool for these loves, top 50, NOTHING subtracted.
+    Deliberately shares no code path with unsaid_places: no wall is loaded, nothing is matched or struck."""
+    key = json.dumps(["qloo_places", loves, city], sort_keys=True)
+    if key in _CACHE:
+        return _CACHE[key]
+    q = Qloo(fake=FAKE, cache_dir=os.path.join(HERE, ".cache"))
+    spec = _parse_loves(loves)
+    base = {"mode": "fake" if FAKE else "live", "loves": [], "places": [], "city": None, "subtraction": "none",
+            "qloo_calls": {}, "as_of": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
+    c = _city(q, city)
+    if c.get("status") != "ok":
+        cands = ["%s (%s)" % (x["name"], x["disamb"]) for x in c.get("candidates", [])]
+        msg = c.get("reason", "city not found")
+        if FAKE and not cands:
+            msg += ". Fake mode knows St. Louis and New York City only"
+        return dict(base, status="needs_input", message=msg + (": " + "; ".join(cands) if cands else ""),
+                    qloo_calls=_calls(q.trace))
+    ck = _city_key(c)
+    _, seed = _seed_set(ck, [t for t, _ in spec]) if ck else (None, None)
+    if seed:  # type hints only; the seed set's wall is never read here
+        spec = [(t, h or next((sh for st, sh in seed if _norm(st) in _norm(t) or _norm(t) in _norm(st)), None))
+                for t, h in spec]
+    resolved = [E.resolve_love(q, t, h) for t, h in spec]
+    loves_out = [{"text": l.get("text"), "status": l.get("status"), "qloo_id": l.get("id"),
+                  "resolved": l.get("name"), "kind": l.get("kind"), "type": l.get("type"),
+                  "reason": l.get("reason")} for l in resolved]
+    city_out = {"name": c.get("name"), "qloo_id": c.get("id"), "disamb": c.get("disamb")}
+    if any(l.get("status") == "needs_input" for l in resolved):
+        bad = [l["text"] for l in loves_out if l["status"] == "needs_input"]
+        return dict(base, status="needs_input", city=city_out, loves=loves_out, qloo_calls=_calls(q.trace),
+                    message="Qloo found no entity or tag for: %s. Give the full official title, or a type "
+                            "(artist, movie, tv_show, book, brand, place, or tag for a dish/cuisine)." % ", ".join(bad))
+    pool, _, _ = E.taste_pool(q, c, resolved)
+    U, drops = E.floor(pool)                       # the quality floor (rating, open) only; nothing is crossed out
+    top = sorted(U, key=lambda e: e["_pos"])[:QLOO_TOP]
+    places = [{"rank": i, "qloo_id": e["entity_id"], "name": e.get("name"),
+               "neighbourhood": prop(e, "neighborhood"),
+               "what": [t.get("name") for t in (e.get("tags") or []) if isinstance(t, dict) and t.get("name")][:3],
+               "rating": prop(e, "business_rating"),
+               "open": (not prop(e, "is_closed")) if prop(e, "is_closed") is not None else None}
+              for i, e in enumerate(top, 1)]
+    out = dict(base, status="ok" if places else "empty_none", city=city_out, loves=loves_out, places=places,
+               pool={"P": len(pool), "U": len(U), "floor": drops}, qloo_calls=_calls(q.trace))
+    if FAKE:
+        out["message"] = ("FAKE MODE: place names and ranks come from the kit's synthetic Qloo world and prove the "
+                          "code path only.")
+    _CACHE[key] = out
+    return out
+
+
+def qloo_summary(r):
+    if r["status"] == "needs_input":
+        return "needs_input: " + r.get("message", "")
+    lines = ["%s · %s: the top %d of Qloo's taste pool for these loves (%s places after the quality floor). "
+             "Nothing removed." % (r["status"], r["city"]["name"], len(r["places"]), r["pool"]["U"])]
+    for p in r["places"]:
+        lines.append("%d. %s (%s) · %s · qloo:%s" % (p["rank"], p["name"], p["neighbourhood"],
+                                                    ", ".join(p["what"]) or "-", p["qloo_id"]))
+    if r["mode"] == "fake":
+        lines.append(r["message"])
+    return "\n".join(lines)
 
 
 def summary(r):
@@ -310,14 +416,16 @@ def _check_args(a):
 
 def call_tool(params):
     name = params.get("name")
-    if name != TOOL["name"]:
+    impl = {"unsaid_places": (unsaid_places, summary), "qloo_places": (qloo_places, qloo_summary)}.get(name)
+    if impl is None:
         raise RpcError(-32602, "Unknown tool: %s" % name)
+    fn, summarize = impl
     try:
         loves, city = _check_args(params.get("arguments") or {})
     except ValueError as e:
         return {"content": [{"type": "text", "text": "Invalid input: %s" % e}], "isError": True}
     try:
-        r = unsaid_places(loves, city)
+        r = fn(loves, city)
     except QlooError as e:
         r = None
         err = "Qloo returned HTTP %s; try again in a minute" % e.status  # never echo the URL or body
@@ -325,8 +433,8 @@ def call_tool(params):
         log(traceback.format_exc())
         r, err = None, "%s: %s" % (type(e).__name__, e)
     if r is None:
-        return {"content": [{"type": "text", "text": "UNSAID failed: " + err}], "isError": True}
-    return {"content": [{"type": "text", "text": summary(r)},
+        return {"content": [{"type": "text", "text": "%s failed: %s" % (name, err)}], "isError": True}
+    return {"content": [{"type": "text", "text": summarize(r)},
                         {"type": "text", "text": json.dumps(r, ensure_ascii=False, default=str)}],
             "structuredContent": r, "isError": False}
 
@@ -353,7 +461,7 @@ def handle(msg, state):
     elif method == "ping":
         r = {}
     elif method == "tools/list":
-        r = {"tools": [TOOL]}
+        r = {"tools": TOOLS}
     elif method == "tools/call":
         r = call_tool(params)
     else:
