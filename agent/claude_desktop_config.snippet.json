@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "unsaid": {
+      "command": "/usr/bin/python3",
+      "args": ["-I", "/Users/mi11ion/Desktop/qloo/research/round4/agent/unsaid_mcp.py"],
+      "env": { "UNSAID_MODE": "fake" }
+    }
+  }
+}

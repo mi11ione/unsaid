@@ -1,0 +1,19 @@
+# Qloo responses and results never enter git (UNSAID.md §3.5, §5.2)
+.cache/
+**/.cache/
+engine/out/
+*.qloo.json
+*.live.json
+data/private/
+# secrets
+.env
+.env.*
+*.key
+auth.json
+.dev.vars
+# build
+.wrangler/
+node_modules/
+__pycache__/
+*.pyc
+.DS_Store
