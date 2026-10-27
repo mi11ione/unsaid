@@ -60,6 +60,12 @@ CARD:
 - A failed Gemini lane sets `diag.live_error`; the server maps it to the `dated_only` flag, not `partial`.
 - One Qloo client per run. `diag.rho_res` is null when undefined.
 
+### UI additions (accepted 27 Oct, from Agent C)
+
+- CARD gains `holds_without` (love label or null) and `request_urls` (key-redacted, for RAW LOG).
+- `diag` gains `obscure_names`, `known_names` (lists for S4) and `calls: {pool, rescore, ids, cap, total}`.
+- The UI renders these when present and degrades gracefully when absent.
+
 ## Stream events (one JSON object per line)
 
 `{"type":"status","state":…,"text":…}` · `{"type":"wall_name",…wall item…}` · `{"type":"pool","U":n}` ·
