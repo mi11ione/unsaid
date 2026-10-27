@@ -36,8 +36,8 @@
     null
    ],
    "ran": null,
-   "src": null,
-   "mock": false
+   "src": "data/mock/nyc-khruangbin.ndjson",
+   "mock": true
   }
  ]
 }

@@ -13,7 +13,7 @@
   },
   "new-york": {
    "name": "New York",
-   "map": null,
+   "map": "data/map/nyc.json",
    "wall": "data/walls/nyc.json",
    "census": "nyc"
   }
