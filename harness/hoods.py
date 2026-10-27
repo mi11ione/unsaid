@@ -38,7 +38,7 @@ def main():
                 n = (e.get("tags") or {}).get("name", "").strip()
                 if n:
                     names.add(n)
-        out["cities"][ck] = sorted(names)
+        out["cities"][ck] = sorted(n for n in names if "Historic District" not in n)  # pruned: not places people eat in
         print(ck, len(names))
     with open(os.path.join(HERE, "neighbourhoods.json"), "w") as f:
         json.dump(out, f, indent=1, ensure_ascii=False)

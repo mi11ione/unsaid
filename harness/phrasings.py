@@ -53,18 +53,34 @@ def qhash(text):
     return hashlib.sha256(t.encode()).hexdigest()
 
 
-def load_sets(path=None):
-    """The preset sets: engine/unsaid/seeds.py SEED_SETS (read with ast, never imported), or a JSON override
-    {city: [[sid, [[love, hint], ...]], ...]}. Returns {city: [(sid, [love text, ...])]}."""
-    if path:
-        raw = json.load(open(path))
+SETS_SOURCES = [os.path.join(REPO, "data", "sets.json"), os.path.join(REPO, "data", "sets.draft.json")]
+
+
+def load_sets_meta(path=None):
+    """The preset sets, from (in order) --sets-file, data/sets.json (frozen), data/sets.draft.json (Agent E's draft),
+    else engine/unsaid/seeds.py SEED_SETS (read with ast, never imported).
+    Returns ({city: [(sid, [love text, ...])]}, {sids marked try_these}, source path)."""
+    src = path or next((p for p in SETS_SOURCES if os.path.exists(p)), None)
+    if src:
+        raw = json.load(open(src))
+        if isinstance(raw, dict) and isinstance(raw.get("sets"), list):  # Agent E's format
+            out, tt = {}, set()
+            for x in raw["sets"]:
+                out.setdefault(x["city"], []).append((x["id"], [l[0] if isinstance(l, list) else l for l in x["loves"]]))
+                if x.get("try_these"):
+                    tt.add(x["id"])
+            return out, tt, src
     else:
-        src = open(os.path.join(REPO, "engine", "unsaid", "seeds.py")).read()
+        src = os.path.join(REPO, "engine", "unsaid", "seeds.py")
         raw = None
-        for node in ast.parse(src).body:
+        for node in ast.parse(open(src).read()).body:
             if isinstance(node, ast.Assign) and getattr(node.targets[0], "id", "") == "SEED_SETS":
                 raw = ast.literal_eval(node.value)
-    return {ck: [(sid, [l[0] for l in loves]) for sid, loves in v] for ck, v in raw.items()}
+    return {ck: [(sid, [l[0] for l in loves]) for sid, loves in v] for ck, v in raw.items()}, set(), src
+
+
+def load_sets(path=None):
+    return load_sets_meta(path)[0]
 
 
 def all_wall_hashes(sets=None, hoods=None):

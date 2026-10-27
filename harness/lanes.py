@@ -14,6 +14,7 @@ SCHEMA = os.path.join(HERE, "places.schema.json")
 SYS_CLAUDE = "You are Claude, a helpful assistant chatting with a user in a consumer chat app."  # the census line
 SYS_GEMINI = "You are Gemini, a helpful assistant chatting with a user in a consumer chat app."
 TIMEOUT = 300
+CODEX_MODEL_DEFAULT = "gpt-5.6-terra"  # orchestrator decision 27 Oct; env CODEX_MODEL overrides
 
 
 def now():
@@ -157,7 +158,7 @@ class CodexLane(Lane):
 
     def __init__(self):
         self.version = _version(["codex", "--version"]) if shutil.which("codex") else ""
-        self.model = os.environ.get("CODEX_MODEL", "").strip()
+        self.model = os.environ.get("CODEX_MODEL", "").strip() or CODEX_MODEL_DEFAULT
 
     def check(self):
         if not shutil.which("codex"):
@@ -415,6 +416,8 @@ def run(lane, asks, path, limit=None, go=False, opts=None):
                 a = q.popleft()
             ask_opts = dict(opts or {}, **(a.get("opts") or {}))
             r = lane.ask(a["prompt"], **ask_opts)
+            if a.get("verbatim") and r.get("status") == "unparsed":
+                r["status"] = "ok"  # a verbatim ask expects prose: the raw text is the answer (k5 reads it)
             rec = {k: v for k, v in a.items() if k != "opts"}
             rec.update(r, lane="dated", provider=lane.provider, assistant=lane.assistant, runner=lane.name)
             fatal = rec.pop("fatal", False)

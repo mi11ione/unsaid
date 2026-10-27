@@ -6,9 +6,12 @@ walls.json in the kit's contract (engine/unsaid/walls.py).
   python3 -I walls_cli.py ask --lane all --wall 1 --go            # dated wall #1: city + taste, STL and NYC
   python3 -I walls_cli.py ask --lane claude,codex --kind street --wall 1 --go     # every neighbourhood
   python3 -I walls_cli.py ask --lane claude --kind street --hoods "Soulard,The Ville" --city stl --wall 1 --go
-  python3 -I walls_cli.py build --walls 1,2,3 --out ../data/walls.json
+  python3 -I walls_cli.py build --walls 1,2,3        # -> ../data/walls/wall-1.json ... + census.json (server reads the dir)
+  python3 -I walls_cli.py build --walls smoke --out ../data/walls/smoke.json --no-census
   python3 -I walls_cli.py status
 
+Taste sets per wall (orchestrator, 27 Oct): wall 1 asks all 20 sets; every other wall asks only the sets marked
+try_these in the sets file (data/sets.json, else data/sets.draft.json). --sets a,b or --all-sets overrides.
 Answers append to runs/wall-<N>.jsonl, one line per attempt; an id already stored ok is never asked again, so a run
 that stops on a plan limit resumes by running the same line again. Nothing is asked without --go.
 Answer ids: w<N>:<kind>:<city>:<set|->:<phrasing_id>:<lane>.
@@ -67,8 +70,22 @@ def fresh_hashes():
     return {P.qhash(q["text"]) for q in qs}
 
 
+def taste_filter(args, try_these, src):
+    if args.set_filter:
+        return args.set_filter
+    if args.all_sets or str(args.wall) == "1" or "taste" not in args.kinds:
+        return None
+    if not try_these:
+        sys.exit("wall %s asks taste only for try_these sets, and %s marks none: pass --sets or --all-sets" % (args.wall, src))
+    return try_these
+
+
 def cmd_ask(args):
-    sets = P.load_sets(args.sets_file)
+    sets, try_these, src = P.load_sets_meta(args.sets_file)
+    args.set_filter = taste_filter(args, try_these, src)
+    if "taste" in args.kinds:
+        print("sets: %s; taste for %s" % (os.path.relpath(src, HERE), "all %d" % sum(map(len, sets.values()))
+                                          if not args.set_filter else "%d: %s" % (len(args.set_filter), ",".join(sorted(args.set_filter)))))
     hoods = load_hoods(args) if "street" in args.kinds else {}
     if "street" in args.kinds and not any(hoods.get(ck) for ck in args.cities):
         sys.exit("street asks need neighbourhoods: run hoods.py (writes neighbourhoods.json) or pass --hoods")
@@ -110,45 +127,77 @@ def item(r):
             "names": r.get("places") or [], "raw": r.get("raw") or ""}
 
 
-def cmd_build(args):
-    sets = P.load_sets(args.sets_file)
-    recs, failed = [], []
-    for w in args.walls:
-        for r in L.load(wall_path(w)).values():
-            (recs if L.is_done(r) else failed).append(r)
-    fh = fresh_hashes()
-    bad = [r["id"] for r in recs if P.qhash(r["phrasing"]) in fh]
-    if bad:
-        sys.exit("refusing: %d stored wall answers hash-match a held-out fresh ask: %s" % (len(bad), bad[:3]))
-    walls, meta = [], {"built_at": L.now(), "walls_used": args.walls, "prompt_v": P.PROMPT_V,
-                       "failed_not_included": sorted(r["id"] for r in failed), "counts": {}}
-    n = 0
-    for ck in args.cities:
+WALLS_DIR = os.path.join(os.path.dirname(HERE), "data", "walls")
+
+
+def entries(recs, cities, census=True):
+    """Wall entries in the engine's contract. Set "city" (city wall + street asks) and set "census" apply to every set
+    of the city (walls.GENERIC_SETS); a set's own entry holds only its taste answers, with its loves."""
+    walls, counts = [], {}
+    for ck in cities:
         cr = [r for r in recs if r["city"] == ck]
-        # set "city" and "census" apply to every set of the city (walls.GENERIC_SETS); a set's entry is its taste only
-        city = [r for r in cr if r["kind"] == "city"] + ([] if args.no_street else [r for r in cr if r["kind"] == "street"])
-        census = [] if args.no_census else census_answers(ck)
-        walls.append({"city": ck, "set": "city", "answers": [item(r) for r in city]})
-        walls.append({"city": ck, "set": "census", "answers": [item(r) for r in census]})
-        allr = city + census
-        for sid, _ in sets.get(ck, []):
+        city = [r for r in cr if r["kind"] in ("city", "street")]
+        cen = census_answers(ck) if census else []
+        if city:
+            walls.append({"city": ck, "set": "city", "answers": [item(r) for r in city]})
+        if cen:
+            walls.append({"city": ck, "set": "census", "answers": [item(r) for r in cen]})
+        allr = city + cen
+        for sid in sorted({r["set"] for r in cr if r["kind"] == "taste"}):
             taste = [r for r in cr if r["kind"] == "taste" and r["set"] == sid]
-            walls.append({"city": ck, "set": sid, "answers": [item(r) for r in taste]})
+            walls.append({"city": ck, "set": sid, "loves": taste[0].get("loves"), "answers": [item(r) for r in taste]})
             allr += taste
         by = {}
         for r in allr:
             k = "%s/%s" % (r["kind"], r.get("runner") or r["provider"])
             by[k] = by.get(k, 0) + 1
-        meta["counts"][ck] = by
-        n += len(allr)
-    out = {"meta": meta, "walls": walls}
-    os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
-    with open(args.out, "w") as f:
-        json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
-    print("wrote %s: %d wall entries, %d answers, %d failed asks left out, %.1f MB" % (
-        args.out, len(walls), n, len(failed), os.path.getsize(args.out) / 1e6))
+        if by:
+            counts[ck] = by
+    return walls, counts
+
+
+def write(path, walls, meta):
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    with open(path, "w") as f:
+        json.dump({"meta": meta, "walls": walls}, f, ensure_ascii=False, separators=(",", ":"))
+    n = sum(len(w["answers"]) for w in walls)
+    print("wrote %s: %d entries, %d answers, %.2f MB" % (os.path.relpath(path, HERE), len(walls), n, os.path.getsize(path) / 1e6))
     for ck, c in meta["counts"].items():
         print("  %s %s" % (ck, json.dumps(c, sort_keys=True)))
+
+
+def cmd_build(args):
+    """Default: one file per wall label in data/walls/ (wall-<N>.json, or <label>.json for a non-numeric label) plus
+    data/walls/census.json; the server merges every *.json in that directory, so the census lives in one file only.
+    --out: one combined file with the census too (unless --no-census)."""
+    fh = fresh_hashes()
+    per = {}
+    for w in args.walls:
+        recs, failed = [], []
+        for r in L.load(wall_path(w)).values():
+            (recs if L.is_done(r) else failed).append(r)
+        if args.no_street:
+            recs = [r for r in recs if r["kind"] != "street"]
+        bad = [r["id"] for r in recs if P.qhash(r["phrasing"]) in fh]
+        if bad:
+            sys.exit("refusing: %d stored wall answers hash-match a held-out fresh ask: %s" % (len(bad), bad[:3]))
+        per[w] = (recs, failed)
+    meta = lambda ws, failed, counts: {"built_at": L.now(), "walls_used": ws, "prompt_v": P.PROMPT_V,  # noqa: E731
+                                       "failed_not_included": sorted(r["id"] for r in failed), "counts": counts}
+    if args.out:
+        recs = [r for w in args.walls for r in per[w][0]]
+        failed = [r for w in args.walls for r in per[w][1]]
+        walls, counts = entries(recs, args.cities, not args.no_census)
+        return write(args.out, walls, meta(args.walls, failed, counts))
+    for w, (recs, failed) in per.items():
+        if not recs:
+            print("wall %s: nothing stored, no file written" % w)
+            continue
+        walls, counts = entries(recs, args.cities, census=False)
+        write(os.path.join(WALLS_DIR, ("wall-%s.json" % w) if w.isdigit() else ("%s.json" % w)), walls, meta([w], failed, counts))
+    if not args.no_census:
+        walls, counts = entries([], args.cities, census=True)
+        write(os.path.join(WALLS_DIR, "census.json"), walls, meta(["census"], [], counts))
 
 
 def cmd_status(args):
@@ -163,25 +212,23 @@ def cmd_status(args):
 
 
 def cmd_plan(args):
-    sets = P.load_sets(args.sets_file)
+    sets, try_these, src = P.load_sets_meta(args.sets_file)
     hoods = json.load(open(HOODS))["cities"] if os.path.exists(HOODS) else {}
     nset = sum(len(sets.get(ck, [])) for ck in P.CITY)
-    city = 20 * len(P.CITY)                        # per lane per wall day
-    taste = 4 * nset                               # per lane per wall day
+    ntt = len(try_these) or nset
+    city = 20 * len(P.CITY)                                # per lane per wall day
     street = sum(len(hoods.get(ck, [])) for ck in P.CITY)  # per lane, once
-    fresh = 20 * len(P.CITY) + 4 * nset            # per lane: 20 plain per city (shared by its sets) + 4 with loves per set
-    meter = 10 * 2 * 2 * 2                         # per lane: 10 sets x 2 arms x 2 phrasings x 2 reps
-    days = 3
-    print("per lane, per wall day: city %d + taste %d (%d sets) = %d" % (city, taste, nset, city + taste))
-    print("per lane, once: street %d%s, census 128 (claude: already stored), fresh %d, meter %d" % (
-        street, "" if hoods else " (no neighbourhoods.json yet)", fresh, meter))
-    for lab, tdays in (("taste every wall day", days), ("taste on wall #1 only", 1)):
-        w = days * city + tdays * taste
-        sub = 2 * w + 2 * street + 128 + 2 * fresh + 2 * meter
-        gem = w + 128 + fresh + meter
-        print("%s: subscriptions (claude+codex) %d = walls %d + street %d + codex census 128 + fresh %d + meter %d"
-              " (§3.6 ~1,500) | gemini %d free calls (+1 per meter tool round; §3.6 ~600)" % (
-                  lab, sub, 2 * w, 2 * street, 2 * fresh, 2 * meter, gem))
+    fresh = 20 * len(P.CITY) + 4 * nset                    # per lane: 20 plain per city + 4 with loves per set
+    meter = 10 * 2 * 2 * 2                                 # per lane: 10 sets x 2 arms x 2 phrasings x 2 reps
+    walls = [city + 4 * nset, city + 4 * ntt, city + 4 * ntt]  # wall 1 all sets; walls 2, 3 try-these only
+    print("sets: %s (%d, %d try-these)" % (os.path.relpath(src, HERE), nset, len(try_these)))
+    print("per lane: wall 1 %d (city %d + taste 4x%d), wall 2 %d, wall 3 %d (taste 4x%d try-these); street %d once;"
+          " census 128 (claude stored); fresh %d; meter %d" % (walls[0], city, nset, walls[1], walls[2], ntt, street, fresh, meter))
+    w = sum(walls)
+    print("subscriptions (claude+codex): %d = walls %d + street %d + codex census 128 + fresh %d + meter %d (§3.6 ~1,500)" % (
+        2 * w + 2 * street + 128 + 2 * fresh + 2 * meter, 2 * w, 2 * street, 2 * fresh, 2 * meter))
+    print("gemini free calls: %d = walls %d + census 128 + fresh %d + meter %d (+1 per meter tool round; §3.6 ~600)" % (
+        w + 128 + fresh + meter, w, fresh, meter))
 
 
 def main():
@@ -193,6 +240,7 @@ def main():
     a.add_argument("--kind", default="city,taste", help="city,taste,street")
     a.add_argument("--city", default="stl,nyc")
     a.add_argument("--sets", dest="set_filter", default=None, help="only these set ids (taste)")
+    a.add_argument("--all-sets", action="store_true", help="taste for every set, whatever the wall")
     a.add_argument("--sets-file", default=None)
     a.add_argument("--hoods", default=None, help="comma list of neighbourhoods (street)")
     a.add_argument("--limit", type=int, default=None, help="at most N asks per lane")
@@ -201,7 +249,7 @@ def main():
     b.add_argument("--walls", default="1,2,3")
     b.add_argument("--city", default="stl,nyc")
     b.add_argument("--sets-file", default=None)
-    b.add_argument("--out", default=os.path.join(os.path.dirname(HERE), "data", "walls.json"))
+    b.add_argument("--out", default=None, help="one combined file instead of data/walls/<label>.json + census.json")
     b.add_argument("--no-census", action="store_true")
     b.add_argument("--no-street", action="store_true")
     sp.add_parser("status")

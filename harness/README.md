@@ -1,0 +1,78 @@
+# harness: the $0 AI side (UNSAID.md §3.6)
+
+Walls, censuses, fresh asks and meter runs, asked on Roman's Mac only, through each vendor's own tool. Nothing here is
+callable from a server path. No paid API key, no web search, no name or email in any request or header.
+
+| script | does |
+|---|---|
+| `walls_cli.py` | `ask` city wall (20 phrasings) / taste (4 per set) / street asks; `build` → `data/walls/`; `status`; `plan` |
+| `run_census.py --provider claude\|codex\|gemini` | the frozen 128 census asks (`asks.json`, prompt v1), verbatim |
+| `census_stats.py [--provider p] [--gems]` | census numbers per provider; `--gems` fills ⟦GEM_GPT⟧ ⟦GEM_GEM⟧ from stored output only |
+| `fresh_asks.py` | K5′ held-out public questions, verbatim (needs `data/fresh_asks.json`) |
+| `meter.py` | gate D, alone vs with `qloo_places` (needs `UNSAID_MODE=live` + `QLOO_API_KEY` for the with arm) |
+| `lanes.py` | the three lanes, the answer store, the resumable runner |
+| `phrasings.py` | prompt v2 phrasings (the 16 gem phrasings imported verbatim from `prompts.py`), set loading, question hashes |
+| `hoods.py` → `neighbourhoods.json` | OSM neighbourhoods for street asks (STL 79, NYC 130; 4 "Historic District" entries pruned) |
+
+Nothing is asked without `--go`. Every command prints what it would ask first.
+
+## Lanes: the exact commands
+
+Every ask runs once, from a fresh empty temp dir, with stdin closed (`codex exec` would otherwise append piped stdin).
+
+**claude** (Claude Code 2.1.311, Roman's plan, 4 workers): §3.6's line, unchanged.
+```
+claude -p "<ask>" --output-format json --model sonnet --tools "" --safe-mode --strict-mcp-config \
+  --no-session-persistence --system-prompt "You are Claude, a helpful assistant chatting with a user in a consumer chat app."
+```
+The model id is read from `modelUsage` (the key with the most output tokens).
+
+**codex** (codex-cli 0.164.0, ChatGPT plan, 2 workers):
+```
+codex exec --json --ephemeral --skip-git-repo-check --sandbox read-only --output-schema places.schema.json \
+  --ignore-user-config -c web_search="disabled" -m gpt-5.6-terra "<ask>"
+```
+Any `web_search` item in the event stream labels the answer `search: "on"`. `CODEX_MODEL` overrides the model.
+
+**gemini** (free-tier REST, 1 worker): `POST https://generativelanguage.googleapis.com/v1beta/models/$GEMINI_MODEL:generateContent`.
+- The key goes in the `x-goog-api-key` header, never the URL.
+- `systemInstruction`: "You are Gemini, a helpful assistant chatting with a user in a consumer chat app."
+- JSON mode with a `[{name, neighbourhood}]` schema. No tools, so no grounding.
+- The model id comes from `modelVersion`. A `groundingMetadata` block would label the answer "search on".
+- Paced at `GEMINI_RPM`. It stops at `GEMINI_HARNESS_FRACTION` (0.8) × `GEMINI_RPD` per Pacific day, counted in `runs/.gemini_ledger.json`.
+- A missing variable prints `needs credential: …` and skips the lane.
+
+## Deviations from §3.6, and why
+
+1. **codex `--ignore-user-config -c web_search="disabled"`.** Roman's `~/.codex/config.toml` loads a browser plugin and MCP servers, and codex's own `web_search` tool is on (`"cached"`) by default. Either one would break the no-web-search rule. Auth still comes from `CODEX_HOME`.
+2. **codex model pinned with `-m`.** The `--json` stream in 0.164.0 carries no model id: its events are `thread.started`, `turn.*`, `item.*` and `error`, with `thread_id`, `items` and `usage`, as checked in the binary and in a real ask on 27 Oct. Answers are recorded as `model: "gpt-5.6-terra"`, `model_source: "pinned (-m)"`. If an event ever carries a `model` field, that value wins and `model_source` becomes `"event stream"`.
+3. **Meter, claude, both arms: `--safe-mode` is replaced by `--setting-sources local --disable-slash-commands`.**
+   - Why: `--safe-mode` drops every `--mcp-config` server. Checked on 2.1.311 on 27 Oct: the init event showed `mcp_servers: []` and `tools: []`.
+   - The replacement loads the server (`unsaid: connected`) and keeps user skills, plugins and hooks off (`skills: []`; only the builtin plugins remain).
+   - Both arms use it, so they differ only in the tool. The meter also uses `--output-format stream-json --verbose`, so every `tool_use` is counted.
+   - The with arm adds `--mcp-config runs/.meter.mcp.json --allowedTools mcp__unsaid__qloo_places --disallowedTools mcp__unsaid__unsaid_places`.
+4. **Meter, codex:** the walls line plus `-c mcp_servers.unsaid.{command,args,enabled_tools=["qloo_places"],env_vars}`. **Meter, gemini:** no JSON mode (it doesn't mix with function calling), plus one `functionDeclaration` whose calls run through the same MCP server (`mcp_client.py`). Both are untested against real tools so far.
+5. **Fresh asks go out verbatim:** no JSON suffix, codex without `--output-schema`, Gemini without JSON mode. The raw text is the answer, and k5 matches on it. Records carry `verbatim: true, suffix: false`. `--suffix` opts out.
+6. **Taste sets per wall:** wall 1 asks all 20 sets. Every other wall asks only the sets marked `try_these` (`data/sets.json`, else `data/sets.draft.json`). `--sets a,b` or `--all-sets` overrides.
+
+## Storage, resume and failures
+
+- Every attempt appends one line: `runs/wall-<label>.jsonl`, `runs/fresh.jsonl`, `runs/meter.jsonl`, `<provider>_answers.jsonl` (census).
+- Each line holds the id, kind, city, set, loves, phrasing_id, phrasing, prompt, prompt_v, provider, assistant, tool version, model and model_source, `lane: "dated"`, search on/off, asked_at, answered_at, status, error, the raw text and the parsed `places`. No session ids, costs or account data are kept.
+- `status`:
+  - `ok`: a parsed list, or any answer to a verbatim ask.
+  - `unparsed`: the tool answered without a list. Kept and not re-asked, since re-asking until it parses would bias the wall.
+  - `failed`: no answer (timeout, plan limit, HTTP error). Recorded as failed and asked again on the next run.
+- **Resume:** run the same command again. Ids already stored `ok`/`unparsed` are skipped. A lane stops after 3 failures in a row, or at once on a Gemini 401/403/429 or the daily cap.
+- **Held out:** fresh questions are hashed (case and whitespace folded, suffix stripped) and checked against every wall, taste, street and census phrasing. One clash and nothing runs. `walls_cli.py` refuses to ask or build a wall phrasing that matches a fresh question.
+
+## Build
+
+`walls_cli.py build --walls 1` writes `data/walls/wall-1.json` (set `city` = city wall + street asks; one entry per set with its taste answers and loves) and `data/walls/census.json` (set `census`, every provider's census).
+- The server merges every `*.json` in `data/walls/`, so the census lives in one file only.
+- A non-numeric label writes `<label>.json`. `--out FILE` writes one combined file instead.
+- `data/walls/smoke.json` holds the 27 Oct smoke asks (5). Delete it before the dated walls go public if it shouldn't count.
+
+## Credentials (Roman only)
+
+`codex login` (ChatGPT plan; already signed in on 27 Oct). `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_RPM` and `GEMINI_RPD` come from an AI Studio project with no billing account. `claude` signed in to the plan.

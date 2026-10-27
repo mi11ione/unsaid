@@ -84,7 +84,6 @@
    "Wydown Skinker"
   ],
   "nyc": [
-   "Albemarle-Kenmore Terraces Historic District",
    "Alphabet City",
    "Bath Beach",
    "Battery Park City",
@@ -94,7 +93,6 @@
    "Bensonhurst",
    "Bergen Beach",
    "Boerum Hill",
-   "Boerum Hill Historic District",
    "Borough Park",
    "Brighton Beach",
    "Broadway Junction",
@@ -106,7 +104,6 @@
    "Canarsie",
    "Carnegie Hill",
    "Carroll Gardens",
-   "Carroll Gardens Historic District",
    "Chelsea",
    "Chelsea District",
    "Chinatown",
@@ -115,7 +112,6 @@
    "Clinton",
    "Clinton Hill",
    "Cobble Hill",
-   "Cobble Hill Historic District",
    "Columbia Street Waterfront District",
    "Columbus Circle",
    "Coney Island",
@@ -219,5 +215,11 @@
    "Windsor Terrace",
    "Yorkville"
   ]
- }
+ },
+ "pruned": [
+  "Albemarle-Kenmore Terraces Historic District",
+  "Boerum Hill Historic District",
+  "Carroll Gardens Historic District",
+  "Cobble Hill Historic District"
+ ]
 }

@@ -12,8 +12,9 @@ suffix stripped) and checked against every wall, taste, street and census phrasi
 Expected file (UNSAID_FRESH overrides the path):
   {"frozen_at": "...", "questions": [{"id": "stl-q01", "city": "stl", "text": "<verbatim>", "url": "...", "posted": "2025-03-02"}, ...],
    "with_loves": {"stl": ["stl-q03", ...4 ids], "nyc": [...]}}        # optional; default: each city's first 4 in file order
-The prompt appends the v2 JSON suffix (as the walls do) unless --no-suffix; whichever is used goes in the
-pre-registration, and each record stores it.
+Questions go out VERBATIM (orchestrator decision 27 Oct): no JSON suffix, and codex runs without --output-schema,
+Gemini without JSON mode. The raw text is stored; k5 measures naming on it (matcher + reverse check). Each record
+stores verbatim/suffix. --suffix opts back into the v2 JSON suffix and the schemas (not the pre-registered default).
 """
 import argparse, json, os, sys
 
@@ -30,7 +31,7 @@ def love_line(loves):
     return " I love %s, %s and %s." % tuple(loves[:3])
 
 
-def build(d, sets, suffix=True):
+def build(d, sets, suffix=False):
     qs = d.get("questions", d) if isinstance(d, dict) else d
     wl = (d.get("with_loves") if isinstance(d, dict) else None) or {}
     out = []
@@ -49,7 +50,7 @@ def build(d, sets, suffix=True):
                             "url": q.get("url"), "with_loves": True})
     for a in out:
         a.update(prompt=a["phrasing"] + (P.SUFFIX_V2 if suffix else ""), prompt_v="fresh-" + ("v2suffix" if suffix else "verbatim"),
-                 suffix=suffix)
+                 suffix=suffix, verbatim=not suffix)
     return out
 
 
@@ -57,7 +58,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--lane", default="all")
     ap.add_argument("--sets-file", default=None)
-    ap.add_argument("--no-suffix", action="store_true")
+    ap.add_argument("--suffix", action="store_true", help="append the v2 JSON suffix (default: verbatim)")
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--go", action="store_true")
     a = ap.parse_args()
@@ -66,14 +67,15 @@ def main():
     d = json.load(open(FRESH))
     sets = P.load_sets(a.sets_file)
     hoods = json.load(open(os.path.join(HERE, "neighbourhoods.json")))["cities"] if os.path.exists(os.path.join(HERE, "neighbourhoods.json")) else {}
-    base = build(d, sets, not a.no_suffix)
+    base = build(d, sets, a.suffix)
     wall = P.all_wall_hashes(sets, hoods)
     clash = [x["id"] for x in base if P.qhash(x["phrasing"]) in wall]
     if clash:
         sys.exit("refusing: %d fresh questions hash-match a wall/census phrasing: %s" % (len(clash), clash[:5]))
     print("hash check: %d fresh questions, 0 clash with %d wall/census phrasings" % (len(base), len(wall)))
     lanes = L.lanes_from(a.lane)
-    L.run_lanes(lanes, lambda l: [dict(x, id=x["id"] + ":" + l.name) for x in base], lambda l: OUT, a.limit, a.go)
+    opts = {} if a.suffix else {"schema": None, "json_mode": False}  # verbatim: no codex schema, no Gemini JSON mode
+    L.run_lanes(lanes, lambda l: [dict(x, id=x["id"] + ":" + l.name) for x in base], lambda l: OUT, a.limit, a.go, opts)
 
 
 if __name__ == "__main__":
