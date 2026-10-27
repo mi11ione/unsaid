@@ -28,7 +28,7 @@ from unsaid import engine as E
 from unsaid import matcher as M
 from unsaid import seeds as SD
 from unsaid import walls as W
-from unsaid.qloo import HARD_CAP_S, Qloo, QlooError, quota_state
+from unsaid.qloo import HARD_CAP_S, Qloo, QlooError, quota_state, redact
 
 RANKING_AFTER_S = 20.0
 NUM = {1: "one", 2: "two", 3: "three"}
@@ -82,7 +82,7 @@ def resolve_love(text, hint=None, *, mode="fake", qloo=None):
 
 def _love_from_chip(ch):
     t = ch.get("type") or ""
-    l = {"text": ch.get("label") or ch.get("text") or ch.get("id"), "name": ch.get("label"), "id": ch["id"],
+    l = {"text": ch.get("text") or ch.get("label") or ch.get("id"), "name": ch.get("label"), "id": ch["id"],
          "kind": ch.get("kind") or ("tag" if str(ch["id"]).startswith("urn:tag") else "entity"), "type": t,
          "status": "ok", "is_place": t == E.PLACE, "alternatives": [], "dead": False, "dead_reason": None}
     if l["kind"] == "tag" and E.dead_tag({"type": t, "id": ch["id"]}):
@@ -144,11 +144,11 @@ def taste_prompt(labels, city_name):
 
 
 def match_set(city_key, loves):
-    """The try-these set whose loves these are (order-free), so its dated taste answers join the wall."""
-    mine = sorted(M.norm(l.get("name") or l.get("text") or "") for l in loves)
+    """The preset set (data/sets.json, else sets.draft.json, else seeds.py) whose loves these are, order-free and
+    normalised, by typed text or resolved label: its dated taste answers join the wall."""
+    keys = [tuple(sorted(M.norm(l.get(f) or "") for l in loves)) for f in ("text", "name")]
     for sid, spec in SD.SEED_SETS.get(city_key, []):
-        theirs = sorted(M.norm(t) for t, _ in spec)
-        if mine == theirs:
+        if tuple(sorted(M.norm(t) for t, _ in spec)) in keys:
             return sid
     return None
 
@@ -232,9 +232,9 @@ def run_unsaid(city, loves, *, walls_path=None, mode="fake", on_event=None, qloo
 
     # ---- the dated wall streams first, from static data
     city_key = c.get("key")
-    sid = set_id or match_set(city_key, ls)
+    sid = (SD.resolve(city_key, set_id) or set_id) if set_id else match_set(city_key, ls)
     try:
-        wall = W.wall_for(city_key, sid, walls_path)
+        wall = W.wall_for(city_key, sid, walls_path, loves=[l["text"] for l in ls])
     except (OSError, ValueError) as e:
         wall = {"answers": [], "source": "wall unavailable: %s" % type(e).__name__}
     for a in wall["answers"]:
@@ -282,7 +282,14 @@ def run_unsaid(city, loves, *, walls_path=None, mode="fake", on_event=None, qloo
                 state["U"] if state["U"] is not None else "", state["calls"], max(state["calls"], state["total"]))})
     q.on_call = on_call
 
+    label = {l["text"]: (l.get("name") or l["text"]) for l in ls}
+
     def emit(kind, payload):
+        live_trace = [r for r in q.trace[t_start:] if not r["label"].endswith("(retry)")]
+        if kind == "card":
+            payload = contract_card(payload, live_trace, label, keep=("provisional",))
+        elif kind == "burn" and payload.get("risen"):
+            payload = dict(payload, risen=contract_card(payload["risen"], live_trace, label))
         if kind == "pool":
             state["U"] = payload["U"]
             state["total"] = state["calls"] + n_resc * max(1, math.ceil(payload["U"] / 48.0)) + 1 + 5
@@ -303,7 +310,7 @@ def run_unsaid(city, loves, *, walls_path=None, mode="fake", on_event=None, qloo
 def _empty(status, diag=None):
     return {"status": status, "flags": [], "loves": [], "city": None, "picks": [], "reserves": [], "wall": [],
             "counts": {"wall": 0, "asks": 0, "P": 0, "U": 0, "S": 0, "R_mi": 0,
-                       "floor": {"closed": 0, "below_43": 0, "outside_R": 0, "not_venue": 0}},
+                       "floor": {"closed": 0, "below_43": 0, "outside_R": 0, "not_venue": 0, "not_venue_music": 0}},
             "burn": {"asked": [], "burned": []},
             "diag": dict({"qloo_calls": 0, "rho_tp": None, "rho_res": None, "cap_keep": None, "cap_shared": None,
                           "engine_v": E.ENGINE_V, "as_of": None, "trace_url": None}, **(diag or {}))}
@@ -322,6 +329,33 @@ def dead_line(l, city_name, n_live):
     return "%s; ranked on the other %s." % (head, "one" if n_live == 1 else NUM.get(n_live, str(n_live)))
 
 
+CALL_KINDS = (("pool", ("C4",)), ("rescore", ("C6'", "C5")), ("ids", ("C7",)), ("cap", ("CAP",)))
+
+
+def call_counts(trace):
+    """diag.calls = {pool, rescore, ids, cap, total}; total also counts C1/C2 (city, loves)."""
+    out = {k: sum(1 for r in trace if r["label"].startswith(p)) for k, p in CALL_KINDS}
+    out["total"] = len(trace)
+    return out
+
+
+def request_urls(card, trace):
+    """Every request this card's ranks came from, key-redacted: the C4 pool call(s) it came back in and the C6'
+    rescoring chunks that carried its ID (for RAW LOG)."""
+    urls = list(card.get("_pool_urls") or [])
+    urls += [r["url"] for r in trace if r["label"].startswith(("C6'", "C5")) and card["id"] in r["url"]]
+    return [redact(u) for u in dict.fromkeys(urls)]
+
+
+def contract_card(x, trace, label, keep=()):
+    """Engine card -> CONTRACT CARD (because/holds_without as love labels, request_urls key-redacted)."""
+    y = {k: v for k, v in x.items() if k not in ("because_label", "provisional", "_pool_urls") or k in keep}
+    y["because"] = label.get(x["because"], x["because"]) if x.get("because") else None
+    y["holds_without"] = label.get(x["holds_without"], x["holds_without"]) if x.get("holds_without") else None
+    y["request_urls"] = request_urls(x, trace)
+    return y
+
+
 def to_contract(res, trace, c, ls, fake):
     """Engine result -> CONTRACT.md result."""
     d = res.get("diag") or {}
@@ -336,12 +370,11 @@ def to_contract(res, trace, c, ls, fake):
         loves.append(ch)
     label = {l["text"]: (l.get("name") or l["text"]) for l in ls}
 
-    def card(x):
-        y = {k: v for k, v in x.items() if k not in ("because_label", "provisional")}
-        y["because"] = label.get(x["because"], x["because"]) if x.get("because") else None
-        return y
-
     trace = [r for r in trace if not r["label"].endswith("(retry)")]
+
+    def card(x):
+        return contract_card(x, trace, label)
+
     out.update({
         "flags": list(res.get("flags") or []), "loves": loves, "city": C.public(c),
         "picks": [card(x) for x in res.get("picks") or []], "reserves": [card(x) for x in res.get("reserves") or []],
@@ -356,8 +389,11 @@ def to_contract(res, trace, c, ls, fake):
         out["fallback"] = [{"id": i, "name": U[i].get("name") if i in U else None} for i in res["fallback_ids"]]
     cap = d.get("cap") or {}
     out["diag"].update({
+        "obscure_names": [n for _, n in d.get("obscure") or []], "known_names": [n for _, n in d.get("known") or []],
+        "calls": call_counts(trace),
         "qloo_calls": len(trace), "qloo_network": sum(1 for r in trace if not r["cache"]),
-        "rho_tp": _nan(d.get("rho_tp")), "rho_res": _nan(d.get("rho_res")), "cap_keep": d.get("cap_keep"),
+        "rho_tp": _nan(d.get("rho_tp")), "rho_res": _nan(d.get("rho_res")), "rho_res_note": d.get("rho_res_note"),
+        "cap_keep": d.get("cap_keep"),
         "cap_shared": d.get("cap_shared"), "cap_overlap": _nan(d.get("popcap_overlap")),
         "cap7": [{"id": i, "name": n} for i, n in cap.get("cap7") or []], "cap_max": cap.get("max"),
         "obscure": [{"id": i, "name": n} for i, n in d.get("obscure") or []],

@@ -33,7 +33,7 @@ for city in cli.cities(args):
         loves = cli.loves(q, spec)
         if loves is None:
             print("    %-8s a love is not in Qloo%s" % (sid, T)); continue
-        r = E.run(q, c, loves, W.wall_for(city, sid, args.walls))
+        r = E.run(q, c, loves, W.wall_for(city, sid, args.walls, loves=[t for t, _ in spec]))
         d = r["diag"]
         if r["status"] in ("needs_input", "degraded"):
             print("    %-8s %s%s" % (sid, r["status"], T)); continue

@@ -6,7 +6,7 @@
 strike needs U, ~7 s into a fresh run per §3.4). Both times are printed.
 
   --url https://<host>/api/unsaid   streams NDJSON; the token (if any) comes from env UNSAID_TOKEN, sent as
-                                    'Authorization: Bearer <token>'; loves are sent as repeated `loves=` params
+                                    'Authorization: Bearer <token>'; loves go as one JSON array: loves=["a","b","c"]
   --runs N                          default 5 fake, 3 live (each live in-process run costs ~27 Qloo calls)"""
 import json, os, sys, time, urllib.parse, urllib.request
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -23,7 +23,7 @@ print("== k11_latency  %s  %s" % ("[FAKE]" if args.fake else "[LIVE]", args.url 
 
 
 def run_http(city, spec):
-    qs = urllib.parse.urlencode([("city", SD.CITY_QUERY[city][0])] + [("loves", t) for t, _ in spec])
+    qs = urllib.parse.urlencode([("city", SD.CITY_QUERY[city][0]), ("loves", json.dumps([t for t, _ in spec]))])
     req = urllib.request.Request(args.url + ("&" if "?" in args.url else "?") + qs,
                                  headers={"Accept": "application/x-ndjson", "User-Agent": "Python-urllib/3"})
     tok = os.environ.get("UNSAID_TOKEN")
@@ -86,3 +86,7 @@ print("  ⟦P50⟧ = %s s · ⟦P90⟧ = %s s (%d runs; %s)%s" % (cli.f(p50, 1),
                                                        "phone/cellular via --url" if args.url else "in-process", T))
 print("F speed: p50 %s s to cards (gate <=20), first name on screen p50 %s s (gate <=1) -> %s%s" % (
     cli.f(p50, 1), cli.f(s50, 2), cli.verdict(ok), T), "| if FAIL: try-these first on S1; fresh runs say 'about a minute'")
+if getattr(run_local, "q", None) is not None:
+    cli.finish(run_local.q, args, "k11_latency")
+else:
+    print("QLOO_NETWORK_CALLS=0%s" % T)

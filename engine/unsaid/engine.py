@@ -25,7 +25,7 @@ from concurrent.futures import ThreadPoolExecutor
 from unsaid import cities as C
 from unsaid import matcher as M
 from unsaid import stats as ST
-from unsaid.qloo import (QlooDeadline, QlooError, TIMEOUT_POOL, TIMEOUT_RESCORE, affinity, explain_items, is_default_affinity,
+from unsaid.qloo import (QlooDeadline, QlooError, TIMEOUT_POOL, canonical_query, TIMEOUT_RESCORE, affinity, explain_items, is_default_affinity,
                          latlon, prop)
 
 ENGINE_V = "unsaid-engine-4.0"
@@ -43,6 +43,7 @@ CFG = {
     "FLAT_RHO": 0.90, "DEAD_RHO": 0.95, "THIN_TIE": 0.30, "FLAT_POP_KEEP": 0.80,
     "ANCHOR_DRIFT_MAX": 0.005, "COVERAGE_MIN": 0.95,
     "BASELINE": "popularity",    # P12 decides; "nosignal" rescores U with no signal (+~5 calls)
+    "NS_IS_POP_RHO": 0.99,       # P12: no-signal order == popularity at Spearman >= 0.99 -> RHO_RES undefined
     "WORKERS": 5,                # <= burst; the global bucket paces at 3/s anyway
     "HOURS_COVERAGE_MIN": 0.5,   # the hours part of the last-seen check applies only where Qloo carries hours
     # allowlist hard-excludes (tag id substrings / tag names); probes print the real IDs, R sets the final list
@@ -245,6 +246,7 @@ def per_love_pools(q, city, loves, offsets=None, workers=None):
             continue
         ents_ = (resp.get("results") or {}).get("entities") or []
         d["n"] += len(ents_)
+        url = "%s/v2/insights?%s" % (q.base, canonical_query(p))     # the request this member came back in
         for k, e in enumerate(ents_):
             if off == 0 and explain_items(e)[0]:
                 diag["explain_page1"] += 1
@@ -252,9 +254,11 @@ def per_love_pools(q, city, loves, offsets=None, workers=None):
             if i in seen:
                 diag["dupes"] += 1
                 seen[i]["_loves"].append(name)
+                seen[i]["_pool_urls"].append(url)
                 continue
             e["_pos"] = len(pool) + 1
             e["_loves"] = [name]
+            e["_pool_urls"] = [url]
             seen[i] = e
             pool.append(e)
     return pool, diag
@@ -278,11 +282,25 @@ def excluded_kind(e):
     return None
 
 
+MUSIC_PATTERNS = ("music_venue", "concert_venue", "concert_hall", "music venue", "concert hall")
+
+
+def is_music(e):
+    """Did the music-venue part of the allowlist fire? (Tag id or name; counted separately in the floor line.)"""
+    for t in e.get("tags") or []:
+        if isinstance(t, dict):
+            k = ("%s %s" % (t.get("id") or "", t.get("name") or "")).lower()
+            if any(p in k for p in MUSIC_PATTERNS):
+                return True
+    return False
+
+
 def floor(pool, city=None):
     """UNSAID.md §3.1 client floor. Returns (U, drops) with drops = {closed, below_43, outside_R, not_venue,
     no_rating, no_location} and the dropped IDs by reason (for the wall's 'closed (Qloo)' lines)."""
     U = []
-    drop = {"closed": 0, "below_43": 0, "outside_R": 0, "not_venue": 0, "no_rating": 0, "no_location": 0,
+    drop = {"closed": 0, "below_43": 0, "outside_R": 0, "not_venue": 0, "not_venue_music": 0, "no_rating": 0,
+            "no_location": 0,
             "ids": {"closed": [], "below_43": [], "outside_R": [], "not_venue": []}}
     thr = CFG["RATING_CLIENT"] - CFG["RATING_EPS"]
     for e in pool:
@@ -290,8 +308,11 @@ def floor(pool, city=None):
             drop["closed"] += 1
             drop["ids"]["closed"].append(e["entity_id"])
             continue
-        if excluded_kind(e):
+        kind = excluded_kind(e)
+        if kind:
             drop["not_venue"] += 1
+            if is_music(e):
+                drop["not_venue_music"] += 1        # shown separately: does "music venue" catch restaurants?
             drop["ids"]["not_venue"].append(e["entity_id"])
             continue
         r = prop(e, "business_rating")
@@ -569,7 +590,7 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
     res["diag"].update({"P": len(pool), "U": N, "drops": {k: v for k, v in drops.items() if k != "ids"},
                         "pool": pdiag, "explain_page1": pdiag["explain_page1"]})
     res["counts"] = {"P": len(pool), "U": N, "R_mi": city["radius_mi"],
-                     "floor": {k: drops[k] for k in ("closed", "below_43", "outside_R", "not_venue")}}
+                     "floor": {k: drops[k] for k in ("closed", "below_43", "outside_R", "not_venue", "not_venue_music")}}
     emit("pool", {"U": N, "P": len(pool), "floor": res["counts"]["floor"], "R_mi": city["radius_mi"]})
     if not U:
         res["status"] = "empty_none"
@@ -622,10 +643,13 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
         if rs["failed"] or rs["coverage"] < CFG["COVERAGE_MIN"]:
             lanes_failed.append("C6' %s coverage %.2f" % (l["text"], rs["coverage"]))
     base_label = "anyone = Qloo popularity order of these %d places" % N
+    ns_rank = None          # the city's no-signal rank over U: only when P12 said it is NOT popularity (C5 branch)
     if (baseline or CFG["BASELINE"]) == "nosignal":
         rs0 = rescore(q, city, loves, ids, None, "C5 no-signal")
         if rs0["coverage"] >= CFG["COVERAGE_MIN"]:
-            pop_ord = ordinal({i: rs0["aff"].get(i, -1) for i in ids}, ids)
+            ns_score = {i: rs0["aff"].get(i, -1) for i in ids}
+            pop_ord = ordinal(ns_score, ids)
+            ns_rank = ST.rank(ns_score)
             base_label = "anyone = Qloo's no-signal order of these %d places (P12)" % N
 
     # ---- dead loves
@@ -651,12 +675,17 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
     lift = {i: pct(fit[i]) - pct(pop_ord[i]) for i in ids}
     rho_tp = ST.spearman(fit_avg, pop_rank_avg)
     flat = all_dead or not (rho_tp == rho_tp) or rho_tp > CFG["FLAT_RHO"]
-    resid = {}
-    for i in ids:
-        vals = [l["_aff"][i] / pop[i] for l in live if i in l.get("_aff", {}) and pop[i] > 0]
-        if vals:
-            resid[i] = sum(vals) / len(vals)
-    rho_res = ST.spearman(ST.rank(resid), pop_rank_avg) if len(resid) >= 3 else float("nan")
+    # RHO_RES = partial Spearman rho(for-you, popularity | the city's no-signal rank). Undefined (None) when the
+    # no-signal order IS popularity (P12: Spearman >= 0.99), i.e. whenever the popularity baseline is in use.
+    rho_res, rho_res_note = None, "RHO_RES undefined (base = popularity)"
+    if ns_rank is not None:
+        rho_ns_pop = ST.spearman(ns_rank, pop_rank_avg)
+        if rho_ns_pop == rho_ns_pop and rho_ns_pop < CFG["NS_IS_POP_RHO"]:
+            rho_res = ST.partial_spearman(fit_avg, pop_rank_avg, ns_rank)
+            rho_res_note = "partial Spearman(for-you, popularity | no-signal rank); rho(no-signal, popularity) %.2f" \
+                % rho_ns_pop
+            if rho_res != rho_res:
+                rho_res, rho_res_note = None, "RHO_RES undefined (degenerate ranks)"
 
     # ---- the live lane (Gemini taste ask), joined now that U exists
     live_ans = []
@@ -677,15 +706,22 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
     S = [i for i in ids if i not in struck_u]
     n_live = len(live)
     holds = {i: None for i in S}
+    holds_without = {i: None for i in S}   # 2 of 3: the love it can lose with the least damage ("holds without X")
     if n_live >= 2 and S:
         cut = math.ceil(len(S) * CFG["HOLD_FRAC"])
         holds = {i: 0 for i in S}
+        drop_rank = {i: [] for i in S}
         for drop in live:
             others = [orders[l["text"]] for l in live if l is not drop]
             sc = rrf(others, S)
             rk = ordinal(sc, S)
             for i in S:
                 holds[i] += rk[i] <= cut
+                if rk[i] <= cut:
+                    drop_rank[i].append((rk[i], drop["text"]))
+        for i in S:
+            if 0 < holds[i] < n_live:                   # n of n -> null: "holds even if you drop any one love"
+                holds_without[i] = min(drop_rank[i])[1]
     need = n_live - 1 if n_live >= 2 else 0
     eligible = [i for i in S if (holds[i] is None or holds[i] >= need)
                 and (not live or any(i not in tied[l["text"]] for l in live))]
@@ -756,6 +792,7 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
                 "rating": prop(e, "business_rating"), "open": prop(e, "is_closed") is not True,
                 "neighbourhood": hood, "address": prop(e, "address") or "", "lat": ll[0], "lon": ll[1],
                 "url": prop(e, "website") or "", "holds": holds.get(i), "n_loves": n_live, "tied": is_tied,
+                "holds_without": holds_without.get(i), "_pool_urls": list(e.get("_pool_urls") or []),
                 "lift": round(lift[i], 4), "popularity": pop[i],
                 "never_said": {"asks": n_city + len(street_answers), "city_asks": n_city, "street_asks": n_street,
                                "as_of": as_of}}
@@ -867,7 +904,7 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
                           "struck_in_U": len(struck_u)})
     res["diag"].update({
         "N": N, "S": len(S), "kept": len(eligible), "flat": flat, "all_dead": all_dead, "thin_taste": thin,
-        "tie_share": tie_share, "rescore": rs_diag, "rho_tp": rho_tp, "rho_res": rho_res,
+        "tie_share": tie_share, "rescore": rs_diag, "rho_tp": rho_tp, "rho_res": rho_res, "rho_res_note": rho_res_note,
         "rho_taste_base": rho_tp, "rho_taste_pop": rho_tp, "baseline": base_label,
         "cap_keep": cap.get("cap_keep"), "cap_shared": len(cap_ids & set(picks)) if cap.get("cap7") else None,
         "popcap_overlap": cap.get("overlap", float("nan")), "cap": {k: v for k, v in cap.items() if k != "topk"},

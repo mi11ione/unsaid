@@ -69,7 +69,7 @@ CITIES = {
 }
 DEFAULT_AFF = 0.7649962877984056
 FILLERS = 700                 # per city; with the catalog this gives |U| in the 150-300 target band
-WORLD_V = "v4.1"              # part of the fake cache key: changing the world never serves stale responses
+WORLD_V = "v4.3"              # part of the fake cache key: changing the world never serves stale responses
 DEAD_SEEDS = ("starbucks", "budweiser", "popeyes")   # fake: their signal is pure popularity (dead love by rho)
 LOCALITY_IDS = {c: uid("locality:" + c) for c in CITIES}
 EXTRA_LOCALITIES = [  # the Richmond trap entrants hit: the first "Richmond" is on Staten Island
@@ -103,6 +103,10 @@ SEED_TAGS = {  # /v2/tags answers for food-ish loves
     "ramen": ("urn:tag:cuisine:qloo:ramen", "Ramen", "urn:tag:cuisine:qloo", None),
     "cozy": ("urn:tag:vibe:place:cozy", "Cozy", "urn:tag:vibe:place", None),   # vibe: dead on arrival
 }
+for _d, _k in (("chicken wings", "bar"), ("matcha latte", None), ("chopped cheese", None), ("korean fried chicken", None),
+               ("dry martini", "bar"), ("brisket", "bbq"), ("pierogi", None), ("tapas", "bar"), ("pho", None),
+               ("pork steak", "bbq")):   # the dish loves in data/sets*.json
+    SEED_TAGS[_d] = ("urn:tag:specialty_dish:place:" + _d.replace(" ", "_"), _d.title(), "urn:tag:specialty_dish:place", _k)
 CLOSED_TRUTH = {"Sweetie Pie's": True, "Mike Shannon's Steaks and Seafood": True,
                 "Grace Meat & Three": False}  # Grace: modelled as a stale record (closed 13 Sep 2026, still open here)
 BBQ_WORDS = ("bbq", "smoke", "rib", "barbecue", "q and")
@@ -194,6 +198,8 @@ def build_world():
                     kt.append("foodcourt")
                 elif j < 0.06:
                     kt.append("hotelcat")
+                elif j < 0.07:
+                    kt.append("music")    # a restaurant-category place that is also a music venue
                 closed = h(city + nm, 9) < 0.03
                 places.append(_place(city, nm, "filler:" + nm, kt, closed))
                 n += 1

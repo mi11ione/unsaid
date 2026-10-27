@@ -64,6 +64,30 @@ class TestRunUnsaid(Tmp):
             self.assertTrue(WALL_KEYS <= set(w))
             self.assertIn(w["outcome"], ("struck", "dimmed"))
         self.assertTrue(DIAG_KEYS <= set(r["diag"]))
+        # CONTRACT "UI additions"
+        labels = [l["label"] for l in r["loves"]]
+        for c in r["picks"] + r["reserves"]:
+            self.assertIn("holds_without", c)
+            self.assertTrue(c["holds_without"] is None or c["holds_without"] in labels)
+            if c["holds"] == c["n_loves"]:
+                self.assertIsNone(c["holds_without"])
+            self.assertTrue(c["request_urls"] and all(u.startswith("https://hackathon.api.qloo.com/v2/insights?")
+                                                      for u in c["request_urls"]))
+            self.assertTrue(any(c["id"] in u for u in c["request_urls"]), "its C6' chunk carries its ID")
+            self.assertFalse(any("key" in u.lower() for u in c["request_urls"]))
+            self.assertNotIn("_pool_urls", c)
+        self.assertTrue(any(c["holds_without"] for c in r["picks"] + r["reserves"]), "a 2-of-3 card names its love")
+        calls = r["diag"]["calls"]
+        self.assertEqual(set(calls), {"pool", "rescore", "ids", "cap", "total"})
+        self.assertEqual(calls["total"], r["diag"]["qloo_calls"])
+        self.assertEqual((calls["pool"], calls["cap"]), (4, 1))         # 2 entity loves x offsets 0, 50; one CAP
+        self.assertGreaterEqual(calls["rescore"], 3)
+        self.assertLessEqual(calls["pool"] + calls["rescore"] + calls["ids"] + calls["cap"], calls["total"])
+        self.assertEqual(r["diag"]["obscure_names"], [x["name"] for x in r["diag"]["obscure"]])
+        self.assertEqual(r["diag"]["known_names"], [x["name"] for x in r["diag"]["known"]])
+        self.assertTrue(all(isinstance(n, str) for n in r["diag"]["obscure_names"] + r["diag"]["known_names"]))
+        cards = [e for e in events if e["type"] == "card"]
+        self.assertTrue(cards and all("request_urls" in e and "_pool_urls" not in e for e in cards))
         self.assertTrue({"closed", "below_43", "outside_R", "not_venue"} <= set(r["counts"]["floor"]))
         self.assertTrue(set(r["city"]) >= {"id", "name", "slug", "center", "radius_mi"})
         lon, lat = r["city"]["center"]
@@ -118,6 +142,52 @@ class TestRunUnsaid(Tmp):
         r = api.run_unsaid("St. Louis", [{"id": "X", "label": "X", "kind": "entity", "type": "urn:entity:artist"}],
                            mode="fake", qloo=q, gemini=False, street_check=False)
         self.assertEqual(r["status"], "degraded")
+
+
+class TestSetsAndWalls(Tmp):
+    def test_sets_from_data_files_and_aliases(self):
+        from unsaid import seeds as SD
+        self.assertEqual(SD.resolve("stl", "cedric"), "stl-cedric")
+        self.assertEqual(SD.resolve("stl", "jason"), "stl-jason")
+        self.assertEqual(SD.resolve("nyc", "A"), "nyc-khruangbin")
+        self.assertTrue(SD.same("cedric", "stl-cedric"))
+        self.assertEqual(SD.get("stl", "cedric"), SD.get("stl", "stl-cedric"))
+        self.assertTrue(SD.SOURCE.endswith((".json", "FALLBACK_SETS")))
+
+    def test_taste_joins_by_id_and_by_loves(self):
+        from unsaid import walls as W
+        a = lambda n: {"provider": "t", "asked_at": "2026-10-28", "lane": "dated", "names": [{"name": n}]}  # noqa
+        doc = {"walls": [{"city": "stl", "set": "city", "answers": [a("Gioia's Deli")]},
+                         {"city": "stl", "set": "stl-cedric", "loves": ["Frankie Beverly & Maze",
+                          "The Original Kings of Comedy", "rib tips"], "answers": [a("Smoki O's")]},
+                         {"city": "stl", "set": "stl-other", "loves": ["rib tips", "Al Green", "Barbershop"],
+                          "answers": [a("Roper's Ribs")]}]}
+        p = os.path.join(self.dir, "walls.json")
+        with open(p, "w") as f:
+            json.dump(doc, f)
+        names = lambda w: sorted(W.names(w))  # noqa: E731
+        self.assertEqual(names(W.wall_for("stl", "cedric", p)), ["Gioia's Deli", "Smoki O's"])
+        self.assertEqual(names(W.wall_for("stl", None, p, loves=["Barbershop", "AL GREEN", "Rib Tips"])),
+                         ["Gioia's Deli", "Roper's Ribs"])
+        r = api.run_unsaid("St. Louis", [["Al Green", "artist"], ["Barbershop", "movie"], ["rib tips", "tag"]],
+                           mode="fake", qloo=self.q(), walls_path=p, gemini=False, street_check=False)
+        self.assertIn("Roper's Ribs", [w["name"] for w in r["wall"]])
+
+    def test_partial_spearman(self):
+        from unsaid import stats as ST
+        ids = list(range(40))
+        c = {i: i for i in ids}
+        a = {i: i + (7 if i % 2 else -7) for i in ids}
+        b = {i: i + (5 if i % 2 else -5) for i in ids}
+        self.assertGreater(ST.spearman(a, b), 0.9)
+        pr = ST.partial_spearman(a, b, c)
+        self.assertTrue(-1.0001 <= pr <= 1.0001 and pr > 0.5)   # shared +/- pattern survives holding c fixed
+        self.assertNotEqual(ST.partial_spearman(a, {i: -i for i in ids}, c),
+                            ST.partial_spearman(a, {i: -i for i in ids}, c))   # b == -c: degenerate -> nan
+        r = api.run_unsaid("St. Louis", CEDRIC, mode="fake", qloo=self.q())
+        self.assertIsNone(r["diag"]["rho_res"])          # fake no-signal order == popularity -> undefined
+        self.assertEqual(r["diag"]["rho_res_note"], "RHO_RES undefined (base = popularity)")
+        self.assertIn("not_venue_music", r["counts"]["floor"])
 
 
 class TestDeadline(Tmp):

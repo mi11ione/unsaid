@@ -168,6 +168,7 @@ def p8():
             edge = sum(1 for x in rat if x is not None and 4.3 - 1e-4 <= float(x) < 4.3)
             ext = sum(1 for e in es if any("tripadvisor" in k.lower() for k in (e.get("properties") or {})))
             resy = sum(1 for e in es if any("resy" in k.lower() for k in (e.get("properties") or {})))
+            music = sum(1 for e in es if E.excluded_kind(e) and E.is_music(e))
             junk = {}
             for e in es:
                 k = E.excluded_kind(e)
@@ -179,12 +180,14 @@ def p8():
                       "ge43": sum(1 for x in rat if x is not None and float(x) >= 4.3 - 1e-4) / n,
                       "edge_float32": edge, "hours_cov": sum(1 for e in es if prop(e, "hours")) / n,
                       "website_cov": sum(1 for e in es if prop(e, "website")) / n,
-                      "tripadvisor_cov": ext / n, "resy_cov": resy / n, "allowlist_hits": junk, "U": len(U)}
+                      "tripadvisor_cov": ext / n, "resy_cov": resy / n, "allowlist_hits": junk, "music": music,
+                      "U": len(U)}
             x = r[key]
             print("  P8 %s: n %d, rating on %.0f%%, >=4.3 %.0f%% (float32 edge %d), hours %.0f%%, website %.0f%%, "
-                  "Tripadvisor %.0f%%, Resy %.0f%% (read only), allowlist %s, U %d%s" % (
+                  "Tripadvisor %.0f%%, Resy %.0f%% (read only), allowlist %s (music venue %d), U %d%s" % (
                       key, x["n"], 100 * x["rating_cov"], 100 * x["ge43"], edge, 100 * x["hours_cov"],
-                      100 * x["website_cov"], 100 * x["tripadvisor_cov"], 100 * x["resy_cov"], junk or "none", len(U), T))
+                      100 * x["website_cov"], 100 * x["tripadvisor_cov"], 100 * x["resy_cov"], junk or "none", music,
+                      len(U), T))
     return r
 
 
@@ -284,10 +287,12 @@ def p12():
         viol = sum(1 for a, b in zip(pops, pops[1:]) if b > a + 1e-12)
         rk = {e["entity_id"]: k + 1 for k, e in enumerate(es)}
         rho = ST.spearman(rk, ST.rank({e["entity_id"]: E.popularity(e) for e in es}))
-        use = "popularity" if es and viol <= max(1, int(0.02 * len(es))) else "nosignal"
+        use = "popularity" if es and rho == rho and rho >= E.CFG["NS_IS_POP_RHO"] else "nosignal"
         r[ck] = {"n": len(es), "violations": viol, "rho": rho, "baseline": use}
-        print("  P12 %s no-signal order: %d results, %d popularity increases, rho(order, popularity) %s -> anyone = %s%s"
-              % (ck.upper(), len(es), viol, cli.f(rho), use, T))
+        print("  P12 %s no-signal order: %d results, %d popularity increases, rho(order, popularity) %s (>= %.2f = "
+              "popularity) -> CFG BASELINE=%s%s%s" % (ck.upper(), len(es), viol, cli.f(rho), E.CFG["NS_IS_POP_RHO"], use,
+                                                      "; RHO_RES undefined (base = popularity)" if use == "popularity"
+                                                      else "; RHO_RES = partial rho | no-signal (C5, +~5 calls/query)", T))
     return r
 
 

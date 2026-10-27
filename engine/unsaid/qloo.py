@@ -56,6 +56,11 @@ class QlooDeadline(QlooError):
         super().__init__(599, "hard cap of %.0f s reached" % HARD_CAP_S, url)
 
 
+class BudgetExceeded(SystemExit):
+    """--budget N: stop before the (N+1)-th network call. A SystemExit, so no engine `except` swallows it and the
+    script ends at once (worker threads re-raise it through the executor)."""
+
+
 class NeverSend(ValueError):
     """A request that UNSAID.md §3.1 forbids. Raised before anything leaves the process."""
 
@@ -224,7 +229,7 @@ def redact(s):
 
 class Qloo:
     def __init__(self, fake=False, cache_dir=None, use_cache=True, trace_path=None, retries=2, base_url=BASE_URL,
-                 refresh=False, frozen=False, bucket=None, deadline_s=None):
+                 refresh=False, frozen=False, bucket=None, deadline_s=None, budget=None):
         self.fake = fake
         self.base = base_url
         self.use_cache = use_cache
@@ -234,6 +239,7 @@ class Qloo:
         self.cache_dir = os.path.join(cache_dir or DEFAULT_CACHE, mode)
         os.makedirs(self.cache_dir, exist_ok=True)
         self.retries = retries
+        self.budget = budget    # max network calls (cache hits are free); None = unlimited
         self.trace = []
         self.trace_path = trace_path
         self.calls = {"network": 0, "cache": 0, "errors": 0}
@@ -302,6 +308,16 @@ class Qloo:
             if self.bucket and not self.bucket.take(self.deadline):
                 self._log(label + " (deadline)", url, 599, t0, False, None, key)
                 raise QlooDeadline(url)
+            with self.lock:
+                if self.budget is not None and self.calls["network"] >= self.budget:
+                    raise BudgetExceeded("BUDGET EXCEEDED: stopped before Qloo network call %d (--budget %d); "
+                                         "QLOO_NETWORK_CALLS=%d" % (self.calls["network"] + 1, self.budget,
+                                                                     self.calls["network"]))
+                self.calls["network"] += 1
+                n_net = self.calls["network"]
+            if self.budget is not None and n_net % 10 == 0:
+                print("  [qloo] %d of %d budgeted network calls used%s" % (n_net, self.budget,
+                                                                         " [FAKE]" if self.fake else ""), flush=True)
             to = timeout or TIMEOUT_DEFAULT
             if self.deadline is not None:
                 to = max(0.5, min(to, self.deadline - time.monotonic()))
@@ -311,7 +327,6 @@ class Qloo:
             except Exception as e:  # network error, timeout
                 status, body, headers = 599, redact(e), {}
             with self.lock:
-                self.calls["network"] += 1
                 for k, v in (headers or {}).items():
                     self.headers_seen[k] = v
             if headers:

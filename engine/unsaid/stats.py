@@ -70,3 +70,12 @@ def median(xs):
     if not n:
         return float("nan")
     return s[n // 2] if n % 2 else (s[n // 2 - 1] + s[n // 2]) / 2
+
+
+def partial_spearman(a, b, c):
+    """Partial Spearman rho(a, b | c) over the shared ids: the rank correlation of a and b once c is held fixed."""
+    rab, rac, rbc = spearman(a, b), spearman(a, c), spearman(b, c)
+    if any(x != x for x in (rab, rac, rbc)):
+        return float("nan")
+    den = ((1 - rac ** 2) * (1 - rbc ** 2)) ** 0.5
+    return (rab - rac * rbc) / den if den > 1e-12 else float("nan")

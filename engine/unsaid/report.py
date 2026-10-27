@@ -55,7 +55,8 @@ def placeholders(r):
         ("C", p[2]["name"] if len(p) > 2 else None),
         ("CAP_KEEP", d.get("cap_keep")), ("CAP_SHARED", d.get("cap_shared")),
         ("OBSCURE", len(d.get("obscure") or [])), ("KNOWN", len(d.get("known") or [])),
-        ("RHO_TP", _f(d.get("rho_tp"))), ("RHO_RES", _f(d.get("rho_res"))),
+        ("RHO_TP", _f(d.get("rho_tp"))),
+        ("RHO_RES", _f(d.get("rho_res")) if d.get("rho_res") is not None else "null (%s)" % d.get("rho_res_note")),
     ])
     return ph
 
@@ -94,9 +95,9 @@ def markdown(r, trace, city_label, loves_text, fake, set_id=None):
     L.append("## The set every rank is taken over")
     L.append("")
     fl = cn.get("floor") or {}
-    L.append("%s → %s (closed %s, below 4.3 %s, outside %s mi %s, not a restaurant or bar %s).%s" % (
-        cn.get("P"), cn.get("U"), fl.get("closed"), fl.get("below_43"), cn.get("R_mi"), fl.get("outside_R"),
-        fl.get("not_venue"), T))
+    L.append("%s → %s (closed %s, below 4.3 %s, outside %s mi %s, not a restaurant or bar %s; of which music venue %s)"
+             ".%s" % (cn.get("P"), cn.get("U"), fl.get("closed"), fl.get("below_43"), cn.get("R_mi"), fl.get("outside_R"),
+                      fl.get("not_venue"), fl.get("not_venue_music", 0), T))
     L.append("")
     L.append("Pools: one per entity love, offsets 0 and 50, `urn:tag:category:place:restaurant` ∪ `…:bar`, "
              "`business_rating.min=4` server side then ≥ 4.3 − 1e-4 client side, `bias.trends=off`. Every rank on a "
@@ -124,10 +125,14 @@ def markdown(r, trace, city_label, loves_text, fake, set_id=None):
     L.append("- A popularity cap cutting the same %s would keep **%s** of the places the AIs named. Its 7 and yours "
              "share **%s**.%s" % (cn.get("struck_in_U") or "%s" % (cn.get("U", 0) - cn.get("S", 0)),
                                   d.get("cap_keep"), d.get("cap_shared"), T))
-    L.append("- Taste vs popularity ρ **%s**; after the city's own order is taken away, ρ **%s**.%s" % (
-        _f(d.get("rho_tp")), _f(d.get("rho_res")), T))
-    L.append("  - ρ_tp = Spearman(for-you RRF order, popularity) over U. ρ_res = Spearman(mean over live loves of "
-             "affinity_i ÷ popularity, popularity): HouseFull's division by the city order.")
+    if d.get("rho_res") is None:
+        L.append("- Taste vs popularity ρ **%s**. %s: the residual sentence is deleted (bracket rule).%s" % (
+            _f(d.get("rho_tp")), d.get("rho_res_note") or "RHO_RES undefined (base = popularity)", T))
+    else:
+        L.append("- Taste vs popularity ρ **%s**; after the city's own order is taken away, ρ **%s**.%s" % (
+            _f(d.get("rho_tp")), _f(d.get("rho_res")), T))
+    L.append("  - ρ_tp = Spearman(for-you RRF order, popularity) over U. ρ_res = partial Spearman ρ(for-you, popularity | "
+             "the city's no-signal rank), defined only when P12 finds the no-signal order is not popularity (ρ < 0.99).")
     L.append("- The cap's 7: %s." % (", ".join(x["name"] or x["id"] for x in d.get("cap7") or []) or "n/a"))
     L.append("")
     L.append("| STRUCK THOUGH OBSCURE (%d) | KEPT THOUGH KNOWN (%d) |" % (len(d.get("obscure") or []),

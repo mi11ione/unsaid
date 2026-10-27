@@ -7,8 +7,8 @@ is given. Fills ⟦FA_Q⟧ ⟦FA_SETS⟧ ⟦FA_HITS⟧ ⟦FA_CARDS⟧ ⟦FA_MED�
 Inputs
   --fresh   data/fresh_asks.json  {"frozen_at", "cities": {"stl": [{"id", "text", "url", "posted"}], "nyc": [...]}}
             (also accepted: {"questions": [{"id", "city", "text", ...}]})
-  --answers stored answers, JSON list or JSONL: {"set", "city", "question_id", "provider", "model", "asked_at",
-            "names": [{"name"}], "raw"}            (the harness writes them; agent B)
+  --answers harness/runs/fresh.jsonl (or a JSON list): {"set", "city", "phrasing_id", "provider", "model", "asked_at",
+            "places" | "names": [{"name"}], "raw"}; failed and fake records are skipped
   --cards   frozen cards: precompute.py output (a dir with index.json, or one JSON), else the engine runs now
   --walls   the walls file, for the never-in-a-wall hash check and the new-name rate
 In --fake mode with no inputs, fake questions and fixture answers stand in, tagged [FAKE]."""
@@ -52,9 +52,11 @@ def load_answers():
             txt = f.read()
         try:
             d = json.loads(txt)
-            return d if isinstance(d, list) else d.get("answers", [])
+            recs = d if isinstance(d, list) else d.get("answers", [])
         except ValueError:
-            return [json.loads(l) for l in txt.splitlines() if l.strip()]
+            recs = [json.loads(l) for l in txt.splitlines() if l.strip()]
+        return [dict(r, names=r.get("names") or r.get("places") or []) for r in recs   # harness: `places`
+                if r.get("status") != "failed" and not r.get("fake")]
     if args.fake:   # fixture "fresh" answers (one model from memory) stand in for every set
         out = []
         for city in ("nyc", "stl"):
@@ -81,6 +83,7 @@ def load_cards():
         return out, "frozen cards from %s" % args.cards
     out = {}
     q = cli.client(args, "k5_fresh")
+    load_cards.q = q
     for city in cli.cities(args):
         for sid, spec in cli.sets(args, city):
             ch, _ = cli.chips(q, spec)
@@ -111,7 +114,7 @@ print("  questions: %s (%s); hash check vs walls: %d collisions%s" % (
 
 per_set, pooled_named, pooled_total, new_names, all_names = [], 0, 0, 0, 0
 for (city, sid), names in sorted(cards.items()):
-    ans = [a for a in answers if a.get("set") == sid and W._ckey(a.get("city")) == city]
+    ans = [a for a in answers if SD.same(a.get("set"), sid) and W._ckey(a.get("city")) == city]
     if not names:
         continue
     pool = [{"entity_id": n, "name": n} for n in names]
@@ -123,7 +126,9 @@ for (city, sid), names in sorted(cards.items()):
     for n in names:
         if E.reverse_hit(n, rix) is not None:
             named.add(n)
-    wall_norms = {M.norm(x) for x in W.names(W.wall_for(city, sid, args.walls))}
+    spec = dict(SD.SEED_SETS.get(city, [])).get(SD.resolve(city, sid) or sid)
+    wall_norms = {M.norm(x) for x in W.names(W.wall_for(city, sid, args.walls,
+                                                         loves=[t for t, _ in spec] if spec else None))}
     fresh_norms = {M.norm(n["name"] if isinstance(n, dict) else n) for a in ans for n in a.get("names") or []}
     new_names += len(fresh_norms - wall_norms)
     all_names += len(fresh_norms)
@@ -142,3 +147,7 @@ print("  ⟦FA_Q⟧ = %s · ⟦FA_SETS⟧ = %d · ⟦FA_HITS⟧ = %d · ⟦FA_CA
     cli.f(med, 1), T))
 print("E fresh asks: median %s of 7 (gate <=1, %d sets) -> %s%s" % (cli.f(med, 1), len(per_set), cli.verdict(ok), T),
       "| if FAIL: add the gem phrasings' second pass and rerun once; then cut the dare-as-promise")
+if getattr(load_cards, "q", None) is not None:
+    cli.finish(load_cards.q, args, "k5_fresh")
+else:
+    print("QLOO_NETWORK_CALLS=0%s" % T)

@@ -22,7 +22,7 @@ def analyse(qq, city, sid, spec):
     loves = cli.loves(qq, spec)
     if loves is None:
         return None
-    r = E.run(qq, c, loves, W.wall_for(city, sid, args.walls), street_check=None)
+    r = E.run(qq, c, loves, W.wall_for(city, sid, args.walls, loves=[t for t, _ in spec]), street_check=None)
     if r["status"] in ("needs_input", "degraded") or not r.get("_U"):
         return None
     R = r["_R"]
@@ -72,8 +72,8 @@ if ("stl", x) in results and ("stl", y) in results:
         rs = E.rescore(q, A["c"], A["loves"], ids, l, "K2a stranger %s" % l["text"][:14])
         orders.append(E.ranks_from(rs["aff"], ids))
     rho_ab = ST.spearman(ST.rank(E.rrf(orders, ids)), ST.rank({i: -A["R"]["fit"][i] for i in ids})) if orders else float("nan")
-    ta = {M.norm(n["name"] if isinstance(n, dict) else n) for a in W.taste_answers("stl", x, args.walls) for n in a["names"]}
-    tb = {M.norm(n["name"] if isinstance(n, dict) else n) for a in W.taste_answers("stl", y, args.walls) for n in a["names"]}
+    ta = {M.norm(n["name"] if isinstance(n, dict) else n) for a in W.taste_answers("stl", x, args.walls, SD.get("stl", x)) for n in a["names"]}
+    tb = {M.norm(n["name"] if isinstance(n, dict) else n) for a in W.taste_answers("stl", y, args.walls, SD.get("stl", y)) for n in a["names"]}
     print("  two strangers (STL %s vs %s): sevens share %d (gate <=2) -> %s%s" % (x, y, shared, cli.verdict(ok_str), T))
     print("    rho_AB %s (printed, not gated); the AIs' taste answers for the two share %d of %d / %d names "
           "(0 Qloo calls)%s" % (cli.f(rho_ab), len(ta & tb), len(ta), len(tb), T))
@@ -83,7 +83,9 @@ else:
 
 # rerun determinism (printed, not gated)
 if reruns:
-    q2 = Qloo(fake=args.fake, use_cache=True, refresh=True)
+    left = None if args.budget is None else max(0, args.budget - q.calls["network"])
+    q2 = Qloo(fake=args.fake, use_cache=True, refresh=True, budget=left)
+    cli.extra_clients.append(q2)
     same, tried = 0, 0
     for (city, sid) in list(results)[:reruns]:
         b = analyse(q2, city, sid, SD.get(city, sid))

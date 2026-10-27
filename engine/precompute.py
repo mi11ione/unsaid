@@ -2,8 +2,8 @@
   python3 -I precompute.py --fake --out /tmp/try-these              (a directory: index.json + <city>_<set>.json)
   QLOO_API_KEY=... python3 -I precompute.py --walls walls.json --out <dir outside git, or gitignored>
 Each file: {"id", "city", "label", "loves", "ran_at", "as_of", "fake", "result": <CONTRACT result>}.
-Default sets: the first --sets of each city's seed sets (5 + 5 = the 10 try-these, Cedric, Jason and Khruangbin
-included). A love whose resolution is not exact is reported and the set is skipped unless --accept-top.
+Default sets: the sets marked try_these in data/sets.json (else sets.draft.json), up to --sets per city (5 + 5 = the
+10 try-these, Cedric, Jason and Khruangbin included); without marks, the first --sets of each city. A love whose resolution is not exact is reported and the set is skipped unless --accept-top.
 Live results contain Qloo data: --out must not be a git-tracked path (checked with `git check-ignore`)."""
 import json, os, subprocess, sys, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -17,8 +17,8 @@ ap.add_argument("--accept-top", action="store_true", help="use the top candidate
 ap.add_argument("--no-street", action="store_true")
 args = ap.parse_args()
 T = cli.tag(args)
-LABEL = {("stl", "cedric"): "Cedric · St. Louis", ("stl", "jason"): "Jason · St. Louis",
-         ("nyc", "A"): "Khruangbin · New York"}
+LABEL = {("stl", "stl-cedric"): "Cedric · St. Louis", ("stl", "stl-jason"): "Jason · St. Louis",
+         ("nyc", "nyc-khruangbin"): "Khruangbin · New York"}   # used only when the sets file carries no label
 
 
 def inside_git_unignored(path):
@@ -45,7 +45,11 @@ if args.sets_file:
     with open(args.sets_file) as f:
         jobs = [(s["city"], s["id"], [tuple(x) for x in s["loves"]], s.get("label")) for s in json.load(f)]
 else:
-    jobs = [(c, sid, spec, LABEL.get((c, sid))) for c in cli.cities(args) for sid, spec in cli.sets(args, c)]
+    jobs = []
+    for c in cli.cities(args):
+        tt = [(sid, spec) for sid, spec in SD.SEED_SETS.get(c, []) if SD.SET_META.get(sid, {}).get("try_these")]
+        for sid, spec in (tt or cli.sets(args, c))[:args.sets]:
+            jobs.append((c, sid, spec, SD.SET_META.get(sid, {}).get("label") or LABEL.get((c, sid))))
 q = cli.client(args, "precompute", frozen=True)
 single = args.out.endswith(".json")
 if not single:

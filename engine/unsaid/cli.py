@@ -20,6 +20,7 @@ def parser(desc):
     ap.add_argument("--city", choices=["nyc", "stl", "both", "la"], default="both")
     ap.add_argument("--sets", type=int, default=10, help="seed sets per city (<=10)")
     ap.add_argument("--walls", help="walls JSON from the harness (default: fixtures/consensus.py)")
+    ap.add_argument("--budget", type=int, help="abort before exceeding N Qloo network calls (cache hits are free)")
     return ap
 
 
@@ -28,7 +29,7 @@ def client(args, name, **kw):
     tp = os.path.join(OUT, "%s%s.trace.jsonl" % (name, ".fake" if args.fake else ""))
     if os.path.exists(tp):
         os.remove(tp)
-    q = Qloo(fake=args.fake, use_cache=not args.no_cache, trace_path=tp, **kw)
+    q = Qloo(fake=args.fake, use_cache=not args.no_cache, trace_path=tp, budget=getattr(args, "budget", None), **kw)
     banner = "[FAKE] canned responses: numbers prove code paths, not Qloo" if args.fake else "[LIVE] %s" % q.base
     print("== %s  %s  %s" % (name, banner, time.strftime("%Y-%m-%d %H:%M")))
     return q
@@ -68,14 +69,20 @@ def chips(q, spec):
     if ls is None:
         return None, []
     unsure = ["%s -> %s" % (l["text"], l.get("name")) for l in ls if l["status"] != "ok"]
-    return [{"id": l["id"], "label": l.get("name") or l["text"], "kind": l["kind"], "type": l.get("type")}
-            for l in ls], unsure
+    return [{"id": l["id"], "label": l.get("name") or l["text"], "text": l["text"], "kind": l["kind"],
+             "type": l.get("type")} for l in ls], unsure
+
+
+extra_clients = []   # second clients a script opens (k2a's rerun client) count toward the same line
 
 
 def finish(q, args, name):
     p = os.path.join(OUT, "%s%s.trace.md" % (name, ".fake" if args.fake else ""))
     write_trace_md(q.trace, p, "%s call trace" % name)
     print("calls: %d network, %d cache; trace %s" % (q.calls["network"], q.calls["cache"], p))
+    print("QLOO_NETWORK_CALLS=%d%s%s" % (q.calls["network"] + sum(x.calls["network"] for x in extra_clients),
+                                         " (budget %d)" % args.budget if getattr(args, "budget", None) is not None else "",
+                                         tag(args)))
 
 
 def verdict(ok):
