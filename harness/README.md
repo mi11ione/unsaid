@@ -49,6 +49,7 @@ The console shows 20 requests a day and 5 a minute per model per project. Creden
 
 - **The only Gemini path is the queue:** `walls_cli.py queue gemini-priority [--already-used N] --go`. It spends exactly what is left of today's cap (16 per Pacific day, which resets at 03:00 ET). Resumable: run it again each day.
 - `--already-used N` records requests made outside the harness today (the console's count).
+- `gemini_batch.sh` runs one batch: it loads the env, runs the queue, then `build --census-only`. To schedule it, run it after 03:00 ET from a wall-clock wait loop, which still fires after the Mac wakes.
 - Priority order:
   - (a) the 16 census hidden-gem asks for STL, then NYC, verbatim (`asks.json`, prompt v1). Stored once in `gemini_answers.jsonl`: `census_stats.py --gems` reads them for ⟦GEM_GEM⟧, and `build` puts them in `census.json`, which joins every wall, so they are also wall #1's gem part.
   - (b) the 4 plain wall phrasings per city (v2).

@@ -30,3 +30,10 @@
 [gemini] stl-hidden-02 failed 300.3s 0 names gemini-3.8-flash The read operation timed out
 [gemini] stl-hidden-03 ok 27.8s 10 names gemini-3.8-flash
 [gemini] stl-hidden-04 failed 300.2s 0 names gemini-3.8-flash The read operation timed out
+[gemini] stl-hidden-05 failed 635.1s 0 names gemini-3.8-flash HTTP 503 {
+  "error": {
+    "code": 503,
+    "message": "This model is currently experiencing high demand. Spikes in dem
+[gemini] stl-hidden-06 failed 280.8s 0 names gemini-3.8-flash harness cap reached
+[gemini-priority] stopping: harness cap reached
+[gemini-priority] done for now: 3 of 80 stored, 77 pending; next: stl-hidden-02
