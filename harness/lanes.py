@@ -253,6 +253,7 @@ class GeminiLane(Lane):
     name, provider, assistant, workers = "gemini", "google", "Gemini", 1
     URL = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent"
     LEDGER = os.path.join(RUNS, ".gemini_ledger.json")
+    BACKOFF = (30, 90, 240)  # seconds between 503 retries
 
     def __init__(self):
         self.key = os.environ.get("GEMINI_API_KEY", "").strip()
@@ -295,6 +296,19 @@ class GeminiLane(Lane):
         d[self._day()] = d.get(self._day(), 0) + 1
         json.dump(d, open(self.LEDGER, "w"))
 
+    def remaining(self):
+        return max(0, self.cap - self._used())
+
+    def seed_used(self, n):
+        """Record requests made today outside the harness (console count), so the cap covers them too."""
+        os.makedirs(RUNS, exist_ok=True)
+        try:
+            d = json.load(open(self.LEDGER))
+        except Exception:
+            d = {}
+        d[self._day()] = max(d.get(self._day(), 0), int(n))
+        json.dump(d, open(self.LEDGER, "w"))
+
     def pace(self):
         with self._lock:
             wait = self._next - time.time()
@@ -305,7 +319,7 @@ class GeminiLane(Lane):
     def _post(self, body):
         req = urllib.request.Request(self.URL % self.model, data=json.dumps(body).encode(),
                                      headers={"Content-Type": "application/json", "x-goog-api-key": self.key})
-        with urllib.request.urlopen(req, timeout=120) as r:
+        with urllib.request.urlopen(req, timeout=300) as r:  # 3.8 Flash took 82 s for one census ask on 27 Oct
             return json.loads(r.read())
 
     def ask(self, prompt, json_mode=True, functions=None, call_tool=None, **_):
@@ -323,17 +337,26 @@ class GeminiLane(Lane):
                     "name": {"type": "STRING"}, "neighbourhood": {"type": "STRING"}}, "required": ["name", "neighbourhood"]}}}
         if functions:
             body["tools"] = [{"functionDeclarations": functions}]
-        calls = 0
-        for _round in range(5):
+        calls, busy = 0, 0
+        for _round in range(5 + len(self.BACKOFF)):
+            if self._used() >= self.cap:
+                return _finish(dict(res, status="failed", error="harness cap reached", fatal=True), "", t0, s)
             self.pace()
-            self._count()
+            self._count()  # every request counts, 503s included: the quota is shared with the live lane, so err low
             try:
                 d = self._post(body)
             except urllib.error.HTTPError as e:
                 msg = e.read().decode(errors="replace")[:300].replace(self.key, "<key>") if self.key else ""
-                return _finish(dict(res, status="failed", error="HTTP %s %s" % (e.code, msg), fatal=e.code in (401, 403, 429)), "", t0, s)
+                if e.code in (500, 503) and busy < len(self.BACKOFF):  # "high demand": back off, not a failure
+                    time.sleep(self.BACKOFF[busy])
+                    busy += 1
+                    continue
+                return _finish(dict(res, status="failed", error="HTTP %s %s" % (e.code, msg), fatal=e.code in (401, 403, 429),
+                                    transient=e.code in (500, 503), retries_503=busy), "", t0, s)
             except Exception as e:
-                return _finish(dict(res, status="failed", error=str(e)[:200].replace(self.key, "<key>")), "", t0, s)
+                return _finish(dict(res, status="failed", error=str(e)[:200].replace(self.key, "<key>"), transient=True,
+                                    retries_503=busy), "", t0, s)
+            res["retries_503"] = busy
             res["model"] = d.get("modelVersion") or res["model"]
             c = (d.get("candidates") or [{}])[0]
             if c.get("groundingMetadata"):
@@ -424,7 +447,9 @@ def run(lane, asks, path, limit=None, go=False, opts=None):
             append(path, rec)
             with lk:
                 st["asked"] += 1
-                if rec["status"] == "failed":
+                if rec["status"] == "failed" and rec.get("transient"):
+                    st["failed"] += 1  # 503 after backoff: recorded, retried next run, not a strike toward the stop
+                elif rec["status"] == "failed":
                     st["failed"] += 1
                     st["streak"] += 1
                 else:

@@ -385,11 +385,12 @@ def gems():
             line = (f"  {LABELS[prov]:8s} {ck}: {target} in {hits} of {len(H)} hidden-gem asks stored (named first in {first}; "
                     f"census L2 rule {l2}; {unp} without a parsed list) · plain asks {plain} of {len(G)} · model {', '.join(models) or '-'}")
             print(line)
-            if ck == "stl" and prov != "claude":
+            if prov != "claude":
+                tag = FILL[prov] if ck == "stl" else FILL[prov] + "_NYC"
                 if len(H) == 16:
-                    print(f"    {FILL[prov]} = {hits} of 16")
+                    print(f"    {tag} = {hits} of 16 hidden-gem asks ({ck}, {target})")
                 else:
-                    print(f"    {FILL[prov]} unfilled: {len(H)} of 16 hidden-gem asks stored")
+                    print(f"    {tag} unfilled: {hits} of {len(H)} hidden-gem asks stored so far ({ck}, {target}; 16 planned)")
 
 
 if __name__ == "__main__":

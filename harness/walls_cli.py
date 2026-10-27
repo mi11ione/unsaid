@@ -16,7 +16,7 @@ Answers append to runs/wall-<N>.jsonl, one line per attempt; an id already store
 that stops on a plan limit resumes by running the same line again. Nothing is asked without --go.
 Answer ids: w<N>:<kind>:<city>:<set|->:<phrasing_id>:<lane>.
 """
-import argparse, datetime, glob, json, os, sys
+import argparse, datetime, glob, json, os, sys, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -90,7 +90,9 @@ def cmd_ask(args):
     if "street" in args.kinds and not any(hoods.get(ck) for ck in args.cities):
         sys.exit("street asks need neighbourhoods: run hoods.py (writes neighbourhoods.json) or pass --hoods")
     fh = fresh_hashes()
-    lanes = L.lanes_from(args.lane)
+    if "gemini" in args.lane.split(",") or args.lane == "all":
+        print("[gemini] " + GEMINI_ONLY_VIA_QUEUE)
+    lanes = L.lanes_from(",".join(x for x in (list(L.LANES) if args.lane == "all" else args.lane.split(",")) if x != "gemini"))
     if not lanes:
         sys.exit("no lane available")
 
@@ -101,6 +103,86 @@ def cmd_ask(args):
             sys.exit("refusing: %d wall phrasings hash-match a held-out fresh ask: %s" % (len(clash), clash[:3]))
         return a
     L.run_lanes(lanes, asks_for, lambda l: wall_path(args.wall), args.limit, args.go)
+
+
+PAUSE_MIN = 10
+GEMINI_ONLY_VIA_QUEUE = ("gemini: not run here: free-tier 20/day (cap 16). Its dated asks go through "
+                         "`walls_cli.py queue gemini-priority` only")
+
+
+def gemini_priority(sets, try_these):
+    """The Gemini dated lane's order (orchestrator, 28 Oct; free tier 20 RPD, 5 RPM, one project, one key):
+    (a) the 16 census hidden-gem asks, STL then NYC, verbatim from asks.json (prompt v1), stored ONCE in
+        gemini_answers.jsonl: census_stats reads them for GEM_GEM, and build puts them in census.json, which joins
+        every wall (so they are also the gem part of wall #1);
+    (b) the 4 plain wall phrasings per city (w00-w03, v2) -> runs/wall-1.jsonl;
+    (c) taste for stl-cedric, then stl-jason; (d) the other try-these sets' taste -> runs/wall-1.jsonl."""
+    items = []
+    census = json.load(open(os.path.join(HERE, "asks.json")))
+    gpath = os.path.join(HERE, CENSUS_FILES["gemini"])
+    for ck in ("stl", "nyc"):
+        for a in sorted((x for x in census if x["city"] == ck and x["family"] == "hidden"), key=lambda x: x["id"]):
+            items.append((gpath, dict(a, kind="census", phrasing_id=a["id"], prompt_v="v1", set=None, also="wall-1 gem part")))
+    w1 = wall_path("1")
+    for ck in ("stl", "nyc"):
+        items += [(w1, a) for a in build_asks("gemini", "1", ["city"], [ck], sets, {}) if a["phrasing_id"].startswith("w")]
+    order = ["stl-cedric", "stl-jason"] + [sid for ck in ("stl", "nyc") for sid, _ in sets.get(ck, [])
+                                           if sid in try_these and sid not in ("stl-cedric", "stl-jason")]
+    for sid in order:
+        ck = next((c for c, v in sets.items() if any(x == sid for x, _ in v)), None)
+        if ck:
+            items += [(w1, a) for a in build_asks("gemini", "1", ["taste"], [ck], sets, {}, {sid})]
+    return items
+
+
+def cmd_queue(args):
+    if args.name != "gemini-priority":
+        sys.exit("unknown queue %s (gemini-priority)" % args.name)
+    sets, try_these, src = P.load_sets_meta(args.sets_file)
+    lane = L.GeminiLane()
+    if args.already_used:
+        lane.seed_used(args.already_used)
+    items = gemini_priority(sets, try_these)
+    done = {}
+    pending = [(p, a) for p, a in items if a["id"] not in done.setdefault(p, L.done_ids(p))]
+    ok, msg = lane.check()
+    left = lane.remaining() if lane.key else 0
+    print("[gemini-priority] %d in queue, %d stored, %d pending; %s" % (len(items), len(items) - len(pending), len(pending),
+                                                                     msg if ok else "SKIPPED, " + msg), flush=True)
+    for p, a in pending[:max(left, 0) or 3]:
+        print("   next: %s" % a["id"])
+    if not (ok and args.go):
+        return
+    streak, busy, day = 0, 0, lane._day()
+    for p, a in pending:
+        if lane._day() != day:
+            print("[gemini-priority] the Pacific day changed; the next batch takes over", flush=True)
+            break
+        if lane.remaining() <= 0:
+            print("[gemini-priority] today's allowance spent (%d of cap %d, Pacific day %s)" % (lane._used(), lane.cap, lane._day()), flush=True)
+            break
+        r = lane.ask(a["prompt"])
+        rec = dict(a)
+        rec.update(r, lane="dated", provider=lane.provider, assistant=lane.assistant, runner=lane.name)
+        fatal = rec.pop("fatal", False)
+        L.append(p, rec)
+        print("[gemini] %s %s %ss %s names %s%s" % (rec["id"], rec["status"], rec["secs"], len(rec["places"] or []),
+                                                 rec.get("model"), (" " + str(rec.get("error"))[:120]) if rec["status"] == "failed" else ""), flush=True)
+        if fatal:
+            print("[gemini-priority] stopping: %s" % rec.get("error"), flush=True)
+            break
+        streak = streak + 1 if rec["status"] == "failed" and not rec.get("transient") else 0
+        busy = busy + 1 if rec.get("transient") else 0
+        if busy >= 2:  # timeouts / 503s in a row: each one spends a request, so wait instead of hammering
+            print("[gemini-priority] %d slow answers in a row; pausing %d min" % (busy, PAUSE_MIN), flush=True)
+            time.sleep(PAUSE_MIN * 60)
+            busy = 0
+        if streak >= 3:
+            print("[gemini-priority] stopping after 3 failures in a row", flush=True)
+            break
+    left = [a["id"] for p, a in items if a["id"] not in L.done_ids(p)]
+    print("[gemini-priority] done for now: %d of %d stored, %d pending; next: %s" % (len(items) - len(left), len(items), len(left),
+                                                                                  left[0] if left else "-"), flush=True)
 
 
 def census_answers(ck):
@@ -227,8 +309,12 @@ def cmd_plan(args):
     w = sum(walls)
     print("subscriptions (claude+codex): %d = walls %d + street %d + codex census 128 + fresh %d + meter %d (§3.6 ~1,500)" % (
         2 * w + 2 * street + 128 + 2 * fresh + 2 * meter, 2 * w, 2 * street, 2 * fresh, 2 * meter))
-    print("gemini free calls: %d = walls %d + census 128 + fresh %d + meter %d (+1 per meter tool round; §3.6 ~600)" % (
-        w + 128 + fresh + meter, w, fresh, meter))
+    q = gemini_priority(sets, try_these)
+    print("gemini (free tier 20 RPD, harness cap 16/day): queue gemini-priority = %d asks: (a) 32 census hidden-gem asks "
+          "(also wall #1's gem part), (b) 8 plain wall phrasings, (c) stl-cedric + stl-jason taste 8, (d) other try-these "
+          "taste %d; about %d Pacific days at 16/day" % (len(q), len(q) - 48, -(-len(q) // 16)))
+    print("gemini not run: free-tier 20/day: the full 64-ask census per city, the v2 copies of the 16 gem wall phrasings (the census v1 answers stand in), street asks, "
+          "walls #2 and #3, fresh asks, meter")
 
 
 def main():
@@ -252,6 +338,11 @@ def main():
     b.add_argument("--out", default=None, help="one combined file instead of data/walls/<label>.json + census.json")
     b.add_argument("--no-census", action="store_true")
     b.add_argument("--no-street", action="store_true")
+    q = sp.add_parser("queue", help="gemini-priority: spend exactly today's remaining Gemini allowance, in priority order")
+    q.add_argument("name")
+    q.add_argument("--already-used", type=int, default=0, help="requests made today outside the harness (console)")
+    q.add_argument("--sets-file", default=None)
+    q.add_argument("--go", action="store_true")
     sp.add_parser("status")
     pl = sp.add_parser("plan")
     pl.add_argument("--sets-file", default=None)
@@ -265,6 +356,8 @@ def main():
     elif args.cmd == "build":
         args.walls = [w.strip() for w in args.walls.split(",") if w.strip()]
         cmd_build(args)
+    elif args.cmd == "queue":
+        cmd_queue(args)
     elif args.cmd == "status":
         cmd_status(args)
     else:

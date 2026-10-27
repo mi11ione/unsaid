@@ -73,7 +73,10 @@ def main():
     if clash:
         sys.exit("refusing: %d fresh questions hash-match a wall/census phrasing: %s" % (len(clash), clash[:5]))
     print("hash check: %d fresh questions, 0 clash with %d wall/census phrasings" % (len(base), len(wall)))
-    lanes = L.lanes_from(a.lane)
+    names = [x for x in (list(L.LANES) if a.lane == "all" else a.lane.split(",")) if x != "gemini"]
+    if "gemini" in a.lane or a.lane == "all":
+        print("[gemini] not run: free-tier 20/day (orchestrator, 28 Oct)")
+    lanes = L.lanes_from(",".join(names)) if names else []
     opts = {} if a.suffix else {"schema": None, "json_mode": False}  # verbatim: no codex schema, no Gemini JSON mode
     L.run_lanes(lanes, lambda l: [dict(x, id=x["id"] + ":" + l.name) for x in base], lambda l: OUT, a.limit, a.go, opts)
 

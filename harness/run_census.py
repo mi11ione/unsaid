@@ -32,6 +32,9 @@ def main():
     if a.only_hidden:
         asks = [x for x in asks if x["family"] == "hidden"]
     asks = [dict(x, kind="census", phrasing_id=x["id"], prompt_v="v1", set=None) for x in asks]
+    if a.provider == "gemini" and not a.only_hidden:
+        sys.exit("gemini: full 128-ask census not run: free-tier 20/day. Its 32 hidden-gem asks run through "
+                 "`walls_cli.py queue gemini-priority` (stored in gemini_answers.jsonl)")
     lanes = L.lanes_from(a.provider)
     if not lanes:
         sys.exit(1)

@@ -1,0 +1,178 @@
+provider: codex (ChatGPT); models: ['gpt-5.6-terra']
+answers with a parsed list: 128
+
+==================== ST. LOUIS: 64 asks, 645 mentions (mean 10.1 per answer)
+-- normalisation: distinct names at each level
+   L0 raw string                          255
+   L1 kit norm                            229
+   L2 + dish/paren strip + core key       223
+   L3 + token containment                 218
+   dish-prefixed strings rewritten ('X at Venue'): 0
+   canonical names with >1 raw spelling: 25; examples:
+      Charlie Gitto's On The Hill | Charlie Gitto's On the Hill | Charlie Gitto's on The Hill | Charlie Gitto's on the Hill | Charlie Gitto’s | Charlie Gitto’s On The Hill
+      Dominic's | Dominic's on The Hill | Dominic's on the Hill | Dominic’s | Dominic’s on The Hill
+      Sister Cities Cajun | Sister Cities Cajun & BBQ
+      Anthonino's Taverna | Anthonino’s Taverna
+      Fountain on Locust | The Fountain on Locust
+      BEAST Craft BBQ Co. | Beast Craft BBQ Co.
+      Blue Strawberry | The Blue Strawberry
+      Venice Cafe | Venice Café
+   L3 containment merges (5): Meskerem -> Meskerem Ethiopian Restaurant; Gian-Tony's -> Gian-Tony's Ristorante; City Museum -> City Museum Cabin Inn; Small Batch -> Small Batch Whiskey & Fare; The Vine Mediterranean Cafe -> The Vine Mediterranean Café and Market
+-- SAID (L2, headline) = 223; L3 sensitivity = 218
+-- accumulation (ask k: distinct so far, new at this ask; mean over 200 random orders)
+   ask  1:   10  new 10   mean-order   10.0
+   ask  2:   18  new  8   mean-order   19.2
+   ask  4:   32  new  7   mean-order   35.3
+   ask  8:   56  new  7   mean-order   61.5
+   ask 12:   76  new  7   mean-order   82.1
+   ask 16:  100  new  6   mean-order   99.8
+   ask 24:  124  new  0   mean-order  128.6
+   ask 32:  145  new  4   mean-order  152.5
+   ask 40:  158  new  0   mean-order  173.2
+   ask 48:  191  new  6   mean-order  191.2
+   ask 56:  207  new  1   mean-order  207.7
+   ask 64:  223  new  2   mean-order  223.0
+   last 20 asks: 53 new names / 201 mentions = 26.4% (flat rule: <2%)
+   mean new per ask, asks 45-64: 2.01
+   mean new per ask, asks 33-48: 2.42
+   mean new per ask, asks 49-64: 1.99
+   generic+hidden only: 30 asks -> 115 distinct; last 10 asks add 29 new / 100 mentions (29%)
+   taste+strangers only: 34 asks -> 159 distinct; last 10 asks add 31 new / 101 mentions (31%)
+-- mention singletons f1=115 (52% of SAID), doubletons f2=44; ask-incidence Q1=115, Q2=44
+   Chao1 (mentions) = 369, log-normal 95% CI 311-464
+   Chao2 (asks as units) = 366, bootstrap 95% CI 310-423 (percentile 263-373; 400 iNEXT-style resamples)
+   coverage: SAID is 61% of the Chao2 estimate
+-- K50 = 33 names carry 325/645 mentions (50%); that is 15% of SAID
+   top 10 carry 22% of mentions; top 20 carry 36%
+   top 12 by family (generic/hidden/cedric/jason/stranger asks): Mai Lee 9/9/0/0/1; iNDO 6/6/1/0/4; Balkan Treat Box 5/8/2/0/1; Louie 8/0/0/4/4; Anthonino's Taverna 3/1/0/10/1; Pappy's Smokehouse 5/1/7/0/0; Bogart's Smokehouse 5/0/7/0/0; The Royale Food & Spirits 2/2/5/2/1; Sado 5/4/0/0/2; Sidney Street Cafe 7/0/0/1/3; Charlie Gitto's On the Hill 0/0/0/11/0; Planter's House 5/0/1/3/2
+   named FIRST in the 16 hidden-gem asks: Mai Lee 4, Monte Bello Pizzeria 2, Tiny Chef 2, Lona's Lil Eats 2
+   names that look like non-restaurant venues (museums, parks, comedy/music clubs...): 14: Bellefontaine Cemetery, Chatillon-DeMenil Mansion, City Museum, City Museum Cabin Inn, Compton Hill Reservoir Park and Water Tower, Forest Park, Fort Belle Fontaine Park, Helium Comedy Club, Milo's Bocce Garden, Missouri Civil War Museum, St. Louis Funny Bone, The Fox Theatre, The Griot Museum of Black History, Tower Grove Park
+   most named (asks out of 64): Mai Lee 19, iNDO 17, Balkan Treat Box 16, Louie 16, Anthonino's Taverna 15, Pappy's Smokehouse 13, Bogart's Smokehouse 12, The Royale Food & Spirits 12, Sado 11, Sidney Street Cafe 11, Charlie Gitto's On the Hill 11, Planter's House 11, Vicia 10, Venice Cafe 10, Salt + Smoke 9, Lona's Lil Eats 9, Yemanja Brasil 8, Gioia's Deli 8, Menya Rui 8, Union Loafers 8
+-- by family: asks, distinct, mean list length
+   hidden    16 asks,  90 distinct
+   generic   14 asks,  47 distinct
+   stranger  10 asks,  76 distinct
+   cedric    12 asks,  60 distinct
+   jason     12 asks,  53 distinct
+-- HIDDEN-GEM family: 16 asks, 162 mentions, 90 distinct; 22/90 also named in the 14 mainstream asks
+   most repeated 'hidden gems' (asks out of 16):
+     Mai Lee                                   9/16   also mainstream: yes  (Brentwood)
+     Balkan Treat Box                          8/16   also mainstream: yes  (Webster Groves)
+     Yemanja Brasil                            8/16   also mainstream: no   (Benton Park)
+     Lona's Lil Eats                           8/16   also mainstream: yes  (Fox Park)
+     iNDO                                      6/16   also mainstream: yes  (Botanical Heights)
+     Tiny Chef                                 6/16   also mainstream: no   (Bevo Mill)
+     El Morelia Super Mercado                  5/16   also mainstream: no   (Cherokee Street)
+     Sado                                      4/16   also mainstream: yes  (The Hill)
+     Akar                                      4/16   also mainstream: no   (Midtown)
+     The Blue Duck                             3/16   also mainstream: no   (Maplewood)
+     Sister Cities Cajun                       3/16   also mainstream: no   (The Grove)
+     The Crow's Nest                           3/16   also mainstream: no   (Maplewood)
+     Nudo House                                3/16   also mainstream: yes  (Creve Coeur)
+     Lulu's Local Eatery                       2/16   also mainstream: no   (South Grand)
+     Barg Continental                          2/16   also mainstream: no   (St. Louis Hills)
+   hidden-gem K50 = 19 of 90
+-- taste vs generic (generic = mainstream + hidden-gem asks)
+   Cedric 60 distinct, 17 (28%) also in generic; Jason 53, 18 (34%) also in generic
+   Cedric∩Jason = 6: Planter's House, The Crack Fox, The Fountain on Locust, The Lucky Accomplice, The Royale Food & Spirits, Venice Cafe
+   Jaccard: Cedric-generic 0.11, Jason-generic 0.12, Cedric-Jason 0.06
+   Cedric top: Bogart's Smokehouse 7/12, Pappy's Smokehouse 7/12, Salt + Smoke 6/12, The Shaved Duck 6/12, The Royale Food & Spirits 5/12, Adam's Smokehouse 4/12, Stellar Hog 4/12, The Dark Room at The Grandel 4/12
+   Jason top:  Charlie Gitto's On the Hill 11/12, Anthonino's Taverna 10/12, Dominic's on The Hill 7/12, Trattoria Marcella 7/12, Cunetto House of Pasta 5/12, Tony's 5/12, Zia's Restaurant 4/12, Brennan's 4/12
+   strangers: 76 distinct, 61% already named by the other 54 asks
+-- OSM roster: 818 features, 800 named (restaurant/bar/pub only: 541); by amenity {'restaurant': 405, 'fast_food': 171, 'cafe': 88, 'bar': 116, 'pub': 20}
+   SAID labelled outside the boundary by ChatGPT's own neighbourhood (and not matched in OSM): 35; SAID inside ~ 188
+   SAID/CITY = 223/800 = 27.9% (all names); inside-only 188/800 = 23.5%; vs restaurant+bar+pub 188/541 = 34.8%
+   eat-and-drink only (minus 14 museums/parks/clubs/casinos), inside: 175/800 = 21.9%
+   Chao2 vocabulary / CITY = 366/800 = 46%
+   SAID names matched to an OSM name: exact keys 81/223; with containment 100/223 (45%), carrying 377/645 mentions
+   OSM places matched to a ChatGPT name: 122 of 800 (15.2%); never named: 84.8%
+   most-named NOT found in OSM by name: Mai Lee 19, Balkan Treat Box 16, Louie 16, Yemanja Brasil 8, Dominic's on The Hill 8, The Vandy 7, Acero 7, El Morelia Super Mercado 5, Bulrush 5, The Blue Duck 4, Lulu's Local Eatery 4, Zia's Restaurant 4, Stellar Hog 4, The Dark Room at The Grandel 4, The Crow's Nest 4
+-- vs the saved round-2 STL wall (88 distinct): 56/223 ChatGPT names are on it, carrying 298/645 mentions (46%)
+   Smoki O's: named in 3 of 64 asks
+
+==================== NEW YORK (Manhattan + Brooklyn prompts): 64 asks, 643 mentions (mean 10.0 per answer)
+-- normalisation: distinct names at each level
+   L0 raw string                          352
+   L1 kit norm                            332
+   L2 + dish/paren strip + core key       327
+   L3 + token containment                 320
+   dish-prefixed strings rewritten ('X at Venue'): 0
+   canonical names with >1 raw spelling: 23; examples:
+      Sylvia's | Sylvia's Restaurant | Sylvia’s | Sylvia’s Restaurant
+      Morgan's Brooklyn Barbecue | Morgan’s Brooklyn Barbecue
+      Mighty Quinn's Barbeque | Mighty Quinn’s Barbeque
+      Virgil's Real BBQ | Virgil’s Real BBQ
+      John Brown BBQ | John Brown Smokehouse
+      Emilio's Ballato | Emilio’s Ballato
+      Raf's | Raf’s
+      Rolo's | Rolo’s
+   L3 containment merges (7): New York Comedy Club -> The Comedy Cellar; The Modern -> Modern Love; Golden Diner -> Golden Steer NYC; Peaches -> Peaches HotHouse; El Valle Restaurant -> El Nuevo Valle III; The Cloisters -> The Met Cloisters; A&A Bake and Doubles -> A&A Bake Doubles and Roti
+-- SAID (L2, headline) = 327; L3 sensitivity = 320
+-- accumulation (ask k: distinct so far, new at this ask; mean over 200 random orders)
+   ask  1:   10  new 10   mean-order   10.0
+   ask  2:   20  new 10   mean-order   19.7
+   ask  4:   31  new  8   mean-order   37.7
+   ask  8:   59  new 10   mean-order   70.3
+   ask 12:   94  new 10   mean-order   98.6
+   ask 16:  114  new  3   mean-order  124.0
+   ask 24:  150  new  1   mean-order  168.3
+   ask 32:  195  new  7   mean-order  207.0
+   ask 40:  237  new  9   mean-order  241.4
+   ask 48:  266  new  2   mean-order  272.6
+   ask 56:  303  new  7   mean-order  300.5
+   ask 64:  327  new  4   mean-order  327.0
+   last 20 asks: 72 new names / 200 mentions = 36.0% (flat rule: <2%)
+   mean new per ask, asks 45-64: 3.48
+   mean new per ask, asks 33-48: 4.10
+   mean new per ask, asks 49-64: 3.40
+   generic+hidden only: 30 asks -> 160 distinct; last 10 asks add 36 new / 100 mentions (36%)
+   taste+strangers only: 34 asks -> 210 distinct; last 10 asks add 43 new / 100 mentions (43%)
+-- mention singletons f1=205 (63% of SAID), doubletons f2=50; ask-incidence Q1=205, Q2=50
+   Chao1 (mentions) = 737, log-normal 95% CI 600-943
+   Chao2 (asks as units) = 731, bootstrap 95% CI 609-852 (percentile 485-736; 400 iNEXT-style resamples)
+   coverage: SAID is 45% of the Chao2 estimate
+-- K50 = 67 names carry 323/643 mentions (50%); that is 20% of SAID
+   top 10 carry 14% of mentions; top 20 carry 23%
+   top 12 by family (generic/hidden/cedric/jason/stranger asks): Dhamaka 5/8/0/0/1; Rolo's 0/10/0/0/0; Via Carota 6/0/0/3/0; Crown Shy 5/1/0/0/3; Hometown Bar-B-Que 0/1/7/0/0; Katz's Delicatessen 6/0/0/0/2; Tatiana by Kwame Onwuachi 6/0/0/0/2; Le Bernardin 3/0/0/0/4; Semma 6/0/0/0/1; Emilio's Ballato 0/0/0/7/0; Sami & Susu 0/7/0/0/0; Dinosaur Bar-B-Que 0/0/6/0/0
+   named FIRST in the 16 hidden-gem asks: Khe-Yo 1, Green-Wood Cemetery 1, Arepera Guacuco 1, Lucali 1
+   names that look like non-restaurant venues (museums, parks, comedy/music clubs...): 21: Apollo Theater, Brooklyn Comedy Collective, City Island, Gotham Comedy Club, Green-Wood Cemetery, Jokes Up Comedy Club, Kashkaval Garden, Louis Armstrong House Museum, Mmuseumm, New York Chinese Scholar's Garden, New York Comedy Club, Park Side Restaurant, Prospect Park, Public Records, Socrates Sculpture Park, The City Reliquary Museum, The Comedy Cellar, The Long Island Bar, The Noguchi Museum, The Rubin Museum of Art, Van Cortlandt Park
+   most named (asks out of 64): Dhamaka 14, Rolo's 10, Via Carota 9, Crown Shy 9, Hometown Bar-B-Que 8, Katz's Delicatessen 8, Tatiana by Kwame Onwuachi 8, Le Bernardin 7, Semma 7, Emilio's Ballato 7, Sami & Susu 7, Dinosaur Bar-B-Que 6, The Four Horsemen 6, Torrisi 6, Gage & Tollner 6, Los Tacos No. 1 6, L'Industrie Pizzeria 6, Sylvia's 6, Attaboy 6, Morgan's Brooklyn Barbecue 5
+-- by family: asks, distinct, mean list length
+   cedric    12 asks,  66 distinct
+   stranger  10 asks,  82 distinct
+   jason     12 asks,  68 distinct
+   hidden    16 asks, 105 distinct
+   generic   14 asks,  65 distinct
+-- HIDDEN-GEM family: 16 asks, 161 mentions, 105 distinct; 10/105 also named in the 14 mainstream asks
+   most repeated 'hidden gems' (asks out of 16):
+     Rolo's                                   10/16   also mainstream: no   (Ridgewood)
+     Dhamaka                                   8/16   also mainstream: yes  (Lower East Side)
+     Sami & Susu                               7/16   also mainstream: no   (Lower East Side)
+     Gage & Tollner                            5/16   also mainstream: yes  (Downtown Brooklyn)
+     Nyonya                                    4/16   also mainstream: no   (Chinatown)
+     Sofreh                                    4/16   also mainstream: no   (Prospect Heights)
+     KJUN                                      4/16   also mainstream: no   (Murray Hill)
+     Café China                                3/16   also mainstream: no   (Midtown East)
+     Taqueria Ramírez                          3/16   also mainstream: no   (Greenpoint)
+     Usha Foods                                3/16   also mainstream: no   (Floral Park)
+     Casa Enrique                              3/16   also mainstream: no   (Long Island City)
+     Bánh by Lauren                            2/16   also mainstream: no   (Chinatown)
+     Elevated Acre                             2/16   also mainstream: no   (Financial District)
+     Green-Wood Cemetery                       2/16   also mainstream: no   (Greenwood Heights)
+     The City Reliquary Museum                 2/16   also mainstream: no   (Williamsburg)
+   hidden-gem K50 = 25 of 105
+-- taste vs generic (generic = mainstream + hidden-gem asks)
+   Cedric 66 distinct, 4 (6%) also in generic; Jason 68, 7 (10%) also in generic
+   Cedric∩Jason = 1: Raines Law Room
+   Jaccard: Cedric-generic 0.02, Jason-generic 0.03, Cedric-Jason 0.01
+   Cedric top: Hometown Bar-B-Que 7/12, Dinosaur Bar-B-Que 6/12, Morgan's Brooklyn Barbecue 5/12, Melba's 5/12, Sylvia's 5/12, Charles Pan-Fried Chicken 5/12, Fette Sau 4/12, Mighty Quinn's Barbeque 4/12
+   Jason top:  Emilio's Ballato 7/12, Patsy's Italian Restaurant 5/12, Bamonte's 5/12, Don Angie 4/12, Carbone 4/12, Bemelmans Bar 4/12, The Grill 4/12, Rao's 4/12
+   strangers: 82 distinct, 45% already named by the other 54 asks
+-- OSM roster: 12053 features, 11959 named (restaurant/bar/pub only: 6799); by amenity {'fast_food': 3077, 'restaurant': 5312, 'bar': 1159, 'pub': 328, 'cafe': 2083}
+   SAID labelled outside the boundary by ChatGPT's own neighbourhood (and not matched in OSM): 20; SAID inside ~ 307
+   SAID/CITY = 327/11959 = 2.7% (all names); inside-only 307/11959 = 2.6%; vs restaurant+bar+pub 307/6799 = 4.5%
+   eat-and-drink only (minus 21 museums/parks/clubs/casinos), inside: 292/11959 = 2.4%
+   Chao2 vocabulary / CITY = 731/11959 = 6%
+   SAID names matched to an OSM name: exact keys 201/327; with containment 226/327 (69%), carrying 487/643 mentions
+   OSM places matched to a ChatGPT name: 742 of 11959 (6.2%); never named: 93.8%
+   most-named NOT found in OSM by name: Rolo's 10, Emilio's Ballato 7, Atomix 5, Patsy's Italian Restaurant 5, Fette Sau 4, John Brown Smokehouse 3, Laser Wolf 3, Green-Wood Cemetery 3, The Noguchi Museum 3, The Comedy Cellar 3, Usha Foods 3, Gene's Restaurant 3, Casa Enrique 3, Sunken Harbor Club 3, Elevated Acre 2

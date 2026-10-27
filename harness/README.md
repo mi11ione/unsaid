@@ -34,13 +34,27 @@ codex exec --json --ephemeral --skip-git-repo-check --sandbox read-only --output
 ```
 Any `web_search` item in the event stream labels the answer `search: "on"`. `CODEX_MODEL` overrides the model.
 
-**gemini** (free-tier REST, 1 worker): `POST https://generativelanguage.googleapis.com/v1beta/models/$GEMINI_MODEL:generateContent`.
+**gemini** (free-tier REST, 1 worker; dated lane = `gemini-3.8-flash` only, one project, one key): `POST https://generativelanguage.googleapis.com/v1beta/models/$GEMINI_MODEL:generateContent`.
 - The key goes in the `x-goog-api-key` header, never the URL.
 - `systemInstruction`: "You are Gemini, a helpful assistant chatting with a user in a consumer chat app."
 - JSON mode with a `[{name, neighbourhood}]` schema. No tools, so no grounding.
 - The model id comes from `modelVersion`. A `groundingMetadata` block would label the answer "search on".
 - Paced at `GEMINI_RPM`. It stops at `GEMINI_HARNESS_FRACTION` (0.8) × `GEMINI_RPD` per Pacific day, counted in `runs/.gemini_ledger.json`.
 - A missing variable prints `needs credential: …` and skips the lane.
+- A 500/503 ("high demand") is retried after 30, 90 and 240 s. Every attempt counts in the ledger, erring low because the live lane shares the quota. A 503 that outlasts the retries is stored `failed` with `transient: true`: it is asked again later and is no strike toward the 3-in-a-row stop.
+
+### Gemini on the free tier (orchestrator, 28 Oct): 20 RPD, 5 RPM, harness cap 16/day
+
+The console shows 20 requests a day and 5 a minute per model per project. Credentials load from `~/.config/unsaid/env` (mode 0600, never printed, never copied): `set -a; . ~/.config/unsaid/env; set +a`.
+
+- **The only Gemini path is the queue:** `walls_cli.py queue gemini-priority [--already-used N] --go`. It spends exactly what is left of today's cap (16 per Pacific day, which resets at 03:00 ET). Resumable: run it again each day.
+- `--already-used N` records requests made outside the harness today (the console's count).
+- Priority order:
+  - (a) the 16 census hidden-gem asks for STL, then NYC, verbatim (`asks.json`, prompt v1). Stored once in `gemini_answers.jsonl`: `census_stats.py --gems` reads them for ⟦GEM_GEM⟧, and `build` puts them in `census.json`, which joins every wall, so they are also wall #1's gem part.
+  - (b) the 4 plain wall phrasings per city (v2).
+  - (c) taste for stl-cedric, then stl-jason.
+  - (d) the other try-these sets' taste. Items (b) to (d) go to `runs/wall-1.jsonl`.
+- **Not run: free-tier 20/day.** The full 64-ask Gemini census, the v2 copies of the 16 gem phrasings, street asks, walls #2 and #3, fresh asks and the meter. `walls_cli.py ask`, `fresh_asks.py` and `meter.py` skip the gemini lane and say so. `run_census.py --provider gemini` refuses without `--only-hidden`.
 
 ## Deviations from §3.6, and why
 

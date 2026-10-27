@@ -128,7 +128,10 @@ def main():
         for x in asks:
             if x["arm"] == "with":
                 x["fake"] = True
-    lanes = L.lanes_from(a.lane)
+    names = [x for x in (list(L.LANES) if a.lane == "all" else a.lane.split(",")) if x != "gemini"]
+    if "gemini" in a.lane or a.lane == "all":
+        print("[gemini] not run: free-tier 20/day (orchestrator, 28 Oct)")
+    lanes = L.lanes_from(",".join(names)) if names else []
 
     def one_lane(lane):  # arms in turn within a lane; lanes in parallel
         for arm in arms:
