@@ -1,11 +1,14 @@
 """The one live AI lane: Gemini API free tier (UNSAID.md §3.6). Standard library only.
 
 - Key from env GEMINI_API_KEY, sent in the x-goog-api-key header (never in a URL, log or response).
-- Model pinned by env GEMINI_MODEL. JSON output (responseSchema), no grounding, no tools, no system prompt.
-- Per fresh run: one taste ask, <= 3 street asks, in the exact prompt-v2 phrasings below.
+- Model pinned by env GEMINI_LIVE_MODEL (default gemini-3-flash-preview, the "Gemini 3 Flash" free bucket), separate
+  from the dated lane's model. JSON output (responseSchema), no grounding, no tools, no system prompt.
+- Per fresh run: ONE taste ask, in the exact prompt-v2 phrasing below. No live street asks: the free tier is
+  20 RPD / 5 RPM per model, so the street check uses dated answers only.
 - Geo-gate on the visitor's country (CF-IPCountry via the Pages proxy): EEA, UK or CH -> dated_only.
   An unknown country is gated too: only paid services may serve those regions, so we don't guess.
-- Guard at 80% of env GEMINI_RPD (requests per day, reset at midnight Pacific). A 429 -> dated_only for 1 h.
+- Guard at 80% of env GEMINI_RPD (20 -> 16 asks a day, reset at midnight Pacific), then dated_only until the reset.
+  A 429 -> dated_only for 1 h.
 - No GEMINI_API_KEY (or no model / no RPD) -> dated_only. A live answer is never faked.
 - Every answer is stored with asked_at and lane=live. Only venue names, neighbourhoods and timestamps are kept.
 """
@@ -28,7 +31,8 @@ PROVIDER = "gemini"
 PROMPT_V = "v2"
 SUFFIX = ('Answer only with a JSON array of up to 12 objects {"name": ..., "neighbourhood": ...}. '
           'Real, currently open venues only.')
-STREET_MAX = 3
+LIVE_MODEL_DEFAULT = "gemini-3-flash-preview"
+STREET_MAX = 0                                 # no live street asks (20 RPD); street checks are dated only
 ANSWER_TTL_S = 24 * 3600                       # taste answers 1 d; street answers until the next daily wall
 API = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent"
 UA = "Mozilla/5.0 (compatible)"               # generic; no name or email in any request
@@ -63,7 +67,7 @@ class GeminiLane:
 
     def __init__(self, cache_dir, transport=None):
         self.key = os.environ.get("GEMINI_API_KEY", "").strip()
-        self.model = os.environ.get("GEMINI_MODEL", "").strip()
+        self.model = os.environ.get("GEMINI_LIVE_MODEL", "").strip() or LIVE_MODEL_DEFAULT
         try:
             self.rpd = int(os.environ.get("GEMINI_RPD", "0"))
         except ValueError:

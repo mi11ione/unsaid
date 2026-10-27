@@ -27,7 +27,8 @@ Keep both in your password manager. The token goes in the Devpost testing instru
    - `UNSAID_MODE=fake` (switch to `live` once the Qloo key works)
    - `UNSAID_TOKEN`, and `UNSAID_PROXY_SECRET` = the PROXY_SECRET from step 1
    - `QLOO_API_KEY` (when it arrives) · `QLOO_MONTHLY_QUOTA=10000` · `QLOO_QUOTA_HEADERS` after P9
-   - `GEMINI_API_KEY` (AI Studio, a project with **no billing**), `GEMINI_MODEL` (one pinned free Flash id), `GEMINI_RPD` (from the console)
+   - `GEMINI_API_KEY` (AI Studio, a project with **no billing**), `GEMINI_LIVE_MODEL=gemini-3-flash-preview` (the live lane's own "Gemini 3 Flash" bucket, separate from the dated lane's 3.8 Flash), `GEMINI_RPD=20`
+   - The free tier is 20 requests a day and 5 a minute per model. The server makes one live taste ask per fresh run and no live street asks (street checks use dated answers), stops at 16 a day, and is `dated_only` until midnight Pacific. The status line reads "Gemini (gemini-3-flash-preview): asked just now".
 4. Deploy (auto-deploy is off: **Manual Deploy → Deploy latest commit**). Check:
    `curl -s https://unsaid-engine.onrender.com/api/health`
 

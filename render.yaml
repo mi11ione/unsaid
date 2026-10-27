@@ -25,9 +25,9 @@ services:
         sync: false
       - key: GEMINI_API_KEY         # AI Studio key, project with no billing linked
         sync: false
-      - key: GEMINI_MODEL           # one pinned free Flash model id
+      - key: GEMINI_LIVE_MODEL      # the live lane's own model: gemini-3-flash-preview (not the dated lane's 3.8 Flash)
         sync: false
-      - key: GEMINI_RPD             # the model's requests/day from the AI Studio console
+      - key: GEMINI_RPD             # 20 (free tier, per model); the server stops live asks at 16/day
         sync: false
       - key: UNSAID_WALLS           # optional: a walls JSON file or directory; default data/walls/ in the repo
         sync: false

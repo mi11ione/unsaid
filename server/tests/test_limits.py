@@ -113,7 +113,7 @@ class Guards(unittest.TestCase):
 
 class Gemini(unittest.TestCase):
     def lane(self, transport, **env):
-        return H.make_lane(transport, **dict({"GEMINI_RPD": "10"}, **env))
+        return H.make_lane(transport, **dict({"GEMINI_RPD": "20"}, **env))
 
     @staticmethod
     def ok_transport(calls):
@@ -122,6 +122,15 @@ class Gemini(unittest.TestCase):
             text = json.dumps([{"name": "Place %d" % i, "neighbourhood": "Soulard"} for i in range(15)])
             return 200, {"candidates": [{"content": {"parts": [{"text": text}]}}]}
         return t
+
+    def test_live_model_is_its_own_env_var(self):
+        self.assertEqual(self.lane(self.ok_transport([]), GEMINI_LIVE_MODEL=None).model, "gemini-3-flash-preview")
+        self.assertEqual(self.lane(self.ok_transport([]), GEMINI_LIVE_MODEL="x-pinned").model, "x-pinned")
+        os.environ["GEMINI_MODEL"] = "gemini-3.8-flash"          # the dated lane's model never leaks in
+        try:
+            self.assertEqual(self.lane(self.ok_transport([]), GEMINI_LIVE_MODEL=None).model, "gemini-3-flash-preview")
+        finally:
+            os.environ.pop("GEMINI_MODEL")
 
     def test_no_key_is_dated_only_and_never_calls(self):
         calls = []
@@ -136,24 +145,21 @@ class Gemini(unittest.TestCase):
             self.assertIsNone(s.ask_taste("St. Louis", ["A"], "loc", ["1"]), cc)
             self.assertEqual((s.state, calls), ("dated_only", []), cc)
 
-    def test_live_answer_shape_and_phrasings(self):
+    def test_one_taste_ask_and_no_live_street_asks(self):
         calls = []
         s = self.lane(self.ok_transport(calls)).for_country("US")
         a = s.ask_taste("St. Louis", ["Frankie Beverly & Maze", "The Original Kings of Comedy", "Rib Tips"], "loc",
                         ["1", "2", "3"])
         self.assertEqual(s.state, "live")
-        self.assertEqual(a["lane"], "live")
+        self.assertEqual((a["lane"], a["model"]), ("live", "gemini-3-flash-preview"))
         self.assertTrue(a["asked_at"].endswith("Z"))
         self.assertEqual(len(a["names"]), 12)
         self.assertEqual(a["phrasing"], "I love Frankie Beverly & Maze, The Original Kings of Comedy and Rib Tips. "
                                         "Where should I eat and drink in St. Louis?")
         self.assertTrue(calls[0].endswith("Real, currently open venues only."))
         self.assertIsNone(s.ask_taste("St. Louis", ["X"], "loc", ["9"]), "a second taste ask in one run")
-        hoods = ["Soulard", "The Hill", "Midtown", "Downtown"]
-        got = [s.ask_street(h, "St. Louis", "loc") for h in hoods]
-        self.assertEqual([g is not None for g in got], [True, True, True, False], "at most 3 street asks")
-        self.assertEqual(got[0]["phrasing"], "Best places to eat and drink in Soulard, St. Louis")
-        self.assertEqual(len(calls), 4)
+        self.assertEqual([s.ask_street(h, "St. Louis", "loc") for h in ("Soulard", "The Hill")], [None, None])
+        self.assertEqual(len(calls), 1, "exactly one live call per run")
 
     def test_429_cools_down_for_an_hour(self):
         calls = []
@@ -168,48 +174,50 @@ class Gemini(unittest.TestCase):
         self.assertGreater(lane.cooldown_until - time.time(), 3590)
         s2 = lane.for_country("US")
         self.assertEqual((s2.state, s2.reason), ("dated_only", "429 cooldown"))
-        self.assertIsNone(s2.ask_street("Soulard", "St. Louis", "loc"))
+        self.assertIsNone(s2.ask_taste("St. Louis", ["B"], "loc", ["2"]))
         self.assertEqual(len(calls), 1)
 
-    def test_rpd_guard_at_80_percent(self):
+    def test_guard_16_of_20_then_dated_only_until_pacific_midnight(self):
         calls = []
-        lane = self.lane(self.ok_transport(calls))           # RPD 10 -> at most 8 calls
-        for i in range(10):
+        lane = self.lane(self.ok_transport(calls))           # GEMINI_RPD=20 -> at most 16 live asks a day
+        for i in range(20):
             lane.for_country("US").ask_taste("St. Louis", ["L%d" % i], "loc", [str(i)])
-        self.assertEqual(len(calls), 8)
+        self.assertEqual(len(calls), 16)
         self.assertEqual(lane.for_country("US").reason, "daily guard")
+        lane.usage["day"] = "2000-01-01"                      # a new Pacific day resets the count
+        self.assertIsNone(lane.for_country("US").reason)
+        self.assertEqual(G.GeminiLane._day(), G.dt.datetime.now(G.PACIFIC).strftime("%Y-%m-%d"))
 
-    def test_run_with_live_lane_burns_a_card(self):
-        """Taste names join the wall as lane=live; a street answer naming a card burns it and a reserve rises."""
+    def test_live_run_names_the_model_and_makes_one_call(self):
         H.reset_limits()
-        first = {}
-
-        def t(prompt):
-            if prompt.startswith("Best places") and not first:
-                first["hood"] = prompt
-                names = [{"name": first_pick["name"], "neighbourhood": first_pick["neighbourhood"]}]
-            else:
-                names = [{"name": "Pappy's Smokehouse", "neighbourhood": "Midtown"}]
-            return 200, {"candidates": [{"content": {"parts": [{"text": json.dumps(names)}]}}]}
-        _, base = H.run(H.CEDRIC, ip="192.0.2.50")          # cached run: learn pick 1 to make Gemini name it
-        first_pick = base["picks"][0]
-        old = app.GEMINI
-        app.GEMINI = self.lane(t)
         H.clear_results()
+        calls = []
+        old = app.GEMINI
+        app.GEMINI = self.lane(self.ok_transport(calls))
         try:
             ev, r = H.run(H.CEDRIC, ip="192.0.2.51", country="US")
+            _, again = H.run(H.CEDRIC, ip="192.0.2.52", country="US")     # cached: no second call
         finally:
             app.GEMINI = old
+        self.assertEqual(len(calls), 1)
         live = [e for e in ev if e["type"] == "wall_name" and e["lane"] == "live"]
-        self.assertTrue(live and live[0]["provider"] == "gemini")
+        self.assertTrue(live and all(e["model"] == "gemini-3-flash-preview" for e in live))   # the raw log
+        line = [e["text"] for e in ev if e.get("state") == "live"]
+        self.assertEqual(line, ["Gemini (gemini-3-flash-preview): asked just now"])          # the status line
+        self.assertEqual(r["lanes"]["gemini"]["model"], "gemini-3-flash-preview")
         self.assertNotIn("dated_only", r["flags"])
-        self.assertEqual(r["burn"]["burned"][0]["card_id"], first_pick["id"])
-        self.assertNotIn(first_pick["id"], [p["id"] for p in r["picks"]])
-        self.assertEqual(len(r["picks"]), 7)
-        p0 = r["picks"][0]
-        self.assertEqual(p0["never_said"]["street_asks"],
-                         sum(1 for b in r["burn"]["asked"] if b["neighbourhood"] == p0["neighbourhood"]))
-        self.assertTrue(any(e["type"] == "burn" for e in ev))
+        self.assertFalse([b for b in r["burn"]["asked"] if b.get("lane") == "live"])
+        self.assertTrue(again["cached"])
+
+    def test_street_check_is_dated_only(self):
+        wall = {"answers": [
+            {"kind": "street", "hood": "Soulard", "lane": "dated", "asked_at": "2026-10-28T09:00:00Z",
+             "names": [{"name": "Somewhere"}]},
+            {"kind": "city", "lane": "dated", "names": [{"name": "Elsewhere"}]},
+            {"kind": "street", "hood": "Soulard", "lane": "live", "names": [{"name": "Never"}]}]}
+        fn = app.adapter.dated_street(wall)
+        self.assertEqual([n["name"] for a in fn("soulard", "St. Louis") for n in a["names"]], ["Somewhere"])
+        self.assertEqual(fn("The Hill", "St. Louis"), [])
 
 
 class Walls(unittest.TestCase):

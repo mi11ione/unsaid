@@ -37,7 +37,7 @@ os.environ["UNSAID_WALLS"] = WALLS_DIR
 def make_lane(transport, **env):
     """A GeminiLane with a fake transport (never the network). env overrides GEMINI_* for its construction."""
     import time
-    base = {"GEMINI_API_KEY": "k", "GEMINI_MODEL": "gemini-test-flash", "GEMINI_RPD": "1000"}
+    base = {"GEMINI_API_KEY": "k", "GEMINI_LIVE_MODEL": "gemini-3-flash-preview", "GEMINI_RPD": "1000"}
     base.update(env)
     old = {k: os.environ.get(k) for k in base}
     for k, v in base.items():

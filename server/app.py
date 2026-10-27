@@ -82,6 +82,7 @@ COPY = {  # UNSAID.md §2.2, exact
     "queued": "%s ahead of yours · about %d s",
     "limited": "Fresh runs are limited so everyone gets through. These open instantly:",
     "partial": "%d answers · %d of 3 AIs",
+    "live": "Gemini (%s): asked %s",          # §2.1 status line, naming the live model id
 }
 WORDS = {1: "One run", 2: "Two runs", 3: "Three runs", 4: "Four runs", 5: "Five runs"}
 PROVIDERS = {"openai": "ChatGPT", "chatgpt": "ChatGPT", "codex": "ChatGPT", "claude": "Claude",
@@ -163,9 +164,21 @@ def lane_flags(result, session, wall):
     reasons = [r for r in (session.reasons if session else []) if r]
     if d.get("live_error"):
         reasons.append("engine: %s" % str(d["live_error"])[:80])
-    result["lanes"] = {"gemini": {"state": "dated_only" if "dated_only" in flags else "live",
-                                  "reason": reasons[0] if reasons else (session.reason if session else "not asked")},
+    live_a = [a for a in (session.answers if session else []) if a.get("lane") == "live"]
+    state = "dated_only" if "dated_only" in flags or not live_a else "live"
+    if state == "dated_only" and session is not None and "dated_only" not in flags:
+        flags.add("dated_only")
+        dated = [a.get("asked_at") for a in (wall or {}).get("answers", []) if a.get("asked_at")]
+        notes.append(("dated_only", COPY["dated_only"] % (et(max(dated)) if dated else "earlier")))
+        result["flags"] = sorted(flags)
+    model = GEMINI.model
+    result["lanes"] = {"gemini": {"state": state, "model": model,
+                                  "asked_at": live_a[0]["asked_at"] if live_a else None,
+                                  "reason": None if state == "live" else (
+                                      reasons[0] if reasons else (session.reason if session else "not asked"))},
                        "providers": sorted(have)}
+    if state == "live":
+        notes.insert(0, ("live", COPY["live"] % (model, "just now")))
     return notes
 
 
@@ -181,7 +194,10 @@ def stream_unsaid(city_text, loves, ip, country, emit):
             result = shell("degraded", prep, wall, COPY["degraded_none"], flags=["no_cache"])
             cached, stored_at = False, None
         if cached:
+            g = (result.get("lanes") or {}).get("gemini") or {}
             for n in result.get("notes") or []:
+                if n["state"] == "live" and g.get("asked_at"):      # cached: "asked <when>", not "just now"
+                    n["text"] = COPY["live"] % (g.get("model"), et(g["asked_at"]))
                 emit({"type": "status", "state": n["state"], "text": n["text"]})
         result["cached"] = cached
         if stored_at:

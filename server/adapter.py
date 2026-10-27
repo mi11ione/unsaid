@@ -304,7 +304,7 @@ def run(prep, wall, q, mode, gemini, emit, deadline_s=90.0):
         if not live and gemini is not None:
             gemini.reasons.append(gemini.reason)
         lane = _ApiTaste(gemini, prep) if live else False         # False: no engine stand-in, never a fake live answer
-        street = _api_street(gemini, prep) if live else False
+        street = dated_street(wall)                                # dated answers only, never a live street ask
         return API.run_unsaid(prep["city_text"], prep["loves"], walls_path=wall["path"],
                               mode=mode, qloo=q, gemini=lane, street_check=street, on_event=forward,
                               deadline_s=max(1.0, min(90.0, float(deadline_s))))
@@ -327,10 +327,16 @@ class _ApiTaste:
         return a
 
 
-def _api_street(session, prep):
+def dated_street(wall):
+    """street_check from the dated wall only (no live street asks): the stored answers about that neighbourhood."""
+    by = {}
+    for a in (wall or {}).get("answers") or []:
+        hood = a.get("hood") or (a.get("phrasing_id") or "").partition("street:")[2]
+        if a.get("kind", "street" if hood else None) == "street" and hood and a.get("lane", "dated") == "dated":
+            by.setdefault(slugify(hood), []).append(a)
+
     def fn(hood, city_name):
-        a = session.ask_street(hood, city_name, prep["city"]["id"])
-        return [a] if a else []
+        return list(by.get(slugify(hood), []))
     return fn
 
 
@@ -379,24 +385,27 @@ def _run_fallback(prep, wall, q, mode, gemini, emit):
             "never_said": {"asks": city_asks, "city_asks": city_asks, "street_asks": 0, "as_of": as_of}})
     picks, reserves = cards[:N_PICKS], cards[N_PICKS:]
     burn = {"asked": [], "burned": []}
-    if gemini is not None and picks:
+    if picks:
         hoods = []
         for p in picks:
             if p["neighbourhood"] and p["neighbourhood"] not in hoods:
                 hoods.append(p["neighbourhood"])
         burned_ids, risen = set(), set()
+        street = dated_street(wall)
         for hood in hoods[:3]:
-            a = gemini.ask_street(hood, city["name"], city["id"])
-            if not a:
+            got = street(hood, city["name"])
+            if not got:
                 continue
+            a = {"names": [n for x in got for n in x.get("names") or []], "asked_at": max(x.get("asked_at") or ""
+                                                                                          for x in got)}
             said = [n["name"] for n in a["names"]]
             st, _ = M.match_wall(said, [{"entity_id": x["id"], "name": x["name"]} for x in picks + reserves], None)
             named = [x["name"] for x in picks + reserves if x["id"] in st]
-            burn["asked"].append({"neighbourhood": hood, "lane": "live", "asked_at": a["asked_at"], "named": named})
+            burn["asked"].append({"neighbourhood": hood, "lane": "dated", "asked_at": a["asked_at"], "named": named})
             for cid in st:
                 if cid not in burned_ids:
                     burned_ids.add(cid)
-                    b = {"card_id": cid, "by": "gemini", "at": a["asked_at"]}
+                    b = {"card_id": cid, "by": "dated street answer", "at": a["asked_at"]}
                     burn["burned"].append(b)
                     nxt = None
                     if cid in {x["id"] for x in picks}:     # a burned pick: the next unburned reserve rises
