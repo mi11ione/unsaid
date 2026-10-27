@@ -1,0 +1,463 @@
+{
+ "status": "frozen",
+ "drafted": "2026-10-27",
+ "drafted_by": "Agent E",
+ "format": "loves are [text, type hint]; type hints follow engine/unsaid/seeds.py (/search `types`; 'tag' goes to /v2/tags; 'place' also feeds filter.exclude.entities). city uses the seeds.py key; city_slug uses site/data/try.json.",
+ "sources_for_fixed_sets": {
+  "stl-cedric": "research/round4/exp/prompts.py CEDRIC comment and first phrasing: 'Frankie Beverly & Maze, The Original Kings of Comedy and rib tips' (seeds.py lists the same three, with the film first)",
+  "stl-jason": "research/round4/exp/prompts.py JASON comment: 'Frank Sinatra, Rounders, Carbone'",
+  "nyc-khruangbin": "Not in research/round4/exp. Taken from engine/unsaid/seeds.py set A and research/round3/prototype/js/data.js: Khruangbin, The Grand Budapest Hotel, Ten Bells"
+ },
+ "sets": [
+  {
+   "id": "stl-cedric",
+   "label": "Cedric · St. Louis",
+   "city": "stl",
+   "city_slug": "st-louis",
+   "try_these": true,
+   "loves": [
+    [
+     "Frankie Beverly & Maze",
+     "artist"
+    ],
+    [
+     "The Original Kings of Comedy",
+     "movie"
+    ],
+    [
+     "rib tips",
+     "tag"
+    ]
+   ],
+   "stresses": "the hero set; a dish as a tag love (no discovery call, rescoring only); barbecue and soul pool; strangers test with jason"
+  },
+  {
+   "id": "stl-jason",
+   "label": "Jason · St. Louis",
+   "city": "stl",
+   "city_slug": "st-louis",
+   "try_these": true,
+   "loves": [
+    [
+     "Frank Sinatra",
+     "artist"
+    ],
+    [
+     "Rounders",
+     "movie"
+    ],
+    [
+     "Carbone",
+     "place"
+    ]
+   ],
+   "stresses": "a place love from another city (Carbone is in NYC), so filter.exclude.entities must be a no-op here; strangers test with cedric"
+  },
+  {
+   "id": "stl-nelly",
+   "label": "Nelly · St. Louis",
+   "city": "stl",
+   "city_slug": "st-louis",
+   "try_these": true,
+   "loves": [
+    [
+     "Nelly",
+     "artist"
+    ],
+    [
+     "The Blues Brothers",
+     "movie"
+    ],
+    [
+     "toasted ravioli",
+     "tag"
+    ]
+   ],
+   "stresses": "mainstream, home-town artist; a city-signature dish that the wall likely already covers (empty_few risk)"
+  },
+  {
+   "id": "stl-chuckberry",
+   "label": "Chuck Berry · St. Louis",
+   "city": "stl",
+   "city_slug": "st-louis",
+   "try_these": true,
+   "loves": [
+    [
+     "Chuck Berry",
+     "artist"
+    ],
+    [
+     "Back to the Future",
+     "movie"
+    ],
+    [
+     "Ted Drewes Frozen Custard",
+     "place"
+    ]
+   ],
+   "stresses": "the in-city place love (an STL institution that is surely on the wall): exercises filter.exclude.entities and the seed-place strike"
+  },
+  {
+   "id": "stl-sza",
+   "label": "SZA · St. Louis",
+   "city": "stl",
+   "city_slug": "st-louis",
+   "try_these": true,
+   "loves": [
+    [
+     "SZA",
+     "artist"
+    ],
+    [
+     "Insecure",
+     "tv_show"
+    ],
+    [
+     "chicken wings",
+     "tag"
+    ]
+   ],
+   "stresses": "mainstream current R&B and a TV love; casual-food tag"
+  },
+  {
+   "id": "stl-wilco",
+   "label": "Wilco · St. Louis",
+   "city": "stl",
+   "city_slug": "st-louis",
+   "try_these": false,
+   "loves": [
+    [
+     "Wilco",
+     "artist"
+    ],
+    [
+     "Lady Bird",
+     "movie"
+    ],
+    [
+     "natural wine",
+     "tag"
+    ]
+   ],
+   "stresses": "indie, bar-leaning; a drink tag; carried over from seeds.py S9"
+  },
+  {
+   "id": "stl-taylorswift",
+   "label": "Taylor Swift · St. Louis",
+   "city": "stl",
+   "city_slug": "st-louis",
+   "try_these": false,
+   "loves": [
+    [
+     "Taylor Swift",
+     "artist"
+    ],
+    [
+     "Ted Lasso",
+     "tv_show"
+    ],
+    [
+     "Starbucks",
+     "brand"
+    ]
+   ],
+   "stresses": "the most mainstream set; a chain brand love; likely 'flat' or dead-love (rho with popularity); carried over from seeds.py S7"
+  },
+  {
+   "id": "stl-jayz",
+   "label": "Jay-Z · St. Louis",
+   "city": "stl",
+   "city_slug": "st-louis",
+   "try_these": false,
+   "loves": [
+    [
+     "Jay-Z",
+     "artist"
+    ],
+    [
+     "Paid in Full",
+     "movie"
+    ],
+    [
+     "Budweiser",
+     "brand"
+    ]
+   ],
+   "stresses": "a brand love native to the city (Anheuser-Busch); carried over from seeds.py S8"
+  },
+  {
+   "id": "stl-bigthief",
+   "label": "Big Thief · St. Louis",
+   "city": "stl",
+   "city_slug": "st-louis",
+   "try_these": false,
+   "loves": [
+    [
+     "Big Thief",
+     "artist"
+    ],
+    [
+     "Twin Peaks",
+     "tv_show"
+    ],
+    [
+     "pho",
+     "tag"
+    ]
+   ],
+   "stresses": "niche artist (thin_taste and tie-guard risk) with a cuisine tag that has a real STL cluster (South Grand)"
+  },
+  {
+   "id": "stl-morganwallen",
+   "label": "Morgan Wallen · St. Louis",
+   "city": "stl",
+   "city_slug": "st-louis",
+   "try_these": false,
+   "loves": [
+    [
+     "Morgan Wallen",
+     "artist"
+    ],
+    [
+     "Yellowstone",
+     "tv_show"
+    ],
+    [
+     "pork steak",
+     "tag"
+    ]
+   ],
+   "stresses": "mainstream country; a regional dish that /v2/tags may miss (needs_input or semantic_search fallback)"
+  },
+  {
+   "id": "nyc-khruangbin",
+   "label": "Khruangbin · New York",
+   "city": "nyc",
+   "city_slug": "new-york",
+   "try_these": true,
+   "loves": [
+    [
+     "Khruangbin",
+     "artist"
+    ],
+    [
+     "The Grand Budapest Hotel",
+     "movie"
+    ],
+    [
+     "Ten Bells",
+     "place"
+    ]
+   ],
+   "stresses": "the NYC hero candidate; an in-city place love (a natural wine bar), so filter.exclude.entities is live. Check Ten Bells still resolves and is open in Qloo before freezing"
+  },
+  {
+   "id": "nyc-taylorswift",
+   "label": "Taylor Swift · New York",
+   "city": "nyc",
+   "city_slug": "new-york",
+   "try_these": true,
+   "loves": [
+    [
+     "Taylor Swift",
+     "artist"
+    ],
+    [
+     "Gilmore Girls",
+     "tv_show"
+    ],
+    [
+     "matcha latte",
+     "tag"
+    ]
+   ],
+   "stresses": "mainstream; cafe-leaning tag outside the restaurant/bar allowlist core; flat-state risk"
+  },
+  {
+   "id": "nyc-wutang",
+   "label": "Wu-Tang Clan · New York",
+   "city": "nyc",
+   "city_slug": "new-york",
+   "try_these": true,
+   "loves": [
+    [
+     "Wu-Tang Clan",
+     "artist"
+    ],
+    [
+     "The Sopranos",
+     "tv_show"
+    ],
+    [
+     "chopped cheese",
+     "tag"
+    ]
+   ],
+   "stresses": "NYC-rooted loves; a bodega dish whose best answers are delis that may fail the allowlist and 4.3 floor"
+  },
+  {
+   "id": "nyc-newjeans",
+   "label": "NewJeans · New York",
+   "city": "nyc",
+   "city_slug": "new-york",
+   "try_these": true,
+   "loves": [
+    [
+     "NewJeans",
+     "artist"
+    ],
+    [
+     "Past Lives",
+     "movie"
+    ],
+    [
+     "Korean fried chicken",
+     "tag"
+    ]
+   ],
+   "stresses": "K-culture set; a strong geographic cluster (Koreatown, Flushing) against the 8 mi Manhattan radius"
+  },
+  {
+   "id": "nyc-badbunny",
+   "label": "Bad Bunny · New York",
+   "city": "nyc",
+   "city_slug": "new-york",
+   "try_these": true,
+   "loves": [
+    [
+     "Bad Bunny",
+     "artist"
+    ],
+    [
+     "Narcos",
+     "tv_show"
+    ],
+    [
+     "tacos al pastor",
+     "tag"
+    ]
+   ],
+   "stresses": "mainstream Latin; carried over from seeds.py C"
+  },
+  {
+   "id": "nyc-coltrane",
+   "label": "John Coltrane · New York",
+   "city": "nyc",
+   "city_slug": "new-york",
+   "try_these": false,
+   "loves": [
+    [
+     "John Coltrane",
+     "artist"
+    ],
+    [
+     "Mad Men",
+     "tv_show"
+    ],
+    [
+     "dry martini",
+     "tag"
+    ]
+   ],
+   "stresses": "bar-leaning set; a drink tag; classic NYC canon that AIs over-name (wall-heavy)"
+  },
+  {
+   "id": "nyc-kendrick",
+   "label": "Kendrick Lamar · New York",
+   "city": "nyc",
+   "city_slug": "new-york",
+   "try_these": false,
+   "loves": [
+    [
+     "Kendrick Lamar",
+     "artist"
+    ],
+    [
+     "Atlanta",
+     "tv_show"
+    ],
+    [
+     "Popeyes",
+     "brand"
+    ]
+   ],
+   "stresses": "a fast-food brand love whose own outlets the allowlist hard-excludes; carried over from seeds.py E"
+  },
+  {
+   "id": "nyc-stapleton",
+   "label": "Chris Stapleton · New York",
+   "city": "nyc",
+   "city_slug": "new-york",
+   "try_these": false,
+   "loves": [
+    [
+     "Chris Stapleton",
+     "artist"
+    ],
+    [
+     "Yellowstone",
+     "tv_show"
+    ],
+    [
+     "brisket",
+     "tag"
+    ]
+   ],
+   "stresses": "taste-city mismatch (country/barbecue in Manhattan and Brooklyn)"
+  },
+  {
+   "id": "nyc-arthurrussell",
+   "label": "Arthur Russell · New York",
+   "city": "nyc",
+   "city_slug": "new-york",
+   "try_these": false,
+   "loves": [
+    [
+     "Arthur Russell",
+     "artist"
+    ],
+    [
+     "Paris Is Burning",
+     "movie"
+    ],
+    [
+     "pierogi",
+     "tag"
+    ]
+   ],
+   "stresses": "the niche set: /search misses, needs_input and thin_taste are all likely"
+  },
+  {
+   "id": "nyc-rosalia",
+   "label": "Rosalía · New York",
+   "city": "nyc",
+   "city_slug": "new-york",
+   "try_these": false,
+   "loves": [
+    [
+     "Rosalía",
+     "artist"
+    ],
+    [
+     "Volver",
+     "movie"
+    ],
+    [
+     "tapas",
+     "tag"
+    ]
+   ],
+   "stresses": "non-English loves; diacritics in the love text (matcher.norm and /search)"
+  }
+ ],
+ "try_these_count": {
+  "stl": 5,
+  "nyc": 5
+ },
+ "open_questions_for_roman": [
+  "SZA, Nelly and Chuck Berry are St. Louis-connected artists; is a home-town tilt wanted in 3 of the 5 STL try-these, or should one swap for wilco or bigthief?",
+  "Ten Bells (NYC) must be confirmed open and resolvable in Qloo before freezing; if not, swap the place love for another in-city bar.",
+  "Ted Drewes is a near-certain wall name; if the in-city place love should NOT also be a wall name, use a lesser-known STL place instead."
+ ],
+ "frozen_at": "2026-10-27T20:30:00-04:00"
+}
