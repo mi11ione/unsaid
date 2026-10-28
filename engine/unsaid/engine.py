@@ -39,6 +39,8 @@ CFG = {
     "RATING_CLIENT": 4.3, "RATING_EPS": 1e-4,   # client floor 4.3 - 1e-4 (float32 values like 4.1999998)
     "TAKE": 50, "OFFSETS": [0, 50],
     "EXTRA_OFFSETS": [100, 150],  # live 28 Oct: gate B left Cedric at 7+0 (U 28); the 50k/month key affords it
+    "EXTRA_OFFSETS_2": [200, 250],  # a second step, only while U is still short (the state rule took ~30 IL places
+                                    # out of every STL pool: 28 Oct)
     "U_MIN": 150,
     "CHUNK": 48, "ANCHORS": 2,   # 48 of U + 2 anchors = 50 = take
     "RRF_K": 60, "HOLD_FRAC": 1.0 / 3,
@@ -82,12 +84,20 @@ CFG = {
                             # judge 2 (28 Oct): stores and banquet/event businesses. event_venue and wedding_venue
                             # stay: every pool place carrying them is also a bar or restaurant (92 and 15 of 1,178)
                             "liquor_store", "wine_store", "beer_store", "banquet_hall", "event_planner",
-                            "party_planner", "wedding_planner", "event_management_company"],
+                            "party_planner", "wedding_planner", "event_management_company",
+                            "hookah_bar", "hookah_lounge", "hookah_store"],
     # Diversity (28 Oct): "everyone's taste" prior per city, data/priors/<city>.json (build_priors.py). A place's
     # prior is its mean fit percentile over the preset sets that share no love with this query (>= PRIOR_MIN_SETS).
     "PRIORS_DIR": os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
                                "data", "priors"),
     "PRIOR_MIN_SETS": 1, "PRIOR_ENABLED": True,   # 1: with 10 sets a city, one other taste is evidence
+    # how a place's fits for other tastes become "fits everyone": "top" = share of other tastes that put it in their
+    # top PRIOR_TOP (a place many tastes rank high); "mean" = its mean fit percentile
+    "PRIOR_STAT": "top", "PRIOR_TOP": 0.7,
+    # Dish loves (28 Oct): a tag love ties every place at Qloo's default affinity under C6' ("rib tips" 1.0). Its
+    # sub-pool comes from filter.tags=<the tag and its same-name menu_highlight/specialty_dish siblings>; a place that
+    # carries the dish ranks first for that love, then untagged places Qloo did score, then the rest (tied).
+    "DISH_POOL": True, "DISH_OFFSETS": [0, 50], "DISH_SIBLING_TYPES": ("menu_highlight", "specialty_dish", "cuisine")   # 1: with 10 sets a city, one other taste is evidence
 }
 PLACE = "urn:entity:place"
 GENERIC_WHAT = {"urn:tag:category:place:restaurant", "urn:tag:category:place:bar", "urn:tag:genre:place:restaurant",
@@ -339,6 +349,60 @@ def taste_pool(q, city, loves, pages=None, kind_tags=None, label=None, adaptive=
     return pool, {}, d
 
 
+# ---------------------------------------------------------------- dish loves
+def dish_tag_ids(q, love):
+    """The love's tag plus same-name siblings of the dish kinds (rib tips: specialty_dish and menu_highlight)."""
+    ids = [love["id"]]
+    label = love.get("name") or love["text"]
+    try:
+        tags = q.tags(label, take=10, label="C2 dish siblings") or []
+    except QlooError:
+        tags = []
+    for t in tags:
+        tid = t.get("id") or t.get("tag_id")
+        if tid and tid not in ids and M.norm(t.get("name") or "") == M.norm(label) and \
+                any(k in (t.get("type") or tid) for k in CFG["DISH_SIBLING_TYPES"]):
+            ids.append(tid)
+    return ids[:3]
+
+
+def dish_pools(q, city, loves, tag_loves, workers=None):
+    """-> ({love text: set of tag ids}, [entities], {love text: set of ids returned}, diag). base filters with
+    filter.tags = the dish's tag ids (union) instead of the restaurant/bar kinds; the floor still applies."""
+    tagsets, ents, hit, calls = {}, [], {}, 0
+    jobs = []
+    for l in tag_loves:
+        ids = dish_tag_ids(q, l)
+        tagsets[l["text"]] = set(ids)
+        for off in CFG["DISH_OFFSETS"]:
+            p = dict(base_filters(city, loves), take=CFG["TAKE"])
+            p["filter.tags"] = sorted(ids)
+            p["operator.filter.tags"] = "union"
+            if off:
+                p["offset"] = off
+            jobs.append((l["text"], off, p))
+
+    def run(job):
+        txt, off, p = job
+        try:
+            return job, q.insights(p, label="C4 dish %s o%d" % (txt[:16], off), timeout=TIMEOUT_POOL), None
+        except QlooError as e:
+            return job, None, e
+
+    for (txt, off, p), resp, err in _pmap(run, jobs, workers or CFG["WORKERS"]):
+        calls += 1
+        if isinstance(err, QlooDeadline):
+            raise err
+        if err is not None:
+            continue
+        url = "%s/v2/insights?%s" % (q.base, canonical_query(p))
+        for e in (resp.get("results") or {}).get("entities") or []:
+            hit.setdefault(txt, set()).add(e["entity_id"])
+            e["_loves"], e["_pool_urls"] = [txt], [url]
+            ents.append(e)
+    return tagsets, ents, hit, {"calls": calls}
+
+
 # ---------------------------------------------------------------- floor
 _TAG_FACTS = {"cfg": None, "memo": {}}
 
@@ -426,6 +490,13 @@ def floor(pool, city=None):
             drop["ids"]["below_43"].append(e["entity_id"])
             continue
         if city is not None:
+            state = (C.CITIES.get(city.get("key")) or {}).get("region")
+            where = prop(e, "admin1_region")
+            if state and where and str(where).lower() != state.lower():
+                drop["outside_R"] += 1           # outside the city's state (690 Park, Cliffside Park NJ, in NYC)
+                drop["outside_state"] = drop.get("outside_state", 0) + 1
+                drop["ids"]["outside_R"].append(e["entity_id"])
+                continue
             ll = latlon(e)
             if ll is None:
                 drop["no_location"] += 1
@@ -942,6 +1013,78 @@ def hood_of(e, centroids, max_mi=1.5):
     return "", None
 
 
+# ---------------------------------------------------------------- card lines
+def display_name(name):
+    """'Space Ping Pong Sports Bar & Lounge | Koreatown NYC' -> 'Space Ping Pong Sports Bar & Lounge'."""
+    return (name or "").split(" | ")[0].strip() or name
+
+
+def why_line(f, p, e, flat):
+    """One line from the selection score's parts: fit for you f, popularity p, fit for everyone e (percentiles)."""
+    if flat:
+        return "fits you, among the less famous places here"
+    gap = f - max(p, e if e is not None else 0.0)
+    if e is not None and e <= 0.35 and gap >= 0.5:
+        return "fits you far more than it fits most people here"
+    if p <= 0.35 and gap >= 0.5:
+        return "fits you, and few people here know it"
+    if e is not None and e < p:
+        return "fits you more than its fame suggests"
+    return "fits you better than most of the places here"
+
+
+WHAT_TAG_PREFIX = ("urn:tag:cuisine:", "urn:tag:category:place:", "urn:tag:genre:place:restaurant:",
+                   "urn:tag:menu_highlight:", "urn:tag:specialty_dish:", "urn:tag:interests:", "urn:tag:offerings:",
+                   "urn:tag:activity_type:", "urn:tag:beverage_offering:", "urn:tag:ambience:", "urn:tag:decor:")
+_DETAIL = {}
+
+
+def _tags_of(e):
+    out = {}
+    for t in e.get("tags") or []:
+        if isinstance(t, dict) and (t.get("id") or "").startswith(WHAT_TAG_PREFIX) and t.get("name"):
+            lab = _what_label(t)
+            if lab and lab not in WHAT_BLAND:
+                out[t["id"]] = lab
+    return out
+
+
+def because_detail(i, love, byid, ids, orders, tied, dish_tags, dish_tagged):
+    """The one or two Qloo tags that tie the card to the love it credits. A dish love: the dish tag itself. Any other
+    love: the card's tags that are most over-represented among that love's top quarter of this pool (Qloo's own
+    per-love ranking and Qloo's own tags; 0 extra calls)."""
+    if not love:
+        return None
+    txt = love["text"]
+    if txt in dish_tags:
+        return ("on Qloo's %s list" % (love.get("name") or txt).lower()) if i in dish_tagged.get(txt, ()) else None
+    key = (id(orders), txt)
+    if key not in _DETAIL:
+        _DETAIL.clear()
+        o = orders[txt]
+        top = [x for x in ids if x not in tied[txt]]
+        top = sorted(top, key=lambda x: o[x])[:max(5, len(ids) // 4)]
+        cnt_top, cnt_all = {}, {}
+        for x in ids:
+            for tid in _tags_of(byid[x]):
+                cnt_all[tid] = cnt_all.get(tid, 0) + 1
+        for x in top:
+            for tid in _tags_of(byid[x]):
+                cnt_top[tid] = cnt_top.get(tid, 0) + 1
+        lift = {}
+        for tid, n in cnt_top.items():
+            if n >= 3 and n / float(len(top)) >= 0.2:
+                lift[tid] = (n / float(len(top))) / (cnt_all[tid] / float(len(ids)))
+        _DETAIL[key] = lift
+    lift = _DETAIL[key]
+    mine = _tags_of(byid[i])
+    best = sorted(((lift[t], mine[t]) for t in mine if lift.get(t, 0) >= 1.5), reverse=True)
+    labs = list(dict.fromkeys(l for _, l in best))[:2]
+    if not labs:
+        return None
+    return "%s, like the places %s fans rank highest here" % (" and ".join(labs), love.get("name") or txt)
+
+
 # ---------------------------------------------------------------- the "everyone's taste" prior
 _PRIORS = {}
 
@@ -972,7 +1115,10 @@ def everyone_pct(city, ids, love_ids):
     for i in ids:
         v = [s["fit_pct"][i] for s in sets if i in s["fit_pct"]]
         if len(v) >= CFG["PRIOR_MIN_SETS"]:
-            mean[i] = sum(v) / len(v)
+            if CFG["PRIOR_STAT"] == "top":     # (hits + 0.5) / (n + 1): a lone observation counts for less
+                mean[i] = (sum(1 for x in v if x >= CFG["PRIOR_TOP"]) + 0.5) / (len(v) + 1.0)
+            else:
+                mean[i] = sum(v) / len(v)
     if len(mean) < 3:
         return {}, {"used": False, "why": "too few places with a prior", "sets": len(sets)}
     rk = ST.rank(mean)                       # 1 = fits everyone best
@@ -1052,9 +1198,24 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
         res["status"] = "degraded"
         res["diag"]["pool"] = pdiag
         return res
+    tag_loves = [l for l in rescorable if l.get("kind") == "tag"] if CFG["DISH_POOL"] else []
+    dish_tags, dish_hit = {}, {}
+    if tag_loves:                         # the dish sub-pools join the pool like any love's pool
+        dish_tags, dents, dish_hit, ddiag = dish_pools(q, city, loves, tag_loves)
+        have = {e["entity_id"]: e for e in pool}
+        for e in dents:
+            if e["entity_id"] in have:
+                have[e["entity_id"]]["_loves"] = list(dict.fromkeys(have[e["entity_id"]]["_loves"] + e["_loves"]))
+                continue
+            e["_pos"] = len(pool) + 1
+            pool.append(e)
+            have[e["entity_id"]] = e
+        pdiag["dish_calls"] = ddiag["calls"]
     U, drops = floor(pool, city)
-    if len(U) < CFG["U_MIN"] and CFG["EXTRA_OFFSETS"]:
-        more, mdiag = per_love_pools(q, city, loves, offsets=CFG["EXTRA_OFFSETS"])
+    for step in ("EXTRA_OFFSETS", "EXTRA_OFFSETS_2"):
+        if len(U) >= CFG["U_MIN"] or not CFG.get(step):
+            break
+        more, mdiag = per_love_pools(q, city, loves, offsets=CFG[step])
         have = {e["entity_id"] for e in pool}
         pool += [e for e in more if e["entity_id"] not in have]
         pdiag["calls"] += mdiag["calls"]
@@ -1123,10 +1284,23 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
     pop_rank_avg = ST.rank(pop)
     pop_ord = ordinal(pop, ids)
     orders, tied, tied_only, rs_diag = {}, {}, {}, {}
+    dish_tagged = {}
     for l, rs in zip(rescorable, resc_all):
         orders[l["text"]] = ranks_from(rs["aff"], ids)
         tied[l["text"]] = set(rs["tied"]) | set(rs["missing"])     # no non-default score (eligibility)
         tied_only[l["text"]] = set(rs["tied"])                      # at Qloo's default affinity (tie share)
+        if l["text"] in dish_tags:
+            tagset = dish_tags[l["text"]]
+            tagged = {i for i in ids if i in dish_hit.get(l["text"], ()) or
+                      any((t.get("id") or "") in tagset for t in byid[i].get("tags") or [] if isinstance(t, dict))}
+            if tagged:
+                # carries the dish > untagged that Qloo scored > the rest; a tagged place is never a tie
+                informative = {i: rs["aff"][i] for i in ids if i in rs["aff"] and i not in rs["tied"]}
+                score = {i: (10.0 + informative.get(i, 0.0)) if i in tagged else informative.get(i, -1.0) for i in ids}
+                orders[l["text"]] = ST.rank(score)
+                tied[l["text"]] = {i for i in ids if i not in tagged and i not in informative}
+                tied_only[l["text"]] = set()     # tagged vs not is information, not a tie
+                dish_tagged[l["text"]] = tagged
         rs_diag[l["text"]] = {k: rs[k] for k in ("coverage", "drift", "calls", "failed", "tie_share", "distinct")}
         scored = [i for i in ids if i not in tied[l["text"]]]     # ties carry no order: rho over scored members
         rs_diag[l["text"]]["rho_pop"] = ST.spearman({i: orders[l["text"]][i] for i in scored}, pop_rank_avg)
@@ -1218,8 +1392,10 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
     if flat:
         keep_from = (1 - CFG["FLAT_POP_KEEP"]) * N        # drop the most popular 20 %
         order = sorted([i for i in eligible if pop_ord[i] > keep_from], key=lambda i: (fit[i], i))
+        score = {i: round(pct(fit[i]), 4) for i in ids}          # flat: the score is fit (what the order uses)
     else:
         order = sorted(eligible, key=lambda i: (-lift[i], fit[i], i))
+        score = {i: round(lift[i], 4) for i in ids}
 
     # ---- 7 + 3 via the reverse check and the last-seen check
     rindex = reverse_index_cached(all_answers)
@@ -1291,9 +1467,11 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
         b = because(i)
         hood, hood_src = hoods[i]
         n_street = len(asked_hoods.get(hood, []))
-        is_tied = any(i in tied[l["text"]] for l in live)
+        is_tied = bool(live) and all(i in tied[l["text"]] for l in live)     # never true for a card
         ll = latlon(e) or (None, None)
-        return {"id": i, "name": e.get("name"), "what": what_line(e), "neighbourhood_src": hood_src,
+        return {"id": i, "name": display_name(e.get("name")), "what": what_line(e), "score": score[i],
+                "why": why_line(pct(fit[i]), pct(pop_ord[i]), everyone.get(i), flat),
+                "because_detail": because_detail(i, b, byid, ids, orders, tied, dish_tags, dish_tagged), "neighbourhood_src": hood_src,
                 "last_seen": seen_info.get(i),
                 "because": b["text"] if b else None, "because_label": (b.get("name") or b["text"]) if b else None,
                 "fit_rank": fit[i], "any_rank": None if flat else pop_ord[i], "U": N,
@@ -1391,7 +1569,7 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
             res["diag"]["live_burned"] = [byid[x].get("name") for x in hits]
             street_pass()                  # a risen card's street is asked too
     picks = sorted(picks, key=lambda i: (fit[i], i))           # displayed in for-you order
-    reserves = sorted(reserves, key=lambda i: (fit[i], i))
+    reserves = sorted(reserves, key=lambda i: (-score[i], fit[i], i))  # reserves: the selection order, after the last card
 
     res["picks"] = [card(i) for i in picks]
     res["reserves"] = [card(i) for i in reserves]
@@ -1463,7 +1641,7 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
                           "struck_in_U": len(struck_u)})
     res["diag"].update({
         "N": N, "S": len(S), "kept": len(eligible), "flat": flat, "all_dead": all_dead, "thin_taste": thin,
-        "prior": prior_diag, "tie_share": tie_share, "tie_by_love": tie_by_love, "rescore": rs_diag, "rho_tp": rho_tp, "rho_res": rho_res, "rho_res_note": rho_res_note,
+        "prior": prior_diag, "dish_tagged": {k: len(v) for k, v in dish_tagged.items()}, "tie_share": tie_share, "tie_by_love": tie_by_love, "rescore": rs_diag, "rho_tp": rho_tp, "rho_res": rho_res, "rho_res_note": rho_res_note,
         "rho_taste_base": rho_tp, "rho_taste_pop": rho_tp, "baseline": base_label,
         "cap_keep": cap.get("cap_keep"), "cap_shared": len(cap_ids & set(picks)) if cap.get("cap7") else None,
         "popcap_overlap": cap.get("overlap", float("nan")), "cap": {k: v for k, v in cap.items() if k != "topk"},

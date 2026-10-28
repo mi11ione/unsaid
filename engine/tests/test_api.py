@@ -58,6 +58,15 @@ class TestRunUnsaid(Tmp):
             self.assertGreaterEqual(c["rating"], 4.3 - 1e-4)
             self.assertTrue(c["open"])
             self.assertIn(c["because"], [l["label"] for l in r["loves"]])
+        # one ordering: every card scores at least as high as every reserve; every card has a for-you rank
+        if r["reserves"]:
+            self.assertGreaterEqual(min(c["score"] for c in r["picks"]), max(c["score"] for c in r["reserves"]))
+            self.assertEqual([c["score"] for c in r["reserves"]], sorted([c["score"] for c in r["reserves"]], reverse=True))
+        for c in r["picks"] + r["reserves"]:
+            self.assertFalse(c["tied"])
+            self.assertTrue(c["why"] and isinstance(c["fit_rank"], int))
+            self.assertNotIn(" | ", c["name"])
+            self.assertIn("because_detail", c)
         fits = [c["fit_rank"] for c in r["picks"]]
         self.assertEqual(fits, sorted(fits), "displayed in for-you order")
         for w in r["wall"]:
@@ -82,7 +91,8 @@ class TestRunUnsaid(Tmp):
         self.assertEqual(calls["total"], r["diag"]["qloo_calls"])
         self.assertEqual(calls["total"], sum(v for k, v in calls.items() if k != "total"))
         self.assertGreaterEqual(calls["loves"], 1)
-        self.assertIn(calls["pool"], (4, 4 + 2 * len(E.CFG["EXTRA_OFFSETS"])))   # 2 entity loves x offsets 0, 50 (+ extra pages when U is small)
+        dish = len(E.CFG["DISH_OFFSETS"]) if E.CFG["DISH_POOL"] else 0          # the rib-tips dish sub-pool
+        self.assertIn(calls["pool"], (4 + dish, 4 + dish + 2 * len(E.CFG["EXTRA_OFFSETS"])))   # 2 entity loves x offsets 0, 50 (+ extra pages when U is small)
         self.assertEqual(calls["cap"], 1)
         self.assertGreaterEqual(calls["rescore"], 3)
         self.assertLessEqual(calls["pool"] + calls["rescore"] + calls["ids"] + calls["cap"], calls["total"])
@@ -430,6 +440,19 @@ class TestLiveLaneNeverGatesCards(Tmp):
         self.assertEqual(len(r["picks"]), 7)
         self.assertEqual(r["burn"]["burned"], [])
         self.assertIn("live lane: TimeoutError", r["diag"]["lanes_failed"])
+
+
+class TestDishLove(unittest.TestCase):
+    def test_tagged_places_rank_first_and_the_dish_is_not_a_tie(self):
+        from unsaid import stats as ST
+        ids = ["a", "b", "c", "d"]
+        aff = {"a": QL.DEFAULT_AFFINITY, "b": QL.DEFAULT_AFFINITY, "c": 0.9, "d": QL.DEFAULT_AFFINITY}
+        tagged = {"b", "d"}
+        informative = {i: aff[i] for i in ids if not QL.is_default_affinity(aff[i])}
+        score = {i: (10.0 + informative.get(i, 0.0)) if i in tagged else informative.get(i, -1.0) for i in ids}
+        r = ST.rank(score)
+        self.assertEqual(sorted(ids, key=lambda i: r[i])[:2], ["b", "d"])     # the places that carry the dish
+        self.assertLess(r["c"], r["a"])                                        # then what Qloo scored
 
 
 class TestDeadline(Tmp):

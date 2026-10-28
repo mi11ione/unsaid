@@ -58,18 +58,22 @@ def resolve_city(text, *, mode="fake", qloo=None):
     return {"status": "ok", "city": C.public(c), "alternatives": alts, "_city": c}
 
 
+TYPE_LABELS = {"movie": "film", "tv_show": "TV show", "videogame": "video game", "specialty_dish": "dish",
+               "menu_highlight": "menu item", "genre": "kind of place", "category": "kind of place"}
+
+
 def type_label(t):
-    """'urn:entity:artist' -> 'artist'; 'urn:tag:specialty_dish:place' -> 'dish'; 'urn:tag:cuisine:qloo' -> 'cuisine'."""
+    """What a chip says it matched, for people: 'urn:entity:tv_show' -> 'TV show', 'urn:entity:movie' -> 'film',
+    'urn:tag:specialty_dish:place' -> 'dish', 'urn:tag:cuisine:qloo' -> 'cuisine', 'urn:entity:artist' -> 'artist'."""
     parts = (t or "").split(":")
-    if len(parts) >= 3 and parts[1] == "tag":
-        return parts[2].replace("specialty_", "").replace("_", " ")
-    return parts[-1].replace("_", " ") if t else None
+    k = parts[2] if len(parts) >= 3 and parts[1] == "tag" else parts[-1]
+    return TYPE_LABELS.get(k, k.replace("_", " ")) if t else None
 
 
 def _chip(l):
     t = l.get("type") or ""
     return {"id": l.get("id"), "label": l.get("name") or l.get("text"), "kind": l.get("kind"), "type": t,
-            "type_label": type_label(t), "dead": bool(l.get("dead"))}
+            "type_label": type_label(t), "disamb": l.get("disamb"), "dead": bool(l.get("dead"))}
 
 
 def c2_count(trace):
@@ -91,7 +95,8 @@ def resolve_love(text, hint=None, *, mode="fake", qloo=None):
     except QlooError as e:
         return {"status": "degraded", "chip": None, "alternatives": [], "reason": "Qloo HTTP %s" % e.status}
     chip = dict(_chip(l), text=text, c2_calls=n) if l.get("id") else None
-    return {"status": l["status"], "chip": chip, "alternatives": l.get("alternatives") or [], "text": text}
+    alts = [dict(a, type_label=type_label(a.get("type"))) for a in l.get("alternatives") or []]
+    return {"status": l["status"], "chip": chip, "alternatives": alts, "text": text}
 
 
 def _love_from_chip(ch):
@@ -474,6 +479,7 @@ def to_contract(res, trace, c, ls, fake):
     cap = d.get("cap") or {}
     out["diag"].update({
         "obscure_names": [n for _, n in d.get("obscure") or []], "known_names": [n for _, n in d.get("known") or []],
+        "dish_tagged": d.get("dish_tagged"), "prior": d.get("prior"),
         "calls": call_counts(trace, sum(l.get("_c2", 0) for l in ls)), "wall_names": d.get("wall_names"), "wall_snapshot": d.get("wall_snapshot"),
         "struck_fit_ranks": d.get("struck_fit_ranks") or [],
         "qloo_calls": call_counts(trace, sum(l.get("_c2", 0) for l in ls))["total"], "qloo_network": sum(1 for r in trace if not r["cache"]),
