@@ -31,8 +31,9 @@ res = api.run_unsaid(SD.CITY_QUERY[city][0], [list(x) for x in spec], walls_path
                      use_cache=not args.no_cache, street_check=False if args.no_street else None)
 d, cn = res["diag"], res["counts"]
 T = cli.tag(args)
-print("  status %s | P %s U %s S %s kept %s | wall %s places (%s distinct names) / %s asks | RHO_TP %s | %s | flags %s%s" % (
-    res["status"], cn["P"], cn["U"], cn["S"], d.get("kept"), cn["wall"], d.get("wall_names"), cn["asks"], cli.f(d.get("rho_tp")),
+print("  status %s | P %s U %s S %s kept %s | wall %s places (%s distinct names, snapshot %s) / %s asks | RHO_TP %s | %s | flags %s%s" % (
+    res["status"], cn["P"], cn["U"], cn["S"], d.get("kept"), cn["wall"], d.get("wall_names"), d.get("wall_snapshot"),
+    cn["asks"], cli.f(d.get("rho_tp")),
     ("RHO_RES %s" % cli.f(d["rho_res"])) if d.get("rho_res") is not None else d.get("rho_res_note"), res["flags"], T))
 fl = cn["floor"]
 print("  floor: %s -> %s (closed %s, below 4.3 %s, outside %s mi %s, not a restaurant or bar %s; not_venue_music %s)%s" % (

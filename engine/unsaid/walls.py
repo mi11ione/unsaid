@@ -108,6 +108,16 @@ def wall_for(city, sid, walls_file=None, loves=None):
             "source": "fixtures/consensus.py %s generic only (4 answers; taste phrasings not yet asked)" % city.upper()}
 
 
+def snapshot(wall):
+    """A short hash of the assembled wall (every answer's provider, phrasing, time and names), so two results can be
+    compared: the same counts.wall needs the same snapshot (UNSAID.md §3.5 result key)."""
+    import hashlib
+    rows = sorted(json.dumps([a.get("provider"), a.get("phrasing_id") or a.get("phrasing"), a.get("asked_at"),
+                              [n["name"] if isinstance(n, dict) else n for n in a.get("names") or a.get("places") or []]],
+                             sort_keys=True, ensure_ascii=False) for a in wall.get("answers") or [])
+    return hashlib.sha256("\n".join(rows).encode()).hexdigest()[:12]
+
+
 def taste_answers(city, sid, walls_file=None, loves=None):
     """Only a set's taste answers: the two-strangers repeat count never uses the shared generic wall."""
     if walls_file:

@@ -70,9 +70,9 @@ for city, sid, spec, label in jobs:
             "loves": ch, "ran_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "as_of": r["diag"].get("as_of"),
             "fake": args.fake, "result": r}
     ok_n += r["status"] in ("ok", "partial", "empty_few")
-    print("    %s/%-8s %s: %d cards, U %s, wall %s, %d Qloo calls%s" % (
+    print("    %s/%-8s %s: %d cards, U %s, wall %s places (%s names, snapshot %s), %d Qloo calls%s" % (
         city.upper(), sid, r["status"], len(r["picks"]), r["counts"]["U"], r["counts"]["wall"],
-        r["diag"]["qloo_calls"], T))
+        r["diag"].get("wall_names"), r["diag"].get("wall_snapshot"), r["diag"]["qloo_calls"], T))
     if single:
         index.append(item)
     else:

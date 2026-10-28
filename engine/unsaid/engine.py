@@ -1118,7 +1118,7 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
         "popcap_overlap": cap.get("overlap", float("nan")), "cap": {k: v for k, v in cap.items() if k != "topk"},
         "obscure": [(i, byid[i].get("name")) for i in obscure], "known": [(i, byid[i].get("name")) for i in known],
         "auc_pop_struck": ST.auc([pop[i] for i in ids], [i in struck_u for i in ids]),
-        "wall_names": len(distinct_norms),
+        "wall_names": len(distinct_norms), "wall_snapshot": _snapshot(wall, live_ans),
         "wall": {"answers": len(all_answers), "names": len(distinct_norms), "places": n_places, "struck": len(struck_u),
                  "status": _count(per), "source": wall.get("source"),
                  "c7_calls": sum(c.calls for c in css), "c7_skipped": sum(len(c.skipped) for c in css),
@@ -1206,6 +1206,11 @@ def wall_places(raws, qid_of):
         if bigs and len({find(c) for c in bigs}) == 1:
             union(r, next(iter(bigs)))
     return {r: M.norm(find(r)) for r in raws}
+
+
+def _snapshot(wall, live_ans):
+    from unsaid.walls import snapshot
+    return snapshot({"answers": list(wall.get("answers") or []) + list(live_ans or [])})
 
 
 def wall_item(a, raw):
