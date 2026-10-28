@@ -660,7 +660,7 @@ def k12_k14_keys(put):
               "(resumable; only new pairs cost claude -p calls)" if k14 else "k14 did not run")
     ok = not note14
     f2 = lambda x: None if x is None else "%.2f" % x  # noqa: E731
-    put("K14_AGREE", f2(k14.get("agreement")) if ok else None, src14, note14)
+    put("K14_AGREE", "%.3f" % k14["agreement"] if ok and k14.get("agreement") is not None else None, src14, note14)
     put("K14_PRECISION", f2(k14.get("precision")) if ok else None, src14, note14)
     put("K14_RECALL", f2(k14.get("recall")) if ok else None, src14, note14)
     put("K14_KAPPA", f2(k14.get("kappa")) if ok else None, src14, note14)

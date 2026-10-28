@@ -1,0 +1,116 @@
+{
+ "pairs": 3556,
+ "labelled": 3556,
+ "flags": {
+  "sample": 1132,
+  "token": 2424
+ },
+ "unflagged_arm_pairs": 11558,
+ "sample_rate": 0.1,
+ "sample_named": 0,
+ "sample_n": 1132,
+ "confusion_weighted": {
+  "tp": 102.0,
+  "fp": 19.0,
+  "fn": 21.0,
+  "tn": 13602.0
+ },
+ "confusion_raw": {
+  "m_l": 102,
+  "m_notl": 19,
+  "notm_l": 21,
+  "notm_notl": 3414
+ },
+ "precision": 0.8429752066115702,
+ "recall": 0.8292682926829268,
+ "agreement": 0.9970896391152503,
+ "kappa": 0.8345974601130638,
+ "named_quote_not_found": 0,
+ "models": [
+  "claude-opus-5-5"
+ ],
+ "arms": {
+  "all": {
+   "plain": {
+    "labeller": 33,
+    "matcher": 32,
+    "cards": 140
+   },
+   "plain_rules": {
+    "labeller": 20,
+    "matcher": 21,
+    "cards": 140
+   },
+   "score_only": {
+    "labeller": 11,
+    "matcher": 12,
+    "cards": 140
+   },
+   "unsaid": {
+    "labeller": 3,
+    "matcher": 3,
+    "cards": 140
+   },
+   "random": {
+    "labeller": 1.65,
+    "matcher": 2.34,
+    "cards": 140
+   }
+  },
+  "nyc": {
+   "plain": {
+    "labeller": 8,
+    "matcher": 8,
+    "cards": 70
+   },
+   "plain_rules": {
+    "labeller": 7,
+    "matcher": 8,
+    "cards": 70
+   },
+   "score_only": {
+    "labeller": 1,
+    "matcher": 3,
+    "cards": 70
+   },
+   "unsaid": {
+    "labeller": 1,
+    "matcher": 1,
+    "cards": 70
+   },
+   "random": {
+    "labeller": 0.95,
+    "matcher": 1.01,
+    "cards": 70
+   }
+  },
+  "stl": {
+   "plain": {
+    "labeller": 25,
+    "matcher": 24,
+    "cards": 70
+   },
+   "plain_rules": {
+    "labeller": 13,
+    "matcher": 13,
+    "cards": 70
+   },
+   "score_only": {
+    "labeller": 10,
+    "matcher": 9,
+    "cards": 70
+   },
+   "unsaid": {
+    "labeller": 2,
+    "matcher": 2,
+    "cards": 70
+   },
+   "random": {
+    "labeller": 0.7,
+    "matcher": 1.33,
+    "cards": 70
+   }
+  }
+ },
+ "k12_sha256": "d216ff22232bdfa8f8c7b69662081d5b72ef321fed26bca2cc9ab173dad47221"
+}
