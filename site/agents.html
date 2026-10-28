@@ -23,7 +23,7 @@
     <p class="dim">Send it as <code>Authorization: Bearer …</code>, as <code>X-Unsaid-Token: …</code>, or as <code>&amp;token=…</code>. In a browser, add <code>?token=…</code> to this site’s address and the page passes it on.</p>
 
     <h2>MCP</h2>
-    <div id="mcp-hosted"><p><b>One paste.</b> Add <code>https://unsaid-ang.pages.dev/mcp?token=&lt;token&gt;</code> as a custom connector in Claude (Settings → Connectors), or run <code>claude mcp add --transport http unsaid "https://unsaid-ang.pages.dev/mcp?token=&lt;token&gt;"</code>. After 30 Oct 23:45 ET, leave out <code>?token=…</code>.</p></div>
+    <div id="mcp-hosted"><p><b>One paste.</b> Add <code>https://unsaid-ang.pages.dev/mcp?token=&lt;token&gt;</code> as a custom connector in Claude (Settings → Connectors), or run <code>claude mcp add --transport http unsaid "https://unsaid-ang.pages.dev/mcp?token=&lt;token&gt;"</code>. After 30 Oct 23:45 ET both forms work: without <code>?token=…</code> you share a per-address limit on fresh runs, and with it you get your own bucket. Repeat queries are cached and free.</p></div>
     <p>The MCP server is one Python file, standard library only. By default it calls this site’s API, so your agent gets the same live Qloo ranks and the same dated AI answers as this page. You don’t need a Qloo key.</p>
     <p class="dim">Claude Code:</p>
     <pre>claude mcp add unsaid -e UNSAID_MODE=remote -e UNSAID_TOKEN=&lt;token&gt; -- python3 -I /path/to/unsaid/agent/unsaid_mcp.py</pre>
