@@ -10,7 +10,7 @@
 #   flags: --skip-f  --render-if-unchanged  --skip-render  --skip-media  --skip-site  --allow-dirty  --to N
 #          --no-street-catchup  --skip-agent
 #
-#   1 preflight   disk >= 10 GB; harness/runs/done has gem-30 + wall-3 (warn); git on main, clean but for harness output
+#   1 preflight   the 5 pre-registered files hash to data/prereg/SHA256SUMS; disk >= 10 GB; harness/runs/done has gem-30 + wall-3 (warn); git on main, clean but for harness output
 #                 and walls, pulled; leak audit 0 unresolved; walls rebuilt from harness/runs (unless saturation or a
 #                 wall ask is running: then the committed walls), committed and pushed (regen reads origin/main)
 #   2 regen       engine/regen_try.sh: the 20 sets -> $FRESH and site/data/live, gates A and B --frozen; then the
@@ -105,6 +105,8 @@ commit_paths() {
 step1() {
   say "1 preflight"
   rm -f "$LOGS"/02-regen.prev-*.log   # a new freeze: earlier attempts' call counts no longer apply
+  # the five pre-registered files must still hash to the public gist (data/prereg/SHA256SUMS)
+  python3 -I "$MAIN/tools/freeze_numbers.py" prereg || die "pre-registration: a hashed file changed (data/prereg/SHA256SUMS)"
   local avail; avail=$(df -g "$MAIN" | awk 'NR==2{print $4}')
   [ "$avail" -ge 10 ] || die "disk: ${avail} GB free (need >= 10 GB: the video's frames are ~2 GB)"
   echo "disk: ${avail} GB free"
@@ -151,6 +153,8 @@ regen_once() {   # one engine/regen_try.sh pass; the gate logs are copied for nu
   [ "${PIPESTATUS[0]}" = 0 ] || die "regen_try.sh"
   cp "$WT/engine/out/regen_gateA.log" "$LOGS/02-gateA.txt"
   cp "$WT/engine/out/regen_gateB.log" "$LOGS/02-gateB.txt"
+  # which engine, priors and walls made $FRESH: numbers.json carries it, fill_devpost.py refuses a stale one
+  python3 -I "$MAIN/tools/freeze_numbers.py" stamp --fresh "$FRESH" --wt "$WT"
 }
 
 unasked_count() {   # neighbourhoods of the regenerated cards + reserves no street answer was asked about
@@ -215,7 +219,10 @@ def med(k):
     s = sorted(r[k] for r in rows); n = len(s)
     return float(s[n // 2] if n % 2 else (s[n // 2 - 1] + s[n // 2]) / 2.0)
 old.update({"sets": len(rows), "of": 7, "named_unsaid": med("on_named"), "named_no_strike": med("off_named"),
-            "named_plain": med("plain_named")})
+            "named_plain": med("plain_named"),
+            # the held-out chain the site shows (pooled cards some AI named on the fresh questions, which never fed the wall)
+            "held_out_cards": sum(r["n_on"] for r in rows), "held_out_plain": sum(r["plain_fresh"] for r in rows),
+            "held_out_no_strike": sum(r["off_fresh"] for r in rows), "held_out_unsaid": sum(r["on_fresh"] for r in rows)})
 json.dump(old, open(sys.argv[2], "w"), indent=1, ensure_ascii=False); open(sys.argv[2], "a").write("\n")
 print("site/data/wall_effect.json: UNSAID %s · no strike %s · plain %s" % (old["named_unsaid"], old["named_no_strike"], old["named_plain"]))
 PY

@@ -80,7 +80,7 @@ plain_hits = sum(any('gioia' in n.lower() for n in names_of(r)) for r in plain)
 
 census = {
     '_': 'Every figure here is a census figure; "src" is the census_stats.txt line it is checked against by build_data.py.',
-    'model': 'Claude Sonnet 5.5', 'model_id': stl[0]['model'], 'date': '27 Oct 2026', 'web_search': False, 'preregistered': True,
+    'model': 'Claude Sonnet 5.5', 'model_id': stl[0]['model'], 'date': '27 Oct 2026', 'web_search': False,
     'stl': {
         'city': 'St. Louis',
         'asks': {'n': 64, 'src': cite(3, r'ST\. LOUIS: (\d+) asks', 64)},
@@ -241,8 +241,8 @@ if osm_nyc.exists():
 # ---------------------------------------------------------------- config + try-these ------------------
 jdump(SITE / 'config.json', {
     'lanes': ['ChatGPT', 'Claude', 'Gemini'],
-    'cities': {'st-louis': {'name': 'St. Louis', 'map': 'data/map/stl.json', 'wall': 'data/walls/stl.json', 'census': 'stl'},
-               'new-york': {'name': 'New York', 'map': 'data/map/nyc.json' if NYC_MAP else None, 'wall': 'data/walls/nyc.json', 'census': 'nyc'}},
+    'cities': {'st-louis': {'name': 'St. Louis', 'map': 'data/map/stl.json', 'wall': 'data/walls/stl.json', 'census': 'stl', 'from': 'downtown'},
+               'new-york': {'name': 'New York', 'map': 'data/map/nyc.json' if NYC_MAP else None, 'wall': 'data/walls/nyc.json', 'census': 'nyc', 'from': 'central Manhattan'}},
     'floor': {'rating': 4.3},
     'site': 'unsaid-ang.pages.dev',   # the share image's address line and deploy-site.sh's OG card (C, 28 Oct)
 }, 1)
@@ -250,15 +250,18 @@ SETS = json.load(open(UNSAID / 'data' / 'sets.json'))['sets']
 MOCK_SRC = {'stl-cedric': 'data/mock/stl-cedric.ndjson', 'nyc-khruangbin': 'data/mock/nyc-khruangbin.ndjson' if NYC_MAP else None}
 CITY_SLUG = {'stl': 'st-louis', 'nyc': 'new-york'}
 try_sets = []
-for x in SETS:
-    if not x.get('try_these'):
+TT_FILE = UNSAID / 'data' / 'try_these.json'   # the presets (data/sets.json keeps its pre-registered bytes)
+TT = [i for c in ('stl', 'nyc') for i in json.load(open(TT_FILE)).get(c, [])] if TT_FILE.exists() else None
+BY_ID = {x['id']: x for x in SETS}
+for x in ([BY_ID[i] for i in TT] if TT is not None else SETS):
+    if TT is None and not x.get('try_these'):
         continue
     stored = SITE / 'sets' / f"{x['id']}.ndjson"   # a precomputed real result, when one exists
     src = f"data/sets/{x['id']}.ndjson" if stored.exists() else MOCK_SRC.get(x['id'])
     try_sets.append({'id': x['id'], 'label': x['label'], 'city': x.get('city_slug') or CITY_SLUG.get(x['city'], x['city']),
                      'loves': [l[0] if isinstance(l, list) else l for l in x['loves']],
                      'ran': None, 'src': src, 'mock': bool(src) and not stored.exists()})
-jdump(SITE / 'try.json', {'_': 'built from data/sets.json (try_these: true); src is null until a stored result exists', 'sets': try_sets}, 1)
+jdump(SITE / 'try.json', {'_': 'built from data/try_these.json + data/sets.json; src is null until a stored result exists', 'sets': try_sets}, 1)
 
 # ---------------------------------------------------------------- MOCK streams -------------------------
 hoods = json.load(open(PROTO / 'hoods-stl.json'))['elements']

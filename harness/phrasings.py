@@ -69,6 +69,10 @@ def load_sets_meta(path=None):
                 out.setdefault(x["city"], []).append((x["id"], [l[0] if isinstance(l, list) else l for l in x["loves"]]))
                 if x.get("try_these"):
                     tt.add(x["id"])
+            ttp = os.path.join(REPO, "data", "try_these.json")   # overrides the flags (data/sets.json stays as hashed)
+            if not path and os.path.exists(ttp):
+                d = json.load(open(ttp))
+                tt = {sid for c in ("stl", "nyc", "la") for sid in d.get(c, [])}
             return out, tt, src
     else:
         src = os.path.join(REPO, "engine", "unsaid", "seeds.py")

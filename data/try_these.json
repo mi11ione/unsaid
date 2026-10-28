@@ -1,0 +1,5 @@
+{
+ "_": "The try-these presets the site shows, in its order (NYC first, then STL). Kept apart from data/sets.json so the pre-registered sets file stays byte-for-byte its hashed version (sha256 ac3e169f..., the gist). Readers: engine/unsaid/seeds.py, harness/phrasings.py, engine/regen_try.sh, media/tools/build_data.py. Changed 28 Oct (24d2b85): STL Nelly and SZA out, Big Thief and Morgan Wallen in.",
+ "nyc": ["nyc-khruangbin", "nyc-taylorswift", "nyc-wutang", "nyc-newjeans", "nyc-badbunny"],
+ "stl": ["stl-cedric", "stl-jason", "stl-chuckberry", "stl-bigthief", "stl-morganwallen"]
+}

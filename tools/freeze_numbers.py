@@ -78,6 +78,75 @@ def hood_norm(s):
     return re.sub(r"[^a-z0-9 ]", "", s).strip()
 
 
+# ----------------------------------------------------------------------------------------------------------- provenance
+REGEN_WALLS = os.path.join(LOGS, "walls.regen")      # the exact walls the regeneration read (copied at stamp time)
+ENGINE_PATHS = ["engine/unsaid", "engine/precompute.py"]
+
+
+def git_out(*a, cwd=ROOT):
+    return subprocess.run(["git", "-C", cwd] + list(a), capture_output=True, text=True).stdout.strip()
+
+
+def tree_hash(d, pattern="*.json"):
+    import hashlib
+    h = hashlib.sha256()
+    for p in sorted(glob.glob(os.path.join(d, pattern))):
+        h.update(os.path.basename(p).encode() + b"\0" + open(p, "rb").read() + b"\0")
+    return h.hexdigest()
+
+
+def stamp(a):
+    """After a regeneration: which engine, priors and walls made $FRESH, and when (-> $FRESH/freeze_stamp.json)."""
+    import shutil
+    wt = a.wt
+    doc = {"regenerated_at": dt.datetime.now().astimezone().strftime("%Y-%m-%dT%H:%M:%S%z"),
+           "index_generated_at": json.load(open(os.path.join(a.fresh, "index.json"))).get("generated_at"),
+           "engine_commit": git_out("rev-parse", "HEAD", cwd=wt),
+           "priors_sha256": tree_hash(os.path.join(wt, "data", "priors")),
+           "walls_sha256": tree_hash(os.path.join(wt, "data", "walls"))}
+    json.dump(doc, open(os.path.join(a.fresh, "freeze_stamp.json"), "w"), indent=1)
+    shutil.rmtree(REGEN_WALLS, ignore_errors=True)
+    shutil.copytree(os.path.join(wt, "data", "walls"), REGEN_WALLS)
+    print("stamp: %s engine %s, priors %s, walls %s -> %s" % (doc["regenerated_at"], doc["engine_commit"][:7],
+                                                              doc["priors_sha256"][:8], doc["walls_sha256"][:8], a.fresh))
+
+
+def prereg(a=None):
+    """The five pre-registered files vs the public gist's hashes (data/prereg/SHA256SUMS). Exit 1 on any mismatch."""
+    import hashlib
+    where = {"UNSAID.md": os.path.join(os.path.dirname(ROOT), "prereg-private", "UNSAID.md")}   # private build doc
+    bad = 0
+    for line in open(os.path.join(ROOT, "data", "prereg", "SHA256SUMS")):
+        if not line.strip():
+            continue
+        h, name = line.split(None, 1)
+        name = name.split(" (")[0].strip()
+        p = where.get(name, os.path.join(ROOT, "data", name))
+        got = hashlib.sha256(open(p, "rb").read()).hexdigest() if os.path.exists(p) else "missing"
+        print("prereg %-24s %s" % (name, "ok" if got == h else "MISMATCH (now %s, gist %s)" % (got[:8], h[:8])))
+        bad += got != h
+    return 1 if bad else 0
+
+
+def provenance(fresh):
+    """The regeneration's stamp vs the tree now. Problems -> fill_devpost.py refuses to fill."""
+    sp = os.path.join(fresh, "freeze_stamp.json")
+    st = json.load(open(sp)) if os.path.exists(sp) else {}
+    head_engine = git_out("log", "-1", "--format=%H", "HEAD", "--", *ENGINE_PATHS)
+    now_priors = tree_hash(os.path.join(ROOT, "data", "priors"))
+    probs = []
+    if not st:
+        probs.append("no %s: this regeneration was not made by freeze.sh step 2" % sp)
+    else:
+        if subprocess.run(["git", "-C", ROOT, "merge-base", "--is-ancestor", head_engine, st["engine_commit"]]).returncode:
+            probs.append("the regeneration ran on engine %s, which predates HEAD's last engine commit %s" % (
+                st["engine_commit"][:7], head_engine[:7]))
+        if st.get("priors_sha256") != now_priors:
+            probs.append("the regeneration's priors (sha256 %s) differ from data/priors now (%s)" % (
+                (st.get("priors_sha256") or "?")[:8], now_priors[:8]))
+    return {"stamp": st, "head_engine_commit": head_engine, "priors_sha256_now": now_priors, "problems": probs}
+
+
 # ---------------------------------------------------------------------------------------------------------- walls-keep
 def walls_keep(backup):
     kept, changed, new = [], [], []
@@ -119,11 +188,12 @@ def snapshot_cedric(src, out):
 
 
 # ------------------------------------------------------------------------------------------------------------ numbers
-def walls_stats():
+def walls_stats(wdir=None):
     seen, per = set(), collections.Counter()
     first, last = None, None
     total_nosearch, gem = 0, 0
-    for p in sorted(glob.glob(os.path.join(WALLS, "*.json"))):
+    city_ns = collections.Counter()
+    for p in sorted(glob.glob(os.path.join(wdir or WALLS, "*.json"))):
         d = json.load(open(p))
         search = bool((d.get("meta") or {}).get("search"))
         for e in d["walls"]:
@@ -141,12 +211,14 @@ def walls_stats():
                     continue
                 if prov in ("anthropic", "openai"):
                     total_nosearch += 1
+                    city_ns[e.get("city")] += 1
                 else:
                     gem += 1
     by_city = collections.Counter()
     for (f, prov, city), n in per.items():
         by_city[city] += n
     return {"answers": len(seen), "claude_chatgpt_dated_no_search": total_nosearch, "other_dated_no_search": gem,
+            "claude_chatgpt_dated_no_search_by_city": dict(city_ns),
             "first_asked_at": first, "last_asked_at": last, "by_city_all": dict(by_city),
             "by_file": {"%s %s %s" % k: v for k, v in sorted(per.items(), key=lambda kv: str(kv[0]))}}
 
@@ -160,11 +232,11 @@ def date_range(first, last):
     return "%d %s – %d %s %d" % (a.day, a.strftime("%b"), b.day, b.strftime("%b"), b.year)
 
 
-def street_stats(fresh, nostreet):
+def street_stats(fresh, nostreet, wdir=None):
     """Cards the street answers struck: the no-street run's cards that the full run's wall strikes by a street:*
     answer. Denominator: those cards whose neighbourhood a street answer was asked about."""
     full, ns = load_sets(fresh), load_sets(nostreet)
-    hoods = street_hoods()
+    hoods = street_hoods(wdir)
     if len(ns) != len(full) or not full:
         return {"ok": False, "why": "no-street ablation incomplete (%d of %d sets)" % (len(ns), len(full))}
     cards = asked = named = named_asked = 0
@@ -189,9 +261,9 @@ def street_stats(fresh, nostreet):
             "unasked": unasked, "hits": hits, "hoods_asked": {c: len(v) for c, v in hoods.items()}}
 
 
-def street_hoods():
+def street_hoods(wdir=None):
     hoods = collections.defaultdict(set)
-    for p in glob.glob(os.path.join(WALLS, "*.json")):
+    for p in glob.glob(os.path.join(wdir or WALLS, "*.json")):
         for e in json.load(open(p))["walls"]:
             for a in e["answers"]:
                 if a.get("kind") == "street" and a.get("hood"):
@@ -388,7 +460,8 @@ def numbers(a):
         put("GATE_F", None, F["source"], "gate F not run at this freeze")
 
     # ---- street (the no-street ablation)
-    st = street_stats(fresh, nostreet) if nostreet else {"ok": False, "why": "no ablation dir"}
+    st = street_stats(fresh, nostreet, REGEN_WALLS if os.path.isdir(REGEN_WALLS) else None) if nostreet else {
+        "ok": False, "why": "no ablation dir"}
     if st.get("ok") and not st["unasked"]:
         put("STREET_NAMED", str(st["named"]), "the no-street ablation vs the full run (out/freeze/03-nostreet.log)")
         put("STREET_CARDS", str(st["cards"]), "the no-street ablation vs the full run (out/freeze/03-nostreet.log)")
@@ -401,12 +474,17 @@ def numbers(a):
         put("STREET_CARDS", None, "the no-street ablation", why)
 
     # ---- walls: ASKS_TOTAL, DATES
-    ws = walls_stats()
+    wdir = REGEN_WALLS if os.path.isdir(REGEN_WALLS) else WALLS
+    ws = walls_stats(wdir)
+    wsrc = "%s (the walls this regeneration read, sha256 %s)" % (os.path.relpath(wdir, ROOT), tree_hash(wdir)[:8])
     put("ASKS_TOTAL", "{:,}".format(ws["claude_chatgpt_dated_no_search"]),
-        "data/walls/*.json: dated Claude + ChatGPT answers, search-on lane excluded (both cities)",
+        wsrc + ": dated Claude + ChatGPT answers, search-on lane excluded, both cities",
         "plus %d other dated answers (Gemini census) and the search-on lane" % ws["other_dated_no_search"])
+    for c in ("stl", "nyc"):
+        put("ASKS_" + c.upper(), "{:,}".format(ws["claude_chatgpt_dated_no_search_by_city"].get(c, 0)),
+            wsrc + ": the same count, %s only" % c.upper())
     put("DATES", date_range(ws["first_asked_at"], ws["last_asked_at"]) if ws["first_asked_at"] else None,
-        "data/walls/*.json: first and last asked_at (ET)", "%s .. %s" % (ws["first_asked_at"], ws["last_asked_at"]))
+        wsrc + ": first and last asked_at (ET)", "%s .. %s" % (ws["first_asked_at"], ws["last_asked_at"]))
 
     # ---- COVERAGE (saturation.py --metrics), GEM_GEM (census_stats.py --gems)
     sat = log("03-saturation.log")
@@ -475,12 +553,14 @@ def numbers(a):
             qc[os.path.basename(p)] = sum(ns_)
     head = subprocess.run(["git", "-C", ROOT, "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
     doc = {"generated_at": dt.datetime.now().astimezone().strftime("%Y-%m-%dT%H:%M:%S%z"), "git_head": head,
-           "dry_run": bool(a.dry_run), "fresh_dir": fresh, "placeholders": P, "gates": G,
+           "dry_run": bool(a.dry_run), "fresh_dir": fresh, "provenance": provenance(fresh), "placeholders": P, "gates": G,
            "cedric": cedric_of(os.path.join(fresh, "stl_stl-cedric.json")) if ced else None,
            "street": st, "walls": {k: v for k, v in ws.items() if k != "by_file"},
            "qloo_calls": {"by_log": qc, "total": sum(qc.values())}}
     json.dump(doc, open(NUMBERS, "w"), indent=1, ensure_ascii=False, default=str)
     print("numbers: %s" % NUMBERS)
+    for pr in doc["provenance"]["problems"]:
+        print("STALE: %s (fill_devpost.py will refuse)" % pr)
     for k, v in P.items():
         print("  %-12s %-28s %s" % (k, (v["value"] or "-")[:28].replace("\n", " "), v["note"][:110]))
     print("  gates: " + " · ".join("%s %s" % (k, v.get("verdict")) for k, v in G.items() if isinstance(v, dict) and "verdict" in v))
@@ -616,6 +696,10 @@ def main():
     n.add_argument("--fresh", required=True)
     n.add_argument("--nostreet")
     n.add_argument("--dry-run", action="store_true")
+    sp.add_parser("prereg")
+    t = sp.add_parser("stamp")
+    t.add_argument("--fresh", required=True)
+    t.add_argument("--wt", required=True)
     u = sp.add_parser("unasked")
     u.add_argument("--fresh", required=True)
     u.add_argument("--write")
@@ -630,6 +714,10 @@ def main():
         snapshot_cedric(a.src, a.out)
     elif a.cmd == "numbers":
         numbers(a)
+    elif a.cmd == "prereg":
+        return prereg(a)
+    elif a.cmd == "stamp":
+        stamp(a)
     elif a.cmd == "unasked":
         unasked(a)
     elif a.cmd == "agentcheck":

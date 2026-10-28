@@ -12,6 +12,8 @@ Rules (devpost.md's legend, UNSAID.md §6.0):
     (i.e. by this freeze's media step);
   * the draft's legend (everything before the first "## Elevator pitch") is dropped unless --whole.
 It also checks the draft's hard-coded measured claims (gate A/B/E/F, k12) against numbers.json and prints any drift.
+Refuses (exit 3) unless numbers.json's regeneration is current: its engine commit contains HEAD's last engine commit
+and its priors hash equals data/priors now (freeze_numbers.py provenance); --allow-stale writes a labelled preview.
 Never edits the input. Writes <out> and a machine-readable <logs>/fill.json (filled, unfilled, drift)."""
 import argparse
 import json
@@ -77,11 +79,22 @@ def main():
     ap.add_argument("--in", dest="src", default=os.path.join(QLOO, "devpost.md"))
     ap.add_argument("--out", default=os.path.join(QLOO, "devpost.final.md"))
     ap.add_argument("--whole", action="store_true", help="keep the whole file (default drops the draft's legend)")
+    ap.add_argument("--allow-stale", action="store_true", help="fill even when the regeneration is stale (a preview; "
+                    "the header says STALE)")
     ap.add_argument("--report", help="fill.json path (default: next to numbers.json, fill.json or fill.<name>.json)")
     a = ap.parse_args()
     if os.path.abspath(a.src) == os.path.abspath(a.out):
         sys.exit("refusing: --out must be a new file, not the draft itself")
     N = json.load(open(a.numbers))
+    # every number must come from THIS freeze's regeneration: re-check its stamp against the tree now
+    sys.path.insert(0, os.path.join(ROOT, "tools"))
+    import freeze_numbers as FN
+    prov = FN.provenance(N.get("fresh_dir") or "")
+    if prov["problems"] and not a.allow_stale:
+        for pr in prov["problems"]:
+            print("REFUSING to fill: %s" % pr, file=sys.stderr)
+        print("Regenerate (./freeze.sh --from 2), or pass --allow-stale for a labelled preview.", file=sys.stderr)
+        sys.exit(3)
     text = open(a.src).read()
     if not a.whole:
         i = text.find("\n## Elevator pitch")
@@ -143,7 +156,8 @@ def main():
         if bad:
             drift.append({"claim": label, "status": "DRIFT", "text": got, "freeze": [num(w) if isinstance(w, (int, float)) else w for w in want]})
 
-    head = ("<!-- Filled by tools/fill_devpost.py at %s from %s (freeze snapshot %s, git %s). Source: %s. "
+    stale = ("STALE PREVIEW (%s). " % "; ".join(prov["problems"])) if prov["problems"] else ""
+    head = (stale and "<!-- %s-->\n" % stale) + ("<!-- Filled by tools/fill_devpost.py at %s from %s (freeze snapshot %s, git %s). Source: %s. "
             "Unfilled: %s. Strip the HTML comments before pasting into Devpost. -->\n\n" % (
                 time.strftime("%Y-%m-%d %H:%M %Z"), os.path.relpath(a.numbers, ROOT), N.get("generated_at"),
                 N.get("git_head"), a.src, ", ".join(sorted(unfilled)) or "none"))

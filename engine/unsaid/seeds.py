@@ -45,6 +45,20 @@ ALIASES = {"cedric": "stl-cedric", "jason": "stl-jason", "A": "nyc-khruangbin"}
 CITY_QUERY = {"nyc": ("New York City", "New York"), "stl": ("St. Louis", "Missouri"), "la": ("Los Angeles", "California")}
 
 
+TRY_THESE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data",
+                         "try_these.json")
+
+
+def try_these_ids():
+    """The try-these presets, in the site's order, from data/try_these.json (the pre-registered data/sets.json keeps
+    its hashed bytes, so its try_these flags are the 27 Oct ones). None when the file is absent."""
+    if not os.path.exists(TRY_THESE):
+        return None
+    with open(TRY_THESE) as f:
+        d = json.load(f)
+    return [sid for c in ("nyc", "stl", "la") for sid in d.get(c, [])]
+
+
 def _load():
     src = next((p for p in SOURCES if os.path.exists(p)), None)
     if src:
@@ -58,6 +72,10 @@ def _load():
                 loves = [(l[0], l[1] if len(l) > 1 else None) for l in loves]
                 sets.setdefault(x["city"], []).append((x["id"], loves))
                 meta[x["id"]] = {"label": x.get("label"), "city": x["city"], "try_these": bool(x.get("try_these"))}
+            tt = try_these_ids()
+            if tt is not None:                       # data/try_these.json overrides the sets file's flags
+                for sid, m in meta.items():
+                    m["try_these"] = sid in tt
             sets.setdefault("la", FALLBACK_SETS["la"])
             return sets, meta, src
         except (OSError, ValueError, KeyError, TypeError):

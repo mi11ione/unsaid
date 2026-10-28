@@ -1,5 +1,5 @@
 {
- "_": "built from data/sets.json (try_these: true); src is null until a stored result exists",
+ "_": "built from data/try_these.json + data/sets.json; src is null until a stored result exists",
  "sets": [
   {
    "id": "stl-cedric",

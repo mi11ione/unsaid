@@ -78,7 +78,9 @@ cp -p "$STAGE"/*.json "$FRESH/"
 python3 -I - "$WT" "$STAGE" "$LIVE" <<'PY'
 import json, os, shutil, sys
 wt, stage, live = sys.argv[1:4]
-tt = [s["id"] for s in json.load(open(os.path.join(wt, "data", "sets.json")))["sets"] if s.get("try_these")]
+ttp = os.path.join(wt, "data", "try_these.json")     # the presets live apart from the hashed data/sets.json
+tt = ([i for c in ("nyc", "stl") for i in json.load(open(ttp)).get(c, [])] if os.path.exists(ttp) else
+      [s["id"] for s in json.load(open(os.path.join(wt, "data", "sets.json")))["sets"] if s.get("try_these")])
 idx = json.load(open(os.path.join(stage, "index.json")))
 by = {s["id"]: s for s in idx["sets"]}
 order = [i for c in ("nyc", "stl") for i in tt if by[i]["city"] == c]       # the site's order: NYC first

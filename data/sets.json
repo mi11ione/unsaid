@@ -58,7 +58,7 @@
    "label": "Nelly · St. Louis",
    "city": "stl",
    "city_slug": "st-louis",
-   "try_these": false,
+   "try_these": true,
    "loves": [
     [
      "Nelly",
@@ -102,7 +102,7 @@
    "label": "SZA · St. Louis",
    "city": "stl",
    "city_slug": "st-louis",
-   "try_these": false,
+   "try_these": true,
    "loves": [
     [
      "SZA",
@@ -190,7 +190,7 @@
    "label": "Big Thief · St. Louis",
    "city": "stl",
    "city_slug": "st-louis",
-   "try_these": true,
+   "try_these": false,
    "loves": [
     [
      "Big Thief",
@@ -212,7 +212,7 @@
    "label": "Morgan Wallen · St. Louis",
    "city": "stl",
    "city_slug": "st-louis",
-   "try_these": true,
+   "try_these": false,
    "loves": [
     [
      "Morgan Wallen",
