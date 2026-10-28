@@ -114,7 +114,8 @@ class TestRunUnsaid(Tmp):
         self.assertEqual(r["chip"]["kind"], "tag")
         self.assertEqual(api.resolve_love("zzqx unknown", "tag", mode="fake", qloo=self.q())["status"], "miss")
         c = api.resolve_city("Brooklyn", mode="fake", qloo=self.q())
-        self.assertEqual((c["status"], c["city"]["slug"], c["city"]["radius_mi"]), ("ok", "new-york", 8))
+        self.assertEqual((c["status"], c["city"]["slug"], c["city"]["radius_mi"]),
+                         ("ok", "new-york", C.CITIES["nyc"]["radius_mi"]))
         self.assertEqual(api.resolve_city("Richmond", mode="fake", qloo=self.q())["status"], "needs_input")
 
     def test_dead_love_vibe_and_rho(self):
@@ -240,6 +241,49 @@ class TestWallCount(Tmp):
         self.assertEqual(len(set(E.wall_places(["The Pageant", "Gioia's Deli"], {"The Pageant": "m"}).values())), 2)
 
 
+class TestStruckFitRanks(Tmp):
+    def test_struck_fit_ranks_are_the_struck_members_ranks_under_the_rrf(self):
+        q = self.q()
+        r = api.run_unsaid("St. Louis", CEDRIC, mode="fake", qloo=q, gemini=False, street_check=False)
+        sfr = r["diag"]["struck_fit_ranks"]
+        self.assertTrue(sfr and sfr == sorted(sfr) and all(isinstance(x, int) and 1 <= x <= r["counts"]["U"] for x in sfr))
+        self.assertEqual(len(set(sfr)), len(sfr))
+        self.assertTrue(set(c["fit_rank"] for c in r["picks"] + r["reserves"]).isdisjoint(sfr), "cards are never struck")
+        # strike the for-you top 3 on purpose: the UI line's condition then holds
+        res = E.run(QL.Qloo(fake=True, cache_dir=self.dir), E.resolve_city(None, "St. Louis"),
+                    [tuple(x) for x in CEDRIC], {"answers": []})
+        top3 = sorted(res["_R"]["fit"], key=lambda i: res["_R"]["fit"][i])[:3]
+        names = {e["entity_id"]: e["name"] for e in res["_U"]}
+        wall = os.path.join(self.dir, "w.json")
+        with open(wall, "w") as f:
+            json.dump({"walls": [{"city": "stl", "set": "city", "answers": [
+                {"provider": "t", "asked_at": "2026-10-28", "lane": "dated",
+                 "names": [{"name": names[i]} for i in top3]}]}]}, f)
+        r = api.run_unsaid("St. Louis", CEDRIC, mode="fake", qloo=self.q(), walls_path=wall, gemini=False,
+                           street_check=False)
+        self.assertTrue({1, 2, 3} <= set(r["diag"]["struck_fit_ranks"]))
+
+
+class TestAllTiedLoveIsDead(Tmp):
+    def test_a_love_tied_on_95pct_of_U_is_dead_and_leaves_the_tie_share(self):
+        os.environ["FAKE_TIE_LOVES"] = "urn:tag:specialty_dish:place:rib_tips"   # live P11: rib tips 100% tied
+        try:
+            r = api.run_unsaid("St. Louis", CEDRIC, mode="fake", qloo=self.q(), gemini=False, street_check=False)
+        finally:
+            del os.environ["FAKE_TIE_LOVES"]
+        self.assertAlmostEqual(r["diag"]["tie_by_love"]["Rib Tips"], 1.0)
+        self.assertIn("dead_love:Rib Tips", r["flags"])
+        self.assertNotIn("thin_taste", r["flags"])
+        self.assertLess(r["diag"]["tie_share"], 0.30)          # live loves only
+        rib = next(l for l in r["loves"] if l["label"] == "Rib Tips")
+        self.assertTrue(rib["dead"] and rib["dead_reason"].startswith("ties"))
+        self.assertEqual(rib["dead_line"], "Rib Tips doesn't change St. Louis restaurants much; ranked on the other two.")
+        self.assertEqual(len(r["picks"]), 7)
+        self.assertFalse(any(c["because"] == "Rib Tips" for c in r["picks"]))
+        self.assertTrue(all(c["n_loves"] == 2 for c in r["picks"]))
+        self.assertEqual(set(r["diag"]["tie_by_love"]), {l["label"] for l in r["loves"]})
+
+
 class TestDeadline(Tmp):
     def test_hard_cap_degrades(self):
         events = []
@@ -280,7 +324,8 @@ class TestClientRules(Tmp):
     def test_bucket_and_point(self):
         self.assertEqual((QL.BUCKET.rate, QL.BUCKET.capacity), (3.0, 5.0))
         p = C.location_params(E.resolve_city(None, "St. Louis"))
-        self.assertEqual(p, {"filter.location": "POINT(-90.1994 38.627)", "filter.location.radius": 16093})
+        self.assertEqual(p, {"filter.location": "POINT(-90.1994 38.627)",
+                             "filter.location.radius": C.CITIES["stl"]["radius_m"]})   # R is a set point (§4 widen R)
         la = C.location_params(E.resolve_city(None, "Los Angeles"))
         self.assertEqual(la["filter.location.radius"], 24140)
         self.assertTrue(la["filter.location"].startswith("POINT(-118"))

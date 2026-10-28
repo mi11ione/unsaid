@@ -391,6 +391,7 @@ def to_contract(res, trace, c, ls, fake):
     out["diag"].update({
         "obscure_names": [n for _, n in d.get("obscure") or []], "known_names": [n for _, n in d.get("known") or []],
         "calls": call_counts(trace), "wall_names": d.get("wall_names"),
+        "struck_fit_ranks": d.get("struck_fit_ranks") or [],
         "qloo_calls": len(trace), "qloo_network": sum(1 for r in trace if not r["cache"]),
         "rho_tp": _nan(d.get("rho_tp")), "rho_res": _nan(d.get("rho_res")), "rho_res_note": d.get("rho_res_note"),
         "cap_keep": d.get("cap_keep"),
@@ -399,7 +400,8 @@ def to_contract(res, trace, c, ls, fake):
         "obscure": [{"id": i, "name": n} for i, n in d.get("obscure") or []],
         "known": [{"id": i, "name": n} for i, n in d.get("known") or []],
         "engine_v": d.get("engine_v", E.ENGINE_V), "as_of": d.get("as_of"), "trace_url": None,
-        "tie_share": _nan(d.get("tie_share")), "baseline": d.get("baseline"), "lanes_failed": d.get("lanes_failed"),
+        "tie_share": _nan(d.get("tie_share")),
+        "tie_by_love": {label.get(k, k): _nan(v) for k, v in (d.get("tie_by_love") or {}).items()}, "baseline": d.get("baseline"), "lanes_failed": d.get("lanes_failed"),
         "wall_source": (d.get("wall") or {}).get("source"), "kept": d.get("kept"),
         "reverse_struck": d.get("reverse_struck"), "last_seen_dropped": d.get("last_seen_dropped"),
         "rescore": {label.get(k, k): {kk: _nan(vv) if isinstance(vv, float) else vv for kk, vv in v.items()}

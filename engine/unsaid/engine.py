@@ -42,6 +42,7 @@ CFG = {
     "N_CARDS": 7, "N_RESERVES": 3,
     "SEARCH_RADIUS_MI": 15,      # C7 city-scoped /search
     "FLAT_RHO": 0.90, "DEAD_RHO": 0.95, "THIN_TIE": 0.30, "FLAT_POP_KEEP": 0.80,
+    "DEAD_TIE": 0.95,            # a love with >= 95% of U at the default affinity ranks nothing: dead (gate B live)
     "ANCHOR_DRIFT_MAX": 0.005, "COVERAGE_MIN": 0.95,
     "BASELINE": "popularity",    # P12 decides; "nosignal" rescores U with no signal (+~5 calls)
     "NS_IS_POP_RHO": 0.99,       # P12: no-signal order == popularity at Spearman >= 0.99 -> RHO_RES undefined
@@ -285,7 +286,10 @@ def excluded_kind(e):
         kind_tag = tid.startswith(("urn:tag:category:place:", "urn:tag:genre:place:"))
         fast = "fast_food" in tid and (kind_tag or tid.startswith(("urn:tag:cuisine:", "urn:tag:culinary_style:")))
         hit = any(p in tid for p in pats) or (t.get("name") or "").strip().lower() in names
-        if hit and (fast or (kind_tag and not eatery)):
+        music = any(m in tid for m in ("music_venue", "concert_venue", "concert_hall"))
+        # §3.1 hard-excludes food courts, hotels, malls, groceries, butchers and gyms outright; only a music
+        # venue that is also tagged a restaurant or bar (a jazz bar with a kitchen) is kept
+        if hit and (fast or (kind_tag and (not music or not eatery))):
             return t.get("id") or t.get("name")
     return None
 
@@ -676,9 +680,12 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
             base_label = "anyone = Qloo's no-signal order of these %d places (P12)" % N
 
     # ---- dead loves
+    tie_by_love = {l["text"]: len(tied_only[l["text"]]) / float(N) for l in rescorable}
     for l in rescorable:
         r = rs_diag[l["text"]]["rho_pop"]
-        if r == r and r >= CFG["DEAD_RHO"]:
+        if tie_by_love[l["text"]] >= CFG["DEAD_TIE"]:
+            l["dead"], l["dead_reason"] = True, "ties %.2f" % tie_by_love[l["text"]]
+        elif r == r and r >= CFG["DEAD_RHO"]:
             l["dead"], l["dead_reason"] = True, "rho %.2f" % r
     live = [l for l in rescorable if not l.get("dead")]
     all_dead = not live
@@ -939,7 +946,7 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
                           "struck_in_U": len(struck_u)})
     res["diag"].update({
         "N": N, "S": len(S), "kept": len(eligible), "flat": flat, "all_dead": all_dead, "thin_taste": thin,
-        "tie_share": tie_share, "rescore": rs_diag, "rho_tp": rho_tp, "rho_res": rho_res, "rho_res_note": rho_res_note,
+        "tie_share": tie_share, "tie_by_love": tie_by_love, "rescore": rs_diag, "rho_tp": rho_tp, "rho_res": rho_res, "rho_res_note": rho_res_note,
         "rho_taste_base": rho_tp, "rho_taste_pop": rho_tp, "baseline": base_label,
         "cap_keep": cap.get("cap_keep"), "cap_shared": len(cap_ids & set(picks)) if cap.get("cap7") else None,
         "popcap_overlap": cap.get("overlap", float("nan")), "cap": {k: v for k, v in cap.items() if k != "topk"},
@@ -951,6 +958,9 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
                  "c7_calls": sum(c.calls for c in css), "c7_skipped": sum(len(c.skipped) for c in css),
                  "c7_busy": sum(len(c.busy) for c in css)},
         "reverse_struck": rev_struck, "last_seen_dropped": unseen, "hours_coverage": hours_cov,
+        # fit ranks in U (RRF order) of every struck member, wall strike + reverse check: "Your #1-#3 were on the
+        # AIs' lists." only when 1, 2 and 3 are all here
+        "struck_fit_ranks": sorted(fit[i] for i in set(struck) & set(ids)),
         "lanes_failed": lanes_failed, "as_of": as_of, "elapsed_s": round(time.monotonic() - t0, 3),
         "loves_live": [l["text"] for l in live], "street_asks": len(street_answers)})
     res["_R"] = {"fit": fit, "pop_ord": pop_ord, "lift": lift, "orders": orders, "pop": pop, "tied": tied,

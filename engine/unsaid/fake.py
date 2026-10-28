@@ -236,6 +236,7 @@ class FakeQloo:
         self.flaky = os.environ.get("FAKE_FLAKY") == "1"
         self.w = float(os.environ.get("FAKE_TASTE_WEIGHT", "0.55"))
         self.tie = float(os.environ.get("FAKE_TIE_SHARE", "0.08"))
+        self.tie_all = {x.strip().lower() for x in os.environ.get("FAKE_TIE_LOVES", "").split(",") if x.strip()}
         self.dead = {uid("seed:" + k) for k in DEAD_SEEDS}
 
     # ---- transport interface -------------------------------------------
@@ -426,7 +427,8 @@ class FakeQloo:
                 scored.append((a, pl, None))
                 continue
             popz = (pl["popularity"] - 0.5) / 0.5
-            if len(seed_vecs) == 1 and h(pl["entity_id"] + seed_vecs[0][0], 11) < self.tie:
+            if len(seed_vecs) == 1 and (seed_vecs[0][0].lower() in self.tie_all
+                                        or h(pl["entity_id"] + seed_vecs[0][0], 11) < self.tie):
                 scored.append((DEFAULT_AFF, pl, None))      # Qloo's default affinity: a tie, not a rank
                 continue
             contrib = []

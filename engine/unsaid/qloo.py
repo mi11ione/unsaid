@@ -269,7 +269,8 @@ class Qloo:
         if self.fake:  # the fake world's knobs are part of the key, so changing them never serves stale responses
             from unsaid.fake import WORLD_V
             k = "fake|%s|%s|%s|%s" % (WORLD_V, os.environ.get("FAKE_TASTE_WEIGHT", "0.55"),
-                                      os.environ.get("FAKE_TIE_SHARE", "0.08"), k)
+                                      os.environ.get("FAKE_TIE_SHARE", "0.08") + "|" +
+                                      os.environ.get("FAKE_TIE_LOVES", ""), k)
         return hashlib.sha256(k.encode()).hexdigest()
 
     def _fresh(self, fpath, path):
