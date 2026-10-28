@@ -50,7 +50,8 @@ CFG = {
     # candidates strike their best match when its fuzzy score reaches the token threshold. "all" = the old path.
     "C7_MODE": "capped", "C7_MAX": 20, "C7_MIN_TOKEN": 4, "C7_RARE_MAX": 3, "UNSURE_STRIKE": 0.85,
     "C7_WORKERS": 8,
-    "CAP_ENABLED": True,         # False: skip the CAP call (offline reruns; cards never depend on it)
+    "CAP_ENABLED": True,
+    "CONCURRENT": True,          # False: rescoring and the strike run one after the other (CPU measurement only)         # False: skip the CAP call (offline reruns; cards never depend on it)
     "FLAT_RHO": 0.90, "DEAD_RHO": 0.95, "THIN_TIE": 0.30, "FLAT_POP_KEEP": 0.80,
     "DEAD_TIE": 0.95,            # a love with >= 95% of U at the default affinity ranks nothing: dead (gate B live)
     "ANCHOR_DRIFT_MAX": 0.005, "COVERAGE_MIN": 0.95,
@@ -75,6 +76,19 @@ GENERIC_WHAT = {"urn:tag:category:place:restaurant", "urn:tag:category:place:bar
 
 def _noop(*a, **k):
     pass
+
+
+class CPU:
+    """Process CPU seconds per stage (time.process_time, all threads): diag.cpu_s."""
+
+    def __init__(self):
+        self.t = time.process_time()
+        self.out = {}
+
+    def mark(self, stage):
+        now = time.process_time()
+        self.out[stage] = round(self.out.get(stage, 0.0) + now - self.t, 4)
+        self.t = now
 
 
 # ---------------------------------------------------------------- resolve
@@ -306,22 +320,40 @@ def taste_pool(q, city, loves, pages=None, kind_tags=None, label=None, adaptive=
 
 
 # ---------------------------------------------------------------- floor
-def excluded_kind(e):
-    pats, names = CFG["EXCLUDE_TAG_PATTERNS"], set(CFG["EXCLUDE_TAG_NAMES"])
-    tags = [t for t in (e.get("tags") or []) if isinstance(t, dict)]
-    ids = {(t.get("id") or t.get("tag_id") or "").lower() for t in tags}
-    eatery = any(i in ("urn:tag:category:place:restaurant", "urn:tag:category:place:bar") or
-                 i.startswith("urn:tag:genre:place:restaurant") and "fast_food" not in i for i in ids)
-    for t in tags:
+_TAG_FACTS = {"cfg": None, "memo": {}}
+
+
+def _tag_facts(t):
+    """(eatery, kind_tag, fast, hit, music) for one tag dict. Pure in the tag and CFG, so memoised: Qloo's tag
+    vocabulary is small and every place repeats it."""
+    cfg = (tuple(CFG["EXCLUDE_TAG_PATTERNS"]), tuple(CFG["EXCLUDE_TAG_NAMES"]))
+    if _TAG_FACTS["cfg"] != cfg:
+        _TAG_FACTS["cfg"], _TAG_FACTS["memo"] = cfg, {}
+    key = (t.get("id"), t.get("tag_id"), t.get("name"))
+    f = _TAG_FACTS["memo"].get(key)
+    if f is None:
+        pats, names = cfg
         tid = (t.get("id") or t.get("tag_id") or "").lower()
+        eatery = tid in ("urn:tag:category:place:restaurant", "urn:tag:category:place:bar") or \
+            (tid.startswith("urn:tag:genre:place:restaurant") and "fast_food" not in tid)
         # live data (28 Oct): setting/decor/interest tags ("setting:qloo:hotel" on Ruth's Chris) are not the
         # place's kind, so only category/genre tags, plus fast-food cuisine tags, can exclude it
         kind_tag = tid.startswith(("urn:tag:category:place:", "urn:tag:genre:place:"))
         fast = "fast_food" in tid and (kind_tag or tid.startswith(("urn:tag:cuisine:", "urn:tag:culinary_style:")))
-        if not (fast or kind_tag):
-            continue                     # such a tag can never exclude (speed only: same outcome)
         hit = any(p in tid for p in pats) or (t.get("name") or "").strip().lower() in names
         music = any(m in tid for m in ("music_venue", "concert_venue", "concert_hall"))
+        f = (eatery, kind_tag, fast, hit, music)
+        if len(_TAG_FACTS["memo"]) > 100000:
+            _TAG_FACTS["memo"] = {}
+        _TAG_FACTS["memo"][key] = f
+    return f
+
+
+def excluded_kind(e):
+    tags = [t for t in (e.get("tags") or []) if isinstance(t, dict)]
+    facts = [_tag_facts(t) for t in tags]
+    eatery = any(f[0] for f in facts)
+    for t, (_, kind_tag, fast, hit, music) in zip(tags, facts):
         # §3.1 hard-excludes food courts, hotels, malls, groceries, butchers and gyms outright; only a music
         # venue that is also tagged a restaurant or bar (a jazz bar with a kitchen) is kept
         if hit and (fast or (kind_tag and (not music or not eatery))):
@@ -704,6 +736,20 @@ class _RIndex(list):
         return memo[t]
 
 
+_RCACHE = []        # [(answers kept alive, its index)]: the dated wall's reverse index is built once per snapshot
+
+
+def reverse_index_cached(answers):
+    ids = tuple(map(id, answers))
+    for kept, ri in _RCACHE:
+        if len(kept) == len(answers) and tuple(map(id, kept)) == ids:
+            return ri
+    ri = reverse_index(answers)
+    _RCACHE.append((list(answers), ri))
+    del _RCACHE[:-8]
+    return ri
+
+
 def reverse_index(answers):
     return _RIndex((i, _Toks(M.tokens(answer_text(a)))) for i, a in enumerate(answers))
 
@@ -912,6 +958,7 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
     strict=True: a love that needs input stops the run (the API); False: take the top candidate (the scripts)."""
     emit = emit or _noop
     t0 = time.monotonic()
+    cpu = CPU()
     res = {"status": None, "flags": [], "cards": [], "picks": [], "reserves": [], "diag": {"engine_v": ENGINE_V},
            "loves": [], "city": None, "wall": [], "counts": {}, "burn": {"asked": [], "burned": []}}
     city = city_q if isinstance(city_q, dict) else resolve_city(q, city_q, region)
@@ -927,6 +974,7 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
     if skeptic_fn and not street_check:          # legacy hook: returns names said about a neighbourhood
         street_check = lambda hood, cname: [{"names": skeptic_fn(hood, cname), "provider": "skeptic",  # noqa: E731
                                              "lane": "live", "asked_at": time.strftime("%Y-%m-%dT%H:%M:%S")}]
+    cpu.mark("resolve")
     vibe = [l for l in loves if l.get("dead") and l.get("dead_reason") == "vibe"]
     rescorable = [l for l in loves if not (l.get("dead") and l.get("dead_reason") == "vibe")]
     lanes_failed = []
@@ -961,6 +1009,7 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
     dropped = [e for e in pool if e["entity_id"] not in byid]
     dropped_index = M.PoolIndex([{"entity_id": e["entity_id"], "name": e.get("name", "")} for e in dropped]) \
         if dropped else None
+    cpu.mark("pool")
 
     # ---- strike the dated wall (generic names strike as soon as U exists)
     answers = list(wall.get("answers") or [])
@@ -988,13 +1037,21 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
 
     # C6' (every love at once) runs beside the strike: both need only U. The global bucket paces them together.
     side = ThreadPoolExecutor(max_workers=2)
-    resc_future = side.submit(lambda: _pmap(lambda l: rescore(q, city, loves, ids, l, "C6' %s" % l["text"][:18]),
-                                            rescorable, max(1, len(rescorable))))
+    do_rescore = lambda: _pmap(lambda l: rescore(q, city, loves, ids, l, "C6' %s" % l["text"][:18]),  # noqa: E731
+                               rescorable, max(1, len(rescorable)))
     struck, per, css = {}, {}, []
-    try:
+    if CFG["CONCURRENT"]:
+        resc_future = side.submit(do_rescore)
+        try:
+            strike_answers(answers, struck, per, css)
+        finally:
+            resc_all = resc_future.result()       # re-raises a deadline or budget stop from the rescoring
+        cpu.mark("rescore+strike")
+    else:
+        resc_all = do_rescore()
+        cpu.mark("rescore")
         strike_answers(answers, struck, per, css)
-    finally:
-        resc_all = resc_future.result()       # re-raises a deadline or budget stop from the rescoring
+        cpu.mark("strike")
 
     # ---- C6' per-love orders (one love's signal per call)
     pop = {i: popularity(byid[i]) for i in ids}
@@ -1066,6 +1123,7 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
     all_answers = list(answers)
     struck_u = set(struck) & set(ids)
 
+    cpu.mark("orders")
     # ---- S, holds, eligibility
     S = [i for i in ids if i not in struck_u]
     n_live = len(live)
@@ -1096,7 +1154,7 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
         order = sorted(eligible, key=lambda i: (-lift[i], fit[i], i))
 
     # ---- 7 + 3 via the reverse check and the last-seen check
-    rindex = reverse_index(all_answers)
+    rindex = reverse_index_cached(all_answers)
     hours_cov = sum(1 for e in U if prop(e, "hours")) / float(N)
     hours_known = hours_cov >= CFG["HOURS_COVERAGE_MIN"]
     selected, rev_struck, unseen, seen_info = [], [], [], {}
@@ -1236,7 +1294,9 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
                 continue
             k += 1
 
+    cpu.mark("ranking")
     street_pass()
+    cpu.mark("street")
 
     # ---- the live lane (Gemini taste ask), joined after the cards are out (§3.4). Its names join the wall; a card
     # they name (the matcher, then the reverse check on its raw text) burns "by gemini (live)", and a reserve rises.
@@ -1352,6 +1412,8 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
         "struck_fit_ranks": sorted(fit[i] for i in set(struck) & set(ids)),
         "lanes_failed": lanes_failed, "as_of": as_of, "elapsed_s": round(time.monotonic() - t0, 3),
         "loves_live": [l["text"] for l in live], "street_asks": len(street_answers)})
+    cpu.mark("result")
+    res["diag"]["cpu_s"] = cpu.out
     res["_R"] = {"fit": fit, "pop_ord": pop_ord, "lift": lift, "orders": orders, "pop": pop, "tied": tied,
                  "taste_rank": fit, "pop_rank": pop_ord, "base_rank": pop_ord, "N": N}
     res["_U"] = U

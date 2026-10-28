@@ -174,16 +174,32 @@ def _fuzzy(a, b):
     return m.quick_ratio() >= 0.85 and m.ratio() >= 0.85
 
 
+@lru_cache(maxsize=1 << 16)
+def bigrams(t):
+    """A token's bigram multiset, as a dict."""
+    out = {}
+    for i in range(len(t) - 1):
+        g = t[i:i + 2]
+        out[g] = out.get(g, 0) + 1
+    return out
+
+
 class TokenIndex:
-    """The distinct tokens of a set of names, bucketed by length, so a token is compared only with tokens that
-    could pass tok_eq at all (equal, or both >= 5 letters within the length bound)."""
+    """The distinct tokens of a set of names, so a token is compared only with tokens that could pass tok_eq at all:
+    equal, or both >= 5 letters, within the length bound, AND sharing >= 3 bigram occurrences. The last one is exact:
+    ratio >= 0.85 needs M >= 0.425(la+lb) matched characters in at most (la+lb-2M+1) blocks, so the blocks hold
+    >= 3M-(la+lb)-1 >= 3 shared bigrams (the minimum over every length, checked by brute force; 0 violations in
+    397k random pairs that pass tok_eq)."""
 
     def __init__(self, toks):
         self.exact = set(toks)
         self.by_len = {}
+        self.post = {}                     # (bigram, length) -> [(token, count)] over tokens of >= 5 letters
         for t in self.exact:
             if len(t) >= 5:
                 self.by_len.setdefault(len(t), []).append(t)
+                for g, c in bigrams(t).items():
+                    self.post.setdefault((g, len(t)), []).append((t, c))
         self._rel, self._fwd = {}, {}
 
     def _window(self, t):
@@ -191,7 +207,13 @@ class TokenIndex:
         if la < 5:
             return []
         lo, hi = max(5, int(math.floor(la * 0.85 / 1.15)) - 1), int(math.ceil(la * 1.15 / 0.85)) + 1
-        return [u for n in range(lo, hi + 1) for u in self.by_len.get(n, ())]
+        shared = {}
+        lens = [n for n in range(lo, hi + 1) if n in self.by_len]
+        for g, c in bigrams(t).items():
+            for n in lens:
+                for u, cu in self.post.get((g, n), ()):
+                    shared[u] = shared.get(u, 0) + (c if c < cu else cu)
+        return [u for u, n in shared.items() if n >= 3]
 
     def related(self, t):
         """Every indexed u with tok_eq(t, u) or tok_eq(u, t) (both orders: R2 and R3 call it each way)."""
@@ -206,7 +228,7 @@ class TokenIndex:
         """Is there an indexed u with tok_eq(t, u)?"""
         r = self._fwd.get(t)
         if r is None:
-            r = t in self.exact or any(tok_eq(t, u) for u in self._window(t))
+            r = t in self.exact or any(tok_eq(t, u) for u in sorted(self._window(t)))
             self._fwd[t] = r
         return r
 

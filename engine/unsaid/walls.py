@@ -45,8 +45,22 @@ def _ckey(city):
     return CITY_ALIASES.get(city, city)
 
 
+_LOADED = {}
+
+
 def load_file(walls_file):
-    """One walls JSON, or a directory of them (data/walls/: wall-N.json + census.json), merged like the server does."""
+    """One walls JSON, or a directory of them (data/walls/: wall-N.json + census.json), merged like the server does.
+    Parsed once per (path, file mtimes): the answers are shared and read-only."""
+    paths = ([os.path.join(walls_file, f) for f in sorted(os.listdir(walls_file)) if f.endswith(".json")]
+             if os.path.isdir(walls_file) else [walls_file])
+    key = (os.path.abspath(walls_file), tuple((p, os.path.getmtime(p)) for p in paths))
+    if key not in _LOADED:
+        _LOADED.clear()
+        _LOADED[key] = _load_file(walls_file)
+    return _LOADED[key]
+
+
+def _load_file(walls_file):
     if os.path.isdir(walls_file):
         out = {"walls": []}
         for fn in sorted(os.listdir(walls_file)):

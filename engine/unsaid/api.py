@@ -168,6 +168,37 @@ def match_set(city_key, loves):
     return None
 
 
+# ---------------------------------------------------------------- boot
+def warm(walls_path, cities=("nyc", "stl")):
+    """Boot work, once per process (the server calls it at start): parse the walls and normalise every wall name
+    (norm, keys, distinctive tokens, brand prefix, bigrams, place part) so no query pays for it. Returns
+    {city: names, "cpu_s"}. Results are unchanged: these are the same memoised pure functions the strike calls."""
+    import time as _t
+    t = _t.process_time()
+    out = {}
+    for ck in cities:
+        try:
+            w = W.wall_for(ck, None, walls_path)
+            data = W.load_file(walls_path)
+        except (OSError, ValueError):
+            continue
+        answers = [a for x in data.get("walls", []) if W._ckey(x.get("city")) == ck for a in x.get("answers") or []]
+        names = list(dict.fromkeys(n["name"] if isinstance(n, dict) else n
+                                   for a in answers for n in a.get("names") or []))
+        for n in names:
+            M.keys(n)
+            M.brand_seq(n)
+            E.place_part(n)
+            for x in (n, M.split_parts(n)[0]):
+                for tok in M.distinctive(x):
+                    M.bigrams(tok)
+            M.norm(n)
+        E.reverse_index_cached(list(w["answers"]))
+        out[ck] = len(names)
+    out["cpu_s"] = round(_t.process_time() - t, 3)
+    return out
+
+
 # ---------------------------------------------------------------- the run
 def run_unsaid(city, loves, *, walls_path=None, mode="fake", on_event=None, qloo=None, gemini=None,
                street_check=None, last_seen=None, set_id=None, use_cache=True, deadline_s=HARD_CAP_S):
@@ -259,6 +290,7 @@ def run_unsaid(city, loves, *, walls_path=None, mode="fake", on_event=None, qloo
         return finish(r)
 
     # ---- the dated wall streams first, from static data
+    cpu = E.CPU()
     city_key = c.get("key")
     sid = (SD.resolve(city_key, set_id) or set_id) if set_id else match_set(city_key, ls)
     try:
@@ -268,6 +300,7 @@ def run_unsaid(city, loves, *, walls_path=None, mode="fake", on_event=None, qloo
     for a in wall["answers"]:
         for n in a.get("names") or []:
             send(dict(E.wall_item(a, n["name"] if isinstance(n, dict) else n), type="wall_name"))
+    cpu.mark("wall load")
 
     # ---- the live taste ask runs beside the Qloo path from t = 0
     if gemini is None and fake:
@@ -339,7 +372,12 @@ def run_unsaid(city, loves, *, walls_path=None, mode="fake", on_event=None, qloo
     finally:
         q.on_call = None
         q.deadline = None
-    return finish(to_contract(res, q.trace[t_start:], c, ls, fake))
+    cpu.t = __import__("time").process_time()
+    out = to_contract(res, q.trace[t_start:], c, ls, fake)
+    cpu.mark("contract")
+    out["diag"]["cpu_s"] = dict(cpu.out, **{"engine." + k: v for k, v in ((res.get("diag") or {}).get("cpu_s") or
+                                                                      {}).items()})
+    return finish(out)
 
 
 def _empty(status, diag=None):
