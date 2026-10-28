@@ -4,7 +4,13 @@
 (async function () {
   const { el, esc, ph, et, hhmm } = UM;
   const $ = (s, r = document) => r.querySelector(s);
-  const [CFG, CEN, TRY] = await Promise.all([UM.json('data/config.json'), UM.json('data/census.json'), UM.json('data/try.json')]);
+  const [CFG, CEN, TRY, LIVE] = await Promise.all([UM.json('data/config.json'), UM.json('data/census.json'), UM.json('data/try.json'),
+    UM.json('data/live/index.json').catch(() => null)]);
+  // real precomputed sets (site/data/live, uploaded with the deploy) replace the MOCK ones and enable the rest
+  if (LIVE && Array.isArray(LIVE.sets)) LIVE.sets.forEach(l => {
+    const t = TRY.sets.find(x => x.id === l.id); if (!t || !l.file || l.fake) return;
+    Object.assign(t, { src: 'data/live/' + l.file, mock: false, ran: l.ran_at || l.as_of || null });
+  });
   API.ping(); // wake the engine while the visitor types (§3.9)
   const view = $('#view'), topEl = $('#top');
   const WORD = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
@@ -179,8 +185,8 @@
       <div class="note" id="notes"></div>
       <section class="sec" id="s-wall">
         <div class="sh"><h2>Everyone gets these</h2><span class="sub">Good places. Already on the AIs’ lists.</span>
-          <div class="tr"><div class="counter" id="counter"></div><div class="counter-cap">names the AIs gave everyone · left for you, ranked by Qloo</div></div></div>
-        <div class="fieldwrap" id="fw"><div class="field" id="field"></div>
+          <div class="tr"><div class="counter" id="counter"></div><div class="counter-cap">places the AIs gave everyone · left for you, ranked by Qloo</div></div></div>
+        <div class="fieldwrap" id="fw"><div class="field" id="field"></div><div class="note" id="legend"></div>
           <button class="showall" id="showall"></button>
           <button class="showrow" id="showrow"><span>everything the AI named, <span class="red">crossed out</span></span><span class="dim">show ›</span></button></div>
       </section>
@@ -201,17 +207,20 @@
 
     // ---- the field
     const fieldEl = $('#field');
-    const wn = w => w.name ? esc(w.name) : ph(null, w.ph || 'name');  // a wall item with no name is a fictional placeholder (mock)
+    const wn = w => w.name ? esc(UM.cleanName(w.name)) : ph(null, w.ph || 'name');  // a wall item with no name is a fictional placeholder (mock)
     function addAsk(w) {
       const key = (w.provider || '') + '|' + (w.phrasing_id || '') + '|' + (w.asked_at || '');
-      if (!st.asks.has(key)) st.asks.set(key, { provider: w.provider, model: w.model, phrasing: w.phrasing, asked_at: w.asked_at, lane: w.lane, names: 0 });
+      if (!st.asks.has(key)) st.asks.set(key, { provider: UM.provider(w.provider), model: w.model, phrasing: w.phrasing, asked_at: w.asked_at, lane: w.lane, names: 0 });
       st.asks.get(key).names++;
     }
+    // one entry per place: the result's `place` key merges spellings ("Gioia's Deli (hot salami)" = "Gioia's Deli")
+    const wk = w => w.place || w.norm || Matcher.norm(w.name || '');
     function addName(w) {
-      const k = w.norm || Matcher.norm(w.name);
+      w = { ...w, provider: UM.provider(w.provider) };
+      const k = wk(w);
       addAsk(w);
       if (st.wall.has(k)) { const o = st.wall.get(k); o.n = (o.n || 1) + 1; if (o.lane !== 'live' && w.lane === 'live') { o.lane = 'live'; o.el.classList.add('live'); } return; }
-      const o = { ...w, norm: k, n: 1, outcome: null };
+      const o = { ...w, key: k, n: 1, outcome: null };
       o.el = el(fieldEl, 'span', null, `<button title="">${wn(w)}</button>`);
       o.el.className = 'nm' + (w.lane === 'live' ? ' live' : '');
       o.el.querySelector('button').addEventListener('click', () => nameSheet(o));
@@ -224,10 +233,9 @@
       o.el.classList.toggle('dimmed', outcome === 'dimmed');
       const sup = o.el.querySelector('sup');
       if (sup) sup.remove();
-      if (outcome === 'dimmed') {
-        const why = reason === 'not in pool' ? (st.R_mi != null ? `not in your ${st.R_mi} mi pool` : (st.done ? `not in your ${ph(null, 'R')} mi pool` : 'not in your pool')) : esc(reason || '');
-        el(o.el, 'sup', null, why);
-      }
+      // "not in your R mi pool" is most of the wall: it is said once, in the legend under the field, not on every name
+      if (outcome === 'dimmed' && reason !== 'not in pool') el(o.el, 'sup', null, esc(reason || ''));
+      if (outcome === 'dimmed' && reason === 'not in pool') legend();
     }
 
     // the dated city wall streams from static data first (within 1 s), whatever the engine is doing
@@ -292,7 +300,7 @@
       if (R && R.status === 'degraded' && st.slots.length) out.push(`from ${ph(R.stored_at || et(R.diag && R.diag.as_of), 'date time')} · Qloo is slow right now`);
       if (R) {
         const live = (R.loves || []).filter(l => !l.dead).length;
-        (R.loves || []).filter(l => l.dead).forEach(l => out.push(`${esc(l.label)} doesn’t change ${esc(cityName)} restaurants much; ranked on the other ${word(live)}.`));
+        (R.loves || []).filter(l => l.dead).forEach(l => out.push(l.dead_line ? esc(l.dead_line) : `${esc(l.label)} doesn’t change ${esc(cityName)} restaurants much; ranked on the other ${word(live)}.`));
       }
       $('#notes').innerHTML = out.map(t => `<div>${t}</div>`).join('');
     }
@@ -335,7 +343,7 @@
         case 'status': st.status = e; break;
         case 'wall_name': addName(e); break;
         case 'pool': st.U = e.U; if (e.R_mi != null) st.R_mi = e.R_mi; break;
-        case 'strike': setOutcome(e.norm, e.outcome, e.reason, e.qloo_id); break;
+        case 'strike': setOutcome(e.place || e.norm, e.outcome, e.reason, e.qloo_id); break;
         case 'calls': st.calls = e; break;
         case 'card': st.cards.set(e.id, e); if (!st.order.includes(e.id)) st.order.push(e.id); mapDraw(); break;
         case 'burn':
@@ -345,23 +353,20 @@
       }
       counter(); status();
     }
+    function legend() {
+      const n = [...st.wall.values()].filter(w => w.reason === 'not in pool').length;
+      $('#legend').innerHTML = n ? `dim: not in your ${st.R_mi != null ? st.R_mi : (st.done ? ph(null, 'R') : '')}${st.R_mi != null || st.done ? ' mi ' : ''}pool (${n})` : '';
+    }
     function finish(R) {
       st.result = R; st.done = true;
       if ((R.flags || []).includes('fake')) st.fake = true;
       st.R_mi = R.counts && R.counts.R_mi;
       if (Array.isArray(R.wall) && !st.mock) {
-        // the static dated wall streamed first; the server's wall is what was actually crossed out, so it wins
-        const used = new Set(R.wall.map(w => w.norm || Matcher.norm(w.name)));
-        [...st.wall.keys()].forEach(k => { if (!used.has(k)) { st.wall.get(k).el.remove(); st.wall.delete(k); } });
-        st.reconciled = true;
-        st.asks.clear();
-      }
-      const fresh = Array.isArray(R.wall) && !st.mock;
-      (R.wall || []).forEach(w => {
-        const k = w.norm || Matcher.norm(w.name);
-        if (!st.wall.has(k)) addName({ ...w, norm: k }); else if (fresh) addAsk(w);
-        setOutcome(k, w.outcome, w.reason, w.qloo_id);
-      });
+        // the static dated wall streamed first; the result's wall is what was actually crossed out, so it replaces it
+        fieldEl.innerHTML = ''; st.wall.clear(); st.asks.clear(); st.reconciled = true;
+        R.wall.forEach(w => { addName(w); setOutcome(wk(w), w.outcome, w.reason, w.qloo_id); });
+      } else (R.wall || []).forEach(w => { if (!st.wall.has(wk(w))) addName(w); setOutcome(wk(w), w.outcome, w.reason, w.qloo_id); });
+      legend();
       [...(R.picks || []), ...(R.reserves || []), ...(R.known || [])].forEach(c => { st.cards.set(c.id, c); if (!st.order.includes(c.id)) st.order.push(c.id); });
       (R.burn && R.burn.burned || []).forEach(b => { if (!st.burned.find(x => x.card_id === b.card_id)) st.burned.push({ ...b, seen: hhmm() }); if (b.replaced_by) st.risen.set(b.replaced_by, 'rose in its place'); });
       st.slots = (R.picks || []).map(c => c.id);
@@ -521,7 +526,8 @@
           <p class="dim">of ${ph(U, 'U')} places within ${ph(Rmi, 'R')} mi, rated ${CFG.floor.rating}+, open. ‘Anyone’ is Qloo’s popularity order of the same places.</p></div>
         <div class="blk"><div class="sh"><h2>Because</h2></div>
           <div class="big1">${ph(c.because, 'love')}</div><p class="dim">${holds}</p></div>
-        <div class="blk">${c.url ? `<a class="btn solid" href="${esc(c.url)}" target="_blank" rel="noopener">Go ↗</a>` : `<span class="btn off">Go ↗ ${ph(null, 'url')}</span>`}
+        <div class="blk">${c.url ? `<a class="btn solid" href="${esc(c.url)}" target="_blank" rel="noopener">Go ↗</a>` : ''}
+          ${c.last_seen ? `<p class="dim">Last seen: ${esc(c.last_seen.how || '')}${c.last_seen.checked_at ? ' · ' + esc(et(c.last_seen.checked_at)) : ''}.</p>` : ''}
           <p class="dim">No place can pay to be picked.</p></div>
         <details class="log"><summary>Raw log</summary><div class="logbody">${rawLog(c)}</div></details>`);
     }
@@ -578,7 +584,7 @@
     }
     function shareData() {
       const R = st.result;
-      return { ...R, picks: liveIds().map(id => ({ ...st.cards.get(id), _ph: cardNo(id) ? `place ${cardNo(id)}` : 'burned card' })), wallNames: [...st.wall.values()].filter(w => w.outcome === 'struck' && w.name).map(w => w.name) };
+      return { ...R, picks: liveIds().map(id => ({ ...st.cards.get(id), _ph: cardNo(id) ? `place ${cardNo(id)}` : 'burned card' })), wallNames: [...st.wall.values()].filter(w => w.name).map(w => UM.cleanName(w.name)) };
     }
     window.__shareData = shareData;
 
@@ -609,10 +615,13 @@
       const holder = el(box, 'div', `position:relative;height:${H}px;width:${phone ? W : W}px`);
       if (!phone) { box.style.height = H + 'px'; holder.style.position = 'absolute'; holder.style.left = '0'; holder.style.top = '0'; } else box.style.height = 'auto';
       const ctx = UM.canvas(holder, mw, H);
-      const P = UM.projection(M, { x: mw * .22, y: 10, w: mw * .7, h: H - 20 });
+      // the frame takes in every card (the pool reaches past the city, e.g. North County); a dot is never moved
+      const cardsXY = [...st.cards.values()].filter(c => c.lat != null);
+      const P = UM.projection(UM.frame(M, cardsXY), { x: mw * .22, y: 10, w: mw * .7, h: H - 20 });
       const ai = M.ai, cmax = Math.max(...ai.map(a => a.count)), dmax = phone ? 22 : 28;
       const dense = M.places.length > 3000;   // New York: ~20k dots, smaller and without the haze
       UM.dots(ctx, M, P, dense ? { d: phone ? 1 : 1.3, alpha: .55 } : { d: phone ? 2.2 : 2.8, glow: phone ? 7 : 10 });
+      if (!dense) UM.cityLine(ctx, M, P, cardsXY);   // the city's edge, when a card sits beyond it
       ai.slice().sort((a, b) => a.count - b.count).forEach(a => { const [x, y] = P(a.lon, a.lat); UM.disc(ctx, x, y, UM.discD(a.count, cmax, dmax, 3), st.done ? .55 : .85); });
       const g = ai.find(a => a.name === cen.gem.name);
       if (g) {

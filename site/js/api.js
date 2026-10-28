@@ -61,6 +61,18 @@
     const timers = [];
     const ctl = { abort() { stopped = true; timers.forEach(clearTimeout); if (ctl.ac) ctl.ac.abort(); }, mock: false };
     const file = src || (mockMode() ? `data/mock/${FORCE_MOCK || 'stl-cedric'}.ndjson` : null);
+    if (file && /\.json$/.test(file)) {
+      // a stored result (precompute.py, CONTRACT shape): rendered at once; its wall lands first, then the result
+      ctl.mock = file.includes('/mock/');
+      fetch(file).then(r => r.json()).then(j => {
+        if (stopped) return;
+        const R = j.result || j;
+        (R.wall || []).forEach(w => onEvent({ type: 'wall_name', ...w }));
+        onEvent({ type: 'done', result: R });
+        onEnd && onEnd();
+      }).catch(e => onEvent({ type: 'status', state: 'degraded', text: null, error: String(e) }));
+      return ctl;
+    }
     if (file) {
       ctl.mock = file.includes('/mock/');
       const slow = /stl-slow/.test(file) ? 2.2 : 1;           // the 'ranking' state needs > 20 s

@@ -2,15 +2,15 @@
 # Re-render every image, the clip and the site screenshots. Needs Google Chrome, node (no npm packages),
 # python3 with Pillow, ffmpeg for the MP4.
 #   ./render.sh            everything        ./render.sh hero | images | share | clip | site | data
-#   SRC=../site/data/sets/stl-cedric.ndjson ./render.sh images     re-render from a real results file
+#   SRC=../site/data/mock/stl-cedric.ndjson ./render.sh images     force a results file (default: live, else mock)
 set -e
 cd "$(dirname "$0")"
 U="file://$PWD"
 S=shots
 mkdir -p $S
 what=${1:-all}
-src=${SRC:-../site/data/mock/stl-cedric.ndjson}
-q="src=$src"
+# default: the live result (media/data/live/query_stl-cedric.json) when present, else the MOCK stream
+q=${SRC:+src=$SRC}
 shot() { node tools/cdp.mjs shot "$@" >/dev/null && echo "$2"; }
 small() { python3 - "$@" <<'PY'
 import sys

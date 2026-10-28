@@ -12,7 +12,7 @@
 <script>
 /* share.html[?src=<results>]: the same share image the site draws on its "share" sheet (site/js/share.js), for render.sh. */
 (async function () {
-  const R = await UM.result(UM.param('src', '../site/data/mock/stl-cedric.ndjson'));
+  const R = await UM.result((UM.param('src', null) || await UM.firstOf(['data/live/query_stl-cedric.json', '../site/data/mock/stl-cedric.ndjson'])));
   await document.fonts.ready;
   Share.draw(document.getElementById('cv'), R);
   window.__ready = true;

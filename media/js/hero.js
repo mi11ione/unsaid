@@ -8,7 +8,7 @@
 (async function () {
   const { C, el, esc, fmt } = UM;
   const v = UM.param('v', 'devpost');
-  const SRC = UM.param('src', '../site/data/mock/stl-cedric.ndjson');
+  const SRC = (UM.param('src', null) || await UM.firstOf(['data/live/query_stl-cedric.json', '../site/data/mock/stl-cedric.ndjson']));
   const [CEN, M, RES] = await Promise.all([UM.json('../site/data/census.json'), UM.json('../site/data/map/stl.json'), UM.result(SRC)]);
   const S = CEN.stl;
   // census_stats.txt:58  "Gioia's Deli  13/16"                     -> S.gem.hits / S.gem.of
@@ -25,7 +25,7 @@
   const lv = l => `<span style="white-space:nowrap">${TITLE.has(tl(l)) ? `<i>${esc(l.label)}</i>` : esc(l.label)}</span>`;
   const LOVES = loves.length ? loves.slice(0, -1).map(lv).join(', ') + (loves.length > 1 ? ' and ' : '') + lv(loves[loves.length - 1]) : UM.ph(null, 'loves');
   const PLACE = (c, i) => c.name ? esc(c.name) : UM.ph(null, `place ${i + 1}`);
-  const HOOD = c => c.neighbourhood ? esc(c.neighbourhood) : UM.ph(null, 'neighbourhood');
+  const HOOD = c => c.neighbourhood == null ? UM.ph(null, 'neighbourhood') : esc(c.neighbourhood);   // "" = none known: nothing shown
   const RANK = c => c.fit_rank == null ? null : `<b>#${c.fit_rank}</b> for you`;
   const stage = document.getElementById('stage');
   const ai = M.ai.slice().sort((a, b) => b.count - a.count);
@@ -51,9 +51,10 @@
 
   function map(o) {
     const ctx = UM.canvas(stage, o.W, o.H);
-    const P = UM.projection(PM, o.box);
+    const P = UM.projection(UM.frame(PM, picks), o.box);   // the seven at their real lat/lon; the frame grows to hold them
     const b = P.bounds;
     UM.dots(ctx, M, P, { d: o.dotD, alpha: .95, glow: o.glow });
+    UM.cityLine(ctx, M, P, picks);                           // the city's edge, when one of the seven sits beyond it
     ai.slice().reverse().forEach(a => { const [x, y] = P(a.lon, a.lat); UM.disc(ctx, x, y, UM.discD(a.count, cmax, o.dmax, 5)); });
     if (VAR === 'mailee' && OUT) {
       // the gutter: a thin grey line at the city's west edge; Mai Lee's disc sits beyond it, at its real coordinates
@@ -138,10 +139,10 @@
     const tv = v === 'tv';
     const W = tv ? 1920 : 1600, H = tv ? 1080 : 1000, s = tv ? 1.12 : 1, pad = tv ? 56 : 40;
     stage.style.cssText += `width:${W}px;height:${H}px`;
-    const split = Math.round(W * .585);
+    const split = Math.round(W * .6);   // room for real names at 24 px on both sides of the map
     topbar(s, pad);
     el(stage, 'div', `left:${pad}px;right:${pad}px;top:${54 * s}px`).className = 'rl';
-    map({ W, H, box: { x: pad + 150 * s, y: 76 * s, w: split - pad - 300 * s, h: H - 76 * s - 104 * s },
+    map({ W, H, box: { x: pad + 190 * s, y: 76 * s, w: split - pad - 380 * s, h: H - 76 * s - 104 * s },
       labelTop: 76 * s, labelBottom: H - 100 * s, redPx: 19 * s, gemPx: 26 * s, whitePx: 24 * s, hoodPx: 13 * s, rankPx: 15 * s, dmax: 38 * s,
       dotD: 4.2 * s, glow: 18 * s, sevenD: 13 * s, halo: 4 * s, colGap: -20 * s, colGapR: 14 * s, gap: 10 * s });
     const colX = split + 44 * s, colW = W - colX - pad;
@@ -163,19 +164,22 @@
     el(st, 'div', 'font-size:58px;margin-top:14px', esc(S.gem.name).replace("'", '’')).className = 'gem';
     el(st, 'div', 'font-size:18px;margin-top:12px', `<span class="r">${S.gem.hits} times out of ${S.gem.of}</span><br><span class="d">also on ${S.plain.hits} of its ${S.plain.of} plain lists</span>`).className = 'tally';
     if (CG) el(st, 'div', 'font-size:12px;margin-top:10px', `${esc(CEN.chatgpt_provider)}’s: ${esc(CG.name)}, ${CG.hits} of ${CG.of}` + (MAI && MAI.name === CG.name ? ` · ${esc(CEN.provider)} says it ${MAI.hits} times too` : '')).className = 'loves';
-    const P = UM.projection(M, { x: 108, y: 12, w: 172, h: 2000 });
+    const P = UM.projection(UM.frame(M, picks), { x: 108, y: 12, w: 172, h: 2000 });
     const shift = 12 - P.bounds.y0, mh = Math.round(P.bounds.y1 - P.bounds.y0 + 24);
     const Q = (lon, lat) => { const [x, y] = P(lon, lat); return [x, y + shift]; };
     const mapWrap = el(stage, 'div', `position:relative;height:${mh}px;overflow:hidden;margin-top:8px`);
     const ctx = UM.canvas(mapWrap, W, mh);
     UM.dots(ctx, M, Q, { d: 2.3, alpha: .95, glow: 7 });
+    UM.cityLine(ctx, M, Q, picks);
     ai.slice().reverse().forEach(a => { const [x, y] = Q(a.lon, a.lat); UM.disc(ctx, x, y, UM.discD(a.count, cmax, 20, 3)); });
     const [gx, gy] = Q(gemDisc.lon, gemDisc.lat), gr = UM.discD(gemDisc.count, cmax, 20, 3) / 2;
     UM.ring(ctx, gx, gy, gr + 4, 1.2);
     const LX = 100, RX = 290, CH = 6.9, LW = { L: 92, R: 86 };
     const mid = (P.bounds.x0 + P.bounds.x1) / 2;
     const lines = (t, side) => Math.ceil(String(t || 'neighbourhood').length * CH / LW[side]);
-    const items = picks.map((c, i) => { const [x, y] = Q(c.lon, c.lat); const side = x < mid ? 'L' : 'R'; return { c, i, x, y, side, h: 16 + lines(c.neighbourhood, side) * 12 }; });
+    const nameLines = (c, side) => Math.ceil(String(c.name || 'place 0').length * 7.6 / LW[side]);   // 14 px serif wraps
+    const items = picks.map((c, i) => { const [x, y] = Q(c.lon, c.lat); const side = x < mid ? 'L' : 'R';
+      return { c, i, x, y, side, h: nameLines(c, side) * 16 + (c.neighbourhood ? lines(c.neighbourhood, side) * 12 : 0) + 2 }; });
     items.push({ gem: true, x: gx, y: gy, side: 'L', h: 18 });
     UM.stack(items, 4, mh - 4, 8);
     items.forEach(it => {

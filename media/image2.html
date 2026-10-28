@@ -38,7 +38,7 @@
    taken from the results file. One count on the image: the card's pair and its ask count. */
 (async function () {
   const { el, esc, ph, et } = UM;
-  const SRC = UM.param('src', '../site/data/mock/stl-cedric.ndjson'), K = +UM.param('card', 0);
+  const SRC = (UM.param('src', null) || await UM.firstOf(['data/live/query_stl-cedric.json', '../site/data/mock/stl-cedric.ndjson'])), K = +UM.param('card', 0);
   const [R, CFG] = await Promise.all([UM.result(SRC), UM.json('../site/data/config.json')]);
   const c = R.picks[K], fake = (R.flags || []).includes('fake'), flat = (R.flags || []).includes('flat');
   const U = c.U ?? (R.counts && R.counts.U), Rmi = R.counts && R.counts.R_mi, ns = c.never_said || {};
@@ -50,7 +50,8 @@
     (fake ? '<span class="mock">mock data · no Qloo results yet</span>' : '')).className = 'top';
   const fit = c.tied ? null : c.fit_rank;
   el(S, 'h1', '', `#${ph(fit, 'FIT')} for you.` + (flat ? '' : ` <span class="any">#${ph(c.any_rank, 'ANY')} for anyone.</span>`)).className = 'hl';
-  el(S, 'div', '', `Qloo ranks the same ${ph(U, 'U')} places twice: once for these three loves, once by popularity.`).className = 'subl';
+  const nLive = (R.loves || []).filter(l => !l.dead).length, W2 = ['no', 'one', 'two', 'three'][nLive] || nLive;
+  el(S, 'div', '', `Qloo ranks the same ${ph(U, 'U')} places twice: once for ${nLive === 1 ? 'this love' : `these ${W2} loves`}, once by popularity.`).className = 'subl';
   const g = el(S, 'div', ''); g.className = 'grid';
   const L = el(g, 'div', '');
   L.innerHTML = `<div class="card">
@@ -60,7 +61,7 @@
       <div class="what">${ph(c.what, 'what it is')}</div>
       <div class="rk"><b>#${ph(fit, 'FIT')}</b>for you${flat ? '' : `<span class="any">#${ph(c.any_rank, 'ANY')} for anyone</span>`}</div>
       <div class="because">because you love<b>${ph(c.because, 'love')}</b></div></div>
-    <div class="go2">${c.url ? '<span class="btn solid">Go ↗</span>' : `<span class="btn off">Go ↗ ${ph(null, 'url')}</span>`}<p>No place can pay to be picked.</p></div>`;
+    <div class="go2">${c.url ? '<span class="btn solid">Go ↗</span>' : ''}<p>${c.last_seen ? `Last seen: ${esc(c.last_seen.how || '')}. ` : ''}No place can pay to be picked.</p></div>`;
   const pct = r => Math.max(0, Math.min(100, ((r - 1) / Math.max(1, (U || 1) - 1)) * 100));
   const lab = r => pct(r) < 12 ? `left:${pct(r)}%;transform:none` : pct(r) > 88 ? `right:${100 - pct(r)}%;transform:none` : `left:${pct(r)}%`;
   const holds = c.holds != null && c.holds >= c.n_loves ? 'holds even if you drop any one love' : `holds without ${c.holds_without ? c.holds_without.map(esc).join(' or ') : ph(null, 'love')}`;
@@ -80,7 +81,7 @@
   for (const p of [...new Set(W.map(w => w.provider))]) { const w = W.find(x => x.provider === p); seen.add(p + w.phrasing_id); asks.push(w); }
   for (const w of W) { if (asks.length >= 3) break; const k = w.provider + w.phrasing_id; if (!seen.has(k)) { seen.add(k); asks.push(w); } }
   asks.splice(3);
-  const lines = asks.map(a => `${ph(et(a.asked_at), 'time')} · <span class="v">${esc(a.provider)}</span> ${esc(a.model || '')} · ${a.lane === 'live' ? 'live' : 'dated'} · “${esc(a.phrasing)}” → named ${R.wall.filter(w => w.phrasing_id === a.phrasing_id && w.provider === a.provider).length} new names`);
+  const lines = asks.map(a => `${ph(et(a.asked_at), 'time')} · <span class="v">${esc(UM.provider(a.provider))}</span> ${esc(a.model || '')} · ${a.lane === 'live' ? 'live' : 'dated'} · “${esc(a.phrasing)}” → named ${R.wall.filter(w => w.phrasing_id === a.phrasing_id && w.provider === a.provider).length} new names`);
   lines.push(`card · qloo id <span class="v">${esc(c.id)}</span> · for you #${ph(fit, 'FIT')} of ${ph(U, 'U')} · popularity #${ph(c.any_rank, 'ANY')} · named in 0 of ${ph(R.counts && R.counts.asks, 'n')} asks`);
   // the strip sits right under the card (no dead space): it is placed in the flow, after the two columns
   el(S, 'div', '', `<div class="h">RAW LOG</div>` + lines.map(l => `<div>${l}</div>`).join('')).className = 'logs';

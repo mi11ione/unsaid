@@ -138,5 +138,55 @@
     const j = JSON.parse(t); return j.result || j;
   }
 
-  window.UM = { C, canvas, projection, discD, dots, disc, seven, ring, stack, leader, el, esc, fmt, ph, param, et, hhmm, json, result };
+  // the map's frame: the city's places plus any extra points (the seven can sit outside the city, e.g. North County).
+  // Returns a map-like object for projection() only; the grey dots stay the city's own.
+  function frame(M, extra) {
+    const ex = (extra || []).filter(p => p && p.lat != null && p.lon != null);
+    const top = Math.max(M.latMax || -99, ...ex.map(p => p.lat + 0.004));
+    return { ...M, places: M.places.concat(ex.map(p => [p.lon, p.lat])), latMax: M.latMax ? top : undefined };
+  }
+  // convex hull of the city's places (monotone chain), drawn as a thin line so a dot outside it reads as outside the city
+  function hull(points) {
+    const P = points.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+    const cr = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+    const lo = [], up = [];
+    for (const p of P) { while (lo.length >= 2 && cr(lo[lo.length - 2], lo[lo.length - 1], p) <= 0) lo.pop(); lo.push(p); }
+    for (const p of P.slice().reverse()) { while (up.length >= 2 && cr(up[up.length - 2], up[up.length - 1], p) <= 0) up.pop(); up.push(p); }
+    return lo.slice(0, -1).concat(up.slice(0, -1));
+  }
+  function inHull(H, lon, lat) {
+    for (let i = 0; i < H.length; i++) {
+      const a = H[i], b = H[(i + 1) % H.length];
+      if ((b[0] - a[0]) * (lat - a[1]) - (b[1] - a[1]) * (lon - a[0]) < 0) return false;
+    }
+    return true;
+  }
+  // the city line: drawn only when some of the given points fall outside the city's hull
+  function cityLine(ctx, M, P, pts, color = '#3a3935') {
+    const H = hull(M.places);
+    if (!(pts || []).some(p => p && p.lat != null && !inHull(H, p.lon, p.lat))) return false;
+    ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.setLineDash([3, 4]); ctx.beginPath();
+    H.forEach(([lo, la], i) => { const [x, y] = P(lo, la); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+    ctx.closePath(); ctx.stroke(); ctx.restore();
+    return true;
+  }
+  // the first of several data files that exists (live results first, then the MOCK fallback)
+  async function firstOf(urls) {
+    for (const u of urls) { try { const r = await fetch(u, { method: 'GET' }); if (r.ok) return u; } catch (e) { /* next */ } }
+    return urls[urls.length - 1];
+  }
+  // a wall name as people read it: "Pork steak and ribs BBQ at Pappy's Smokehouse" -> "Pappy's Smokehouse",
+  // "Gioia's Deli (hot salami sandwich)" -> "Gioia's Deli". Same rule as build_data.py clean(); display only.
+  function cleanName(n) {
+    if (!n) return n;
+    let s = String(n).replace(/\s*\(.*?\)\s*/g, ' ').trim();
+    const m = s.match(/^.+? at (.+)$/);
+    if (m && m[1].split(' ').length <= 5 && !/^(jazz|lounge) at/i.test(s)) s = m[1];
+    return s;
+  }
+  // provider codes in the data -> the assistant's name on screen
+  const PROVIDERS = { anthropic: 'Claude', claude: 'Claude', openai: 'ChatGPT', codex: 'ChatGPT', chatgpt: 'ChatGPT', google: 'Gemini', gemini: 'Gemini' };
+  const provider = p => p == null ? p : (PROVIDERS[String(p).toLowerCase()] || p);
+
+  window.UM = { cleanName, frame, hull, inHull, cityLine, firstOf, provider, C, canvas, projection, discD, dots, disc, seven, ring, stack, leader, el, esc, fmt, ph, param, et, hhmm, json, result };
 })();

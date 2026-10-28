@@ -58,7 +58,12 @@ def jdump(path, obj, indent=None):
 
 
 rows = [json.loads(line) for line in open(HARNESS / 'claude_answers.jsonl')]
-codex_rows = [json.loads(line) for line in open(HARNESS / 'codex_answers.jsonl')]
+# ChatGPT census: a re-asked answer (redo_of: the first one used web search) supersedes the earlier one for its id
+_codex = {}
+for line in open(HARNESS / 'codex_answers.jsonl'):
+    r = json.loads(line)
+    _codex[(r['city'], r['id'])] = r
+codex_rows = list(_codex.values())
 names_of = lambda r: [p['name'] if isinstance(p, dict) else p for p in r['places']]
 
 # ---------------------------------------------------------------- census figures (each cited) --------
@@ -108,16 +113,18 @@ def codex_hidden(city, key):
 
 
 assert codex_hidden('stl', 'gioia') == (1, 16) and codex_hidden('nyc', 'sripraphai') == (0, 16)
+assert codex_hidden('stl', 'mai lee') == (10, 16) and codex_hidden('nyc', 'rolo') == (10, 16)
 CODEX_MODEL = re.search(r"models: \['(.+?)'\]", STATS_TXT['codex'][0]).group(1)
 census['chatgpt_model'] = CODEX_MODEL
 census['provider'] = 'Claude'          # whose census the gem figures are
 census['chatgpt_provider'] = 'ChatGPT'
 census['stl']['mailee_claude'] = {'name': 'Mai Lee', 'hits': 13, 'of': 16, 'hood': 'Brentwood', 'src': cite(59, r'Mai Lee\s+(\d+)/(\d+)', 13, 16)}
 census['stl']['chatgpt'] = {
-    'gem': {'name': 'Mai Lee', 'hits': 9, 'of': 16, 'first': 4,
-            'src': cite(59, r'Mai Lee\s+(\d+)/(\d+)', 9, 16, f='codex') + ' + ' + cite(48, r'Mai Lee (\d+), Monte', 4, f='codex')},
+    'gem': {'name': 'Mai Lee', 'hits': 10, 'of': 16, 'first': 5, 'asks64': 21,
+            'src': cite(60, r'Mai Lee\s+(\d+)/(\d+)', 10, 16, f='codex') + ' + ' + cite(48, r'named FIRST in the 16 hidden-gem asks: Mai Lee (\d+),', 5, f='codex')
+                   + ' + ' + cite(50, r'asks out of 64\): Mai Lee (\d+),', 21, f='codex')},
     'gioia': {'hits': 1, 'of': 16, 'src': 'harness/codex_answers.jsonl (hidden family, recounted; the stats file lists Gioia only in its asks-out-of-64 line)'},
-    'k50': {'n': 33, 'src': cite(45, r'K50 = (\d+) names', 33, f='codex')},
+    'k50': {'n': 30, 'src': cite(45, r'K50 = (\d+) names', 30, f='codex')},
 }
 census['nyc']['chatgpt'] = {
     'gem': {'name': "Rolo's", 'hits': 10, 'of': 16, 'src': cite(148, r"Rolo's\s+(\d+)/(\d+)", 10, 16, f='codex')},

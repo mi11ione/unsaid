@@ -163,7 +163,7 @@
   ],
   "asked": {
    "first": "2026-10-27T12:05:34+00:00",
-   "last": "2026-10-27T23:23:33+00:00",
+   "last": "2026-10-28T01:02:25+00:00",
    "src": "data/walls/census.json asked_at"
   },
   "mailee_claude": {
@@ -176,10 +176,11 @@
   "chatgpt": {
    "gem": {
     "name": "Mai Lee",
-    "hits": 9,
+    "hits": 10,
     "of": 16,
-    "first": 4,
-    "src": "harness/census_stats_codex.txt:59 + harness/census_stats_codex.txt:48"
+    "first": 5,
+    "asks64": 21,
+    "src": "harness/census_stats_codex.txt:60 + harness/census_stats_codex.txt:48 + harness/census_stats_codex.txt:50"
    },
    "gioia": {
     "hits": 1,
@@ -187,7 +188,7 @@
     "src": "harness/codex_answers.jsonl (hidden family, recounted; the stats file lists Gioia only in its asks-out-of-64 line)"
    },
    "k50": {
-    "n": 33,
+    "n": 30,
     "src": "harness/census_stats_codex.txt:45"
    }
   }
@@ -229,7 +230,7 @@
   },
   "asked": {
    "first": "2026-10-27T12:05:34+00:00",
-   "last": "2026-10-27T23:23:18+00:00",
+   "last": "2026-10-28T01:01:44+00:00",
    "src": "data/walls/census.json asked_at"
   }
  },

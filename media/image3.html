@@ -50,7 +50,7 @@
    site/data/meter.json says it is featured. One count on the image: the Qloo call count. */
 (async function () {
   const { el, esc, ph } = UM;
-  const SRC = UM.param('src', '../site/data/mock/stl-cedric.ndjson');
+  const SRC = (UM.param('src', null) || await UM.firstOf(['data/live/query_stl-cedric.json', '../site/data/mock/stl-cedric.ndjson']));
   const [R, A, MT] = await Promise.all([UM.result(SRC), UM.json('data/assistant.json'), UM.json('../site/data/meter.json')]);
   const fake = (R.flags || []).includes('fake'), flat = (R.flags || []).includes('flat');
   const city = (R.city && R.city.name) || 'St. Louis';

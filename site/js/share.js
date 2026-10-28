@@ -45,18 +45,19 @@
     // headline
     let y = 210;
     ctx.font = `400 58px ${SERIF}`;
+    // "The AIs told everyone these ⟦WALL⟧ places." (counts.wall of this result)
     const a = 'The AIs told everyone these ', wtxt = WALL == null ? '⟦WALL⟧' : String(WALL);
-    const l1 = wrap(ctx, a + wtxt + '.', W - 2 * pad);
+    const l1 = wrap(ctx, a + wtxt + ' places.', W - 2 * pad);
     // draw line 1 with the number in red (the number is at the end of the sentence)
     l1.forEach((line, i) => {
       const yy = y + i * 68;
       const k = line.lastIndexOf(wtxt);
-      if (k >= 0 && line.endsWith(wtxt + '.')) {
+      if (k >= 0 && line.endsWith(wtxt + ' places.')) {
         const pre = line.slice(0, k);
         ctx.fillStyle = C.ink; ctx.fillText(pre, pad, yy);
         const px = pad + ctx.measureText(pre).width;
         ctx.fillStyle = WALL == null ? C.amber : C.red; ctx.fillText(wtxt, px, yy);
-        ctx.fillStyle = C.ink; ctx.fillText('.', px + ctx.measureText(wtxt).width, yy);
+        ctx.fillStyle = C.ink; ctx.fillText(' places.', px + ctx.measureText(wtxt).width, yy);
       } else { ctx.fillStyle = C.ink; ctx.fillText(line, pad, yy); }
     });
     y += l1.length * 68;
@@ -76,7 +77,8 @@
     ctx.save(); ctx.beginPath(); ctx.rect(pad, top - 24, colW, bottom - top + 24); ctx.clip();
     ctx.font = `400 19px ${SERIF}`;
     let wx = pad, wy = top;
-    for (const n of (R.wallNames || (R.wall || []).filter(w => w.outcome === 'struck').map(w => w.name))) {
+    const seenP = new Set(), names = R.wallNames || (R.wall || []).filter(w => w.name && !seenP.has(w.place || w.norm || w.name) && seenP.add(w.place || w.norm || w.name)).map(w => (window.UM ? UM.cleanName(w.name) : w.name));
+    for (const n of names) {
       const tw = ctx.measureText(n).width;
       if (wx + tw > pad + colW && wx > pad) { wx = pad; wy += 29; }
       if (wy > bottom + 30) break;

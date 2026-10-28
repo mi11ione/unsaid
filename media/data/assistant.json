@@ -18,6 +18,10 @@
     },
     {
      "wall": "The Griot Museum of Black History",
+     "rule": "R5"
+    },
+    {
+     "wall": "The Griot Museum of Black History",
      "rule": "R2"
     }
    ]
@@ -34,11 +38,19 @@
     },
     {
      "wall": "Smoki O's",
+     "rule": "R5"
+    },
+    {
+     "wall": "Smoki O's",
      "rule": "R2"
     },
     {
      "wall": "Smoki O's BBQ",
      "rule": "R1"
+    },
+    {
+     "wall": "Smoki O's BBQ",
+     "rule": "R5"
     },
     {
      "wall": "Smoki O's BBQ",
@@ -47,6 +59,10 @@
     {
      "wall": "Smoki O's Barbecue",
      "rule": "R1"
+    },
+    {
+     "wall": "Smoki O's Barbecue",
+     "rule": "R5"
     },
     {
      "wall": "Smoki O's Barbecue",
@@ -78,6 +94,10 @@
    "matches": [
     {
      "wall": "Helium Comedy Club",
+     "rule": "R5"
+    },
+    {
+     "wall": "Helium Comedy Club",
      "rule": "R2"
     }
    ]
@@ -88,6 +108,10 @@
    "end": 886,
    "struck": true,
    "matches": [
+    {
+     "wall": "Funny Bone Comedy Club",
+     "rule": "R5"
+    },
     {
      "wall": "Funny Bone Comedy Club",
      "rule": "R2"
