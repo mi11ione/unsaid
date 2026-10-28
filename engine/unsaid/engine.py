@@ -1681,6 +1681,34 @@ def blurb_line(e, limit=110):
     return _trim(_first_sentence(d), limit) if d else None
 
 
+# Card lines condensed by Claude from Qloo's own text (engine/build_lines.py, checked word for word against the
+# source): data/lines/<city>.json, UNSAID_LINES_DIR, or lines-<city>.json beside the priors (Render secret files).
+_LINES = {}
+
+
+def load_lines(city_key):
+    cands = []
+    if os.environ.get("UNSAID_LINES_DIR"):
+        cands += [os.path.join(os.environ["UNSAID_LINES_DIR"], n) for n in ("%s.json", "lines-%s.json")]
+    cands += [os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data",
+                           "lines", "%s.json"), os.path.join(CFG["PRIORS_DIR"], "lines-%s.json")]
+    for c in cands:
+        fp = c % city_key
+        if os.path.exists(fp):
+            mt = os.path.getmtime(fp)
+            hit = _LINES.get(city_key)
+            if hit and hit[0] == (fp, mt):
+                return hit[1]
+            try:
+                with open(fp) as f:
+                    lines = json.load(f).get("lines") or {}
+            except (OSError, ValueError):
+                continue
+            _LINES[city_key] = ((fp, mt), lines)
+            return lines
+    return {}
+
+
 def image_url(e):
     im = prop(e, "image")
     if isinstance(im, dict) and im.get("url"):
@@ -2349,6 +2377,7 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
     asked_hoods, street_answers = {}, []
     details = {}
     vocab = dish_vocab(U)
+    cl = load_lines(city.get("key"))
 
     def assign_details():
         """Each card's reason line, the seven in for-you order then the reserves, so no two show the same tag."""
@@ -2376,7 +2405,9 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
                 "neighbourhood_src": hood_src, "area": hood or None,
                 "distance_mi": round(C.haversine_mi((ll[0], ll[1]), city["center_latlon"]), 1)
                 if ll[0] is not None else None, "distance_from": CENTER_LABEL.get(city.get("key")),
-                "image": image_url(e), "blurb": blurb_line(e), "order": order_line(e, vocab), "price": price_line(e),
+                "image": image_url(e), "blurb": (cl.get(i) or {}).get("line") or blurb_line(e),
+                "line_src": "claude" if (cl.get(i) or {}).get("line") else "rules",
+                "order": (cl.get(i) or {}).get("dishes") or order_line(e, vocab), "price": price_line(e),
                 "hours": prop(e, "hours") or None, "tz": CITY_TZ.get(city.get("key")),
                 "last_seen": seen_info.get(i),
                 "because": b["text"] if b else None, "because_label": (b.get("name") or b["text"]) if b else None,

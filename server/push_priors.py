@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Upload the 'fits everyone' priors (data/priors/*.json, Qloo-derived, gitignored) to Render as secret files.
+"""Upload the 'fits everyone' priors (data/priors/*.json) and the card lines (data/lines/<city>.json, as
+lines-<city>.json), both Qloo-derived and gitignored, to Render as secret files.
 
   set -a; . ~/.config/unsaid/env; set +a; python3 -I server/push_priors.py
 Render mounts each at /etc/secrets/<name>; the service's UNSAID_PRIORS_DIR=/etc/secrets points the engine there.
@@ -37,6 +38,9 @@ def main():
     for p in files:
         with open(p) as fh:
             keep[os.path.basename(p)] = fh.read()
+    for p in sorted(glob.glob(os.path.join(ROOT, "data", "lines", "*.json"))):   # card lines -> lines-<city>.json
+        with open(p) as fh:
+            keep["lines-" + os.path.basename(p)] = fh.read()
     status, _ = call("PUT", [{"name": n, "content": c} for n, c in sorted(keep.items())])
     print("PUT secret-files -> HTTP %s: %s" % (status, ", ".join("%s (%d KB)" % (n, len(c) // 1024)
                                                                  for n, c in sorted(keep.items()))))

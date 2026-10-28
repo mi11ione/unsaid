@@ -5,6 +5,7 @@ engine/out/
 *.qloo.json
 *.live.json
 data/private/
+data/lines/
 # secrets
 .env
 .env.*

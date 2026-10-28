@@ -45,6 +45,7 @@ git -C "$MAIN" worktree prune
 git -C "$MAIN" worktree add -q --detach "$WT" "$REF"
 git -C "$WT" log --oneline -1
 cp -Rp "$MAIN/data/priors" "$WT/data/"
+[ -d "$MAIN/data/lines" ] && mkdir -p "$WT/data/lines" && cp -p "$MAIN/data/lines/"*.json "$WT/data/lines/" 2>/dev/null || true
 mkdir -p "$MAIN/engine/.cache"
 ln -s "$MAIN/engine/.cache" "$WT/engine/.cache"
 

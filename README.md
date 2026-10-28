@@ -38,6 +38,7 @@ python3 -I tests/test_api.py              # the engine API contract
 4. **The score.** Qloo scores every place for each of your loves. We keep the places that fit you much more than they fit most tastes on Qloo, or than their popularity alone would say. In code: fit for you − max(popularity, fit for everyone), where *fit for everyone* is the share of a city's 97 sample tastes on Qloo that put the place in their top 30% of the city. The sample tastes are single loves drawn by a fixed-seed procedure (`unsaid-anchors-v1`) from Qloo's own most popular artists, films, shows, brands, books and podcasts, spread over their Qloo genre tags (*Run it live* below), and never one of your loves. Every place in the city's candidate universe has a value; a place none of them scored gets the panel median, never zero. Cards and reserves come from this one score.
 5. **The picks.** At most 3 cards come from any one love while the other loves have places to give. Chains are off the cards (from Qloo's website field: a branch page, or 3 or more pool places sharing a domain and a first word), and so are generic places that 60% or more of the sample tastes put in their top 30%.
 6. **Seven cards, three reserves.** Strike a card you know and a reserve takes its place. Under seven, the page says so.
+7. **The card line.** Card lines are condensed from Qloo's own descriptions by Claude, checked word-for-word against the source; no new facts (`engine/build_lines.py`; a line that fails the check falls back to Qloo's own first sentence).
 
 ## Run it live (your own Qloo key)
 
