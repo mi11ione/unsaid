@@ -211,25 +211,38 @@ def run_unsaid(city, loves, *, walls_path=None, mode="fake", on_event=None, qloo
     # ---- city and loves (needs_input stops here; CROSS OUT stays disabled)
     needs = []
     try:
-        if isinstance(city, dict) and city.get("status") == "ok" and city.get("center_latlon"):
-            c = city
-        else:
-            rc = resolve_city(city.get("name") if isinstance(city, dict) else city, mode=mode, qloo=q)
+        # C1 (city) and C2 (loves) run at once; the global bucket paces them
+        jobs = []
+        if not (isinstance(city, dict) and city.get("status") == "ok" and city.get("center_latlon")):
+            jobs.append(("city", lambda: resolve_city(city.get("name") if isinstance(city, dict) else city,
+                                                      mode=mode, qloo=q)))
+        typed = []
+        for x in loves or []:
+            if isinstance(x, dict) and x.get("id"):
+                typed.append((x, None, None))
+                continue
+            text, hint = (x.get("text"), x.get("hint") or x.get("type")) if isinstance(x, dict) else (x, None)
+            if isinstance(x, (list, tuple)):
+                text, hint = x[0], x[1]
+            typed.append((x, text, hint))
+            jobs.append((len(typed) - 1, (lambda t=text, h=hint: E.resolve_love(q, t, h))))
+        got = dict(zip([k for k, _ in jobs], E._pmap(lambda j: j[1](), jobs, max(1, len(jobs)))))
+        if "city" in got:
+            rc = got["city"]
             if rc["status"] == "degraded":
                 return finish(_empty("degraded", diag={"error": rc.get("reason")}))
             c = rc.get("_city")
             if rc["status"] != "ok":
                 needs.append({"field": "city", "text": city, "reason": rc.get("reason"),
                               "alternatives": rc["alternatives"]})
+        else:
+            c = city
         ls = []
-        for x in loves or []:
-            if isinstance(x, dict) and x.get("id"):
+        for k, (x, text, hint) in enumerate(typed):
+            if text is None:
                 ls.append(_love_from_chip(x))
                 continue
-            text, hint = (x.get("text"), x.get("hint") or x.get("type")) if isinstance(x, dict) else (x, None)
-            if isinstance(x, (list, tuple)):
-                text, hint = x[0], x[1]
-            l = E.resolve_love(q, text, hint)
+            l = got[k]
             if l["status"] != "ok":
                 needs.append({"field": "love", "text": text, "status": l["status"],
                               "suggestion": _chip(l) if l.get("id") else None, "alternatives": l.get("alternatives")})

@@ -22,6 +22,7 @@ import json
 import math
 import os
 import re
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
@@ -43,6 +44,13 @@ CFG = {
     "RRF_K": 60, "HOLD_FRAC": 1.0 / 3,
     "N_CARDS": 7, "N_RESERVES": 3,
     "SEARCH_RADIUS_MI": 15,      # C7 city-scoped /search
+    # C7 budget (gate F live: a ~700-name NYC wall sent 216 /search calls). Only names R1-R5 did not strike, that
+    # share a RARE distinctive token with U, are searched, after the veto candidates (names whose only strike is a
+    # one-word R2 containment), 20 in all. Past the cap a one-word R2 strike is not applied, and the other
+    # candidates strike their best match when its fuzzy score reaches the token threshold. "all" = the old path.
+    "C7_MODE": "capped", "C7_MAX": 20, "C7_MIN_TOKEN": 4, "C7_RARE_MAX": 3, "UNSURE_STRIKE": 0.85,
+    "C7_WORKERS": 8,
+    "CAP_ENABLED": True,         # False: skip the CAP call (offline reruns; cards never depend on it)
     "FLAT_RHO": 0.90, "DEAD_RHO": 0.95, "THIN_TIE": 0.30, "FLAT_POP_KEEP": 0.80,
     "DEAD_TIE": 0.95,            # a love with >= 95% of U at the default affinity ranks nothing: dead (gate B live)
     "ANCHOR_DRIFT_MAX": 0.005, "COVERAGE_MIN": 0.95,
@@ -463,6 +471,7 @@ class CitySearch:
             self.u_tokens.update(M.distinctive(e.get("name", "")))
         self.skipped, self.busy, self.closed, self.calls = set(), set(), set(), 0
         self.nonvenue = set()   # resolved entities that are not a restaurant or bar (tags known, no category tag)
+        self.prefetched, self.lock, self.unsure = {}, threading.Lock(), {}
 
     def shares_token(self, raw):
         if not hasattr(self, "_ti"):
@@ -470,17 +479,32 @@ class CitySearch:
         return any(self._ti.any_eq(t) for t in M.distinctive(raw))
 
     def __call__(self, raw):
+        if raw in self.prefetched:
+            return self._consume(raw, self.prefetched.pop(raw))
         if self.q is None or not self.shares_token(raw):
             self.skipped.add(raw)
             return []
+        return self._consume(raw, self._search(raw))
+
+    def prefetch(self, raws):
+        """The chosen names' /search calls, in parallel within the global bucket."""
+        out = _pmap(lambda r: (r, self._search(r)), list(raws), CFG["C7_WORKERS"])
+        self.prefetched.update(dict(out))
+
+    def _search(self, raw):
         lat, lon = self.city["center_latlon"]
-        self.calls += 1
+        with self.lock:
+            self.calls += 1
         try:
-            res = self.q.search(raw, types=PLACE, take=5, location="%s,%s" % (lat, lon),
-                                radius_mi=CFG["SEARCH_RADIUS_MI"], label="C7 name")
+            return self.q.search(raw, types=PLACE, take=5, location="%s,%s" % (lat, lon),
+                                 radius_mi=CFG["SEARCH_RADIUS_MI"], label="C7 name")
         except QlooDeadline:
             raise
         except QlooError:
+            return QlooError
+
+    def _consume(self, raw, res):
+        if res is QlooError:
             self.busy.add(raw)
             return []
         for r in res:
@@ -491,10 +515,101 @@ class CitySearch:
         return [{"entity_id": r["entity_id"], "name": r.get("name", "")} for r in res]
 
 
+def fuzzy_score(raw, name):
+    """The matcher's own fuzzy measure, name to name: the better of the normalised-name ratio and the share of the
+    AI name's distinctive tokens that tok_eq a token of the pool name."""
+    a, b = M.norm(raw), M.norm(name)
+    if not a or not b:
+        return 0.0
+    r = M.difflib.SequenceMatcher(None, a, b).ratio()
+    dr, dp = M.distinctive(raw), M.distinctive(name)
+    return max(r, (M.overlap(dr, dp) / float(len(dr))) if dr else 0.0)
+
+
+def c7_plan(raws, pool, budget=None):
+    """-> (search: [raw], unsure: {raw: (eid, score)}, skipped: [raw]) for the names R1-R5 did not strike.
+    A candidate shares a rare distinctive token with U: >= 4 letters, outside the generic/city stoplists, and found
+    (exactly or by tok_eq) in at most C7_RARE_MAX pool names. Candidates are ranked by their best fuzzy score
+    against those pool names; the first C7_MAX are searched; the rest strike their best match locally when that
+    score reaches UNSURE_STRIKE."""
+    tok_names = {}
+    for p in pool:
+        for t in set(M.distinctive(p["name"])):
+            tok_names.setdefault(t, set()).add(p["entity_id"])
+    ti = M.TokenIndex(tok_names)
+    name_of = {p["entity_id"]: p["name"] for p in pool}
+    ranked, skipped = [], []
+    for raw in raws:
+        cands = set()
+        for t in set(M.distinctive(raw)):
+            if len(t) < CFG["C7_MIN_TOKEN"] or t in M.STOP:
+                continue
+            ids = set()
+            for u in ti.related(t):
+                ids |= tok_names[u]
+            if 0 < len(ids) <= CFG["C7_RARE_MAX"]:
+                cands |= ids
+        if not cands:
+            skipped.append(raw)
+            continue
+        best = max(((fuzzy_score(raw, name_of[e]), e) for e in sorted(cands)), key=lambda x: (x[0], x[1]))
+        ranked.append((-best[0], raws.index(raw), raw, best[1], best[0]))
+    ranked.sort()
+    cap = CFG["C7_MAX"] if budget is None else max(0, budget)
+    search = [r[2] for r in ranked[:cap]]
+    unsure = {r[2]: (r[3], r[4]) for r in ranked[cap:]}
+    return search, unsure, skipped
+
+
+def one_word_r2(raw, hits):
+    """Is every strike of this name a one-word R2 containment ("home", "rooftop", "golden")? Those are vetoed unless
+    /search can't place the name outside U (the old path's rule)."""
+    if not hits or any(rule != "R2" for _, rule in hits):
+        return False
+    dr = M.distinctive(M.split_parts(raw)[0]) or M.distinctive(raw)
+    return len(dr) == 1
+
+
 def strike(q, city, U, wall_names, use_search=True):
     pool = [{"entity_id": e["entity_id"], "name": e.get("name", "")} for e in U]
     cs = CitySearch(q if use_search else None, city, U)
-    struck, per = M.match_wall(wall_names, pool, cs)
+    if CFG["C7_MODE"] == "all" or q is None or not use_search:
+        struck, per = M.match_wall(wall_names, pool, cs)
+        return struck, per, cs
+    raws = list(dict.fromkeys(wall_names))
+    struck, per = M.match_wall(raws, pool, None)             # R1-R5 locally: no call for a name they strike
+    hits_of = {}
+    for eid, v in struck.items():
+        for raw, rule in v:
+            hits_of.setdefault(raw, []).append((eid, rule))
+    name_of = {p["entity_id"]: p["name"] for p in pool}
+    veto = [r for r in raws if one_word_r2(r, hits_of.get(r))]
+    for r in veto:                                           # lift the one-word R2 strikes; /search decides below
+        for eid, _ in hits_of[r]:
+            struck[eid] = [x for x in struck[eid] if x[0] != r]
+            if not struck[eid]:
+                del struck[eid]
+        per[r] = {"status": "not_found", "ids": [], "resolved": None}
+    veto = sorted(veto, key=lambda r: (-max(fuzzy_score(r, name_of[e]) for e, _ in hits_of[r]), raws.index(r)))
+    rest = [r for r in raws if not per[r]["ids"] and r not in set(veto)]
+    search, unsure, skipped = c7_plan(rest, pool, CFG["C7_MAX"] - min(len(veto), CFG["C7_MAX"]))
+    cs.skipped.update(skipped)
+    cs.vetoed = veto[CFG["C7_MAX"]:]                         # past the cap: the one-word strike is not applied
+    cs.skipped.update(cs.vetoed)
+    search = veto[:CFG["C7_MAX"]] + search
+    if search:
+        cs.prefetch(search)
+        st2, per2 = M.match_wall(search, pool, cs)           # the matcher's own S stage on the chosen names
+        for eid, v in st2.items():
+            struck.setdefault(eid, []).extend(v)
+        per.update(per2)
+    for raw, (eid, score) in unsure.items():
+        if score >= CFG["UNSURE_STRIKE"]:                    # when unsure, strike (over-striking is accepted)
+            struck.setdefault(eid, []).append((raw, "U"))
+            per[raw] = {"status": "struck_unsure", "ids": [eid], "resolved": None, "rule": "unsure, not searched"}
+        else:
+            cs.skipped.add(raw)
+    cs.unsure = unsure
     return struck, per, cs
 
 
@@ -760,6 +875,9 @@ def hood_of(e, centroids, max_mi=1.5):
 def popularity_cap(q, city, loves, U, struck_u, pop, pop_rank):
     k = len(struck_u)
     out = {"k": k, "max": None, "cap7": [], "calls": 0, "error": None}
+    if not CFG["CAP_ENABLED"]:
+        out["error"] = "skipped (CAP_ENABLED off)"
+        return out
     if not k or k >= len(U):
         return out
     by_pop = sorted(U, key=lambda e: (-pop[e["entity_id"]], e["entity_id"]))
@@ -868,16 +986,22 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
             emit("strike", {"name": raw, "norm": M.norm(raw), "outcome": oc, "reason": reason, "qloo_id": qid})
         return out
 
+    # C6' (every love at once) runs beside the strike: both need only U. The global bucket paces them together.
+    side = ThreadPoolExecutor(max_workers=2)
+    resc_future = side.submit(lambda: _pmap(lambda l: rescore(q, city, loves, ids, l, "C6' %s" % l["text"][:18]),
+                                            rescorable, max(1, len(rescorable))))
     struck, per, css = {}, {}, []
-    strike_answers(answers, struck, per, css)
+    try:
+        strike_answers(answers, struck, per, css)
+    finally:
+        resc_all = resc_future.result()       # re-raises a deadline or budget stop from the rescoring
 
     # ---- C6' per-love orders (one love's signal per call)
     pop = {i: popularity(byid[i]) for i in ids}
     pop_rank_avg = ST.rank(pop)
     pop_ord = ordinal(pop, ids)
     orders, tied, tied_only, rs_diag = {}, {}, {}, {}
-    for l in rescorable:
-        rs = rescore(q, city, loves, ids, l, "C6' %s" % l["text"][:18])
+    for l, rs in zip(rescorable, resc_all):
         orders[l["text"]] = ranks_from(rs["aff"], ids)
         tied[l["text"]] = set(rs["tied"]) | set(rs["missing"])     # no non-default score (eligibility)
         tied_only[l["text"]] = set(rs["tied"])                      # at Qloo's default affinity (tie share)
@@ -907,6 +1031,8 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
             l["dead"], l["dead_reason"] = True, "rho %.2f" % r
     live = [l for l in rescorable if not l.get("dead")]
     all_dead = not live
+    struck_u0 = set(struck) & set(ids)
+    cap_future = side.submit(popularity_cap, q, city, loves, U, struck_u0, pop, pop_ord)   # beside the cards
     if all_dead:
         live = list(rescorable)
     tie_share = (sum(len(tied_only[l["text"]]) for l in live) / float(N * len(live))) if live else 0.0
@@ -1164,7 +1290,10 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
     res["wall"] = wall_items
 
     # ---- popularity proofs
-    cap = popularity_cap(q, city, loves, U, struck_u, pop, pop_ord)
+    cap = cap_future.result()
+    side.shutdown(wait=True)
+    if struck_u != struck_u0:                 # the live answer struck more of U: the cap must remove as many
+        cap = popularity_cap(q, city, loves, U, struck_u, pop, pop_ord)
     cap_ids = {x for x, _ in cap.get("cap7") or []}
     obscure = sorted([i for i in struck_u if pop_ord[i] > N / 2.0], key=lambda i: -pop_ord[i])
     known = [c["id"] for c in res["picks"] if pop_ord[c["id"]] <= N / 3.0]

@@ -15,6 +15,7 @@ ap.add_argument("--out", required=True)
 ap.add_argument("--sets-file", help='JSON [{"id", "city", "label", "loves": [["text", "hint"], ...]}]')
 ap.add_argument("--accept-top", action="store_true", help="use the top candidate for a love that needs input")
 ap.add_argument("--no-street", action="store_true")
+ap.add_argument("--no-cap", action="store_true", help="skip the CAP call (an offline rerun; cards don't depend on it)")
 args = ap.parse_args()
 T = cli.tag(args)
 LABEL = {("stl", "stl-cedric"): "Cedric · St. Louis", ("stl", "stl-jason"): "Jason · St. Louis",
@@ -51,6 +52,9 @@ else:
         for sid, spec in (tt or cli.sets(args, c))[:args.sets]:
             jobs.append((c, sid, spec, SD.SET_META.get(sid, {}).get("label") or LABEL.get((c, sid))))
 q = cli.client(args, "precompute", frozen=True)
+if args.no_cap:
+    from unsaid import engine as _E
+    _E.CFG["CAP_ENABLED"] = False
 single = args.out.endswith(".json")
 if not single:
     os.makedirs(args.out, exist_ok=True)
