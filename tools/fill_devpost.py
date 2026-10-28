@@ -3,6 +3,7 @@
 
   python3 -I tools/fill_devpost.py                                  # ~/Desktop/qloo/devpost.md -> devpost.final.md
   python3 -I tools/fill_devpost.py --in README.md --out out/freeze/README.filled.md --whole   # a preview, any file
+  python3 -I tools/fill_devpost.py --scan README.md site/*.html ...   # list every ⟦X⟧ left (exit 1 if any)
 
 Rules (devpost.md's legend, UNSAID.md §6.0):
   * a value comes only from numbers.json (each with its source) or from the two known URLs; nothing is invented;
@@ -82,7 +83,17 @@ def main():
     ap.add_argument("--allow-stale", action="store_true", help="fill even when the regeneration is stale (a preview; "
                     "the header says STALE)")
     ap.add_argument("--report", help="fill.json path (default: next to numbers.json, fill.json or fill.<name>.json)")
+    ap.add_argument("--scan", nargs="+", metavar="FILE", help="only list every ⟦X⟧ left in these files (exit 1 if any)")
     a = ap.parse_args()
+    if a.scan:
+        left = 0
+        for f in a.scan:
+            for i, line in enumerate(open(f), 1):
+                for k in PH.findall(line):
+                    left += 1
+                    print("  LEFT %s:%d ⟦%s⟧   %s" % (os.path.relpath(f, ROOT), i, k, line.strip()[:110]))
+        print("scan: %d placeholders left in %d files" % (left, len(a.scan)))
+        sys.exit(1 if left else 0)
     if os.path.abspath(a.src) == os.path.abspath(a.out):
         sys.exit("refusing: --out must be a new file, not the draft itself")
     N = json.load(open(a.numbers))

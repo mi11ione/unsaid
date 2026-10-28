@@ -21,7 +21,8 @@
 #   3 numbers     k12, gate E (hashed 28 Oct cards + today's), run_query Cedric + README call trace, the no-street
 #                 ablation, census gems, saturation coverage -> out/freeze/numbers.json; commits the regenerated
 #                 counts-only files (engine/k12_wall_effect.md, site/data/wall_effect.json, README call trace)
-#   4 fill        tools/fill_devpost.py -> ~/Desktop/qloo/devpost.final.md (+ a README preview in out/freeze)
+#   4 fill        tools/fill_devpost.py -> ~/Desktop/qloo/devpost.final.md; README.md filled in place and committed;
+#                 fails if any ⟦X⟧ is left in README.md or the other files a judge may open ($JUDGE_FILES)
 #   5 render      tools/render_deploy.py, in this order: deploy HEAD (walls + engine) and wait for live + /api/health;
 #                 refuse unless the live commit contains 547ab11 (the new priors format); push the priors; redeploy so
 #                 the engine reads them; wait for live + health (priors stl/nyc true)
@@ -300,11 +301,50 @@ PY
     engine/k12_wall_effect.md site/data/wall_effect.json README.md engine/k14_label.md engine/k14_label.json
 }
 
+# tracked files a judge may open once the repo is public: no ⟦X⟧ may be left in any of them
+JUDGE_FILES="README.md site/*.html agent/*.md server/*.md harness/README.md engine/*.md media/VIDEO-NOTES.md"
+
 step4() {
-  say "4 fill devpost -> $QLOO_DIR/devpost.final.md"
+  say "4 fill devpost -> $QLOO_DIR/devpost.final.md, README.md in place"
   cd "$MAIN"
-  python3 -I tools/fill_devpost.py --in "$QLOO_DIR/devpost.md" --out "$QLOO_DIR/devpost.final.md"
-  python3 -I tools/fill_devpost.py --in README.md --out "$LOGS/README.filled.md" --whole | head -1
+  python3 -I tools/fill_devpost.py --in "$QLOO_DIR/devpost.md" --out "$QLOO_DIR/devpost.final.md" $([ $DRY = 1 ] && echo --allow-stale)
+  # README.md: filled from the same numbers.json (same stale guard), then checked: ⟦LIVE_URL⟧/⟦REPO_URL⟧ are filled
+  # with the known URLs; anything else left stops the freeze (the repo goes public at the flip)
+  # rerun-safe: once a freeze has filled README.md, the template is that commit's parent (plus this run's call trace)
+  local tmpl=README.md last
+  last=$(git -C "$MAIN" log -1 --format=%H -- README.md)
+  if git -C "$MAIN" log -1 --format=%s "$last" | grep -q "^Freeze: README.md filled"; then
+    git -C "$MAIN" show "$last^:README.md" > "$LOGS/README.template.md"; tmpl="$LOGS/README.template.md"
+    [ -f "$WT/engine/out/query_stl-cedric.md" ] && python3 -I engine/readme_trace.py --trace "$WT/engine/out/query_stl-cedric.md" \
+      --readme "$tmpl" > /dev/null
+    echo "README template: $last^ (README.md was filled by an earlier freeze run)"
+  fi
+  rm -f "$LOGS/README.filled.md"
+  python3 -I tools/fill_devpost.py --in "$tmpl" --out "$LOGS/README.filled.md" --whole --report "$LOGS/fill.README.json" \
+    $([ $DRY = 1 ] && echo --allow-stale) > "$LOGS/04-fill-readme.txt" 2>&1 || { cat "$LOGS/04-fill-readme.txt"; die "README fill"; }
+  grep -vE "^  filled" "$LOGS/04-fill-readme.txt" || true
+  # the fill's own header comment is for devpost.final.md only; README gets the body
+  python3 -I - "$LOGS/README.filled.md" <<'PY'
+import re, sys
+p = sys.argv[1]; s = open(p).read()
+s = re.sub(r"\A(<!-- STALE PREVIEW .*?-->\n)?<!-- Filled by tools/fill_devpost\.py .*?-->\n\n", "", s, flags=re.S)
+s = re.sub(r"^<!-- ⟦X⟧ = .*?-->\n\n?", "", s, flags=re.M)      # the draft's own legend note goes with the fill
+open(p, "w").write(s)
+PY
+  local readme_left judge_left
+  python3 -I tools/fill_devpost.py --scan "$LOGS/README.filled.md" > "$LOGS/04-readme-left.txt" && readme_left=0 || readme_left=1
+  # shellcheck disable=SC2086
+  python3 -I tools/fill_devpost.py --scan $(cd "$MAIN" && ls $JUDGE_FILES | grep -vx README.md) > "$LOGS/04-judge-left.txt" \
+    && judge_left=0 || judge_left=1
+  cat "$LOGS/04-readme-left.txt" "$LOGS/04-judge-left.txt"
+  if [ $DRY = 1 ]; then
+    echo "dry run: README.md not overwritten or committed (preview: $LOGS/README.filled.md)"
+    return 0
+  fi
+  [ $readme_left = 0 ] || die "README.md would ship with ⟦X⟧ left (listed above): fill them in numbers.json or reword"
+  [ $judge_left = 0 ] || die "tracked files a judge may open still hold ⟦X⟧ (listed above)"
+  cp "$LOGS/README.filled.md" "$MAIN/README.md"
+  commit_paths "Freeze: README.md filled from out/freeze/numbers.json (no placeholder left)" README.md
 }
 
 step5() {
@@ -360,8 +400,8 @@ step9() {
   cd "$MAIN"
   python3 -I tools/freeze_numbers.py numbers --fresh "$FRESH" --nostreet "$WT/engine/out/fresh20-no-street" \
     $([ $DRY = 1 ] && echo --dry-run) > "$LOGS/09-numbers.txt"
-  python3 -I tools/fill_devpost.py --in "$QLOO_DIR/devpost.md" --out "$QLOO_DIR/devpost.final.md" > "$LOGS/09-fill.txt"
-  python3 -I tools/fill_devpost.py --in README.md --out "$LOGS/README.filled.md" --whole > "$LOGS/09-fill-readme.txt"
+  python3 -I tools/fill_devpost.py --in "$QLOO_DIR/devpost.md" --out "$QLOO_DIR/devpost.final.md" $([ $DRY = 1 ] && echo --allow-stale) \
+    > "$LOGS/09-fill.txt" || { cat "$LOGS/09-fill.txt"; die "devpost fill"; }
   python3 -I tools/freeze_numbers.py report
 }
 
