@@ -1,13 +1,23 @@
 {
- "_": "The grounding meter (UNSAID.md §4 gate D, engine/k10_meter.py), as measured 28 Oct and printed whatever it said: README.md gate table (D · meter) and LOG.md. Medians of 12 picks on the other AIs' everyone-list.",
- "m_alone": 5,
- "m_qloo": 4,
+ "_": "The grounding meter (UNSAID.md §4 gate D), printed whatever it said. Source: harness/runs/meter_unsaid_grade.txt (k10_meter on the frozen runs, plus a post-hoc arm). Of 12 picks, how many were on the other AIs' everyone-list.",
+ "m_alone": 6.0,
+ "m_qloo": 4.0,
  "of": 12,
  "sets": 10,
  "assistants": 2,
  "city": "St. Louis",
  "gate": "FAIL",
  "bar": "at least 4 fewer picks on it in 7 of 10 sets",
- "below4_sets": 2,
- "featured": false
+ "below4_sets": 5,
+ "featured": false,
+ "posthoc": {
+  "label": "post-hoc, not pre-registered",
+  "alone": 6.2,
+  "qloo": 3.2,
+  "unsaid": 1.0,
+  "stat": "per-set median of runs, then the median across 10 sets",
+  "claude_unsaid": 0,
+  "chatgpt_skipped": 12,
+  "chatgpt_runs": 20
+ }
 }

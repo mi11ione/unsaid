@@ -6,8 +6,9 @@
   // a null field shows as a quiet dash for visitors; the ⟦bracket⟧ placeholders are for ?mock= development only
   const ph = (v, label) => (v === null || v === undefined) ? (API.FORCE_MOCK ? UM.ph(v, label) : '<span class="faint">–</span>') : esc(v);
   const $ = (s, r = document) => r.querySelector(s);
-  const [CFG, CEN, TRY, LIVE] = await Promise.all([UM.json('data/config.json'), UM.json('data/census.json'), UM.json('data/try.json'),
-    UM.json('data/live/index.json').catch(() => null)]);
+  const [CFG, CEN, TRY, LIVE, WE] = await Promise.all([UM.json('data/config.json'), UM.json('data/census.json'), UM.json('data/try.json'),
+    UM.json('data/live/index.json').catch(() => null), UM.json('data/wall_effect.json').catch(() => null)]);
+  const fmt1 = x => Number.isInteger(+x) ? String(+x) : (+x).toFixed(1);
   // real precomputed sets (site/data/live, uploaded with the deploy) replace the MOCK ones and enable the rest
   if (LIVE && Array.isArray(LIVE.sets)) LIVE.sets.forEach(l => {
     const t = TRY.sets.find(x => x.id === l.id); if (!t || !l.file || l.fake) return;
@@ -66,7 +67,7 @@
     topbar({});
     view.innerHTML = `<div class="land"><section class="s1">
       <h1>Everything the AIs tell everyone, <s>crossed out</s>.</h1>
-      <p class="subhead">Three things you love → seven bars and restaurants in ${CITIES.map(c => esc(c.name)).join(' or ')} that ChatGPT, Claude and Gemini never named when we asked, ranked for you by Qloo.</p>
+      <p class="subhead">Three things you love → seven bars and restaurants in ${CITIES.map(c => esc(c.name)).join(' or ')} that ChatGPT and Claude never named when we asked, ranked by Qloo for what fits you, not everyone.</p>
       ${hookLine()}
       <div class="fields">
         ${FIELDS.map((f, i) => `<div class="fld"><span class="n">0${i + 1}</span><input data-i="${i}" placeholder="${esc(f.ph)}" autocomplete="off" spellcheck="false"><div class="res" id="res${i}"></div></div>`).join('')}
@@ -443,7 +444,7 @@
         <div class="dare"><label for="dare" id="darelabel">${dareLabel()}</label>
           <div class="copyrow"><button class="link" id="copyask">copy an ask</button><span class="dim" id="askq">“hidden gems to eat and drink in ${esc(cityName)}”</span></div>
           <textarea id="dare" placeholder="paste an answer here" spellcheck="false"></textarea><div class="out" id="dareout"></div></div>
-        <div class="links"><button class="link" id="lnk-pop">not a popularity filter →</button><button class="link" id="lnk-share">share</button></div>
+        <div class="links"><button class="link" id="lnk-pop">is this just obscure places? →</button><button class="link" id="lnk-share">share</button></div>
         <div id="agentblk"></div>`;
       drawCards();
       agentBlock();
@@ -470,16 +471,20 @@
       const d = await UM.json('data/live/agent_demo.json').catch(() => null);
       const norm = x => String(x || '').toLowerCase().trim();
       const asked = d && d.input && (d.input.loves || []).map(l => norm(Array.isArray(l) ? l[0] : l && typeof l === 'object' ? l.text : l));
-      if (!d || !d.answer || !asked || !TYPED.every(t => asked.includes(norm(t)))) return;
+      if (!d || !d.input || !asked || !TYPED.every(t => asked.includes(norm(t)))) return;
+      // an answer recorded before this set ran names older cards: then only the call is shown
+      const ranAt = set && set.ran ? new Date(set.ran) : null, fresh = d.answer && ranAt && new Date(d.recorded_at) >= ranAt;
       // a line that names no card: the recorded run can predate today's cards
       const cardNames = [...st.cards.values()].map(c => norm(c.name)).filter(Boolean);
-      const plan = d.answer.split('\n').map(l => l.trim()).filter(Boolean).reverse()
-        .find(l => /every ai|everyone gets/i.test(l) && !cardNames.some(n => norm(l).includes(n)));
+      // one sentence of its answer, verbatim: the hidden-gem line if it has one, else the everyone-gets-these line
+      const sentences = d.answer.split('\n').flatMap(l => l.replace(/^\s*(\d+\.|[-*])\s*/, '').split(/(?<=[.!?])\s+(?=[A-Z])/)).map(x => x.trim()).filter(Boolean);
+      const plan = sentences.find(x => /hidden gem on this list/i.test(x))
+        || sentences.reverse().find(x => /every ai|everyone gets/i.test(x) && !cardNames.some(n => norm(x).includes(n)));
       const md = x => esc(x).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\*(.+?)\*/g, '<i>$1</i>');
       box.innerHTML = `<section class="agentblk"><div class="sh"><h2>Use it from Claude</h2><span class="sub">one real run, ${esc(UM.day(d.recorded_at) || '')}</span></div>
         <p class="q">“${esc(d.question)}”</p>
         <pre>${esc(d.tool)}(${esc(JSON.stringify(d.input))})</pre>
-        ${plan ? `<p class="a">${md(plan)}</p>` : ''}
+        ${fresh && plan ? `<p class="a">From its answer: “${md(plan)}”</p>` : ''}
         <p class="dim">${esc(d.model || '')} via Claude Code, with UNSAID as its only tool. <a class="link" href="agents">Set it up in your agent →</a></p></section>`;
     }
     function cardHTML(c, i, known) {
@@ -674,7 +679,7 @@
       const say = xs => xs.length === 1 ? esc(xs[0]) : xs.slice(0, -1).map(esc).join(', ') + ' and ' + esc(xs[xs.length - 1]);
       const P = [];
       if (cut != null && D.cap_keep != null) P.push(`If we had just cut the ${cut} most popular places instead, ${D.cap_keep} of the places the AIs named would still be on your list` +
-        (D.cap_shared != null ? `, and that list’s top ${st.slots.length} would share only ${D.cap_shared} with yours.` : '.'));
+        (D.cap_shared != null ? `, and that list’s top ${st.slots.length} would share ${D.cap_shared ? 'only ' + D.cap_shared : 'none'} with yours.` : '.'));
       if (obscure.length) P.push(`The AIs also name little-known places, and those get crossed out too: ${say(obscure)}.`);
       if (known.length) P.push(`And well-known places no AI named stay in: ${say(known)}.`);
       const T = [];
@@ -682,8 +687,12 @@
       if (D.rho_res != null) T.push(`after the city’s own order is taken away, ρ ${Number(D.rho_res).toFixed(2)}`);
       if (K.P != null && K.U != null) T.push(`${K.P} places from Qloo → ${K.U} kept` + [['closed', F.closed], [`rated below ${CFG.floor.rating}`, F.below_43], [`outside ${K.R_mi} mi`, F.outside_R], ['not a restaurant or bar', F.not_venue]]
         .filter(([, v]) => v != null).map(([k, v]) => ` · ${k} ${v}`).join(''));
-      openSheet(`<div class="cap">${esc(cityName)}</div><h1>Not a popularity filter.</h1>
-        <div class="blk"><p>${EXPLAIN}</p>${P.map(t => `<p>${t}</p>`).join('')}</div>
+      const E = WE;
+      const k12 = E ? `<p>Across our ${E.sets} preset sets, how many of the ${E.of} cards some AI named (median): <b>UNSAID ${fmt1(E.named_unsaid)}</b> · the same pipeline with nothing crossed out ${fmt1(E.named_no_strike)} · Qloo’s plain top ${E.of} for the same taste ${fmt1(E.named_plain)}.</p>` : '';
+      openSheet(`<div class="cap">${esc(cityName)}</div><h1>Is this just obscure places?</h1>
+        <div class="blk"><p>Partly, on purpose. ${EXPLAIN} So less-known places rise when they fit you.</p>
+          <p>But obscurity isn’t the test. Being named by an AI is: a place is crossed out because an AI named it, however famous or small it is.</p>
+          ${k12}${P.map(t => `<p>${t}</p>`).join('')}</div>
         ${T.length ? `<details class="log"><summary>The numbers</summary><div class="logbody">${T.map(t => `<div>${t}</div>`).join('')}</div></details>` : ''}`);
     }
 

@@ -58,21 +58,32 @@
   document.getElementById('curl').textContent =
     `curl -N -H "Authorization: Bearer $UNSAID_TOKEN" \\\n  "${o}/api/unsaid?city=st-louis&loves=${encodeURIComponent(loves)}"`;
   const m = await UM.json('data/meter.json');
+  const cap = x => String(x).charAt(0).toUpperCase() + String(x).slice(1);
   // the meter as measured (data/meter.json, from k10_meter.py), printed whatever it said; the line is dropped if unmeasured
   const me = document.getElementById('meter');
   if (m.m_alone != null && m.m_qloo != null) {
     me.textContent = `We asked ${m.assistants === 2 ? 'two' : m.assistants} AI assistants to plan a night in ${m.city || 'the city'} “but nothing every AI would tell me”, then graded their picks against the other AIs’ everyone-list. ` +
       `Alone, a median ${m.m_alone} of ${m.of} picks were on it. With Qloo as their only tool and nothing crossed out, ${m.m_qloo} of ${m.of} (${m.sets} sets). ` +
-      (m.gate === 'FAIL' ? `That missed the bar we set in advance (${m.bar}; it was ${m.below4_sets}), so a taste tool on its own moves it only a little. That’s why UNSAID crosses out first.` : '');
+      (m.gate === 'FAIL' ? `That missed the bar we set in advance (${m.bar}; it was ${m.below4_sets} of ${m.sets}): FAIL.` : '');
+    const P = m.posthoc;
+    if (P) {
+      const e = document.createElement('p'); e.className = 'dim';
+      e.textContent = `Afterwards (${P.label}), we ran a third arm with UNSAID as the only tool. ${cap(P.stat)}: alone ${P.alone} · with Qloo ${P.qloo} · with UNSAID ${P.unsaid}. ` +
+        `Claude’s UNSAID runs put ${P.claude_unsaid} picks on the list in every run; ChatGPT skipped the tool in ${P.chatgpt_skipped} of its ${P.chatgpt_runs} runs, and those runs count as they came out.`;
+      me.after(e);
+    }
   } else me.parentNode.removeChild(me.previousElementSibling), me.remove();
   const d = await UM.json('data/live/agent_demo.json').catch(() => null);
-  if (d && d.answer) {
+  // the answer is shown only when the run is newer than the stored set it is about (an older run names older cards)
+  const set = await UM.json('data/live/stl_stl-cedric.json').catch(() => null);
+  const fresh = d && set && set.ran_at && new Date(d.recorded_at) >= new Date(set.ran_at);
+  if (d && d.input) {
     const run = document.getElementById('run');
     const p = (cls, text) => { const e = document.createElement(cls === 'pre' ? 'pre' : 'p'); if (cls !== 'pre') e.className = cls; e.textContent = text; run.appendChild(e); return e; };
     p('dim', `Recorded ${String(d.recorded_at).slice(0, 10)} with Claude Code ${d.claude_code} (${d.model}), against this site’s API. The call it made:`);
     p('pre', `${d.tool}(${JSON.stringify(d.input, null, 1).replace(/\n\s*/g, ' ')})`);
-    p('dim', 'Its answer, unedited:');
-    p('pre', d.answer).style.whiteSpace = 'pre-wrap';
+    if (fresh && d.answer) { p('dim', 'Its answer, unedited:'); p('pre', d.answer).style.whiteSpace = 'pre-wrap'; }
+    else p('dim', 'Its answer will be shown here once it is re-recorded on today’s cards.');
   }
   window.__ready = true;
 })();
