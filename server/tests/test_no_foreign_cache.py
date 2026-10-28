@@ -249,12 +249,33 @@ class NoForeignCache(unittest.TestCase):
         finally:
             app.GEMINI = old
 
+    def test_shutdown_ends_open_streams_cleanly(self):
+        """SIGTERM (a deploy or spin-down) mid-run: the stream ends with a 'restarting' done line, never a cut."""
+        gate = threading.Event()
+
+        def slow(*a, **k):
+            gate.wait(10)
+            raise QlooError(503, "x", "u")
+        app.adapter.run = slow
+        threading.Timer(0.5, app.SHUTDOWN.set).start()
+        try:
+            t0 = time.monotonic()
+            ev, r = H.run(H.JASON, ip="198.51.100.60")
+        finally:
+            gate.set()
+            app.SHUTDOWN.clear()
+        self.assertLess(time.monotonic() - t0, 3)
+        self.assertEqual(r["status"], "degraded")
+        self.assertIn("restarting", r["flags"])
+        self.assertEqual(r["note"], app.COPY["restarting"])
+        self.assertNoCards(ev, "shutdown")
+
     def test_needs_input_has_no_cards(self):
         ev, r = H.run([{"text": "Kings of Comedy"}, {"text": "Al Green", "hint": "artist"}])
         self.assertEqual(r["status"], "needs_input")
         self.assertNoCards(ev, "needs_input")
-        ev, r = H.run(H.JASON, city="Richmond")
-        self.assertEqual(r["status"], "needs_input")
+        ev, r = H.run(H.JASON, city="Richmond")          # only St. Louis and New York are served (decided 28 Oct)
+        self.assertEqual(r["status"], "unsupported_city")
         self.assertNoCards(ev, "ambiguous city")
 
 

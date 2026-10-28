@@ -91,6 +91,30 @@ TYPES = {"artist", "movie", "tv_show", "book", "podcast", "videogame", "brand", 
 ID_RE = re.compile(r"^[A-Za-z0-9:_.\-]{1,120}$")
 
 
+COVERED = ("stl", "nyc")
+CITY_NOT_COVERED = ("UNSAID covers St. Louis and New York, the cities where we collected what the AIs say. "
+                    "Pick one of those.")
+CANON = {"stl": "St. Louis", "nyc": "New York City"}
+
+
+def city_key(text):
+    """City text, slug or alias -> ("stl"|"nyc"|None, text for the engine). Slugs the site sends (new-york,
+    st-louis) map to the canonical name, so a resolved city is never sent back for disambiguation."""
+    t = " ".join((text or "").split())
+    k = t.lower().rstrip(".")
+    if k in CITY_SLUGS:
+        ck = CITY_KEY[CITY_SLUGS[k][2]]
+        return ck, CANON[ck]
+    try:
+        from unsaid import cities
+        ck, _ = cities.lookup(t)
+    except ImportError:
+        ck = None
+    if ck in COVERED:
+        return ck, t
+    return None, t
+
+
 def slugify(s):
     return re.sub(r"[^a-z0-9]+", "-", (s or "").lower()).strip("-")
 
@@ -132,6 +156,10 @@ def _city_out(c, slug, radius):
 
 
 def resolve_city(text, q, mode):
+    ck, text = city_key(text)
+    if ck is None:
+        return {"status": "unsupported_city", "city": None, "alternatives": [{"name": CANON[k]} for k in COVERED],
+                "note": CITY_NOT_COVERED}
     if API:
         try:
             return API.resolve_city(text, mode=mode, qloo=q)
@@ -210,6 +238,7 @@ def prepare(city_text, loves, q, mode):
     rc = resolve_city(city_text, q, mode)
     if rc.get("status") == "degraded":
         raise RuntimeError("Qloo unavailable while resolving")
+    city_text = city_key(city_text)[1]
     out = {"status": "ok", "city": rc.get("city"), "city_text": city_text, "city_resolution": rc, "loves": [],
            "resolutions": []}
     if rc.get("status") != "ok":
@@ -251,8 +280,7 @@ def city_wall(city_text, cache_dir):
     """The city's generic dated wall (the sets every love set shares: city wall, street, census), from the city text
     alone: static data, no Qloo call. The server streams it before resolving anything, so the first name is on
     screen at once. Unknown city text -> []."""
-    k = " ".join((city_text or "").split()).lower().rstrip(".")
-    ck = CITY_KEY.get(CITY_SLUGS[k][2]) if k in CITY_SLUGS else None
+    ck, _ = city_key(city_text)
     path = walls_file(cache_dir)
     if not ck or not path:
         return []
@@ -340,7 +368,9 @@ def run(prep, wall, q, mode, gemini, emit, deadline_s=90.0, timing=None):
         lane = _ApiTaste(gemini, prep, timing) if live else False  # False: no engine stand-in, never a fake live answer
         street = dated_street(wall)                                # dated answers only, never a live street ask
         seen = CappedLastSeen() if mode == "live" else None      # None: the engine's fake check in fake mode
-        return API.run_unsaid(prep["city_text"], prep["loves"], walls_path=wall["path"],
+        resolved = prep["city_resolution"].get("_city")        # the city resolved once, never re-resolved here
+        return API.run_unsaid(resolved if isinstance(resolved, dict) else prep["city_text"], prep["loves"],
+                              walls_path=wall["path"],
                               mode=mode, qloo=q, gemini=lane, street_check=street, on_event=forward, last_seen=seen,
                               deadline_s=max(1.0, min(90.0, float(deadline_s))))
     return _run_fallback(prep, wall, q, mode, gemini, emit, timing)

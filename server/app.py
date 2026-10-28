@@ -74,6 +74,26 @@ RESULTS = C.ResultCache(CACHE_DIR)
 INFLIGHT, INFLIGHT_LOCK = {}, threading.Lock()
 BOOT = time.time()
 WARM = {"state": "pending", "cpu_s": None}
+SHUTDOWN = threading.Event()        # SIGTERM (Render deploy or spin-down): open streams end cleanly, then exit
+STREAMS = {"open": 0}
+STREAMS_LOCK = threading.Lock()
+
+
+def rss_mb():
+    """(current, peak) resident memory in MB from /proc (Linux); (None, peak) elsewhere."""
+    cur = peak = None
+    try:
+        with open("/proc/self/status") as f:
+            for line in f:
+                if line.startswith("VmRSS:"):
+                    cur = round(int(line.split()[1]) / 1024.0, 1)
+                elif line.startswith("VmHWM:"):
+                    peak = round(int(line.split()[1]) / 1024.0, 1)
+    except OSError:
+        import resource
+        r = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        peak = round(r / (1024.0 * 1024 if sys.platform == "darwin" else 1024.0), 1)
+    return cur, peak
 
 
 def warm():
@@ -104,6 +124,7 @@ COPY = {  # UNSAID.md §2.2, exact
     "limited": "Fresh runs are limited so everyone gets through. These open instantly:",
     "partial": "%d answers · %d of 3 AIs",
     "live": "Gemini (%s): asked %s",          # §2.1 status line, naming the live model id
+    "restarting": "The ranker restarted mid-run. Try again in a minute; nothing you typed was lost.",
     "no_wall": "No AI answers collected for this city yet: these are Qloo's picks for you, with nothing crossed out.",
 }
 WORDS = {1: "One run", 2: "Two runs", 3: "Three runs", 4: "Four runs", 5: "Five runs"}
@@ -259,6 +280,9 @@ def stream_unsaid(city_text, loves, ip, country, emit, bench=False):
     session = GEMINI.for_country(country)
     prep, wall = None, None
     sent = set()
+    if adapter.city_key(city_text)[0] is None:
+        status("unsupported_city", adapter.CITY_NOT_COVERED)
+        return done(shell("unsupported_city", note=adapter.CITY_NOT_COVERED))
 
     def wall_names(answers):                  # each dated name once, whichever step streams it first
         for it in adapter.wall_items(answers):
@@ -396,6 +420,13 @@ def stream_unsaid(city_text, loves, ip, country, emit, bench=False):
         th.join(1.0)
         if not th.is_alive():
             break
+        if SHUTDOWN.is_set():                 # the host is going away: say so now instead of a silent cut
+            with lock:
+                box["closed"] = True
+            status("degraded", COPY["restarting"])
+            r = shell("degraded", prep, wall, COPY["restarting"], flags=["no_cache", "restarting"])
+            r["key"] = key
+            return done(r)
         if adapter.BACKEND == "api":      # the engine streams its own calls/ranking events
             if time.monotonic() >= deadline:
                 with lock:
@@ -522,7 +553,9 @@ class Handler(BaseHTTPRequestHandler):
             path = u.path.rstrip("/") or "/"
             if path == "/api/health":
                 a, w = ADMIT.depth()
+                cur, peak = rss_mb()
                 return self._json(200, {"ok": True, "state": "warm", "boot_warm": WARM["state"],
+                                        "rss_mb": cur, "peak_rss_mb": peak, "streams": STREAMS["open"],
                                         "mode": MODE, "backend": adapter.BACKEND,
                                         "engine_v": adapter.ENGINE_V, "uptime_s": int(time.time() - BOOT),
                                         "queue": {"active": a, "waiting": w}})
@@ -587,6 +620,9 @@ class Handler(BaseHTTPRequestHandler):
             loves = parse_loves(qs.get("loves"))
         except ValueError as e:
             return self._json(400, {"status": "bad_request", "note": str(e)})
+        if adapter.city_key(city)[0] is None:
+            return self._json(400, {"status": "unsupported_city", "note": adapter.CITY_NOT_COVERED,
+                                    "cities": [adapter.CANON[k] for k in adapter.COVERED]})
         self.send_response(200)
         self.send_header("Content-Type", "application/x-ndjson; charset=utf-8")
         self.send_header("Cache-Control", "no-store")
@@ -604,7 +640,13 @@ class Handler(BaseHTTPRequestHandler):
             except (BrokenPipeError, ConnectionResetError, OSError):
                 gone["v"] = True      # the visitor left; the run still finishes and is cached under its key
 
-        stream_unsaid(city, loves, self.client_ip(), self.country(), emit, bench=self.bench())
+        with STREAMS_LOCK:
+            STREAMS["open"] += 1
+        try:
+            stream_unsaid(city, loves, self.client_ip(), self.country(), emit, bench=self.bench())
+        finally:
+            with STREAMS_LOCK:
+                STREAMS["open"] -= 1
         self._log(200)
 
 
@@ -616,9 +658,20 @@ def make_server(host=None, port=None):
     return srv
 
 
+def drain_and_stop(srv, grace_s=8.0):
+    """SIGTERM: every open stream gets a 'restarting' done line within ~1 s; then the server stops."""
+    SHUTDOWN.set()
+    t = time.monotonic()
+    while STREAMS["open"] and time.monotonic() - t < grace_s:
+        time.sleep(0.2)
+    srv.shutdown()
+
+
 def main():
+    import signal
     threading.Thread(target=warm, name="warm", daemon=True).start()
     srv = make_server()
+    signal.signal(signal.SIGTERM, lambda *a: threading.Thread(target=drain_and_stop, args=(srv,), daemon=True).start())
     h, p = srv.server_address[:2]
     print("[unsaid] listening on %s:%d · mode=%s · backend=%s · token=%s · gemini=%s" % (
         h, p, MODE, adapter.BACKEND, "on" if TOKEN else "off", GEMINI.global_reason() or "live"), file=sys.stderr)

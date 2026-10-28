@@ -76,6 +76,11 @@ class Http(unittest.TestCase):
         finally:
             app.BENCH_SECRET = ""
 
+    def test_unsupported_city_is_a_400(self):
+        code, body = self.get("/api/unsaid?city=Chicago&loves=" + loves_q(H.JASON))
+        self.assertEqual(code, 400)
+        self.assertEqual(json.loads(body)["status"], "unsupported_city")
+
     def test_token(self):
         self.assertEqual(self.get("/api/health", token=None)[0], 200)
         for p in ("/api/resolve?kind=city&q=nyc", "/api/unsaid?city=nyc&loves=x", "/api/result/" + "a" * 64):
@@ -357,6 +362,39 @@ class Output(unittest.TestCase):
         self.assertGreater(calls_before[0], 0, "wall names must stream before the loves are resolved")
         keys = [(e["provider"], e["phrasing_id"], e["asked_at"], e["name"]) for e in seen if e["type"] == "wall_name"]
         self.assertEqual(len(keys), len(set(keys)), "a dated name is streamed once")
+
+    def test_resolved_city_slug_is_never_re_resolved(self):
+        """/api/resolve says New York -> slug new-york; /api/unsaid?city=new-york must not ask again."""
+        H.reset_limits()
+        api = app.adapter.API
+        calls = []
+        real = api.resolve_city
+
+        def spy(text, *a, **k):
+            calls.append(text)
+            return real(text, *a, **k)
+        api.resolve_city = spy
+        try:
+            r0 = app.adapter.resolve_city("New York", app.adapter.make_qloo("fake", H.TMP), "fake")
+            self.assertEqual((r0["status"], r0["city"]["slug"]), ("ok", "new-york"))
+            calls.clear()
+            for slug in ("new-york", "st-louis", "New York City", "St. Louis, MO"):
+                ev, r = H.run(H.JASON, city=slug, ip="192.0.2.%d" % (100 + len(calls)))
+                self.assertNotIn(r["status"], ("needs_input", "unsupported_city"), (slug, r.get("status")))
+                self.assertFalse([e for e in ev if e.get("state") == "needs_input"], slug)
+            self.assertEqual(len(calls), 4, "one city resolution per request, none inside the run: %s" % calls)
+        finally:
+            api.resolve_city = real
+
+    def test_only_st_louis_and_new_york(self):
+        H.reset_limits()
+        ev, r = H.run(H.JASON, city="Chicago", ip="192.0.2.120")
+        self.assertEqual(r["status"], "unsupported_city")
+        self.assertEqual(r["note"], app.adapter.CITY_NOT_COVERED)
+        self.assertEqual(r["picks"], [])
+        self.assertEqual([e["type"] for e in ev if e["type"] == "wall_name"], [])
+        rc = app.adapter.resolve_city("Chicago", app.adapter.make_qloo("fake", H.TMP), "fake")
+        self.assertEqual(rc["status"], "unsupported_city")
 
     def test_ratings_have_one_decimal(self):
         self.assertEqual(app.round_card({"rating": 4.1999998})["rating"], 4.2)
