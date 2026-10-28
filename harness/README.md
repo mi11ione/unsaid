@@ -1,7 +1,8 @@
 # harness: the $0 AI side (UNSAID.md §3.6)
 
 Walls, censuses, fresh asks and meter runs, asked on Roman's Mac only, through each vendor's own tool. Nothing here is
-callable from a server path. No paid API key, no web search, no name or email in any request or header.
+callable from a server path. No paid API key, no name or email in any request or header, and no web search except in the
+labelled search-on lane (below), which is stored apart.
 
 | script | does |
 |---|---|
@@ -9,7 +10,9 @@ callable from a server path. No paid API key, no web search, no name or email in
 | `run_census.py --provider claude\|codex\|gemini` | the frozen 128 census asks (`asks.json`, prompt v1), verbatim |
 | `census_stats.py [--provider p] [--gems]` | census numbers per provider; `--gems` fills ⟦GEM_GPT⟧ ⟦GEM_GEM⟧ from stored output only |
 | `fresh_asks.py` | K5′ held-out public questions, verbatim (needs `data/fresh_asks.json`) |
-| `meter.py` | gate D, alone vs with `qloo_places` (needs `UNSAID_MODE=live` + `QLOO_API_KEY` for the with arm) |
+| `meter.py` | gate D, alone vs with `qloo_places` (needs `UNSAID_MODE=live` + `QLOO_API_KEY` for the with arm); the post-hoc `unsaid` arm (`meter_unsaid.md`, graded by `meter_unsaid_grade.py`) |
+| `search_on.py` | the search-on lane: Claude and ChatGPT with web search, stored apart, labelled `search: true` |
+| `saturation.py` | saturation batches that extend the no-search census like for like, until the new-name rate falls under 5% |
 | `lanes.py` | the three lanes, the answer store, the resumable runner |
 | `phrasings.py` | prompt v2 phrasings (the 16 gem phrasings imported verbatim from `prompts.py`), set loading, question hashes |
 | `hoods.py` → `neighbourhoods.json` | OSM neighbourhoods for street asks (STL 79, NYC 130; 4 "Historic District" entries pruned) |
@@ -79,6 +82,8 @@ The console shows 20 requests a day and 5 a minute per model per project. Creden
 
 - `street-1` (`street_1.sh`): "Best places to eat and drink in {neighbourhood}, {city}" for the 71 distinct neighbourhoods of the frozen 20 sets' cards and reserves (STL 31, NYC 40), on both lanes. Only the neighbourhood and city fields are read; the list sits in a gitignored file. → `data/walls/street-1.json`.
 - `e1` (`sets_e.py`, `sets_e.sh`): each set's own three loves plus the city, two unhinted phrasings, sent verbatim (no suffix) on both lanes: "I love {L1}, {L2} and {L3}. Where should I eat or drink in {city}?" and "Where should I go out to eat or drink in {city}? I'm into {L1}, {L2} and {L3}.". → `data/walls/e1.json`, one taste entry per set. The engine's reverse check reads the raw text. `sets_e.py --count` writes only counts of the cards they name (`runs/sets_e_counts.json`), using k5's rule.
+- `search-on` (`search_on.sh`): "real ChatGPT and Claude search the web; does the wall hold?" Per city, the 16 census hidden-gem phrasings plus 8 plain ones, to Claude with `--tools "WebSearch,WebFetch"` (it searched in 6 of 48 asks), to Claude told to search (a labelled `nudged` variant; 44 of 48) and to codex with `-c web_search="live" --disable apps --disable shell_tool` (48 of 48). → `data/walls/search-on.json` (`meta.search: true`). The no-search census never reads it. `search_on.py --report` on 28 Oct: 0 of the 140 frozen gate-E cards named; Claude's hidden-gem tops hold (Mai Lee 14 of 16 with search allowed, 8 of 16 nudged); ChatGPT with search moves off them (Mai Lee 4 of 16, Gioia's Deli 0 of 16). Logs: `runs/logs/search-on*.log`.
+- `sat` (`saturation.py`, `saturation.sh`): a deterministic phrase grid (neighbourhood × occasion × cuisine × template) with the census v1 suffix, no search, in batches of 40 per city per AI. A pair stops when the new-name rate in the last 40 asks is under 5% or after 240 extra asks. → `data/walls/sat.json`; coverage against the Chao2 estimate in `runs/saturation.json`.
 - Walls #2 and #3 (`wall_day.sh`) are scheduled by `at_et.sh` for 09:00 ET on 29 and 30 Oct. Gemini (`gemini_daily.sh`) runs at 03:05 ET. Every waiter and every lane refuses to start, or stops, below 3 GB of free disk.
 
 ## Search leak (28 Oct): found, fixed, redone
