@@ -21,3 +21,4 @@ __pycache__/
 # live Qloo-derived results: shipped only by direct upload, never committed (UNSAID.md §3.5, §5.2)
 site/data/live/
 media/data/live/
+media/shots/
