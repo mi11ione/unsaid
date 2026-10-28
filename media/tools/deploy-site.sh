@@ -4,7 +4,7 @@
 #   CHECK_ONLY=1 zsh media/tools/deploy-site.sh   check only
 # 1. renders the Open Graph image (the Cedric share card, with the site's address) into site/data/live/og-cedric.png
 # 2. fails if any ⟦placeholder⟧ reaches a visitor: static HTML/JSON outside data/mock, and the rendered text of the
-#    landing page, /agents, every try-these set and Cedric's card, name and popularity sheets, at 390 and 1440 px
+#    landing page, /agents, /how, every try-these set and Cedric's card, wall and name sheets, at 390 and 1440 px
 # 3. deploys with wrangler (site/data/live is gitignored and ships only through this upload)
 set -e
 cd "$(dirname "$0")/../.."
@@ -42,10 +42,11 @@ check() {  # url width [js to run first]
 for w in 390 1440; do
   check "$B/index.html" $w
   check "$B/agents" $w
+  check "$B/how" $w
   for s in ${=SETS}; do check "$B/index.html#/r?set=$s" $w; done
   check "$B/index.html#/r?set=stl-cedric" $w "document.querySelector('.card').click()"
-  check "$B/index.html#/r?set=stl-cedric" $w "document.getElementById('lnk-pop').click()"
-  check "$B/index.html#/r?set=stl-cedric" $w "document.querySelector('.nm button').click()"
+  check "$B/index.html#/r?set=stl-cedric" $w "document.getElementById('xall').click()"
+  check "$B/index.html#/r?set=stl-cedric" $w "(document.getElementById('xall').click(),document.querySelector('.sheet .nm button').click())"
 done
 [[ $bad == 0 ]] || { echo "not deployed: placeholders would reach visitors"; exit 1; }
 echo "placeholder check: ok"

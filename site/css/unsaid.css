@@ -306,8 +306,8 @@ table.k12 tr.us td { color: var(--white); font-weight: 600; }
   .res.done #s-left { order: 0; } .res.done #maphead { order: 1; margin-top: 26px; } .res.done #status { order: 2; } .res.done #notes { order: 3; }
   .res.done #s-left { margin-top: 14px; }
   /* streaming on a phone: the status, then the cards as they arrive, then the map; the wall stays below */
-  .res.hascards:not(.done) #status { order: 0; } .res.hascards:not(.done) #s-left { order: 1; }
-  .res.hascards:not(.done) #maphead { order: 2; margin-top: 26px; } .res.hascards:not(.done) #notes { order: 3; }
+  .res.hascards:not(.done) #maphead { order: 0; } .res.hascards:not(.done) #status { order: 1; }
+  .res.hascards:not(.done) #notes { order: 1; } .res.hascards:not(.done) #s-left { order: 2; }
   .lead2 { font-size: 28px; } .lead2 .n { font-size: 28px; }
   .dare .out .big { font-size: 21px; } .agentblk .a { font-size: 19px; }
   .subhead { font-size: 18px; } .hook { font-size: 15.5px; }
@@ -323,3 +323,97 @@ table.k12 tr.us td { color: var(--white); font-weight: 600; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 .sheet > .cap:first-of-type { padding-right: 84px; }
+
+/* ---------- round 5: less, bigger, cleaner (photo-first cards, compact hero, collapsed paste box) ---------- */
+[hidden] { display: none !important; }
+.land { display: block; }
+.s1 { padding-top: 44px; max-width: 720px; }
+.hook { font: 400 19px/1.4 var(--serif); color: #cfccc3; margin: 14px 0 18px; }
+.legal { margin-top: 12px; }
+.go { margin-top: 20px; }
+.try { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.try .dim { margin-right: 4px; }
+.pchip { font-size: 14px; padding: 5px 10px; }
+.thumbs { margin-top: 26px; }
+.thumbs:empty { display: none; }
+.thumbs .thead { display: flex; justify-content: space-between; gap: 12px; text-decoration: none; font-size: 11px; margin-bottom: 8px; }
+.thumbs .trow { display: flex; gap: 8px; overflow-x: auto; text-decoration: none; scrollbar-width: none; padding-bottom: 2px; }
+.thumbs .trow::-webkit-scrollbar { display: none; }
+.thumbs figure { margin: 0; flex: 0 0 132px; }
+.thumbs img { width: 132px; aspect-ratio: 4 / 3; object-fit: cover; display: block; background: var(--panel); }
+.thumbs figcaption { font: 400 13px/1.25 var(--serif); margin-top: 5px; color: var(--ink); }
+
+/* hero: desktop keeps the map; phone gets the struck gem in one block */
+.herom { padding: 14px 0 2px; }
+.herom .hq { font: 400 16px/1.3 var(--serif); color: #cfccc3; }
+.herom .hg { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-top: 4px; }
+.herom .gx { font: 400 30px/1.1 var(--serif); }
+.herom .red { font-size: 11px; }
+.res .xstrip { margin: 8px 0 0; display: flex; align-items: baseline; gap: 12px; }
+.res .xnames { -webkit-line-clamp: 1; flex: 1 1 auto; min-width: 0; }
+.res .xstrip .link { flex: 0 0 auto; margin: 0; white-space: nowrap; }
+.wallbox .field { margin-top: 16px; }
+.lead2 { margin-top: 26px; font-size: 40px; } .lead2 .n { font-size: 40px; }
+.leadsub { margin: 6px 0 0; font-size: 12px; }
+
+/* the seven: photo first, generous; 2-3 per row on desktop, full width on a phone */
+.cards { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; margin-top: 20px; }
+.card { padding: 0; gap: 0; min-height: 0; overflow: hidden; background: var(--panel); }
+.card .pic { position: relative; aspect-ratio: 16 / 10; background: #171614; overflow: hidden; }
+.card .pic img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.card .pic .fb { display: none; }
+.card .pic.none .fb { display: flex; position: absolute; inset: 0; align-items: center; justify-content: center; padding: 0 24px; text-align: center; color: var(--faint); font: 400 18px/1.3 var(--serif); }
+.card .pic .no { position: absolute; left: 10px; top: 10px; background: rgba(11, 11, 11, .72); color: var(--white); font: 600 11px/1 var(--mono); padding: 5px 7px; }
+.card .xbtn { position: absolute; right: 10px; top: 10px; margin: 0; width: 34px; height: 34px; font-size: 15px; color: var(--white); background: rgba(11, 11, 11, .72); border: 1px solid rgba(242, 239, 230, .28); }
+.card .xbtn:hover { border-color: var(--white); }
+.card .body { padding: 14px 16px 18px; display: flex; flex-direction: column; gap: 6px; }
+.card .name { font: 400 26px/1.15 var(--serif); }
+.card .meta { color: var(--dim); font-size: 11.5px; }
+.card .blurb { margin: 2px 0 0; font: 400 15px/1.4 var(--serif); color: #cfccc3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card .order { font-size: 11.5px; color: #b9b6ad; }
+.card .because { border-top: 0; padding-top: 2px; font-size: 11.5px; color: var(--dim); }
+.card .because b { display: inline; font-size: 11.5px; color: var(--ink); }
+.card .tag { font-size: 11px; }
+.card.struck { background: none; }
+.card.struck .pic img { filter: grayscale(1) brightness(.45); }
+.card.struck .blurb, .card.struck .order, .card.struck .meta { color: var(--faint); }
+
+/* the paste box: one line until opened */
+details.dare { margin-top: 28px; padding: 0; border: 1px solid var(--rule2); }
+details.dare summary { list-style: none; cursor: pointer; padding: 14px 16px; font: 400 18px/1.3 var(--serif); }
+details.dare summary::-webkit-details-marker { display: none; }
+details.dare[open] summary { border-bottom: 1px solid var(--rule); }
+details.dare > :not(summary) { margin-left: 16px; margin-right: 16px; }
+details.dare .copyrow { margin-top: 12px; }
+details.dare textarea { width: calc(100% - 32px); }
+details.dare .out { margin-bottom: 14px; }
+.res .links { margin-top: 22px; gap: 26px; }
+.res .links .link { font-size: 12px; }
+
+.toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 60; max-width: calc(100% - 32px); background: var(--ink); color: var(--bg); padding: 10px 14px; font-size: 12px; box-shadow: 0 6px 24px rgba(0, 0, 0, .5); transition: opacity .6s; }
+.toast.out { opacity: 0; }
+.sheet .lede { font: 400 18px/1.4 var(--serif); color: var(--white); }
+.sheet .placeimg { width: calc(100% + 0px); aspect-ratio: 16 / 10; object-fit: cover; margin: 0 0 14px; border: 0; }
+
+@media (max-width: 720px) {
+  .s1 { padding-top: 26px; }
+  .s1 h1 { font-size: 34px; }
+  .hook { font-size: 17px; margin-bottom: 8px; }
+  .fld { padding: 6px 0 4px; }
+  .cards { grid-template-columns: 1fr; gap: 16px; }
+  .card { padding: 0; gap: 0; }
+  .card .name { font-size: 24px; }
+  .lead2 { margin-top: 18px; font-size: 32px; } .lead2 .n { font-size: 32px; }
+  .res.done #s-left { order: 3; } .res.done #maphead { order: 0; margin-top: 0; } .res.done #status { order: 2; } .res.done #notes { order: 2; }
+  .res.done #s-left { margin-top: 0; }
+  .res.hascards:not(.done) #maphead { margin-top: 0; }
+}
+.how .big { font: 400 26px/1.3 var(--serif); color: var(--white); margin: 22px 0 8px; }
+.how .steps { padding-left: 1.4em; margin: 0; max-width: 680px; }
+.how .steps li { font: 400 17px/1.45 var(--serif); color: #cfccc3; margin: 0 0 12px; }
+.how .steps b { color: var(--white); font-weight: 400; }
+.how table.k12 { max-width: 680px; font-size: 13px; }
+.s1 .fields + .fields { margin-top: 0; }
+.try .pchip { font-size: 13px; padding: 4px 9px; }
+@media (max-width: 720px) { .thumbs .thead { flex-direction: column; gap: 2px; } }
+.sheet .close { background: rgba(11, 11, 11, .8); padding: 6px 8px; z-index: 2; }

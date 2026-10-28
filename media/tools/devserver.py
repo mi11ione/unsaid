@@ -24,8 +24,8 @@ class H(http.server.SimpleHTTPRequestHandler):
 
     def do_GET(self):
         if not self.path.startswith('/api/'):
-            if self.path.split('?')[0] == '/agents':
-                self.path = '/agents.html'
+            if self.path.split('?')[0] in ('/agents', '/how'):     # Cloudflare Pages serves /x for x.html
+                self.path = self.path.split('?')[0] + '.html'
             return super().do_GET()
         req = urllib.request.Request(API + self.path, headers={k: v for k, v in self.headers.items() if k.lower() in ('authorization', 'x-unsaid-token', 'accept')})
         try:
