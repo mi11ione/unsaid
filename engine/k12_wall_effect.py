@@ -52,16 +52,47 @@ def load_fresh():
     return out
 
 
-def named_in(names, answers):
-    """Which of these place names any answer names: matcher R1-R4 on the names + reverse check on the raw text."""
+def named_in(names, answers, veto=()):
+    """Which of these place names any answer names: matcher R1-R5 on the names + reverse check on the raw text.
+    veto: AI names that the engine's strike resolved through Qloo /search to a DIFFERENT place (status outside_pool).
+    Without /search, a 7-name pool lets containment fire on them ('Subway' in "Mimi's Subway Bar and Grill"), so
+    their hits are dropped: same verdict as the strike."""
     if not names or not answers:
         return set()
     pool = [{"entity_id": n, "name": n} for n in names]
     raws = [n["name"] if isinstance(n, dict) else n for a in answers for n in a.get("names") or []]
-    st, _ = M.match_wall(raws, pool, None)
+    st, _ = M.match_wall([r for r in raws if r not in veto], pool, None)
     hit = set(st)
     rix = E.reverse_index(answers)
     return hit | {n for n in names if E.reverse_hit(n, rix) is not None}
+
+
+def explain(card_names, wall_answers, fresh_answers, per, name_of):
+    """For each named card with the wall ON: who names it and, for a dated wall answer, why the strike missed it.
+    -> {card: [{"src": "dated"|"fresh", "how": "matcher R?"|"reverse", "ai_name"|"answer", "strike": ...}]}"""
+    pool = [{"entity_id": n, "name": n} for n in card_names]
+    out = {n: [] for n in card_names}
+    for src, ans in (("dated", wall_answers), ("fresh", fresh_answers)):
+        raws = [n["name"] if isinstance(n, dict) else n for a in ans for n in a.get("names") or []]
+        st, _ = M.match_wall(raws, pool, None)
+        for card, hits in st.items():
+            for raw, rule in dict.fromkeys(hits):
+                x = {"src": src, "how": "matcher " + rule, "ai_name": raw}
+                if src == "dated":
+                    info = per.get(raw) or {}
+                    x["strike"] = {"status": info.get("status"), "outcome": info.get("outcome"),
+                                   "reason": info.get("reason"), "rule": info.get("rule"),
+                                   "struck": [name_of.get(i, i) for i in info.get("ids") or []],
+                                   "resolved": info.get("resolved")}
+                out[card].append(x)
+        rix = E.reverse_index(ans)
+        for n in card_names:
+            j = E.reverse_hit(n, rix)
+            if j is not None:
+                a = ans[j] if isinstance(j, int) and 0 <= j < len(ans) else {}
+                out[n].append({"src": src, "how": "reverse", "answer": a.get("id") or a.get("phrasing_id"),
+                               "provider": a.get("provider"), "hit": j if not isinstance(j, int) else None})
+    return {k: v for k, v in out.items() if v}
 
 
 def last_seen_hook():
@@ -95,9 +126,11 @@ for city in cli.cities(args):
         fr = [a for a in fresh if W._ckey(a.get("city")) == city and (a.get("set") in (None, "", "-") or SD.same(a.get("set"), sid))]
         every = list(wall["answers"]) + fr
 
+        veto = {raw for raw, info in on["_per"].items() if info.get("status") == "outside_pool"}
+
         def score(ids):
             ns = [name_of.get(i) or i for i in ids]
-            return named_in(ns, every), named_in(ns, fr)
+            return named_in(ns, every, veto), named_in(ns, fr, veto)
         r = {"city": city, "set": sid, "U": off["diag"]["N"], "struck_in_U": on["counts"].get("struck_in_U"),
              "wall_answers": len(wall["answers"]), "fresh_answers": len(fr),
              "differ": len(set(off7) - set(on7)), "n_on": len(on7), "n_off": len(off7),
@@ -107,6 +140,8 @@ for city in cli.cities(args):
             a, f = score(ids)
             r[k + "_named"], r[k + "_fresh"], r[k + "_names"] = len(a), len(f), sorted(a)
             r[k + "_struck"] = sum(1 for i in ids if i in on["_struck"])
+        r["on_explain"] = explain([name_of.get(i) or i for i in on7], list(wall["answers"]), fr, on["_per"], name_of)
+        r["on_ids"] = {name_of.get(i) or i: i for i in on7}
         rows.append(r)
         print("    %s/%-18s U %3d: %d of %d cards differ · named by the AIs: on %d · off %d · plain %d "
               "(fresh asks only: %d · %d · %d) · plain top-7 struck by the wall %d%s" % (
@@ -145,6 +180,20 @@ with open(args.md, "w") as f:
     for r in rows:
         f.write("- %s: off %s · plain %s\n" % (r["set"], ", ".join(r["off_names"]) or "none",
                                                ", ".join(r["plain_names"]) or "none"))
+    f.write("\n## Named with the wall ON\n\n(a) = only held-out fresh asks name it (expected: they never fed the wall). "
+            "(b) = a dated wall answer names it, so the strike should have caught it. (c) = a containment match the "
+            "strike overruled because Qloo /search resolved the AI name to another place; not counted as named.\n\n")
+    for r in rows:
+        for card, xs in sorted(r["on_explain"].items()):
+            real = [x for x in xs if (x.get("strike") or {}).get("status") != "outside_pool"]
+            kind = ("(b)" if any(x["src"] == "dated" for x in real) else "(a)" if real else
+                    "(c) not counted: Qloo /search resolves the AI name to a different place, as the strike did")
+            f.write("- %s %s · **%s**: %s\n" % (kind, r["set"], card, "; ".join(
+                "%s %s %s%s" % (x["src"], x["how"], repr(x.get("ai_name") or x.get("answer")),
+                                (" -> strike %s" % json.dumps(x["strike"], ensure_ascii=False)) if x.get("strike") else "")
+                for x in xs)))
+with open(args.md.replace(".md", ".json"), "w") as f:
+    json.dump(rows, f, indent=1, ensure_ascii=False, default=str)
 print("  table: %s" % args.md)
 print("K12 wall effect: %d sets -> %s%s" % (len(rows), cli.verdict(len(rows) > 0), T))
 cli.finish(q, args, "k12_wall_effect")
