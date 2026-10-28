@@ -71,21 +71,34 @@ def _chip(l):
             "type_label": type_label(t), "dead": bool(l.get("dead"))}
 
 
+def c2_count(trace):
+    """C2 love lookups in a slice of the trace (network or cache, retries excluded): one count for every path."""
+    return sum(1 for r in trace if r["label"].startswith("C2") and not r["label"].endswith("(retry)"))
+
+
+def resolve_counted(q, text, hint=None):
+    """E.resolve_love plus the number of C2 calls it made (0 when the pre-resolved table answered)."""
+    n0 = len(q.trace)
+    l = E.resolve_love(q, text, hint)
+    return l, c2_count(q.trace[n0:])
+
+
 def resolve_love(text, hint=None, *, mode="fake", qloo=None):
     q = _client(mode, qloo)
     try:
-        l = E.resolve_love(q, text, hint)
+        l, n = resolve_counted(q, text, hint)
     except QlooError as e:
         return {"status": "degraded", "chip": None, "alternatives": [], "reason": "Qloo HTTP %s" % e.status}
-    return {"status": l["status"], "chip": _chip(l) if l.get("id") else None, "alternatives": l.get("alternatives") or [],
-            "text": text}
+    chip = dict(_chip(l), text=text, c2_calls=n) if l.get("id") else None
+    return {"status": l["status"], "chip": chip, "alternatives": l.get("alternatives") or [], "text": text}
 
 
 def _love_from_chip(ch):
     t = ch.get("type") or ""
     l = {"text": ch.get("text") or ch.get("label") or ch.get("id"), "name": ch.get("label"), "id": ch["id"],
          "kind": ch.get("kind") or ("tag" if str(ch["id"]).startswith("urn:tag") else "entity"), "type": t,
-         "status": "ok", "is_place": t == E.PLACE, "alternatives": [], "dead": False, "dead_reason": None}
+         "status": "ok", "is_place": t == E.PLACE, "alternatives": [], "dead": False, "dead_reason": None,
+         "_c2": int(ch.get("c2_calls") or 0)}      # C2 calls the chip cost when it resolved (on blur)
     if l["kind"] == "tag" and E.dead_tag({"type": t, "id": ch["id"]}):
         l["dead"], l["dead_reason"] = True, "vibe"
     return l
@@ -336,10 +349,16 @@ def dead_line(l, city_name, n_live):
 CALL_KINDS = (("pool", ("C4",)), ("rescore", ("C6'", "C5")), ("ids", ("C7",)), ("cap", ("CAP",)))
 
 
-def call_counts(trace):
-    """diag.calls = {pool, rescore, ids, cap, total}; total also counts C1/C2 (city, loves)."""
+def call_counts(trace, chip_c2=0):
+    """diag.calls = {pool, rescore, ids, cap, loves, city, total}. loves = the C2 lookups, whether they ran inside
+    this run (typed loves) or when the chips resolved (chip.c2_calls), network or cache. total = the sum."""
     out = {k: sum(1 for r in trace if r["label"].startswith(p)) for k, p in CALL_KINDS}
-    out["total"] = len(trace)
+    out["loves"] = c2_count(trace) + chip_c2
+    out["city"] = sum(1 for r in trace if r["label"].startswith("C1"))
+    other = len(trace) - (sum(out.values()) - chip_c2)        # anything uncategorised stays visible
+    if other:
+        out["other"] = other
+    out["total"] = sum(out.values())
     return out
 
 
@@ -394,9 +413,9 @@ def to_contract(res, trace, c, ls, fake):
     cap = d.get("cap") or {}
     out["diag"].update({
         "obscure_names": [n for _, n in d.get("obscure") or []], "known_names": [n for _, n in d.get("known") or []],
-        "calls": call_counts(trace), "wall_names": d.get("wall_names"), "wall_snapshot": d.get("wall_snapshot"),
+        "calls": call_counts(trace, sum(l.get("_c2", 0) for l in ls)), "wall_names": d.get("wall_names"), "wall_snapshot": d.get("wall_snapshot"),
         "struck_fit_ranks": d.get("struck_fit_ranks") or [],
-        "qloo_calls": len(trace), "qloo_network": sum(1 for r in trace if not r["cache"]),
+        "qloo_calls": call_counts(trace, sum(l.get("_c2", 0) for l in ls))["total"], "qloo_network": sum(1 for r in trace if not r["cache"]),
         "rho_tp": _nan(d.get("rho_tp")), "rho_res": _nan(d.get("rho_res")), "rho_res_note": d.get("rho_res_note"),
         "cap_keep": d.get("cap_keep"),
         "cap_shared": d.get("cap_shared"), "cap_overlap": _nan(d.get("popcap_overlap")),

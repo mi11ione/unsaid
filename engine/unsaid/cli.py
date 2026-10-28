@@ -65,12 +65,13 @@ def loves(q, spec):
 def chips(q, spec):
     """Seed set -> resolved chips for api.run_unsaid (top candidate, as the kit always did), or None on a miss.
     Also returns the texts whose resolution was not exact, so callers can say so."""
-    ls = loves(q, spec)
-    if ls is None:
+    from unsaid.api import resolve_counted
+    got = [resolve_counted(q, t, h) for t, h in spec]
+    if any(l["status"] == "miss" for l, _ in got):
         return None, []
-    unsure = ["%s -> %s" % (l["text"], l.get("name")) for l in ls if l["status"] != "ok"]
+    unsure = ["%s -> %s" % (l["text"], l.get("name")) for l, _ in got if l["status"] != "ok"]
     return [{"id": l["id"], "label": l.get("name") or l["text"], "text": l["text"], "kind": l["kind"],
-             "type": l.get("type")} for l in ls], unsure
+             "type": l.get("type"), "c2_calls": n} for l, n in got], unsure
 
 
 extra_clients = []   # second clients a script opens (k2a's rerun client) count toward the same line

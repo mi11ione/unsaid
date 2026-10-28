@@ -78,8 +78,10 @@ class TestRunUnsaid(Tmp):
             self.assertNotIn("_pool_urls", c)
         self.assertTrue(any(c["holds_without"] for c in r["picks"] + r["reserves"]), "a 2-of-3 card names its love")
         calls = r["diag"]["calls"]
-        self.assertEqual(set(calls), {"pool", "rescore", "ids", "cap", "total"})
+        self.assertEqual(set(calls), {"pool", "rescore", "ids", "cap", "loves", "city", "total"})
         self.assertEqual(calls["total"], r["diag"]["qloo_calls"])
+        self.assertEqual(calls["total"], sum(v for k, v in calls.items() if k != "total"))
+        self.assertGreaterEqual(calls["loves"], 1)
         self.assertIn(calls["pool"], (4, 4 + 2 * len(E.CFG["EXTRA_OFFSETS"])))   # 2 entity loves x offsets 0, 50 (+ extra pages when U is small)
         self.assertEqual(calls["cap"], 1)
         self.assertGreaterEqual(calls["rescore"], 3)
@@ -362,6 +364,21 @@ class TestCardFront(Tmp):
         self.assertTrue(any(e["type"] == "strike" and e.get("reason") == "last seen: failed" and e["qloo_id"] == victim
                             for e in events))
         self.assertEqual(r["diag"]["last_seen_dropped"][0]["id"], victim)
+
+
+class TestCallsAgree(Tmp):
+    def test_typed_loves_and_resolved_chips_count_the_same_calls(self):
+        from unsaid import cli
+        typed = api.run_unsaid("St. Louis", CEDRIC, mode="fake", qloo=self.q(), gemini=False, street_check=False)
+        q = self.q()
+        ch, _ = cli.chips(q, [tuple(x) for x in CEDRIC])       # resolved before the run, as precompute does
+        self.assertTrue(all("c2_calls" in c for c in ch))
+        chips = api.run_unsaid("St. Louis", ch, mode="fake", qloo=q, gemini=False, street_check=False)
+        self.assertEqual(typed["diag"]["calls"], chips["diag"]["calls"])
+        self.assertEqual(typed["diag"]["qloo_calls"], chips["diag"]["qloo_calls"])
+        self.assertEqual([c["id"] for c in typed["picks"]], [c["id"] for c in chips["picks"]])
+        r = api.resolve_love("rib tips", "tag", mode="fake", qloo=self.q())
+        self.assertEqual(r["chip"]["c2_calls"], 1)
 
 
 class TestDeadline(Tmp):
