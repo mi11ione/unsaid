@@ -89,7 +89,11 @@
     });
     picks.forEach((c, i) => {
       const [x, y] = P(c.lon, c.lat);
-      items.push({ kind: 'white', c, i, x, y, r: o.sevenD / 2 + o.halo, side: x < mid ? 'L' : 'R', h: o.whitePx * 1.1 + o.hoodPx * 1.5 });
+      // a right-hand label that would run into the headline column goes to the left side instead
+      let side = x < mid ? 'L' : 'R';
+      const est = String(c.name || 'place 0').length * o.whitePx * .5;
+      if (side === 'R' && o.maxRight && Math.max(b.x1 + (o.colGapR ?? o.colGap), x + o.sevenD / 2 + o.halo + 28) + est > o.maxRight) side = 'L';
+      items.push({ kind: 'white', c, i, x, y, r: o.sevenD / 2 + o.halo, side, h: o.whitePx * 1.1 + o.hoodPx * 1.5 });
     });
     UM.stack(items, o.labelTop, o.labelBottom, o.gap || 10);
     const colL = b.x0 - o.colGap, colR = b.x1 + (o.colGapR ?? o.colGap);
@@ -160,7 +164,7 @@
     map({ W, H, box: { x: pad + 190 * s, y: 76 * s, w: split - pad - 380 * s, h: H - 76 * s - 104 * s },
       labelTop: 76 * s, labelBottom: H - 100 * s, redPx: 19 * s, gemPx: 26 * s, whitePx: 24 * s, hoodPx: 13 * s, rankPx: 15 * s, dmax: 38 * s,
       dotD: 4.2 * s, glow: 18 * s, sevenD: 13 * s, halo: 4 * s, colGap: -20 * s, colGapR: 14 * s, gap: 10 * s,
-      clip: { x: pad, y: 64 * s, w: split - pad - 20 * s, h: H - 64 * s - 96 * s } });
+      clip: { x: pad, y: 64 * s, w: split - pad - 20 * s, h: H - 64 * s - 96 * s }, maxRight: split + 24 * s });
     const colX = split + 44 * s, colW = W - colX - pad;
     const holder = el(stage, 'div', `position:absolute;left:${colX}px;top:0`);
     const box = story(holder, colW, s);

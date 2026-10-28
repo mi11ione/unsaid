@@ -50,15 +50,14 @@
     const l1 = wrap(ctx, a + wtxt + ' places.', W - 2 * pad);
     // draw line 1 with the number in red (the number is at the end of the sentence)
     l1.forEach((line, i) => {
-      const yy = y + i * 68;
-      const k = line.lastIndexOf(wtxt);
-      if (k >= 0 && line.endsWith(wtxt + ' places.')) {
-        const pre = line.slice(0, k);
-        ctx.fillStyle = C.ink; ctx.fillText(pre, pad, yy);
-        const px = pad + ctx.measureText(pre).width;
-        ctx.fillStyle = WALL == null ? C.amber : C.red; ctx.fillText(wtxt, px, yy);
-        ctx.fillStyle = C.ink; ctx.fillText(' places.', px + ctx.measureText(wtxt).width, yy);
-      } else { ctx.fillStyle = C.ink; ctx.fillText(line, pad, yy); }
+      // the count is red wherever the wrap puts it
+      const yy = y + i * 68, k = line.indexOf(wtxt);
+      if (k < 0) { ctx.fillStyle = C.ink; ctx.fillText(line, pad, yy); return; }
+      const pre = line.slice(0, k), post = line.slice(k + wtxt.length);
+      ctx.fillStyle = C.ink; ctx.fillText(pre, pad, yy);
+      const px = pad + ctx.measureText(pre).width;
+      ctx.fillStyle = WALL == null ? C.amber : C.red; ctx.fillText(wtxt, px, yy);
+      ctx.fillStyle = C.ink; ctx.fillText(post, px + ctx.measureText(wtxt).width, yy);
     });
     y += l1.length * 68;
     ctx.fillStyle = C.white; ctx.fillText(`Not one said these ${N}.`, pad, y);

@@ -97,8 +97,10 @@
   const tr = el(S, 'div', ''); tr.className = 'trace';
   // the trace sums to its total, from the same run: any calls the parts don't name are shown as "other"
   const parts = [['your pool', CL.pool, '6'], ['same places, each love alone', CL.rescore, '15'], ['names → IDs', CL.ids, '5'], ['popularity cap', CL.cap, '1']];
+  if (CL.loves != null) parts.push(['love lookups', CL.loves, '2']);   // C2: the loves' /search lookups (diag.calls.loves)
   const total = CL.total ?? D.qloo_calls, known = parts.every(p => p[1] != null) ? parts.reduce((t, p) => t + p[1], 0) : null;
-  if (total != null && known != null && total > known) parts.push(['other', total - known, 'n']);
+  // until diag.calls.loves is in the file, the remainder is the love lookups (C2): the only calls outside the four parts
+  if (CL.loves == null && total != null && known != null && total > known) parts.push(['love lookups', total - known, 'n']);
   tr.innerHTML = `<div class="t"><b>${ph(total, 'QLOO_CALLS')} Qloo calls</b> · ${parts.map(p => `${p[0]} ×${ph(p[1], p[2])}`).join(' → ')}</div>
     <div class="tool"><div class="c">Other agents call this.</div>tool_use · unsaid_places({ loves: [${esc(loves)}], city: "${esc(city)}" })</div>`;
   if (MT.featured) el(S, 'div', '', `alone ${ph(MT.m_alone, 'M_ALONE')} of ${MT.of} on the everyone-list · with Qloo ${ph(MT.m_qloo, 'M_QLOO')}`).className = 'meter';
