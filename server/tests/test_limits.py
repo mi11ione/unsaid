@@ -435,6 +435,22 @@ class Output(unittest.TestCase):
         self.assertEqual(a["counts"].get("wall"), b["counts"].get("wall"))
         self.assertLessEqual(len(app.RESULTS.mem), app.RESULTS.max_mem)
 
+    def test_pending_recycle_turns_fresh_runs_away_and_serves_cached(self):
+        H.reset_limits()
+        H.clear_results()
+        _, a = H.run(H.CEDRIC, ip="192.0.2.140")              # cached from here on
+        app.RECYCLE.set()
+        try:
+            ev, r = H.run(H.JASON, ip="192.0.2.141")
+            self.assertEqual(r["status"], "degraded")
+            self.assertIn("restarting", r["flags"])
+            self.assertEqual((r["retry_after"], r["picks"], r["counts"]), (20, [], {}))
+            _, c = H.run(H.CEDRIC, ip="192.0.2.142")
+            self.assertTrue(c["cached"])
+            self.assertEqual([p["id"] for p in c["picks"]], [p["id"] for p in a["picks"]])
+        finally:
+            app.RECYCLE.clear()
+
     def test_ratings_have_one_decimal(self):
         self.assertEqual(app.round_card({"rating": 4.1999998})["rating"], 4.2)
         self.assertIsNone(app.round_card({"rating": None})["rating"])

@@ -96,18 +96,75 @@ STREAMS_LOCK = threading.Lock()
 
 
 RSS_SOFT_MB = float(os.environ.get("UNSAID_RSS_SOFT_MB", "300"))
-MEM = {"trims": 0, "last_trim": None}
+RECYCLE_MB = float(os.environ.get("UNSAID_RECYCLE_MB", "400"))   # 512 MB host: re-exec in place when idle above this
+MEM = {"trims": 0, "last_trim": None, "malloc_trims": 0}
+RECYCLE = threading.Event()
+RECYCLES_FILE = os.path.join(CACHE_DIR, "recycles.json")
+
+
+def malloc_trim():
+    """glibc: return freed heap to the OS (a run parses ~30 MB of JSON on many threads; without this, RSS keeps
+    what it touched). No-op off Linux."""
+    try:
+        import ctypes
+        r = ctypes.CDLL("libc.so.6").malloc_trim(0)
+        MEM["malloc_trims"] += 1
+        return r
+    except Exception:
+        return None
+
+
+def recycles():
+    try:
+        with open(RECYCLES_FILE) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {"count": 0, "last": None}
+
+
+def recycle_watch(srv):
+    """Once RECYCLE is set and nothing is running, re-exec this process in place (same PID, same env, disk caches
+    kept): every byte the allocator kept is returned. New fresh runs are turned away briefly meanwhile."""
+    while True:
+        RECYCLE.wait()
+        a, w = ADMIT.depth()
+        with INFLIGHT_LOCK:
+            busy = bool(INFLIGHT)
+        if STREAMS["open"] or a or w or busy:
+            time.sleep(0.5)
+            continue
+        rec = recycles()
+        rec = {"count": rec.get("count", 0) + 1, "last": {"at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+                                                         "rss_mb": rss_mb()[0]}}
+        try:
+            with open(RECYCLES_FILE, "w") as f:
+                json.dump(rec, f)
+            RESULTS.flush()
+        except OSError:
+            pass
+        print("[unsaid] recycling in place at rss %s MB" % rec["last"]["rss_mb"], file=sys.stderr, flush=True)
+        try:
+            srv.server_close()
+        finally:
+            os.execv(sys.executable, [sys.executable] + (["-I"] if sys.flags.isolated else []) + sys.argv)
 
 
 def memory_guard(force=False):
-    """After a run: above the soft limit (512 MB host), clear the engine's pure caches and re-warm the walls."""
+    """After a run: give freed heap back (malloc_trim); above the soft limit (512 MB host) also clear the engine's
+    pure caches and re-warm the walls; above RECYCLE_MB, recycle the process as soon as it is idle."""
+    malloc_trim()
     cur, _ = rss_mb()
+    if cur is not None and cur >= RECYCLE_MB:
+        RECYCLE.set()
     if not force and (cur is None or cur < RSS_SOFT_MB):
         return None
     out = adapter.trim_caches()
     MEM["trims"] += 1
+    malloc_trim()
     MEM["last_trim"] = {"at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "rss_before_mb": cur,
                         "rss_after_mb": rss_mb()[0], "cleared": out}
+    if (MEM["last_trim"]["rss_after_mb"] or 0) >= RECYCLE_MB:
+        RECYCLE.set()
     threading.Thread(target=warm, name="rewarm", daemon=True).start()
     print("[unsaid] memory guard: %s" % MEM["last_trim"], file=sys.stderr)
     return out
@@ -380,6 +437,13 @@ def stream_unsaid(city_text, loves, ip, country, emit, bench=False):
     # ---- limits: a fresh run is admitted only below both guards (the no-cache case returned above)
     if over:
         return from_stale("limited")
+    if RECYCLE.is_set():                       # memory recycle pending: let the running ones finish first
+        if rec:
+            return from_stale("restarting")
+        status("degraded", COPY["restarting"])
+        r = shell("degraded", prep, None, COPY["restarting"], flags=["no_cache", "restarting"])
+        r.update(key=key, retry_after=20, counts={}, wall=[])
+        return done(r)
 
     # ---- the same key already running: wait for it instead of spending quota twice
     with INFLIGHT_LOCK:
@@ -632,7 +696,9 @@ class Handler(BaseHTTPRequestHandler):
                 cur, peak = rss_mb()
                 return self._json(200, {"ok": True, "state": "warm", "boot_warm": WARM["state"],
                                         "rss_mb": cur, "peak_rss_mb": peak, "streams": STREAMS["open"],
-                                        "priors": adapter.PRIORS, "memory": {"soft_mb": RSS_SOFT_MB, **MEM},
+                                        "priors": adapter.PRIORS, "memory": dict(MEM, soft_mb=RSS_SOFT_MB,
+                                        recycle_mb=RECYCLE_MB, recycle_pending=RECYCLE.is_set(),
+                                        recycles=recycles()),
                                         "mode": MODE, "backend": adapter.BACKEND,
                                         "engine_v": adapter.ENGINE_V, "uptime_s": int(time.time() - BOOT),
                                         "queue": {"active": a, "waiting": w}})
@@ -748,6 +814,7 @@ def main():
     import signal
     threading.Thread(target=warm, name="warm", daemon=True).start()
     srv = make_server()
+    threading.Thread(target=recycle_watch, args=(srv,), name="recycle", daemon=True).start()
     signal.signal(signal.SIGTERM, lambda *a: threading.Thread(target=drain_and_stop, args=(srv,), daemon=True).start())
     h, p = srv.server_address[:2]
     print("[unsaid] listening on %s:%d · mode=%s · backend=%s · token=%s · gemini=%s" % (

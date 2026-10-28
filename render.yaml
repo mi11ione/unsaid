@@ -35,6 +35,10 @@ services:
         sync: false
       - key: UNSAID_RSS_SOFT_MB     # optional, default 300: above it the server clears the engine's memo caches
         sync: false
+      - key: MALLOC_ARENA_MAX       # 2: with malloc_trim after each run, RSS plateaus ~235 MB (was climbing to OOM)
+        sync: false
+      - key: UNSAID_RECYCLE_MB      # optional, default 400: above it the process re-execs itself in place when idle
+        sync: false
       - key: UNSAID_PRIORS_DIR      # /etc/secrets: the priors are Render secret files (server/push_priors.py), never in git
         sync: false
       - key: QLOO_API_KEY
