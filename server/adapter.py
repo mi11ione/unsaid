@@ -247,6 +247,21 @@ def _seed_sid(ck, labels):
     return None
 
 
+def city_wall(city_text, cache_dir):
+    """The city's generic dated wall (the sets every love set shares: city wall, street, census), from the city text
+    alone: static data, no Qloo call. The server streams it before resolving anything, so the first name is on
+    screen at once. Unknown city text -> []."""
+    k = " ".join((city_text or "").split()).lower().rstrip(".")
+    ck = CITY_KEY.get(CITY_SLUGS[k][2]) if k in CITY_SLUGS else None
+    path = walls_file(cache_dir)
+    if not ck or not path:
+        return []
+    try:
+        return [dict(a, lane=a.get("lane", "dated")) for a in W.wall_for(ck, None, path)["answers"]]
+    except (OSError, ValueError, KeyError):
+        return []
+
+
 def wall_for(city, chips, cache_dir):
     """The dated wall for this (city, loves): static data, no network.
     {"answers": [...], "source": ..., "path": <walls file handed to the engine>, "missing": bool}."""

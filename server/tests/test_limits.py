@@ -339,6 +339,25 @@ class Output(unittest.TestCase):
         self.assertFalse([t for t in texts if "dated" in t], texts)          # never "All answers dated earlier"
         self.assertTrue([t for t in texts if t == r["note"]])
 
+    def test_first_line_is_a_dated_wall_name_before_any_qloo_call(self):
+        H.reset_limits()
+        calls_before = []
+        real = app.adapter.prepare
+
+        def spy(*a, **k):
+            calls_before.append(len(seen))
+            return real(*a, **k)
+        seen = []
+        app.adapter.prepare = spy
+        try:
+            app.stream_unsaid("st-louis", [dict(x) for x in H.AL_GREEN], "192.0.2.97", "US", seen.append)
+        finally:
+            app.adapter.prepare = real
+        self.assertEqual(seen[0]["type"], "wall_name")
+        self.assertGreater(calls_before[0], 0, "wall names must stream before the loves are resolved")
+        keys = [(e["provider"], e["phrasing_id"], e["asked_at"], e["name"]) for e in seen if e["type"] == "wall_name"]
+        self.assertEqual(len(keys), len(set(keys)), "a dated name is streamed once")
+
     def test_ratings_have_one_decimal(self):
         self.assertEqual(app.round_card({"rating": 4.1999998})["rating"], 4.2)
         self.assertIsNone(app.round_card({"rating": None})["rating"])

@@ -258,6 +258,15 @@ def stream_unsaid(city_text, loves, ip, country, emit, bench=False):
 
     session = GEMINI.for_country(country)
     prep, wall = None, None
+    sent = set()
+
+    def wall_names(answers):                  # each dated name once, whichever step streams it first
+        for it in adapter.wall_items(answers):
+            k = (it.get("provider"), it.get("phrasing_id"), it.get("asked_at"), it.get("name"))
+            if k not in sent:
+                sent.add(k)
+                emit(dict(it, type="wall_name"))
+    wall_names(adapter.city_wall(city_text, CACHE_DIR))       # first name on screen: static data, before any call
     q = timing.instrument(adapter.make_qloo(MODE, CACHE_DIR, BUCKET, QUOTA, FAKE_PACE))
     try:
         prep = adapter.prepare(city_text, loves, q, MODE)
@@ -273,8 +282,7 @@ def stream_unsaid(city_text, loves, ip, country, emit, bench=False):
         return done(r)
 
     wall = adapter.wall_for(prep["city"], prep["loves"], CACHE_DIR)
-    for it in adapter.wall_items(wall["answers"]):                    # the dated wall first, from static data
-        emit(dict(it, type="wall_name"))
+    wall_names(wall["answers"])                                       # the set's own taste answers, from static data
     lane = "live" if session.live else "dated_only"                   # decided before the key, never after
     key = C.result_key(adapter.ENGINE_V, MODE, prep["city"]["id"], [c["id"] for c in prep["loves"]], "unsaid",
                        C.wall_hash(wall["answers"]), lane)
