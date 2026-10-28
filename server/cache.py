@@ -13,6 +13,7 @@ import hashlib
 import json
 import os
 import re
+import sys
 import threading
 import time
 from collections import OrderedDict
@@ -52,7 +53,9 @@ class ResultCache:
     def _path(self, key):
         return os.path.join(self.root, key[:2], key + ".json")
 
-    def put(self, key, result):
+    def put(self, key, result, background=False):
+        """Memory now; disk now, or on a background thread (background=True: the done line doesn't wait for the
+        serialisation; on 0.1 CPU that is ~1 s). The memory copy answers exact-key lookups either way."""
         if not KEY_RE.match(key or ""):
             raise ValueError("bad key")
         result = dict(result, key=key)
@@ -62,13 +65,35 @@ class ResultCache:
             self.mem.move_to_end(key)
             while len(self.mem) > self.max_mem:
                 self.mem.popitem(last=False)
+        if background:
+            th = threading.Thread(target=self._write, args=(key, rec), name="cache-write", daemon=True)
+            with self.lock:
+                self.pending = [t for t in getattr(self, "pending", []) if t.is_alive()] + [th]
+            th.start()
+        else:
+            self._write(key, rec)
+        return rec
+
+    def flush(self):
+        """Waits for background disk writes (tests; shutdown)."""
+        with self.lock:
+            pend = list(getattr(self, "pending", []))
+        for t in pend:
+            t.join(10)
+
+    def _write(self, key, rec):
+        try:
+            self._write_now(key, rec)
+        except OSError as e:          # disk is a second copy; the memory copy still answers
+            print("[cache] disk write failed: %s" % type(e).__name__, file=sys.stderr)
+
+    def _write_now(self, key, rec):
         p = self._path(key)
         os.makedirs(os.path.dirname(p), exist_ok=True)
         tmp = "%s.%d.%d.tmp" % (p, os.getpid(), threading.get_ident())
         with open(tmp, "w") as f:
             json.dump(rec, f, ensure_ascii=False, default=str)
         os.replace(tmp, p)
-        return rec
 
     def get(self, key):
         """The record for exactly this key, or None. Adds `fresh` (bool) and `age_s`."""

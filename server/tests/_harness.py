@@ -99,5 +99,6 @@ def reset_limits():
 
 def clear_results():
     import shutil
+    app.RESULTS.flush()
     app.RESULTS.mem.clear()
     shutil.rmtree(app.RESULTS.root, ignore_errors=True)

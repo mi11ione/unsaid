@@ -265,6 +265,12 @@ class HttpTransport:
     def __init__(self, key):
         self.key = key
         self.stats = {"calls": 0, "new_conns": 0, "reused": 0, "stale_retries": 0, "wire_bytes": 0, "body_bytes": 0}
+        self._slock = threading.Lock()
+
+    def _count(self, **kv):
+        with self._slock:
+            for k, v in kv.items():
+                self.stats[k] += v
 
     def get(self, url, timeout=TIMEOUT_DEFAULT):
         u = urllib.parse.urlsplit(url)
@@ -282,23 +288,21 @@ class HttpTransport:
                     BrokenPipeError) as e:
                 conn.close()
                 if reused and attempt == 0:      # the server closed an idle keep-alive connection: one fresh retry
-                    self.stats["stale_retries"] += 1
+                    self._count(stale_retries=1)
                     continue
                 raise e
             except Exception:
                 conn.close()
                 raise
             break
-        self.stats["calls"] += 1
-        self.stats["reused" if reused else "new_conns"] += 1
-        self.stats["wire_bytes"] += len(raw)
+        wire = len(raw)
         if r.will_close:
             conn.close()
         else:
             pool.give(conn)
         if (r.getheader("Content-Encoding") or "").lower() == "gzip":
             raw = gzip.decompress(raw)
-        self.stats["body_bytes"] += len(raw)
+        self._count(calls=1, wire_bytes=wire, body_bytes=len(raw), **{"reused" if reused else "new_conns": 1})
         return r.status, raw.decode("utf-8", "replace"), dict(r.headers)
 
 

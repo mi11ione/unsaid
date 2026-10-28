@@ -72,6 +72,25 @@ GEMINI = GeminiLane(CACHE_DIR)
 RESULTS = C.ResultCache(CACHE_DIR)
 INFLIGHT, INFLIGHT_LOCK = {}, threading.Lock()
 BOOT = time.time()
+WARM = {"state": "pending", "cpu_s": None}
+
+
+def warm():
+    """Boot work off the request path (engine api.warm: walls parsed, every wall name normalised and indexed, once
+    per process). Runs on a background thread so /api/health answers at once; a query that arrives first just
+    pays for its own share, with identical results."""
+    try:
+        path = adapter.walls_file(CACHE_DIR)
+        fn = getattr(adapter.API, "warm", None)
+        if path and fn:
+            c = time.process_time()
+            fn(path)
+            WARM.update(state="done", cpu_s=round(time.process_time() - c, 3))
+        else:
+            WARM["state"] = "skipped"
+    except Exception as e:  # warming is an optimisation; never a reason to fail
+        WARM["state"] = "failed: %s" % type(e).__name__
+    print("[unsaid] warm %s (cpu %s s)" % (WARM["state"], WARM["cpu_s"]), file=sys.stderr)
 
 COPY = {  # UNSAID.md §2.2, exact
     "waking": "waking the ranker · about a minute",
@@ -303,7 +322,7 @@ def stream_unsaid(city_text, loves, ip, country, emit, bench=False):
             r["notes"] = [{"state": s, "text": t} for s, t in notes]
             r["diag"] = dict(r.get("diag") or {}, timing=timing.result())   # the run's own stages, kept in the cache
             if r.get("status") in ("ok", "empty_few", "empty_none", "partial", "dated_only"):
-                RESULTS.put(key, public(r))
+                RESULTS.put(key, public(r), background=True)
             box["result"] = r
             fl["result"] = public(r)
         except Exception as e:  # QlooError or anything else: degraded, never a crash
@@ -469,7 +488,8 @@ class Handler(BaseHTTPRequestHandler):
             path = u.path.rstrip("/") or "/"
             if path == "/api/health":
                 a, w = ADMIT.depth()
-                return self._json(200, {"ok": True, "state": "warm", "mode": MODE, "backend": adapter.BACKEND,
+                return self._json(200, {"ok": True, "state": "warm", "boot_warm": WARM["state"],
+                                        "mode": MODE, "backend": adapter.BACKEND,
                                         "engine_v": adapter.ENGINE_V, "uptime_s": int(time.time() - BOOT),
                                         "queue": {"active": a, "waiting": w}})
             if not path.startswith("/api/"):
@@ -563,6 +583,7 @@ def make_server(host=None, port=None):
 
 
 def main():
+    threading.Thread(target=warm, name="warm", daemon=True).start()
     srv = make_server()
     h, p = srv.server_address[:2]
     print("[unsaid] listening on %s:%d · mode=%s · backend=%s · token=%s · gemini=%s" % (
