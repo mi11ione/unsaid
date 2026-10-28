@@ -1,30 +1,30 @@
 {
- "pairs": 3556,
- "labelled": 3556,
+ "pairs": 3562,
+ "labelled": 3562,
  "flags": {
-  "sample": 1132,
-  "token": 2424
+  "token": 2421,
+  "sample": 1141
  },
- "unflagged_arm_pairs": 11558,
+ "unflagged_arm_pairs": 11662,
  "sample_rate": 0.1,
  "sample_named": 0,
- "sample_n": 1132,
+ "sample_n": 1141,
  "confusion_weighted": {
   "tp": 102.0,
   "fp": 19.0,
   "fn": 21.0,
-  "tn": 13602.0
+  "tn": 13689.0
  },
  "confusion_raw": {
   "m_l": 102,
   "m_notl": 19,
   "notm_l": 21,
-  "notm_notl": 3414
+  "notm_notl": 3420
  },
  "precision": 0.8429752066115702,
  "recall": 0.8292682926829268,
- "agreement": 0.9970896391152503,
- "kappa": 0.8345974601130638,
+ "agreement": 0.9971079459185886,
+ "kappa": 0.8346067770444084,
  "named_quote_not_found": 0,
  "models": [
   "claude-opus-5-5"
@@ -52,8 +52,8 @@
     "cards": 140
    },
    "random": {
-    "labeller": 1.65,
-    "matcher": 2.34,
+    "labeller": 1.66,
+    "matcher": 2.43,
     "cards": 140
    }
   },
@@ -106,11 +106,11 @@
     "cards": 70
    },
    "random": {
-    "labeller": 0.7,
-    "matcher": 1.33,
+    "labeller": 0.71,
+    "matcher": 1.42,
     "cards": 70
    }
   }
  },
- "k12_sha256": "d216ff22232bdfa8f8c7b69662081d5b72ef321fed26bca2cc9ab173dad47221"
+ "k12_sha256": "eec385041873c21e60b802f151785b69ee071f5c8ed983e248935f04f5c37cc7"
 }
