@@ -41,7 +41,10 @@ Any `web_search` item in the event stream labels the answer `search: "on"`. `COD
 - The model id comes from `modelVersion`. A `groundingMetadata` block would label the answer "search on".
 - Paced at `GEMINI_RPM`. It stops at `GEMINI_HARNESS_FRACTION` (0.8) × `GEMINI_RPD` per Pacific day, counted in `runs/.gemini_ledger.json`.
 - A missing variable prints `needs credential: …` and skips the lane.
-- A 500/503 ("high demand") is retried once, after 90 s. The read timeout is 180 s. After 2 slow failures in a row (timeouts or 503s) the queue pauses 10 minutes. Every attempt counts in the ledger, erring low because the live lane shares the quota. A 503 that outlasts the retries is stored `failed` with `transient: true`: it is asked again later and is no strike toward the 3-in-a-row stop.
+- A 500/503 ("high demand") or a per-minute 429 is retried once, after the server's Retry-After / RetryInfo when it gives one, else 90 s. A per-day 429 ends the day. After 2 slow failures in a row (timeouts or 503s) the queue pauses 10 minutes. Failed asks come round again in later passes while the day's cap lasts.
+- The read timeout is 420 s. On 28 Oct, answers took up to 282 s, and 7 of 12 attempts died at the old 180 s. Every timed-out request is charged too, so waiting longer costs nothing extra.
+- The ledger (`runs/.gemini_ledger.json`) counts per model per Pacific day, and each model is capped at 16, because the free-tier limits are per model per project.
+- **A second gem model:** `walls_cli.py queue gemini-gems --model gemini-3.6-flash` asks only the 32 census hidden-gem asks, on a free-tier flash model that is neither the dated lane's 3.8-flash nor the live lane's model. Its answers go to `gemini-3.6-flash_answers.jsonl` and are reported separately (`census_stats.py --gems` prints `GEM_GEM[gemini-3.6-flash]`). `gemini_batch.sh` runs both queues each day. Every attempt counts in the ledger, erring low because the live lane shares the quota. A 503 that outlasts the retries is stored `failed` with `transient: true`: it is asked again later and is no strike toward the 3-in-a-row stop.
 
 ### Gemini on the free tier (orchestrator, 28 Oct): 20 RPD, 5 RPM, harness cap 16/day
 
@@ -71,6 +74,12 @@ The console shows 20 requests a day and 5 a minute per model per project. Creden
 5a. **Fresh asks, v1-subreddit-context** (28 Oct, `data/fresh_asks.deviations.md`): one line, "Posted in r/<sub> (<city>):", goes before each verbatim post. The 23 v0 answers sent without it are kept in `runs/fresh.v0.jsonl`.
 5. **Fresh asks go out verbatim:** no JSON suffix, codex without `--output-schema`, Gemini without JSON mode. The raw text is the answer, and k5 matches on it. Records carry `verbatim: true, suffix: false`. `--suffix` opts out.
 6. **Taste sets per wall:** wall 1 asks all 20 sets. Every other wall asks only the sets marked `try_these` (`data/sets.json`, else `data/sets.draft.json`). `--sets a,b` or `--all-sets` overrides.
+
+## More dated walls
+
+- `street-1` (`street_1.sh`): "Best places to eat and drink in {neighbourhood}, {city}" for the 71 distinct neighbourhoods of the frozen 20 sets' cards and reserves (STL 31, NYC 40), on both lanes. Only the neighbourhood and city fields are read; the list sits in a gitignored file. → `data/walls/street-1.json`.
+- `e1` (`sets_e.py`, `sets_e.sh`): each set's own three loves plus the city, two unhinted phrasings, sent verbatim (no suffix) on both lanes: "I love {L1}, {L2} and {L3}. Where should I eat or drink in {city}?" and "Where should I go out to eat or drink in {city}? I'm into {L1}, {L2} and {L3}.". → `data/walls/e1.json`, one taste entry per set. The engine's reverse check reads the raw text. `sets_e.py --count` writes only counts of the cards they name (`runs/sets_e_counts.json`), using k5's rule.
+- Walls #2 and #3 (`wall_day.sh`) are scheduled by `at_et.sh` for 09:00 ET on 29 and 30 Oct. Gemini (`gemini_daily.sh`) runs at 03:05 ET. Every waiter and every lane refuses to start, or stops, below 3 GB of free disk.
 
 ## Search leak (28 Oct): found, fixed, redone
 

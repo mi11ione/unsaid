@@ -358,8 +358,12 @@ def gems():
     parsed list names the gem (core-key containment, so "Sripraphai Thai Restaurant" counts), or, for an answer stored
     without a parsed list, if its raw text contains the gem's core token. The census's own L2 rule is printed beside."""
     print("hidden-gem asks naming the census gem, per provider (16 asks per city; from stored output only)")
-    for prov in LABELS:
-        p = os.path.join(HERE, "%s_answers.jsonl" % prov)
+    import glob
+    sources = [(prov, os.path.join(HERE, "%s_answers.jsonl" % prov), LABELS[prov], FILL.get(prov)) for prov in LABELS]
+    for f in sorted(glob.glob(os.path.join(HERE, "gemini-*_answers.jsonl"))):  # a second free-tier model, kept apart
+        m = os.path.basename(f).replace("_answers.jsonl", "")
+        sources.append(("gemini", f, "Gemini " + m, "GEM_GEM[%s]" % m))
+    for prov, p, label, fill in sources:
         recs = {}
         if os.path.exists(p):
             for l in open(p):
@@ -386,11 +390,11 @@ def gems():
             l2 = sum(1 for r in H if any(Lm.get(x["name"]) == tk for x in (r.get("places") or [])))
             models = sorted(set(r.get("model") or "?" for r in H))
             unp = sum(1 for r in H if not r.get("places"))
-            line = (f"  {LABELS[prov]:8s} {ck}: {target} in {hits} of {len(H)} hidden-gem asks stored (named first in {first}; "
+            line = (f"  {label:8s} {ck}: {target} in {hits} of {len(H)} hidden-gem asks stored (named first in {first}; "
                     f"census L2 rule {l2}; {unp} without a parsed list) · plain asks {plain} of {len(G)} · model {', '.join(models) or '-'}")
             print(line)
             if prov != "claude":
-                tag = FILL[prov] if ck == "stl" else FILL[prov] + "_NYC"
+                tag = fill if ck == "stl" else fill + "_NYC"
                 # as stored, never extrapolated: m = hidden-gem asks with a stored answer
                 print(f"    {tag} = {hits} of {len(H)} asked ({ck}, {target}; 16 planned)")
 

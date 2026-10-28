@@ -322,11 +322,12 @@ class GeminiLane(Lane):
     name, provider, assistant, workers = "gemini", "google", "Gemini", 1
     URL = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent"
     LEDGER = os.path.join(RUNS, ".gemini_ledger.json")
-    BACKOFF = (90,)  # one retry per ask, after 90 s (orchestrator, 28 Oct: 503s are charged)
+    BACKOFF = (90,)  # one retry per ask: after Retry-After / RetryInfo when given, else 90 s (503s are charged)
+    TIMEOUT = 420    # 28 Oct: answers took up to 282 s and 7 of 12 attempts died at 180 s; a timeout is charged too
 
-    def __init__(self):
+    def __init__(self, model=None):
         self.key = os.environ.get("GEMINI_API_KEY", "").strip()
-        self.model = os.environ.get("GEMINI_MODEL", "").strip()
+        self.model = (model or os.environ.get("GEMINI_MODEL", "")).strip()
         self.rpm = float(os.environ.get("GEMINI_RPM") or 0)
         self.rpd = int(os.environ.get("GEMINI_RPD") or 0)
         self.cap = int(self.rpd * float(os.environ.get("GEMINI_HARNESS_FRACTION") or 0.8))
@@ -350,19 +351,28 @@ class GeminiLane(Lane):
         except Exception:  # PT is UTC-7/-8; erring early is fine for a cap
             return (datetime.datetime.utcnow() - datetime.timedelta(hours=8)).date().isoformat()
 
-    def _used(self):
-        try:
-            return json.load(open(self.LEDGER)).get(self._day(), 0)
-        except Exception:
-            return 0
+    PRIMARY = "gemini-3.8-flash"  # the ledger's flat {day: n} entries (27-28 Oct) belong to it
 
-    def _count(self):
-        os.makedirs(RUNS, exist_ok=True)
+    def _ledger(self):
+        """{model: {pacific day: requests}}: the free-tier limits are per model per project."""
         try:
             d = json.load(open(self.LEDGER))
         except Exception:
             d = {}
-        d[self._day()] = d.get(self._day(), 0) + 1
+        flat = {k: v for k, v in d.items() if isinstance(v, int)}
+        if flat:
+            d = {k: v for k, v in d.items() if isinstance(v, dict)}
+            d.setdefault(self.PRIMARY, {}).update(flat)
+        return d
+
+    def _used(self):
+        return self._ledger().get(self.model, {}).get(self._day(), 0)
+
+    def _count(self, n=1, at_least=False):
+        os.makedirs(RUNS, exist_ok=True)
+        d = self._ledger()
+        m = d.setdefault(self.model, {})
+        m[self._day()] = max(m.get(self._day(), 0), n) if at_least else m.get(self._day(), 0) + n
         json.dump(d, open(self.LEDGER, "w"))
 
     def remaining(self):
@@ -370,13 +380,7 @@ class GeminiLane(Lane):
 
     def seed_used(self, n):
         """Record requests made today outside the harness (console count), so the cap covers them too."""
-        os.makedirs(RUNS, exist_ok=True)
-        try:
-            d = json.load(open(self.LEDGER))
-        except Exception:
-            d = {}
-        d[self._day()] = max(d.get(self._day(), 0), int(n))
-        json.dump(d, open(self.LEDGER, "w"))
+        self._count(int(n), at_least=True)
 
     def pace(self):
         with self._lock:
@@ -388,7 +392,7 @@ class GeminiLane(Lane):
     def _post(self, body):
         req = urllib.request.Request(self.URL % self.model, data=json.dumps(body).encode(),
                                      headers={"Content-Type": "application/json", "x-goog-api-key": self.key})
-        with urllib.request.urlopen(req, timeout=180) as r:  # answers that worked on 27 Oct took <= 111 s; a longer wait costs a request too
+        with urllib.request.urlopen(req, timeout=self.TIMEOUT) as r:
             return json.loads(r.read())
 
     def ask(self, prompt, json_mode=True, functions=None, call_tool=None, **_):
@@ -415,13 +419,18 @@ class GeminiLane(Lane):
             try:
                 d = self._post(body)
             except urllib.error.HTTPError as e:
-                msg = e.read().decode(errors="replace")[:300].replace(self.key, "<key>") if self.key else ""
-                if e.code in (500, 503) and busy < len(self.BACKOFF):  # "high demand": back off, not a failure
-                    time.sleep(self.BACKOFF[busy])
+                full = e.read().decode(errors="replace")
+                msg = full[:300].replace(self.key, "<key>") if self.key else full[:300]
+                wait = _retry_after(e, full)
+                per_day = e.code == 429 and re.search(r"PerDay|per day|RPD", full, re.I)
+                # "high demand" 503 / 500, or a per-minute 429: wait as told, retry once; a per-day 429 ends the day
+                if (e.code in (500, 503) or (e.code == 429 and not per_day)) and busy < len(self.BACKOFF):
+                    time.sleep(min(max(wait or self.BACKOFF[busy], 13), 300))
                     busy += 1
                     continue
-                return _finish(dict(res, status="failed", error="HTTP %s %s" % (e.code, msg), fatal=e.code in (401, 403, 429),
-                                    transient=e.code in (500, 503), retries_503=busy), "", t0, s)
+                return _finish(dict(res, status="failed", error="HTTP %s %s" % (e.code, msg),
+                                    fatal=e.code in (401, 403) or bool(per_day), retry_after=wait,
+                                    transient=e.code in (500, 503) or (e.code == 429 and not per_day), retries_503=busy), "", t0, s)
             except Exception as e:
                 return _finish(dict(res, status="failed", error=str(e)[:200].replace(self.key, "<key>"), transient=True,
                                     retries_503=busy), "", t0, s)
@@ -444,6 +453,18 @@ class GeminiLane(Lane):
                 res["tool_calls"] = calls
             return _finish(res, text, t0, s)
         return _finish(dict(res, status="failed", error="tool loop did not end in 5 rounds"), "", t0, s)
+
+
+def _retry_after(err, body):
+    """Seconds to wait, from a Retry-After header or Google's RetryInfo ("retryDelay": "31s")."""
+    try:
+        h = err.headers.get("Retry-After") if err.headers else None
+        if h and h.strip().isdigit():
+            return int(h.strip())
+    except Exception:
+        pass
+    m = re.search(r'"retryDelay"\s*:\s*"(\d+)(?:\.\d+)?s"', body or "")
+    return int(m.group(1)) if m else None
 
 
 LANES = {"claude": ClaudeLane, "codex": CodexLane, "gemini": GeminiLane}

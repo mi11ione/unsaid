@@ -1,0 +1,272 @@
+{
+ "rule": "engine reverse_hit on raw text (k5's rule)",
+ "wall": "e1",
+ "phrasings": [
+  "I love {L1}, {L2} and {L3}. Where should I eat or drink in {city}?",
+  "Where should I go out to eat or drink in {city}? I'm into {L1}, {L2} and {L3}."
+ ],
+ "sets": [
+  {
+   "set": "nyc-arthurrussell",
+   "city": "nyc",
+   "answers": 4,
+   "picks_named": 0,
+   "picks": 7,
+   "reserves_named": 0,
+   "reserves": 3,
+   "picks_named_by": {
+    "claude": 0,
+    "codex": 0
+   }
+  },
+  {
+   "set": "nyc-badbunny",
+   "city": "nyc",
+   "answers": 4,
+   "picks_named": 0,
+   "picks": 7,
+   "reserves_named": 0,
+   "reserves": 3,
+   "picks_named_by": {
+    "claude": 0,
+    "codex": 0
+   }
+  },
+  {
+   "set": "nyc-coltrane",
+   "city": "nyc",
+   "answers": 4,
+   "picks_named": 0,
+   "picks": 7,
+   "reserves_named": 0,
+   "reserves": 3,
+   "picks_named_by": {
+    "claude": 0,
+    "codex": 0
+   }
+  },
+  {
+   "set": "nyc-kendrick",
+   "city": "nyc",
+   "answers": 4,
+   "picks_named": 0,
+   "picks": 7,
+   "reserves_named": 0,
+   "reserves": 3,
+   "picks_named_by": {
+    "claude": 0,
+    "codex": 0
+   }
+  },
+  {
+   "set": "nyc-khruangbin",
+   "city": "nyc",
+   "answers": 4,
+   "picks_named": 0,
+   "picks": 7,
+   "reserves_named": 0,
+   "reserves": 3,
+   "picks_named_by": {
+    "claude": 0,
+    "codex": 0
+   }
+  },
+  {
+   "set": "nyc-newjeans",
+   "city": "nyc",
+   "answers": 4,
+   "picks_named": 0,
+   "picks": 7,
+   "reserves_named": 0,
+   "reserves": 3,
+   "picks_named_by": {
+    "claude": 0,
+    "codex": 0
+   }
+  },
+  {
+   "set": "nyc-rosalia",
+   "city": "nyc",
+   "answers": 4,
+   "picks_named": 0,
+   "picks": 7,
+   "reserves_named": 0,
+   "reserves": 3,
+   "picks_named_by": {
+    "claude": 0,
+    "codex": 0
+   }
+  },
+  {
+   "set": "nyc-stapleton",
+   "city": "nyc",
+   "answers": 4,
+   "picks_named": 0,
+   "picks": 7,
+   "reserves_named": 0,
+   "reserves": 3,
+   "picks_named_by": {
+    "claude": 0,
+    "codex": 0
+   }
+  },
+  {
+   "set": "nyc-taylorswift",
+   "city": "nyc",
+   "answers": 4,
+   "picks_named": 1,
+   "picks": 7,
+   "reserves_named": 0,
+   "reserves": 3,
+   "picks_named_by": {
+    "claude": 0,
+    "codex": 1
+   }
+  },
+  {
+   "set": "nyc-wutang",
+   "city": "nyc",
+   "answers": 4,
+   "picks_named": 0,
+   "picks": 7,
+   "reserves_named": 0,
+   "reserves": 3,
+   "picks_named_by": {
+    "claude": 0,
+    "codex": 0
+   }
+  },
+  {
+   "set": "stl-bigthief",
+   "city": "stl",
+   "answers": 4,
+   "picks_named": 0,
+   "picks": 7,
+   "reserves_named": 0,
+   "reserves": 3,
+   "picks_named_by": {
+    "claude": 0,
+    "codex": 0
+   }
+  },
+  {
+   "set": "stl-cedric",
+   "city": "stl",
+   "answers": 4,
+   "picks_named": 1,
+   "picks": 7,
+   "reserves_named": 0,
+   "reserves": 3,
+   "picks_named_by": {
+    "claude": 1,
+    "codex": 0
+   }
+  },
+  {
+   "set": "stl-chuckberry",
+   "city": "stl",
+   "answers": 4,
+   "picks_named": 0,
+   "picks": 7,
+   "reserves_named": 0,
+   "reserves": 3,
+   "picks_named_by": {
+    "claude": 0,
+    "codex": 0
+   }
+  },
+  {
+   "set": "stl-jason",
+   "city": "stl",
+   "answers": 4,
+   "picks_named": 0,
+   "picks": 7,
+   "reserves_named": 0,
+   "reserves": 3,
+   "picks_named_by": {
+    "claude": 0,
+    "codex": 0
+   }
+  },
+  {
+   "set": "stl-jayz",
+   "city": "stl",
+   "answers": 4,
+   "picks_named": 1,
+   "picks": 7,
+   "reserves_named": 0,
+   "reserves": 3,
+   "picks_named_by": {
+    "claude": 1,
+    "codex": 1
+   }
+  },
+  {
+   "set": "stl-morganwallen",
+   "city": "stl",
+   "answers": 4,
+   "picks_named": 0,
+   "picks": 7,
+   "reserves_named": 0,
+   "reserves": 3,
+   "picks_named_by": {
+    "claude": 0,
+    "codex": 0
+   }
+  },
+  {
+   "set": "stl-nelly",
+   "city": "stl",
+   "answers": 4,
+   "picks_named": 0,
+   "picks": 7,
+   "reserves_named": 0,
+   "reserves": 3,
+   "picks_named_by": {
+    "claude": 0,
+    "codex": 0
+   }
+  },
+  {
+   "set": "stl-sza",
+   "city": "stl",
+   "answers": 4,
+   "picks_named": 0,
+   "picks": 7,
+   "reserves_named": 0,
+   "reserves": 3,
+   "picks_named_by": {
+    "claude": 0,
+    "codex": 0
+   }
+  },
+  {
+   "set": "stl-taylorswift",
+   "city": "stl",
+   "answers": 4,
+   "picks_named": 0,
+   "picks": 7,
+   "reserves_named": 0,
+   "reserves": 3,
+   "picks_named_by": {
+    "claude": 0,
+    "codex": 0
+   }
+  },
+  {
+   "set": "stl-wilco",
+   "city": "stl",
+   "answers": 4,
+   "picks_named": 0,
+   "picks": 7,
+   "reserves_named": 0,
+   "reserves": 3,
+   "picks_named_by": {
+    "claude": 0,
+    "codex": 0
+   }
+  }
+ ],
+ "total_picks_named": 3,
+ "total_picks": 140
+}
