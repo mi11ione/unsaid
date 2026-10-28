@@ -14,6 +14,12 @@ SCHEMA = os.path.join(HERE, "places.schema.json")
 SYS_CLAUDE = "You are Claude, a helpful assistant chatting with a user in a consumer chat app."  # the census line
 SYS_GEMINI = "You are Gemini, a helpful assistant chatting with a user in a consumer chat app."
 TIMEOUT = 300
+MIN_FREE_GB = float(os.environ.get("UNSAID_MIN_FREE_GB") or 3)  # abort cleanly below this (the disk filled on 28 Oct)
+
+
+def disk_low():
+    free = shutil.disk_usage(HERE).free / 1e9
+    return "disk: %.1f GB free < %.0f GB floor" % (free, MIN_FREE_GB) if free < MIN_FREE_GB else None
 CODEX_MODEL_DEFAULT = "gpt-5.6-terra"  # orchestrator decision 27 Oct; env CODEX_MODEL overrides
 
 
@@ -184,7 +190,9 @@ class CodexLane(Lane):
             c += ["--output-schema", schema]
         # Added to §3.6's line, for the no-web-search rule: the user config.toml loads a browser plugin and MCP
         # servers, and codex's own web_search tool is on ("cached") by default.
-        c += ["--ignore-user-config", "-c", 'web_search="disabled"', "--disable", "apps", "-m", self.model]
+        c += ["--ignore-user-config", "-c", 'web_search="disabled"', "--disable", "apps", "--disable", "shell_tool",
+              "-m", self.model]
+        # --disable shell_tool (28 Oct): no shell at all, matching claude's --tools "". 6 street answers had run curl.
         # --disable apps: the built-in codex_apps connector exposes search_service.web_run, a web search that arrives
         # as an mcp_tool_call (seen 28 Oct in 8 of 128 census answers and in the first meter ask)
         if mcp:  # meter "with" arm: one MCP server, only the qloo_places tool
@@ -500,8 +508,9 @@ def run(lane, asks, path, limit=None, go=False, opts=None, on_record=None, stop_
             with lk:
                 if not q:
                     return
-                if stop_if and stop_if():
-                    print("[%s] stopping the lane: %s" % (lane.name, stop_if()), flush=True)
+                why = disk_low() or (stop_if and stop_if())
+                if why:
+                    print("[%s] stopping the lane: %s" % (lane.name, why), flush=True)
                     stop.set()
                     return
                 a = q.popleft()

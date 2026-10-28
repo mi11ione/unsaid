@@ -1,0 +1,110 @@
+[claude] claude 2.1.312 (Claude Code)
+[codex] codex-cli 0.164.0, model pinned gpt-5.6-terra
+[claude] 71 asks, 0 already stored, 71 to ask
+[codex] 71 asks, 0 already stored, 71 to ask
+[claude] wstreet-1:street:stl:-:central-west-end:claude ok 8.1s 12 names claude-sonnet-5-5
+[claude] wstreet-1:street:stl:-:columbia:claude ok 11.9s 10 names claude-sonnet-5-5
+[claude] wstreet-1:street:stl:-:collinsville:claude ok 14.4s 6 names claude-sonnet-5-5
+[claude] wstreet-1:street:stl:-:benton-park:claude ok 19.7s 6 names claude-sonnet-5-5
+[claude] wstreet-1:street:stl:-:dellwood:claude ok 12.8s 6 names claude-sonnet-5-5
+[codex] wstreet-1:street:stl:-:central-west-end:codex ok 21.6s 12 names gpt-5.6-terra
+[claude] wstreet-1:street:stl:-:dupo:claude ok 10.2s 2 names claude-sonnet-5-5
+[codex] wstreet-1:street:stl:-:benton-park:codex ok 27.9s 10 names gpt-5.6-terra
+[claude] wstreet-1:street:stl:-:east-saint-louis:claude ok 12.4s 12 names claude-sonnet-5-5
+[claude] wstreet-1:street:stl:-:downtown-west:claude ok 20.7s 5 names claude-sonnet-5-5
+[claude] wstreet-1:street:stl:-:fairground:claude ok 12.5s 3 names claude-sonnet-5-5
+[claude] wstreet-1:street:stl:-:franz-park:claude ok 12.7s 8 names claude-sonnet-5-5
+[claude] wstreet-1:street:stl:-:glenview:claude unparsed 6.0s 0 names claude-sonnet-5-5
+[claude] wstreet-1:street:stl:-:furman:claude unparsed 6.7s 0 names claude-sonnet-5-5
+[claude] wstreet-1:street:stl:-:kirkwood:claude ok 6.9s 12 names claude-sonnet-5-5
+[claude] wstreet-1:street:stl:-:larimore:claude unparsed 7.8s 0 names claude-sonnet-5-5
+[claude] wstreet-1:street:stl:-:hamilton-heights:claude ok 9.7s 1 names claude-sonnet-5-5
+[claude] wstreet-1:street:stl:-:gravois-park:claude ok 13.5s 2 names claude-sonnet-5-5
+[codex] wstreet-1:street:stl:-:collinsville:codex ok 28.3s 9 names gpt-5.6-terra
+[claude] wstreet-1:street:stl:-:mark-twain-i-70-industrial:claude ok 9.7s 1 names claude-sonnet-5-5
+[codex] wstreet-1:street:stl:-:columbia:codex ok 31.5s 5 names gpt-5.6-terra
+[claude] wstreet-1:street:stl:-:maryland-place:claude ok 14.7s 8 names claude-sonnet-5-5
+[claude] wstreet-1:street:stl:-:maplewood:claude ok 16.4s 6 names claude-sonnet-5-5
+[claude] wstreet-1:street:stl:-:lindenwood-park:claude ok 17.6s 3 names claude-sonnet-5-5
+[claude] wstreet-1:street:stl:-:near-north-riverfront:claude ok 12.9s 3 names claude-sonnet-5-5
+[claude] wstreet-1:street:stl:-:north-pointe:claude ok 9.7s 1 names claude-sonnet-5-5
+[claude] wstreet-1:street:stl:-:old-town-florissant:claude ok 11.9s 1 names claude-sonnet-5-5
+[claude] wstreet-1:street:stl:-:saint-george:claude ok 12.6s 6 names claude-sonnet-5-5
+[claude] wstreet-1:street:stl:-:soulard:claude ok 6.9s 12 names claude-sonnet-5-5
+[claude] wstreet-1:street:stl:-:saint-john:claude ok 12.7s 12 names claude-sonnet-5-5
+[claude] wstreet-1:street:stl:-:the-hill:claude ok 10.1s 12 names claude-sonnet-5-5
+[claude] wstreet-1:street:stl:-:shrewsbury:claude ok 17.8s 8 names claude-sonnet-5-5
+[codex] wstreet-1:street:stl:-:downtown-west:codex ok 30.1s 6 names gpt-5.6-terra
+[claude] wstreet-1:street:stl:-:the-ville:claude ok 11.1s 4 names claude-sonnet-5-5
+[claude] wstreet-1:street:stl:-:wells-goodfellow:claude ok 9.3s 1 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:astoria:claude ok 7.3s 12 names claude-sonnet-5-5
+[codex] wstreet-1:street:stl:-:dupo:codex ok 9.3s 12 names gpt-5.6-terra
+[claude] wstreet-1:street:nyc:-:brooklyn-heights:claude ok 6.5s 12 names claude-sonnet-5-5
+[codex] wstreet-1:street:stl:-:dellwood:codex ok 51.2s 5 names gpt-5.6-terra
+[claude] wstreet-1:street:stl:-:town-and-country:claude ok 19.1s 10 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:bushwick:claude ok 7.3s 12 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:carroll-gardens:claude ok 7.0s 12 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:chelsea:claude ok 6.4s 12 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:chinatown:claude ok 7.1s 12 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:clinton-hill:claude ok 7.2s 12 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:east-flatbush:claude ok 13.3s 6 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:east-tremont:claude ok 11.1s 12 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:east-village:claude ok 9.5s 12 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:elmhurst:claude ok 9.0s 12 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:financial-district:claude ok 7.5s 12 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:grantwood:claude unparsed 6.8s 0 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:flushing:claude ok 7.9s 12 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:greenpoint:claude ok 7.5s 12 names claude-sonnet-5-5
+[codex] wstreet-1:street:stl:-:fairground:codex ok 26.9s 3 names gpt-5.6-terra
+[codex] wstreet-1:street:stl:-:east-saint-louis:codex ok 33.1s 12 names gpt-5.6-terra
+[claude] wstreet-1:street:nyc:-:harlem:claude ok 8.0s 12 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:jackson-heights:claude ok 8.8s 12 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:koreatown:claude ok 8.2s 12 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:lenox-hill:claude ok 7.7s 12 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:lower-east-side:claude ok 7.2s 12 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:midtown-east:claude ok 5.8s 12 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:midtown:claude unparsed 7.9s 0 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:lincoln:claude ok 14.6s 10 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:hudson-square:claude ok 28.6s 6 names claude-sonnet-5-5
+[codex] wstreet-1:street:stl:-:franz-park:codex ok 26.9s 11 names gpt-5.6-terra
+[claude] wstreet-1:street:nyc:-:midtown-south:claude ok 7.5s 12 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:park-slope:claude ok 6.9s 12 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:murray-hill:claude ok 7.3s 12 names claude-sonnet-5-5
+[codex] wstreet-1:street:stl:-:furman:codex ok 23.9s 5 names gpt-5.6-terra
+[claude] wstreet-1:street:nyc:-:prospect-heights:claude ok 6.2s 12 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:soho:claude ok 6.4s 12 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:queens:claude ok 7.2s 12 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:ridgewood:claude ok 7.2s 12 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:theater-district:claude ok 6.7s 12 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:upper-west-side:claude ok 7.4s 12 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:steinway:claude ok 13.6s 9 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:washington-heights:claude ok 6.8s 12 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:west-village:claude unparsed 7.7s 0 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:williamsburg:claude ok 8.5s 12 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:windsor-terrace:claude ok 6.7s 10 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:sunnyside-gardens:claude ok 21.5s 6 names claude-sonnet-5-5
+[claude] wstreet-1:street:nyc:-:yorkville:claude ok 14.1s 8 names claude-sonnet-5-5
+[claude] done: 71 asked, 0 failed
+[codex] wstreet-1:street:stl:-:glenview:codex ok 50.1s 9 names gpt-5.6-terra
+[codex] wstreet-1:street:stl:-:gravois-park:codex ok 61.0s 2 names gpt-5.6-terra
+[codex] wstreet-1:street:stl:-:kirkwood:codex ok 28.2s 12 names gpt-5.6-terra
+[codex] wstreet-1:street:stl:-:larimore:codex ok 15.3s 5 names gpt-5.6-terra
+[codex] wstreet-1:street:stl:-:hamilton-heights:codex ok 95.0s 7 names gpt-5.6-terra
+[codex] wstreet-1:street:stl:-:lindenwood-park:codex ok 70.8s 6 names gpt-5.6-terra
+[codex] wstreet-1:street:stl:-:maplewood:codex ok 69.1s 8 names gpt-5.6-terra
+[codex] wstreet-1:street:stl:-:mark-twain-i-70-industrial:codex ok 49.3s 1 names gpt-5.6-terra
+[codex] wstreet-1:street:stl:-:maryland-place:codex ok 17.4s 11 names gpt-5.6-terra
+[codex] wstreet-1:street:stl:-:near-north-riverfront:codex ok 47.9s 8 names gpt-5.6-terra
+[codex] stopping the lane: disk: 3.0 GB free < 3 GB floor
+[codex] wstreet-1:street:stl:-:north-pointe:codex unparsed 65.5s 0 names gpt-5.6-terra
+[codex] done: 22 asked, 0 failed, 49 left
+wrote ../data/walls/street-1.json: 2 entries, 93 answers, 0.14 MB
+  stl {"street/claude": 31, "street/codex": 22}
+  nyc {"street/claude": 40}
+codex_answers.jsonl      codex records  136, contaminated   8 (already superseded 8), unresolved ids 0
+runs/fresh.jsonl         codex records  120, contaminated   0 (already superseded 0), unresolved ids 0
+runs/fresh.v0.jsonl      codex records    7, contaminated   0 (already superseded 0), unresolved ids 0
+runs/meter.jsonl         codex records   40, contaminated   0 (already superseded 0), unresolved ids 0
+runs/wall-1.jsonl        codex records  161, contaminated  41 (already superseded 41), unresolved ids 0
+runs/wall-smoke.jsonl    codex records    1, contaminated   0 (already superseded 0), unresolved ids 0
+runs/wall-street-1.jsonl codex records   22, contaminated   6 (already superseded 0), unresolved ids 6: wstreet-1:street:stl:-:dellwood:codex, wstreet-1:street:stl:-:furman:codex, wstreet-1:street:stl:-:glenview:codex, wstreet-1:street:stl:-:hamilton-heights:codex, wstreet-1:street:stl:-:maplewood:codex, wstreet-1:street:stl:-:north-pointe:codex

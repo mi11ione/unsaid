@@ -3,3 +3,4 @@ runs/.gemini_ledger.json
 runs/.meter.mcp.json
 runs/walls.smoke.json
 __pycache__/
+runs/.street-1.hoods.json

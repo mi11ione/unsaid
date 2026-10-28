@@ -1,0 +1,104 @@
+[codex] codex-cli 0.164.0, model pinned gpt-5.6-terra
+[codex] 71 asks, 22 already stored, 49 to ask
+[codex] wstreet-1:street:stl:-:old-town-florissant:codex ok 20.6s 3 names gpt-5.6-terra
+[codex] wstreet-1:street:stl:-:saint-john:codex ok 13.9s 8 names gpt-5.6-terra
+[codex] wstreet-1:street:stl:-:saint-george:codex ok 45.5s 10 names gpt-5.6-terra
+[codex] wstreet-1:street:stl:-:shrewsbury:codex ok 29.2s 3 names gpt-5.6-terra
+[codex] wstreet-1:street:stl:-:soulard:codex ok 32.3s 12 names gpt-5.6-terra
+[codex] wstreet-1:street:stl:-:the-hill:codex ok 27.0s 11 names gpt-5.6-terra
+[codex] wstreet-1:street:stl:-:the-ville:codex ok 17.6s 1 names gpt-5.6-terra
+[codex] wstreet-1:street:stl:-:town-and-country:codex ok 15.2s 8 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:astoria:codex ok 14.7s 12 names gpt-5.6-terra
+[codex] wstreet-1:street:stl:-:wells-goodfellow:codex unparsed 31.8s 0 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:brooklyn-heights:codex ok 11.9s 12 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:bushwick:codex ok 10.7s 12 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:carroll-gardens:codex ok 24.6s 10 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:chelsea:codex ok 25.7s 11 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:clinton-hill:codex ok 11.9s 9 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:chinatown:codex ok 21.9s 12 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:east-flatbush:codex ok 22.5s 8 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:east-tremont:codex ok 38.9s 4 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:east-village:codex ok 20.4s 12 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:financial-district:codex ok 15.8s 12 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:elmhurst:codex ok 29.9s 10 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:flushing:codex ok 20.0s 12 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:greenpoint:codex ok 12.4s 12 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:harlem:codex ok 11.7s 12 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:hudson-square:codex ok 16.7s 10 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:grantwood:codex unparsed 57.6s 0 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:jackson-heights:codex ok 16.4s 12 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:lenox-hill:codex ok 10.8s 12 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:koreatown:codex ok 24.9s 12 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:lower-east-side:codex ok 22.1s 12 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:lincoln:codex ok 36.7s 6 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:midtown:codex ok 21.8s 12 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:midtown-east:codex ok 17.7s 12 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:midtown-south:codex ok 27.4s 12 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:park-slope:codex ok 15.6s 12 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:murray-hill:codex ok 52.0s 12 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:queens:codex ok 7.3s 12 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:prospect-heights:codex ok 26.0s 12 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:ridgewood:codex ok 13.7s 12 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:soho:codex ok 47.6s 12 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:steinway:codex ok 45.7s 12 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:theater-district:codex ok 14.9s 12 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:sunnyside-gardens:codex ok 25.8s 11 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:washington-heights:codex ok 17.7s 11 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:upper-west-side:codex ok 25.9s 12 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:west-village:codex ok 16.5s 12 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:williamsburg:codex ok 21.0s 12 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:yorkville:codex ok 26.9s 12 names gpt-5.6-terra
+[codex] wstreet-1:street:nyc:-:windsor-terrace:codex ok 34.3s 8 names gpt-5.6-terra
+[codex] done: 49 asked, 0 failed
+codex_answers.jsonl      codex records  136, contaminated   8 (already superseded 8), unresolved ids 0
+runs/fresh.jsonl         codex records  120, contaminated   4 (already superseded 0), unresolved ids 4: fresh:nyc:-:NYC-12:codex, fresh:nyc:nyc-taylorswift:NYC-03+loves:codex, fresh:stl:-:STL-04:codex, fresh:stl:stl-chuckberry:STL-04+loves:codex
+   redo fresh:nyc:-:NYC-12:codex -> ok, items ['agent_message'], tools None, 0 names
+   redo fresh:nyc:nyc-taylorswift:NYC-03+loves:codex -> ok, items ['agent_message'], tools None, 0 names
+   redo fresh:stl:-:STL-04:codex -> ok, items ['agent_message'], tools None, 0 names
+   redo fresh:stl:stl-chuckberry:STL-04+loves:codex -> ok, items ['agent_message'], tools None, 0 names
+   marked 4 old lines superseded_by
+runs/fresh.v0.jsonl      codex records    7, contaminated   0 (already superseded 0), unresolved ids 0
+runs/meter.jsonl         codex records   40, contaminated   2 (already superseded 0), unresolved ids 2: meter:stl:stl-bigthief:M2:alone:r1:codex, meter:stl:stl-nelly:M2:with:r1:codex
+   redo meter:stl:stl-bigthief:M2:alone:r1:codex -> ok, items ['agent_message'], tools None, 12 names
+   redo meter:stl:stl-nelly:M2:with:r1:codex -> ok, items ['agent_message', 'mcp_tool_call'], tools ['unsaid/qloo_places'], 12 names
+   marked 2 old lines superseded_by
+runs/wall-1.jsonl        codex records  161, contaminated  50 (already superseded 41), unresolved ids 9: w1:city:stl:-:h10:codex, w1:taste:nyc:nyc-wutang:t1:codex, w1:taste:stl:stl-bigthief:t2:codex, w1:taste:stl:stl-cedric:t2:codex, w1:taste:stl:stl-chuckberry:t2:codex, w1:taste:stl:stl-jason:t3:codex, w1:taste:stl:stl-morganwallen:t3:codex, w1:taste:stl:stl-nelly:t1:codex, w1:taste:stl:stl-taylorswift:t2:codex
+   redo w1:city:stl:-:h10:codex -> ok, items ['agent_message'], tools None, 12 names
+   redo w1:taste:nyc:nyc-wutang:t1:codex -> ok, items ['agent_message'], tools None, 8 names
+   redo w1:taste:stl:stl-bigthief:t2:codex -> ok, items ['agent_message'], tools None, 10 names
+   redo w1:taste:stl:stl-chuckberry:t2:codex -> ok, items ['agent_message'], tools None, 6 names
+   redo w1:taste:stl:stl-cedric:t2:codex -> ok, items ['agent_message'], tools None, 12 names
+   redo w1:taste:stl:stl-morganwallen:t3:codex -> ok, items ['agent_message'], tools None, 12 names
+   redo w1:taste:stl:stl-jason:t3:codex -> ok, items ['agent_message'], tools None, 12 names
+   redo w1:taste:stl:stl-nelly:t1:codex -> ok, items ['agent_message'], tools None, 12 names
+   redo w1:taste:stl:stl-taylorswift:t2:codex -> ok, items ['agent_message'], tools None, 12 names
+   marked 9 old lines superseded_by
+runs/wall-smoke.jsonl    codex records    1, contaminated   0 (already superseded 0), unresolved ids 0
+runs/wall-street-1.jsonl codex records   71, contaminated  10 (already superseded 0), unresolved ids 10: wstreet-1:street:nyc:-:grantwood:codex, wstreet-1:street:stl:-:benton-park:codex, wstreet-1:street:stl:-:dellwood:codex, wstreet-1:street:stl:-:furman:codex, wstreet-1:street:stl:-:glenview:codex, wstreet-1:street:stl:-:hamilton-heights:codex, wstreet-1:street:stl:-:maplewood:codex, wstreet-1:street:stl:-:north-pointe:codex, wstreet-1:street:stl:-:old-town-florissant:codex, wstreet-1:street:stl:-:the-ville:codex
+   redo wstreet-1:street:nyc:-:grantwood:codex -> unparsed, items ['agent_message', 'mcp_tool_call'], tools None, 0 names
+   redo wstreet-1:street:stl:-:benton-park:codex -> ok, items ['agent_message'], tools None, 7 names
+   redo wstreet-1:street:stl:-:furman:codex -> ok, items ['agent_message'], tools None, 12 names
+   redo wstreet-1:street:stl:-:dellwood:codex -> ok, items ['agent_message'], tools None, 8 names
+   redo wstreet-1:street:stl:-:glenview:codex -> ok, items ['agent_message'], tools None, 10 names
+   redo wstreet-1:street:stl:-:hamilton-heights:codex -> ok, items ['agent_message', 'mcp_tool_call'], tools None, 1 names
+   redo wstreet-1:street:stl:-:maplewood:codex -> ok, items ['agent_message'], tools None, 10 names
+   redo wstreet-1:street:stl:-:north-pointe:codex -> ok, items ['agent_message'], tools None, 3 names
+   redo wstreet-1:street:stl:-:old-town-florissant:codex -> ok, items ['agent_message'], tools None, 7 names
+   redo wstreet-1:street:stl:-:the-ville:codex -> ok, items ['agent_message'], tools None, 1 names
+   marked 8 old lines superseded_by
+wrote ../data/walls/street-1.json: 2 entries, 142 answers, 0.22 MB
+  stl {"street/claude": 31, "street/codex": 31}
+  nyc {"street/claude": 40, "street/codex": 40}
+wrote ../data/walls/wall-1.json: 22 entries, 240 answers, 0.43 MB
+  stl {"city/claude": 20, "city/codex": 20, "taste/claude": 40, "taste/codex": 40}
+  nyc {"city/claude": 20, "city/codex": 20, "taste/claude": 40, "taste/codex": 40}
+wrote ../data/walls/census.json: 2 entries, 259 answers, 0.45 MB
+  stl {"census/anthropic": 64, "census/codex": 64, "census/gemini": 3}
+  nyc {"census/anthropic": 64, "census/codex": 64}
+codex_answers.jsonl      codex records  136, contaminated   8 (already superseded 8), unresolved ids 0
+runs/fresh.jsonl         codex records  124, contaminated   4 (already superseded 4), unresolved ids 0
+runs/fresh.v0.jsonl      codex records    7, contaminated   0 (already superseded 0), unresolved ids 0
+runs/meter.jsonl         codex records   42, contaminated   2 (already superseded 2), unresolved ids 0
+runs/wall-1.jsonl        codex records  170, contaminated  50 (already superseded 50), unresolved ids 0
+runs/wall-smoke.jsonl    codex records    1, contaminated   0 (already superseded 0), unresolved ids 0
+runs/wall-street-1.jsonl codex records   81, contaminated  12 (already superseded 8), unresolved ids 2: wstreet-1:street:nyc:-:grantwood:codex, wstreet-1:street:stl:-:hamilton-heights:codex

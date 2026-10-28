@@ -34,6 +34,8 @@ def wall_path(w):
 
 
 def load_hoods(args):
+    if getattr(args, "hoods_file", None):
+        return json.load(open(args.hoods_file))["cities"]
     if args.hoods:
         return {ck: [h.strip() for h in args.hoods.split(",") if h.strip()] for ck in args.cities}
     if os.path.exists(HOODS):
@@ -158,6 +160,9 @@ def cmd_queue(args):
     for p, a in pending:
         if lane._day() != day:
             print("[gemini-priority] the Pacific day changed; the next batch takes over", flush=True)
+            break
+        if L.disk_low():
+            print("[gemini-priority] stopping: %s" % L.disk_low(), flush=True)
             break
         if lane.remaining() <= 0:
             print("[gemini-priority] today's allowance spent (%d of cap %d, Pacific day %s)" % (lane._used(), lane.cap, lane._day()), flush=True)
@@ -334,6 +339,7 @@ def main():
     a.add_argument("--all-sets", action="store_true", help="taste for every set, whatever the wall")
     a.add_argument("--sets-file", default=None)
     a.add_argument("--hoods", default=None, help="comma list of neighbourhoods (street)")
+    a.add_argument("--hoods-file", default=None, help='JSON {"cities": {city: [neighbourhood, ...]}} (street)')
     a.add_argument("--limit", type=int, default=None, help="at most N asks per lane")
     a.add_argument("--go", action="store_true", help="actually ask (default: dry run)")
     b = sp.add_parser("build")

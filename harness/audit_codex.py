@@ -2,7 +2,7 @@
 
 Evidence (the same as for the census): a codex record is contaminated when its event stream shows a tool call that is
 not our own unsaid/qloo_places (an `mcp_tool_call` item with no unsaid tool recorded, or any `foreign_tools`), a
-`web_search` item, or `search: "on"`. codex_apps' search_service.web_run arrives as an mcp_tool_call.
+`web_search` item, `search: "on"`, or any shell use (a `command_execution` item or stored `commands`). codex_apps' search_service.web_run arrives as an mcp_tool_call.
 
   python3 -I audit_codex.py            # read-only: contaminated count per file
   python3 -I audit_codex.py --fix      # re-ask each contaminated record (codex now runs with --disable apps), append the
@@ -15,21 +15,32 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import lanes as L
 
-FILES = ["codex_answers.jsonl", "runs/wall-1.jsonl", "runs/wall-smoke.jsonl", "runs/fresh.v0.jsonl",
-         "runs/meter.jsonl", "runs/fresh.jsonl"]
+import glob
+FILES = ["codex_answers.jsonl"] + sorted(os.path.relpath(p, os.path.dirname(os.path.abspath(__file__)))
+                                         for p in glob.glob(os.path.join(os.path.dirname(os.path.abspath(__file__)), "runs", "*.jsonl"))
+                                         if not p.endswith("quarantine.jsonl"))
 
 
 def is_codex(r):
     return r.get("runner") == "codex" or r.get("provider") == "openai"
 
 
+# codex built-ins that only list resources of configured MCP servers. The codex line configures none (apps disabled,
+# --ignore-user-config), so they return an empty list: no network, no content. Recorded on the answer, not a leak.
+BENIGN = {"codex/list_mcp_resources", "codex/list_mcp_resource_templates"}
+
+
 def contaminated(r):
     items = r.get("items") or []
-    called = r.get("tools_called") or []
+    foreign = [t for t in (r.get("foreign_tools") or []) if t not in BENIGN]
+    called = [c for c in (r.get("tools_called") or []) if c not in BENIGN]
     ours = [c for c in called if str(c).startswith("unsaid/")]
-    if r.get("foreign_tools") or "web_search" in items or r.get("search") == "on":
+    benign_only = r.get("foreign_tools") and not foreign and not called
+    if foreign or "web_search" in items or r.get("search") == "on":
         return True
-    if "mcp_tool_call" in items and not (ours and len(ours) == len(called)):
+    if "command_execution" in items or r.get("commands"):  # any shell use (28 Oct: --disable shell_tool since)
+        return True
+    if "mcp_tool_call" in items and not benign_only and not (ours and len(ours) == len(called)):
         return True
     return False
 
@@ -47,7 +58,8 @@ def mark_superseded(path, recs):
     for i, r in enumerate(recs):
         if is_codex(r) and contaminated(r) and not r.get("superseded_by") and r["id"] in later_clean and later_clean[r["id"]][0] > i:
             r["superseded_by"] = later_clean[r["id"]][1]
-            r["superseded_reason"] = "codex_apps tool call (web search) in this answer; re-asked with --disable apps"
+            r["superseded_reason"] = ("tool use in this answer (codex_apps web search or a shell command); "
+                                      "re-asked with --disable apps --disable shell_tool")
             n += 1
     if n:
         tmp = path + ".tmp"
@@ -96,7 +108,7 @@ def main():
             res = lane.ask(old["prompt"], **opts_for(old))
             rec = dict(ask, **res)
             rec.update(lane="dated", provider=lane.provider, assistant=lane.assistant, runner=lane.name,
-                       redo_of="codex_apps search leak (28 Oct)")
+                       redo_of="codex tool leak (28 Oct): codex_apps web search or shell command")
             rec.pop("fatal", None)
             if old.get("verbatim") and rec["status"] == "unparsed":
                 rec["status"] = "ok"
