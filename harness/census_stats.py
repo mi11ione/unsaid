@@ -65,6 +65,8 @@ def load(provider=None):
         return []
     for l in open(p):
         r = json.loads(l)
+        if r.get("superseded_by") or r.get("quarantined"):
+            continue
         if r.get("places"):
             best[r["id"]] = r
     return sorted(best.values(), key=lambda r: r["order"])
@@ -362,6 +364,8 @@ def gems():
         if os.path.exists(p):
             for l in open(p):
                 r = json.loads(l)
+                if r.get("superseded_by") or r.get("quarantined"):
+                    continue
                 if r.get("status") in ("ok", "unparsed") or ("status" not in r and r.get("places")):
                     recs[r["id"]] = r
         rs = list(recs.values())

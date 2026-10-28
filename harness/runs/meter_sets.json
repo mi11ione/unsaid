@@ -1,6 +1,7 @@
 {
  "protocol": "data/meter.protocol.md",
  "lanes": [
+  "claude",
   "codex"
  ],
  "reps": 1,
@@ -8,53 +9,53 @@
   {
    "set": "stl-cedric",
    "city": "stl",
-   "complete": false
+   "complete": true
   },
   {
    "set": "stl-jason",
    "city": "stl",
-   "complete": false
+   "complete": true
   },
   {
    "set": "stl-nelly",
    "city": "stl",
-   "complete": false
+   "complete": true
   },
   {
    "set": "stl-chuckberry",
    "city": "stl",
-   "complete": false
+   "complete": true
   },
   {
    "set": "stl-sza",
    "city": "stl",
-   "complete": false
+   "complete": true
   },
   {
    "set": "stl-wilco",
    "city": "stl",
-   "complete": false
+   "complete": true
   },
   {
    "set": "stl-taylorswift",
    "city": "stl",
-   "complete": false
+   "complete": true
   },
   {
    "set": "stl-jayz",
    "city": "stl",
-   "complete": false
+   "complete": true
   },
   {
    "set": "stl-bigthief",
    "city": "stl",
-   "complete": false
+   "complete": true
   },
   {
    "set": "stl-morganwallen",
    "city": "stl",
-   "complete": false
+   "complete": true
   }
  ],
- "qloo_network_calls": 6
+ "qloo_network_calls": 150
 }

@@ -440,12 +440,15 @@ _wlock = threading.Lock()
 
 
 def load(path):
-    """Last record per id."""
+    """Last live record per id. Lines marked superseded_by or quarantined are kept in the file for audit and skipped
+    here, so every builder (walls_cli build / --census-only, census_stats via its own loader) ignores them."""
     out = {}
     if os.path.exists(path):
         for l in open(path):
             if l.strip():
                 r = json.loads(l)
+                if r.get("superseded_by") or r.get("quarantined"):
+                    continue
                 out[r["id"]] = r
     return out
 

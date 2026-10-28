@@ -20,6 +20,9 @@ ap = cli.parser(__doc__)
 ap.add_argument("--meter")
 ap.add_argument("--generic-ids", help="comma-separated phrasing_ids of the 4 generic phrasings")
 ap.add_argument("--include-own", action="store_true", help="also count the run's own provider's wall answers")
+ap.add_argument("--generic-only", action="store_true",
+                help="old unsaid-v3 grading (generic phrasings 1-4 only). Default is the frozen data/meter.protocol.md: "
+                     "the other assistants' city-wall and census answers for that city, street asks excluded")
 args = ap.parse_args()
 T = cli.tag(args)
 print("== k10_meter  %s  (0 Qloo calls: no client is created)" % ("[FAKE]" if args.fake else "[LIVE] stored runs"))
@@ -31,10 +34,14 @@ def generic_wall(city):
     if args.walls:
         out = []
         for w in W.load_file(args.walls).get("walls", []):
-            if W._ckey(w.get("city")) != city or w.get("set") not in ("city", "_city", "*", None, ""):
+            sets_ok = ("city", "_city", "*", None, "") + (() if args.generic_only else ("census",))
+            if W._ckey(w.get("city")) != city or w.get("set") not in sets_ok:
                 continue
             for a in w.get("answers") or []:
                 if a.get("kind") == "street" or a.get("hood"):
+                    continue
+                if not args.generic_only:      # frozen protocol: every city-wall and census answer counts
+                    out += [(a.get("provider"), n["name"] if isinstance(n, dict) else n) for n in a.get("names") or []]
                     continue
                 pid, txt = str(a.get("phrasing_id") or ""), M.norm(str(a.get("phrasing_text") or a.get("phrasing") or ""))
                 if (gids and pid in gids) or (not gids and any(M.norm(g) in txt for g in GENERIC_TEXT)):

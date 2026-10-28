@@ -72,6 +72,23 @@ The console shows 20 requests a day and 5 a minute per model per project. Creden
 5. **Fresh asks go out verbatim:** no JSON suffix, codex without `--output-schema`, Gemini without JSON mode. The raw text is the answer, and k5 matches on it. Records carry `verbatim: true, suffix: false`. `--suffix` opts out.
 6. **Taste sets per wall:** wall 1 asks all 20 sets. Every other wall asks only the sets marked `try_these` (`data/sets.json`, else `data/sets.draft.json`). `--sets a,b` or `--all-sets` overrides.
 
+## Search leak (28 Oct): found, fixed, redone
+
+**What happened:** `codex exec` ships a built-in connector, `codex_apps`, whose `search_service.web_run` tool is a web search. Neither `--ignore-user-config` nor `-c web_search="disabled"` turns it off, and it reports as an `mcp_tool_call` item, not a `web_search` item. So the "search on" label never fired, and the affected answers were stored as `search: "off"`.
+
+**How it was found:** the first meter "with" ask on codex called `codex_apps/search_service.web_run` three times instead of `qloo_places`. Every stored codex record was then audited (`audit_codex.py`). The evidence, the same for every file: an `mcp_tool_call` that isn't our own `unsaid/qloo_places`, any `foreign_tools`, a `web_search` item, or `search: "on"`.
+
+| file | codex records | contaminated | action |
+|---|---|---|---|
+| `codex_answers.jsonl` (census) | 128 | 8 | re-asked (`run_census.py --redo-foreign`) |
+| `runs/wall-1.jsonl` | 120 | 41 | re-asked (`audit_codex.py --fix`) |
+| `runs/meter.jsonl` | 1 (first verification ask) | 1 | moved to `runs/quarantine.jsonl`, re-asked |
+| `runs/wall-smoke.jsonl`, `runs/fresh.v0.jsonl`, `runs/meter.jsonl` (the other 40), `runs/fresh.jsonl` | | 0 | none |
+
+**The fix:** the codex lane now runs with `--disable apps` (verified: the redone answers and the meter "with" arm show only `unsaid/qloo_places`, or no tool at all). Any tool call outside the `unsaid` server is now recorded in `foreign_tools`, and a search-like one labels the answer `search: "on"`. Every fresh v1 ask ran with `--disable apps` from the first one (checked in the live process list).
+
+**Audit trail:** each re-asked answer is a new record under the same id, with `redo_of`. The old line stays in the file, marked `superseded_by` (the new answer's `asked_at`) and `superseded_reason`. `lanes.load`, every builder (`walls_cli.py build`, `--census-only`) and `census_stats.py` skip superseded and quarantined lines. `python3 -I audit_codex.py` must print 0 unresolved for every file before a wall is published.
+
 ## Storage, resume and failures
 
 - Every attempt appends one line: `runs/wall-<label>.jsonl`, `runs/fresh.jsonl`, `runs/meter.jsonl`, `<provider>_answers.jsonl` (census).
