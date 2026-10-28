@@ -35,6 +35,8 @@ QUOTE_CARD, QUOTE_FIT, QUOTE_ANY, QUOTE_U = "The Spot Sports Bar", 13, 78, 78
 # archives it here; a re-recorded answer words things differently, so the quote is checked against this one)
 QUOTE_SRC = os.path.join(os.path.dirname(ROOT), "private", "agent_quote_source.json")
 ET = dt.timezone(dt.timedelta(hours=-4))   # EDT until 1 Nov 2026
+# Similar tastes (St. Louis soul and hip-hop; indie): the copy says these share the most cards (⟦CLUSTER_MAX⟧)
+CLUSTERS = (("stl-cedric", "stl-sza", "stl-jayz", "stl-nelly"), ("stl-wilco", "stl-bigthief"))
 
 
 def log(name):
@@ -279,6 +281,47 @@ def numbers(a):
             pm, G["A"]["pairs_median_k2a"]))
     put("PAIRS_MED", num(pm), src + "; cross-check engine/k2a_lift.py 'both cities: median'",
         "%d within-city pairs, max %s" % (len(sh), G["pairs"]["max"]))
+    put("CARDS", str(len(cards)) if cards else None, src, "cards over the 20 sets (7 each unless a set came up short)")
+
+    # ---- where shared cards sit: pairs of similar tastes (CLUSTERS) vs every other within-city pair; the strangers
+    seven = {sid: {p["id"] for p in d["result"]["picks"]} for sid, d in sets.items()}
+    if all(s in seven for c in CLUSTERS for s in c) and "stl-cedric" in seven and "stl-jason" in seven:
+        cl = {frozenset(x) for c in CLUSTERS for x in combinations(c, 2)}
+        cin = [len(seven[a] & seven[b]) for a, b in cl]
+        cout = [len(seven[a] & seven[b]) for a, b in combinations(sorted(seven), 2)
+                if sets[a]["city"] == sets[b]["city"] and frozenset((a, b)) not in cl]
+        put("CLUSTER_MAX", str(max(cin)), src, "most cards shared by two sets of a cluster %s" % [list(c) for c in CLUSTERS])
+        put("OTHER_MAX", str(max(cout)), src, "most cards shared by any other two sets in a city (%d pairs)" % len(cout))
+        stv = len(seven["stl-cedric"] & seven["stl-jason"])
+        if G["A"]["strangers"] is not None and G["A"]["strangers"] != stv:
+            print("WARN: strangers share %s in the shipped cards, %s in k2a" % (stv, G["A"]["strangers"]))
+        put("STRANGERS", str(stv), src + "; cross-check out/freeze/02-gateA.txt", "Cedric vs Jason sevens")
+    else:
+        for k_ in ("CLUSTER_MAX", "OTHER_MAX", "STRANGERS"):
+            put(k_, None, src, "a cluster set or a stranger is missing from the regenerated sets")
+
+    # ---- the gate table's result cells (A, B, C; F below), so no measured literal sits in the draft
+    if G["A"]["verdict"] and None not in (G["A"]["nyc_pass"], G["A"]["stl_pass"]) and P["STRANGERS"]["value"]:
+        put("GATE_A", "**%s**: New York %d/10, St. Louis %d/10; strangers share %s" % (
+            G["A"]["verdict"], G["A"]["nyc_pass"], G["A"]["stl_pass"], P["STRANGERS"]["value"]), G["A"]["source"])
+    else:
+        put("GATE_A", None, G["A"]["source"], "gate A did not report")
+    if G["B"]["verdict"] and None not in (G["B"]["nyc_pass"], G["B"]["stl_pass"]):
+        put("GATE_B", "**%s**: New York %d/10, St. Louis %d/10" % (G["B"]["verdict"], G["B"]["nyc_pass"],
+                                                                   G["B"]["stl_pass"]), G["B"]["source"])
+    else:
+        put("GATE_B", None, G["B"]["source"], "gate B did not report")
+    # chance: a random cut of k places from a pool of U overlaps the AIs' k struck places by k/U on average
+    ch = [d["result"]["counts"]["struck_in_U"] / float(d["result"]["counts"]["U"]) for d in sets.values()
+          if (d["result"].get("counts") or {}).get("U") and (d["result"]["counts"].get("struck_in_U") or 0) > 0]
+    G["C"]["chance_median"] = median(ch)
+    put("CAP_CHANCE", None if not ch else "%.2f" % median(ch), src + " (median over sets of struck_in_U / U)",
+        "the overlap a random cut of the same size would have")
+    if G["C"]["verdict"] and ch:
+        put("GATE_C", "**%s**: median %s; a random cut of the same size: %s" % (
+            G["C"]["verdict"], cap, P["CAP_CHANCE"]["value"]), G["C"]["source"] + " + " + src)
+    else:
+        put("GATE_C", None, G["C"]["source"], "gate C did not report")
 
     # ---- Cedric (the shipped stl-cedric: precompute = run_query's product path)
     ced = sets.get("stl-cedric")
@@ -308,6 +351,8 @@ def numbers(a):
                     "off_fresh_median": md("off_fresh"), "plain_fresh_median": md("plain_fresh"),
                     "on_pooled": sum(x["on_named"] for x in rows), "off_pooled": sum(x["off_named"] for x in rows),
                     "plain_pooled": sum(x["plain_named"] for x in rows), "differ_pooled": sum(x["differ"] for x in rows),
+                    "on_fresh_pooled": sum(x["on_fresh"] for x in rows), "off_fresh_pooled": sum(x["off_fresh"] for x in rows),
+                    "plain_fresh_pooled": sum(x["plain_fresh"] for x in rows),
                     "U_median": md("U"), "struck_in_U_median": md("struck_in_U"),
                     "verdict": rx(log("03-k12.log"), r"^K12 wall effect: \d+ sets -> (\w+)"),
                     "source": "out/freeze/k12_wall_effect.json (engine/k12_wall_effect.py --frozen)"}
@@ -329,7 +374,18 @@ def numbers(a):
     G["F"] = {"verdict": rx(t, r"^F speed: .* -> (\w+)"), "p50": rx(t, r"⟦P50⟧ = ([\d.]+) s", float),
               "p90": rx(t, r"⟦P90⟧ = ([\d.]+) s", float),
               "first_name_p50": rx(t, r"first name on screen p50 ([\d.]+) s", float),
+              "runs": rx(t, r"⟦P90⟧ = [\d.]+ s \((\d+) runs", int),
               "source": "out/freeze/06-gateF.log" if t else "not run (--skip-f)"}
+    F = G["F"]
+    g = lambda x: None if x is None else "%g" % x  # noqa: E731
+    put("P50", g(F["p50"]), F["source"], "" if t else "gate F not run: delete the sentence")
+    put("P90", g(F["p90"]), F["source"], "" if t else "gate F not run")
+    put("FIRST_NAME", g(F["first_name_p50"]), F["source"], "" if t else "gate F not run")
+    if F["verdict"] and None not in (F["p50"], F["p90"], F["first_name_p50"]):
+        put("GATE_F", "**%s**: p50 %s s, p90 %s s, first name %s s (%s cold runs)" % (
+            F["verdict"], g(F["p50"]), g(F["p90"]), g(F["first_name_p50"]), F["runs"] or "?"), F["source"])
+    else:
+        put("GATE_F", None, F["source"], "gate F not run at this freeze")
 
     # ---- street (the no-street ablation)
     st = street_stats(fresh, nostreet) if nostreet else {"ok": False, "why": "no ablation dir"}
@@ -358,6 +414,12 @@ def numbers(a):
     put("COVERAGE", None if cov is None else "%d%%" % round(cov),
         "harness/saturation.py --metrics (claude stl distinct / Chao2; out/freeze/03-saturation.log)",
         "" if cov is not None else "no metrics line")
+    for key, pat, what in (("COVERAGE_NYC", r"^now\s+claude nyc: .*coverage ([\d.]+)%", "claude nyc distinct / Chao2"),
+                           ("NEWRATE_STL", r"^now\s+claude stl: .*new-name rate last 40 ([\d.]+)%", "claude stl, last 40 asks"),
+                           ("NEWRATE_NYC", r"^now\s+claude nyc: .*new-name rate last 40 ([\d.]+)%", "claude nyc, last 40 asks")):
+        v = rx(sat, pat, float)
+        put(key, None if v is None else "%d%%" % round(v), "harness/saturation.py --metrics (%s; out/freeze/03-saturation.log)"
+            % what, "" if v is not None else "no metrics line")
     gems = log("03-census_gems.log")
     m = re.search(r"^\s+GEM_GEM = (\d+) of (\d+) asked \((\w+), ([^;]+);", gems, re.M)
     if m and int(m.group(2)) >= 16:
@@ -398,7 +460,10 @@ def numbers(a):
     for key, kk in (("K12_ON", "on_median"), ("K12_OFF", "off_median"), ("K12_PLAIN", "plain_median"),
                     ("K12_ON_POOLED", "on_pooled"), ("K12_OFF_POOLED", "off_pooled"), ("K12_PLAIN_POOLED", "plain_pooled"),
                     ("K12_ON_FRESH", "on_fresh_median"), ("K12_OFF_FRESH", "off_fresh_median"),
-                    ("K12_PLAIN_FRESH", "plain_fresh_median")):
+                    ("K12_PLAIN_FRESH", "plain_fresh_median"),
+                    # the held-out chain (pooled AI-named cards on the fresh questions only): plain -> score-only -> UNSAID
+                    ("K12_PLAIN_FRESH_POOLED", "plain_fresh_pooled"), ("K12_OFF_FRESH_POOLED", "off_fresh_pooled"),
+                    ("K12_ON_FRESH_POOLED", "on_fresh_pooled")):
         put(key, num(k.get(kk)), "out/freeze/k12_wall_effect.json (engine/k12_wall_effect.py --frozen)",
             "" if k else "k12 did not run")
 

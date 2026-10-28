@@ -4,7 +4,7 @@
 
 Ask Claude 16 ways for a hidden gem in St. Louis and Mai Lee is on 13 of the 16 lists; ChatGPT's 10 of 16. UNSAID crosses out every place Claude and ChatGPT named in ⟦ASKS_TOTAL⟧ dated asks about your city. What's left is ranked by Qloo for what fits you, not everyone.
 
-Not an anti-recommender: it removes what the AIs measurably tell everyone, then ranks the rest by your taste.
+Not an anti-recommender: it removes what the AIs measurably tell everyone, then ranks the rest by your taste. On public questions the list never saw, the AIs named ⟦K12_PLAIN_FRESH_POOLED⟧ places in Qloo's plain taste top 7s over 20 sets, ⟦K12_OFF_FRESH_POOLED⟧ in our score's sevens without the list, and ⟦K12_ON_FRESH_POOLED⟧ in UNSAID's (*k12* below): the ranking alone avoids most of the AIs' favourites, and crossing out finishes the job.
 
 **Live demo:** ⟦LIVE_URL⟧ · **License:** MIT ([LICENSE](LICENSE)); map data © OpenStreetMap contributors, ODbL 1.0.
 
@@ -12,7 +12,7 @@ Not an anti-recommender: it removes what the AIs measurably tell everyone, then 
 
 ## Five minutes
 
-**1. The live demo.** Open ⟦LIVE_URL⟧ and tap **Cedric · St. Louis**. Tap a struck name to see which AI named it and when; tap a card for its two ranks; paste any AI's answer into the box under the seven and a card it names burns. Or type three things you love and pick St. Louis or New York: cards arrive in about 18 seconds (about a minute more if the server is asleep).
+**1. The live demo.** Open ⟦LIVE_URL⟧ and tap **Cedric · St. Louis**. Tap a struck name to see which AI named it and when; tap a card for its two ranks; paste any AI's answer into the box under the seven and a card it names burns. Or type three things you love and pick St. Louis or New York: cards arrive in about ⟦P50⟧ seconds (about a minute more if the server is asleep).
 
 **2. From your agent, no Qloo key, one paste.** Add `https://unsaid-ang.pages.dev/mcp?token=<token>` as a custom connector in Claude (Settings → Connectors), or run the line below. The token is in the Devpost testing instructions (until 30 Oct 23:45 ET; after that, leave out `?token=…`).
 
@@ -21,7 +21,7 @@ claude mcp add --transport http unsaid "https://unsaid-ang.pages.dev/mcp?token=<
 # then ask Claude: "I love Frankie Beverly & Maze, The Original Kings of Comedy and rib tips. Where should I go in St. Louis tonight?"
 ```
 
-**3. The offline check, no key, no network** (Python 3.9+, standard library only; about 40 s):
+**3. The offline check, no key, no network** (Python 3.9+, standard library only; about 2 minutes):
 
 ```bash
 cd engine
@@ -35,29 +35,26 @@ python3 -I tests/test_api.py              # the engine API contract
 1. **Your pool.** Qloo's `/v2/insights` ranks places for each of your three loves, one at a time, within 15 mi (St. Louis) or 10 mi (New York). A dish love ("rib tips") adds a sub-pool of places Qloo tags with that dish.
 2. **The floor.** Tagged as a restaurant or bar in Qloo, rated 4.3 or better, open. Adult venues, hookah lounges, liquor and wine stores, banquet halls and out-of-state places are excluded. Each card also gets a last-seen check: hours and address in Qloo, and the venue's own site when Qloo has one.
 3. **Crossing out.** Every place the AIs named in the dated answers is matched to the pool and struck (see *Matching* below).
-4. **The score.** Qloo scores every place for each of your loves. We keep the places that fit you much more than they fit most people's taste, or than their popularity alone would say. In code: fit for you − max(popularity, fit for everyone), where *fit for everyone* is the share of about 100 anchor tastes that put the place in their top 30% of the city. The anchors are single loves drawn by a fixed-seed procedure from Qloo's own most popular artists, films, shows, brands, books and podcasts, spread over their Qloo genre tags (*Run it live* below), and never one of your loves. Every place in the city's candidate universe has a value; a place no anchor scored gets the panel median, never a free pass. Cards and reserves come from this one score.
-5. **Seven cards, three reserves.** Strike a card you know and a reserve takes its place. Under seven, the page says so.
+4. **The score.** Qloo scores every place for each of your loves. We keep the places that fit you much more than they fit most tastes on Qloo, or than their popularity alone would say. In code: fit for you − max(popularity, fit for everyone), where *fit for everyone* is the share of a city's 97 sample tastes on Qloo that put the place in their top 30% of the city. The sample tastes are single loves drawn by a fixed-seed procedure (`unsaid-anchors-v1`) from Qloo's own most popular artists, films, shows, brands, books and podcasts, spread over their Qloo genre tags (*Run it live* below), and never one of your loves. Every place in the city's candidate universe has a value; a place none of them scored gets the panel median, never zero. Cards and reserves come from this one score.
+5. **The picks.** At most 3 cards come from any one love while the other loves have places to give. Chains are off the cards (from Qloo's website field: a branch page, or 3 or more pool places sharing a domain and a first word), and so are generic places that 60% or more of the sample tastes put in their top 30%.
+6. **Seven cards, three reserves.** Strike a card you know and a reserve takes its place. Under seven, the page says so.
 
-**Matching.** Mostly name rules (exact, alias, brand containment: "Ippudo NY" strikes IPPUDO Hell's Kitchen), checked against Qloo IDs with a city-scoped `/search` where it matters, up to 20 lookups per query. Close matches are struck. Weak one-word matches past the lookup cap are not, because in testing they were matcher errors ("Home Wine Kitchen" striking Down Home Elegance).
+**Matching.** Mostly name rules (exact, alias, brand containment: "Ippudo NY" strikes IPPUDO Hell's Kitchen; corporate suffixes and apostrophes normalised, so "Joe's" matches "Joes LLC"), checked against Qloo IDs with a city-scoped `/search` where it matters, up to 20 lookups per query. Close matches are struck. Weak one-word matches past the lookup cap are not, because in testing they were matcher errors ("Home Wine Kitchen" striking Down Home Elegance).
 
 ## Run it live (your own Qloo key)
+
+The "fit for everyone" priors (`data/priors/<city>.json`, plus the anchor panel `anchors-<city>.json`) are Qloo output keyed by Qloo IDs, so they are gitignored. Build them once per city first, then run a query:
 
 ```bash
 export QLOO_API_KEY=...                   # from the environment, never in a file
 cd engine
+python3 -I build_priors.py --city both --dry --frozen           # the universe and the projected cost only
+python3 -I build_priors.py --city stl --budget 1300 --frozen   # about 1,000 calls
+python3 -I build_priors.py --city nyc --budget 2800 --frozen   # about 2,200 calls
 python3 -I run_query.py --city nyc --set nyc-khruangbin --walls ../data/walls --budget 60
 ```
 
-The "fit for everyone" priors (`data/priors/<city>.json`, plus the anchor panel `anchors-<city>.json`) are Qloo output keyed by Qloo IDs, so they are gitignored. Build them once per city:
-
-```bash
-cd engine
-python3 -I build_priors.py --city stl --budget 1150 --frozen   # ~9 calls per anchor: about 1,000 calls
-python3 -I build_priors.py --city nyc --budget 2500 --frozen   # ~22 calls per anchor: about 2,300 calls
-python3 -I build_priors.py --city both --dry --frozen           # the universe and the projected cost only
-```
-
-The procedure (fixed in the `build_priors.py` docstring; seed `unsaid-anchors-v1`): for each of six entity types with a quota (artist 25, movie 20, TV show 20, brand 15, book 10, podcast 10), take Qloo's 200 most popular entities of that type (`/v2/insights`, `filter.popularity.min=0.9`, no signal), group them by their Qloo genre tags, and draw round-robin over the genres with a seeded RNG. In draw order, an anchor is kept if it is live (under 95% of places at Qloo's default affinity), until the quota is met. The city's universe is the city-wide no-signal pool pages plus the pools of the 20 preset sets. Each anchor rescores the whole universe with the engine's own chunked `filter.results.entities` rescoring (48 places + 2 check places per call), and a chunk whose check places drift more than `ANCHOR_DRIFT_MAX` is dropped. Calls are cached, so a rerun after a `--budget` stop resumes. The script stops before the month's remaining Qloo calls would fall below `--quota-floor` (25,000).
+The procedure (fixed in the `build_priors.py` docstring; seed `unsaid-anchors-v1`): for each of six entity types with a quota (artist 25, movie 20, TV show 20, brand 15, book 10, podcast 10), take Qloo's 200 most popular entities of that type (`/v2/insights`, `filter.popularity.min=0.9`, no signal), group them by their Qloo genre tags, and draw round-robin over the genres with a seeded RNG. In draw order, an anchor is kept if it is live (under 95% of places at Qloo's default affinity), until the quota is met. The city's universe is the city-wide no-signal pool pages plus the pools of the 20 preset sets. Each anchor rescores the whole universe with the engine's own chunked `filter.results.entities` rescoring (48 places + 2 check places per call), and a chunk whose check places drift more than `ANCHOR_DRIFT_MAX` is dropped (checked and enforced; 0 drift in the 28 Oct build). Calls are cached, so a rerun after a `--budget` stop resumes. The script stops before the month's remaining Qloo calls would fall below `--quota-floor` (25,000).
 
 Keys come only from environment variables, and the Qloo key goes only in the `X-Api-Key` header. `--budget N` stops before the (N+1)-th live Qloo call, and cached calls cost nothing. `engine/KEYDAY.md` lists every gate command in order; `engine/regen_try.sh` regenerates the site's try-these sets in one command. The server is `python3 -I server/app.py` (fake mode on port 8710; see `server/DEPLOY.md`). Qloo responses, results and the `.cache/` directory never enter git.
 
@@ -120,22 +117,28 @@ Keys come only from environment variables, and the Qloo key goes only in the `X-
 
 ## Is this just `filter.popularity.max`?
 
-No, though it does lean to less-known places, on purpose. Two checks:
+No, though it does lean to less-known places, on purpose, and so do the AIs. Two checks:
 
-- **Gate C.** Cut as many places by Qloo's popularity order as the AIs' list cuts. Across 20 sets the two cuts overlap by a median ⟦CAP_MED⟧ (bar: 0.80 or less; `k3_survivors.py`). For Cedric: the AIs named ⟦WALL⟧ places in ⟦ASKS⟧ asks, ⟦STRUCK_U⟧ of them in his ⟦U⟧-place pool (`run_query.py --city stl --set stl-cedric`).
-- **k12, below.** Without the AIs' list, a median 2 of 7 cards are places the AIs named. With it, 0.
+- **Gate C.** Cut as many places by Qloo's popularity order as the AIs' list cuts. Across 20 sets the two cuts overlap by a median ⟦CAP_MED⟧, against ⟦CAP_CHANCE⟧ for a random cut of the same size (`k3_survivors.py`). The AIs' lists lean popular, but a popularity cap doesn't reproduce them: the rest of what they strike is places the cap keeps. For Cedric: the AIs named ⟦WALL⟧ places in ⟦ASKS⟧ asks, ⟦STRUCK_U⟧ of them in his ⟦U⟧-place pool (`run_query.py --city stl --set stl-cedric`).
+- **k12, below.** On held-out questions, the score alone (no list) does most of the avoiding; the list finishes it.
 
 Probe P12 found that Qloo's no-signal order *is* the popularity order (ρ = 1.00 in New York, St. Louis and LA), so "for anyone" on a card is Qloo's popularity rank of the same pool (`probes.py`).
 
 ## What crossing out changes (k12)
 
-`engine/k12_wall_effect.py` runs the same pipeline twice per set, with the real list and with an empty one, and also takes Qloo's plain top 7 by taste. Over 20 sets, cards an AI named (median of 7): **with the list 0, without it 2, Qloo's plain top 7 3.** Pooled: 8 / 48 / 79 of 140. On the held-out fresh questions alone: 0 / 1 / 2. The list changes a median 2 of 7 cards. Counts only; the table with names stays in `engine/out/` (gitignored). Full table: [engine/k12_wall_effect.md](engine/k12_wall_effect.md).
+`engine/k12_wall_effect.py` runs the same pipeline twice per set, with the real list and with an empty one, and also takes Qloo's plain top 7 by taste (the loves' ranks fused, nothing else). The evidence is the held-out fresh questions: on the dated answers the list is built from, "named" is scored by the same matcher that strikes, so UNSAID's count there is zero by construction.
+
+Held-out, cards the answers named, pooled over 20 sets of 7: **Qloo's plain taste top 7 ⟦K12_PLAIN_FRESH_POOLED⟧ → our score with no list ⟦K12_OFF_FRESH_POOLED⟧ → UNSAID ⟦K12_ON_FRESH_POOLED⟧** (per-set medians ⟦K12_PLAIN_FRESH⟧ / ⟦K12_OFF_FRESH⟧ / ⟦K12_ON_FRESH⟧). The score's popularity and fit-for-everyone terms, with the picks rules, do most of the avoiding; crossing out finishes the job. Counts only; the table with names stays in `engine/out/` (gitignored). Full table: [engine/k12_wall_effect.md](engine/k12_wall_effect.md).
+
+## Why a rank per love, not Qloo's joint signal (k13)
+
+`engine/k13_joint.py` compared the two over the same pool, 20 sets ([engine/k13_joint.md](engine/k13_joint.md)). The joint call can't carry a dish love: the engine's sevens hold 35 dish-tagged places, the joint call's 3; the dish tag got no explainability credit, and in 5 of 14 dish sets Qloo dropped a median 12% of the pool from the response. Joint explainability is flat (the top love's share a median 0.51, 0.05 ahead of the next), so a card couldn't say which love put it there. The two orders correlate at 0.64 (Spearman) and the sevens share 5 of 7. A switch would add about 4 calls per query and save none. The joint signal is still used for the cap check (gate C).
 
 ## With web search on
 
-The main lanes run without web search. A separate lane (`harness/search_on.py`, `data/walls/search-on.json`, labelled `search: true`) asked 24 phrasings per city to Claude with web search allowed (it searched in 6 of 48 asks), to Claude told to search (44 of 48) and to ChatGPT with web search on (48 of 48).
+The main lanes run without web search. A separate lane (`harness/search_on.py`, `data/walls/search-on.json`, labelled `search: true`) asked 24 phrasings per city to Claude with web search allowed (it searched in 6 of 48 asks), to Claude told to search (44 of 48) and to ChatGPT with web search on (48 of 48). 21 of Claude's 96 answers came from `claude-haiku-5-5` (Claude Code's own model routing), not Sonnet; the model is stamped on every answer.
 
-- **0 of the 140 cards gate E scored** were named by any search-on answer.
+- **0 of the 140 frozen cards gate E scored** were named by any search-on answer. On the 28 Oct ranking, before these answers joined the list, they named 5 cards in 4 sets; those are struck now.
 - Claude's hidden-gem lists barely move: with search allowed, Mai Lee on 14 of 16; told to search, 8 of 16.
 - ChatGPT with search scatters: Mai Lee on 4 of 16, Gioia's Deli on 0 of 16.
 - These answers are now part of the list.
@@ -148,18 +151,19 @@ Every gate is printed as measured. The pivot column is what the build doc says t
 |---|---|---|---|
 | P · probes | `probes.py` | **PASS**: 12 of 12 ran. `business_rating.min` is ignored server side; no-signal order ≡ popularity | client floor 4.3; "anyone" = popularity rank |
 | K1 · density | `k1_density.py` | **FAIL**: \|U\| ≥ 150 in 0/10 NYC and 0/10 STL at 8 and 10 mi; 2/10 and 2/10 after widening | widen R: STL 15 mi, NYC 10 mi |
-| A · taste moves | `k2a_lift.py` | **PASS**: ρ(taste, popularity) ≤ 0.90 in NYC 10/10 and STL 10/10. Two strangers' sevens (Cedric, Jason) share **0** (gate ≤ 2); all pairs in a city, median ⟦PAIRS_MED⟧ | none |
+| A · taste moves | `k2a_lift.py` | ⟦GATE_A⟧. Bar: ρ(taste, popularity) ≤ 0.90 in 8+ of 10 sets per city; two strangers' sevens (Cedric, Jason) share ≤ 2. All pairs in a city: median ⟦PAIRS_MED⟧ | none |
 | K8 · closed | `k8_closed.py` | **FAIL**: Qloo's `is_closed` caught 2 of 3 known closures | a last-seen check on every card (hours and address in Qloo; the venue's site when Qloo has one) |
 | K4 · matcher | `tests/test_matcher.py`, `k4_relabel.py` | **PASS after pivot**: 1,345 AI names on 2 real pools; 3 false survivors, then 0 after R5. Labels by the build agent, not held out | raise the guard (R5 brand containment) |
-| B · survivors | `k3_survivors.py` | **PASS**: NYC 10/10, STL 9/10 give 7 cards + 3 reserves with no junk | widen R; extra pool pages |
-| C · not a cap | `k3_survivors.py`, `run_query.py` | **PASS**: cap overlap median ⟦CAP_MED⟧ over 20 sets (gate ≤ 0.80) | none |
-| D · meter | `k10_meter.py` | **FAIL**: alone a median 6.0 of 12 picks land on the other AIs' lists; with Qloo as the tool 4.0; ≥ 4 below alone in 5/10 sets (bar 7/10). Final re-grade on the rebuilt walls | printed here, not featured |
-| E · fresh asks | `k5_fresh.py` | **PASS**: the AIs named 1 of 140 cards over 20 sets × 48 answers (median 0 of 7): El Born, a real ChatGPT mention | none |
-| F · speed | `k11_latency.py` | **PASS**: p50 17.5 s, p90 30.4 s; first name on screen p50 0.89 s. 10 cold NYC sets through the Pages proxy on Render's free tier, 28 Oct | none |
+| B · survivors | `k3_survivors.py` | ⟦GATE_B⟧ sets give 7 cards + 3 reserves with no junk (bar: 8+ NYC, 6+ STL) | widen R; extra pool pages |
+| C · not a cap | `k3_survivors.py`, `run_query.py` | ⟦GATE_C⟧ (pre-registered bar: cap overlap ≤ 0.80) | none |
+| D · meter | `k10_meter.py` | **FAIL**: alone a median 6.0 of 12 picks land on the other AIs' lists (the pre-registered grading list: census + wall 1); with Qloo as the tool 4.0; ≥ 4 below alone in 5/10 sets (bar 7/10). Final re-grade on the rebuilt walls | printed here, not featured |
+| E · fresh asks | `k5_fresh.py` | **PASS**: the AIs named 1 of the 140 frozen cards (`data/prereg/frozen20_cards.sha256`) over 20 sets × 48 answers (median 0 of 7): El Born, a real ChatGPT mention | none |
+| F · speed | `k11_latency.py` | ⟦GATE_F⟧, through the Pages proxy on Render's free tier, at the freeze | none |
 
 - **Gate E** asks 40 real public questions (20 per city, Reddit), taken verbatim plus one line naming the subreddit and city, and for 4 of them the set's three loves. None was ever used in a wall (checked by SHA-256). Gate E has no baseline of its own; k12 is the baseline. The reverse check (does the raw answer text name a card?) was tightened on 28 Oct so month names and common words aren't evidence; before that it counted 5 of 140, mostly loose words.
-- **Gate D's "with Qloo" tool** (`qloo_places`) built its pool the older way at meter time (2 pages, no distance check; 101 places vs the engine's 183 for the same set). It still returned what the frozen protocol asks for, Qloo's top 50 with nothing crossed out, so D stands as measured and was not re-run.
-- **Gate F** was measured from a home broadband line, not a phone on cellular as the build doc says. The final run follows the last engine deploy.
+- **Gate D's "with Qloo" tool** (`qloo_places`) ordered places by the first love's pool order, not a joint signal, and built its pool the older way at meter time (2 pages, no distance check; 101 places vs the engine's 183 for the same set). It still returned what the frozen protocol asks for, Qloo's top 50 with nothing crossed out, so D stands as measured and was not re-run.
+- **Gate F** is measured from a home broadband line, not a phone on cellular as the build doc says. The number above is the freeze run's, after the last engine deploy; an earlier pass on 28 Oct predates the ranking change.
+- **Memory:** the 512 MB host ran out of memory under repeated cold runs (glibc arenas holding freed memory). Fixed with `malloc_trim` after every run and `MALLOC_ARENA_MAX=2`; a 15-run soak on Render then peaked at 291 MB with 0 restarts.
 - Meter protocol: `data/meter.protocol.md`.
 
 ### Post-hoc: the meter with `unsaid_places` as the tool
@@ -175,12 +179,13 @@ Every gate is printed as measured. The pivot column is what the build doc says t
 
 The ChatGPT and Claude answers are **dated**: asked through each vendor's command-line tool between ⟦DATES⟧, and stamped on every name. The census ran on 27 Oct 2026; 8 of ChatGPT's census answers were re-asked on 28 Oct after the search leak below. Gemini is asked **live** once per fresh run (one taste ask on the free tier, `gemini-3-flash-preview`). Cards don't wait for it: a live Gemini name that hits a card burns it afterwards. When Gemini's daily quota is used up, everything on screen is dated and the page says so. Each answer in `data/walls/` carries `asked_at` and `lane: dated | live`.
 
-The list is not every place an AI could name. Claude's St. Louis census covered about 47% of the Chao2 estimate of its full list; after the saturation lane, about ⟦COVERAGE⟧ (`harness/census_stats.py`, `harness/saturation.py`).
+The list is not every place an AI could name. Against the Chao2 estimate of each AI's full list, the saturation lane (960 extra asks) moved Claude in St. Louis from 46.6% to ⟦COVERAGE⟧ and in New York from 43.9% to ⟦COVERAGE_NYC⟧ (ChatGPT at the lane's end on 28 Oct: St. Louis 53.6% → 61.3%, New York 47.1% → 46.2%, as its estimate grew). St. Louis is near flat (Claude's new-name rate over its last 40 asks: ⟦NEWRATE_STL⟧); New York is not (⟦NEWRATE_NYC⟧). `harness/census_stats.py`, `harness/saturation.py`.
 
 ## $0 AI side
 
-- **Claude:** Claude Code (`claude -p`, Sonnet) on the author's subscription.
-- **ChatGPT:** Codex CLI (`codex exec`, `gpt-5.6-terra`) on the author's subscription.
+- **Claude:** Claude Sonnet 5.5 via Claude Code (`claude -p --model sonnet`) on the author's subscription, with a one-line consumer-chat system prompt. The model is read back from each answer: every no-search answer in `data/walls/` is `claude-sonnet-5-5`; in the search-on lane Claude Code routed 21 of 96 to `claude-haiku-5-5`.
+- **ChatGPT:** GPT-5.6 (`gpt-5.6-terra`) via Codex CLI (`codex exec -m gpt-5.6-terra`) on the author's subscription.
+- Census and saturation asks end with the same request for a JSON list of 8–12 places (`harness/prompts.py`), wall asks with a list of up to 12 (`harness/phrasings.py`); fresh questions go out verbatim.
 - Both run on the author's machine and never on the server.
 - **Gemini:** the free API tier. Dated asks use `gemini-3.8-flash`, which allows 20 requests a day, so the Gemini lane covers the hidden-gem asks only. Live asks use `gemini-3-flash-preview`.
 - **No web search** in any lane except the labelled search-on lane. No paid AI API key.
@@ -192,19 +197,20 @@ The list is not every place an AI could name. Claude's St. Louis census covered 
 
 - **Wider radius:** K1 failed at 10 mi (STL) and 8 mi (NYC), so the radius is now 15 mi (STL) and 10 mi (NYC). This is the documented pivot.
 - **Extra pool pages:** offsets 100 and 150 are fetched, but only when the floored pool has fewer than 150 places.
-- **Ranking (28 Oct):** the first ranking put the same place on most sets' cards (Warehouse West in 10 of 10 St. Louis sets). The score now subtracts what fits everyone (above). Over 20 sets: ⟦DISTINCT⟧ distinct places in 140 cards (before: 68), at most ⟦MAXREP⟧ per place per city (before: 10).
-- **Fit-for-everyone prior (30 Oct):** it was first built from the city's other nine preset sets. That made the diversity numbers circular (measured on the sets the prior came from), and a place outside those sets' pools got no penalty at all (in 5 of 10 New York sets only 1–2 of 7 cards had a prior). It now comes from a Qloo-sampled anchor panel (97 live anchors per city, `build_priors.py`) over each city's whole candidate universe, with the median for any place no anchor scored. On the 20 sets: cards with a prior value 100 → 136 of 140 (the other 4 get the median; pool places 82% → 95%); distinct places 118 → 105; at most 4 repeats per place per city (was 3); gates A and B still pass; held-out AI-named cards, plain → our score with no list → UNSAID: 32 → 11 → 1 (was 32 → 7 → 1).
+- **Ranking (28 Oct):** the first ranking put the same place on most sets' cards (Warehouse West in 10 of 10 St. Louis sets). The score now subtracts what fits everyone (above). Over 20 sets: ⟦DISTINCT⟧ distinct places in ⟦CARDS⟧ cards (before: 68), at most ⟦MAXREP⟧ per place per city (before: 10); two sets in a city share a median ⟦PAIRS_MED⟧. Similar tastes share most: St. Louis's soul and hip-hop sets, and Wilco with Big Thief, up to ⟦CLUSTER_MAX⟧ places pair by pair; any other two sets, at most ⟦OTHER_MAX⟧.
+- **Fit-for-everyone prior (28 Oct):** it was first built from the city's other nine preset sets. That made the diversity numbers circular (measured on the sets the prior came from), and a place outside those sets' pools got no penalty at all (in 5 of 10 New York sets only 1–2 of 7 cards had a prior). It now comes from a Qloo-sampled anchor panel (97 live anchors per city, `build_priors.py`) over each city's whole candidate universe, with the median for any place no anchor scored. On the 20 sets that day: cards with a prior value 100 → 136 of 140 (the other 4 get the median; pool places 82% → 95%); distinct places 118 → 105; at most 4 repeats per place per city (was 3); gates A and B still pass; held-out AI-named cards, plain → our score with no list → UNSAID: 32 → 11 → 1 (was 32 → 7 → 1).
+- **Picks rules (28 Oct, after the new prior):** at most 3 cards per love while the other loves have places to give (it can't hold when they have none); chains off the cards; generic places cut (60% or more of the sample tastes put them in their top 30%); the matcher normalises corporate suffixes and apostrophes. The diversity targets were missed rather than the rules bent; similar tastes share the most (above).
 - **Dish loves:** a dish counts through a `filter.tags` sub-pool of places Qloo tags with it. A dish no place is tagged with (Dry Martini) stays dead: it shows the dead-love line and leaves the ranking.
 - **R5 brand containment:** a branch of a named brand is struck. A weak word never fires this rule alone. Added after the live K4 relabel.
 - **The 20-lookup cap:** name → Qloo ID lookups are capped at 20 per query, spent first on vetoing one-word strikes; a one-word match past the cap is not applied (gate F needed it; K4 stayed at 0).
-- **Love resolution correction:** two frozen loves had resolved to the far side of the world (Ten Bells → a pub in Mariana, Brazil; Carbone → a restaurant in Gijón, Spain). They now resolve to The Ten Bells and Carbone in New York, and both sets were recomputed. The resolver passes a 60-case test at 100% top-1.
+- **Love resolution correction:** two frozen loves had resolved to the far side of the world (Ten Bells → a pub in Mariana, Brazil; Carbone → a restaurant in Gijón, Spain). They now resolve to The Ten Bells and Carbone in New York, and both sets were recomputed. The resolver passes a 64-case test at 100% top-1; the cases were written alongside the fix, so it is a regression test, not a held-out score.
 - **Meter grading:** `k10_meter.py` first graded against an older definition. It now uses the frozen protocol (the other assistants' city-wall and census answers).
 - **Fresh-ask city line:** the verbatim questions don't name the city, so the AIs asked "which city?" and named nothing. One context line ("Posted in r/StLouis (St. Louis, Missouri):") is added to every question, before any scoring (`data/fresh_asks.deviations.md`).
 - **The city picker** offers St. Louis and New York only: the two cities with collected AI answers.
 
 ## MCP
 
-**Hosted:** `https://unsaid-ang.pages.dev/mcp` is the same tool over MCP Streamable HTTP (`server/mcp_http.py`: POST JSON-RPC, a JSON reply or an SSE stream for `tools/call`, stateless, no session). It runs every call through the same path as `/api/unsaid`, with the same cache and per-IP limits, and returns the same `structuredContent` as the stdio server. Until 30 Oct 23:45 ET it needs the token, as `?token=` in the URL or `Authorization: Bearer`. Add it as a custom connector in Claude (Settings → Connectors), or `claude mcp add --transport http unsaid "https://unsaid-ang.pages.dev/mcp?token=<token>"`. `python3 -I agent/test_client.py --http <url>` checks it.
+**Hosted:** `https://unsaid-ang.pages.dev/mcp` is the same tool over MCP Streamable HTTP (`server/mcp_http.py`: POST JSON-RPC, a JSON reply or an SSE stream for `tools/call`, stateless, no session). It runs every call through the same path as `/api/unsaid`, with the same cache and limits (a token holder gets its own bucket of 60 an hour; without a token, 15 an hour per IP through 6 Nov), and returns the same `structuredContent` as the stdio server. Until 30 Oct 23:45 ET it needs the token, as `?token=` in the URL or `Authorization: Bearer`. Add it as a custom connector in Claude (Settings → Connectors), or `claude mcp add --transport http unsaid "https://unsaid-ang.pages.dev/mcp?token=<token>"`. `python3 -I agent/test_client.py --http <url>` checks it.
 
 **Local (stdio):** `agent/unsaid_mcp.py` is a stdio MCP server in one file, standard library only. By default (`UNSAID_MODE=remote`) it calls the hosted API at https://unsaid-ang.pages.dev, so an agent gets the same live Qloo ranks and the same dated AI answers as the site. You don't need a Qloo key or the engine. Until 30 Oct 23:45 ET the API needs the token from the Devpost testing instructions. After that, leave `UNSAID_TOKEN` out.
 
@@ -232,8 +238,8 @@ claude -p "I love Frankie Beverly & Maze, The Original Kings of Comedy and rib t
   --mcp-config agent/mcp.json --allowedTools mcp__unsaid__unsaid_places
 ```
 
-- `unsaid_places(loves, city)` returns the product: Qloo's taste pool minus every place the AIs named, ranked as above. Pass loves as `[text, type]` pairs; untyped, "rib tips" can resolve to a restaurant. The hosted API serves St. Louis and New York City and refuses other cities with a note. Run locally, a city with no AI answers on file gets an empty wall and the `no_wall` flag.
-- `qloo_places(loves, city)` returns the top 50 of the same pool with nothing crossed out. It is the meter's "with" arm. Only the local modes list it. At meter time it built a shallower pool than the engine (see *Gates*); it now matches.
+- `unsaid_places(loves, city)` returns the product: it crosses out places named in the dated Claude and GPT answers on file (plus a live Gemini ask where available) and ranks the rest by how much better each fits your loves than its popularity or its fit for most tastes, as above. Up to 7 picks, each with its Qloo id, its two ranks, whether it holds if any one love is dropped, the love that drives it, and the wall's most-named places. Pass loves as `[text, type]` pairs; untyped, "rib tips" can resolve to a restaurant. The hosted API serves St. Louis and New York City and refuses other cities with a note. Run locally, a city with no AI answers on file gets an empty wall and the `no_wall` flag.
+- `qloo_places(loves, city)` returns the top 50 of the same pool with nothing crossed out. It is the meter's "with" arm. Only the local modes list it. It orders places by the first love's pool order, not a joint signal; at meter time it also built a shallower pool than the engine (see *Gates*), and the pool now matches.
 - A real agent run is public on the site: `site/data/live/agent_demo.json` (Claude Code, remote mode, the call and the answer verbatim).
 
 Other modes: `UNSAID_MODE=fake` runs the engine offline on a synthetic Qloo world, and every result is tagged FAKE. `UNSAID_MODE=live` with `QLOO_API_KEY` runs the engine locally, using the walls in `data/walls` (override with `UNSAID_WALLS`). Both local modes call `run_unsaid` in `engine/unsaid/api.py`, as the server does. `python3 -I agent/test_client.py` checks fake mode in both protocol eras, then runs a smoke test against the hosted API. The smoke test is skipped when `UNSAID_TOKEN` isn't set.
@@ -244,9 +250,9 @@ Other modes: `UNSAID_MODE=fake` runs the engine offline on a synthetic Qloo worl
 
 ## Pre-registration
 
-The public gist, posted 27 Oct 2026 at 20:03 ET, before the Qloo key arrived and so before any card existed: https://gist.github.com/mi11ione/6ae7660a666e9bc5978184576809136c. `data/prereg/SHA256SUMS` maps each hash to its file: the 20 taste sets, the fresh questions and their protocol, and the meter protocol. `data/prereg/frozen20_cards.sha256` hashes the 20 card lists that gate E scored. Those lists are Qloo output, so they stay out of the repo and are disclosed on request.
+The public gist, posted 28 Oct 2026 at 00:03 UTC (27 Oct, 20:03 ET), minutes before the Qloo key arrived and so before any card existed: https://gist.github.com/mi11ione/6ae7660a666e9bc5978184576809136c. It lists five SHA-256 hashes, and `data/prereg/SHA256SUMS` maps each to its file: the 20 taste sets (`sets.json`, `ac3e169f…`), the fresh questions (`fresh_asks.json`, `c1f86b2d…`) and their protocol (`d21638ed…`), the meter protocol (`fb19df60…`) and the build doc (`abff575e…`, private, disclosed on request). `data/prereg/frozen20_cards.sha256` (committed 28 Oct 02:26 UTC, not in the gist) hashes the 20 card lists that gate E scored. Those lists are Qloo output, so they stay out of the repo and are disclosed on request.
 
-Both censuses ran earlier that day, before the gist (Claude's from 12:05 UTC). The same 128 prompts (`harness/asks.json`, prompt v1) were frozen and hashed before the run: SHA-256 `ca82f4e3…`, recorded in `harness/run_census.py`. That hash is in the repo, not publicly timestamped.
+The gist postdates both censuses (Claude's from 27 Oct 12:05 UTC), so the census prompts were not publicly pre-registered. `harness/run_census.py` records the SHA-256 of its 128 prompts (`harness/asks.json`, prompt v1): `ca82f4e3…`.
 
 ## Credits
 
