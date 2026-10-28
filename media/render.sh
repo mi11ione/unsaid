@@ -1,7 +1,8 @@
 #!/bin/zsh
 # Re-render every image, the clip and the site screenshots. Needs Google Chrome, node (no npm packages),
 # python3 with Pillow, ffmpeg for the MP4.
-#   ./render.sh            everything        ./render.sh hero | images | share | clip | site | data
+#   ./render.sh            everything        ./render.sh hero | images | share | clip | video | site | data
+#   URL=<live url> FRAMES=<scratch dir> ./render.sh video     the 60 s video (end-card URL; where its PNG frames go, deleted after)
 #   SRC=../site/data/mock/stl-cedric.ndjson ./render.sh images     force a results file (default: live, else mock)
 set -e
 cd "$(dirname "$0")"
@@ -59,6 +60,38 @@ strip.save('shots/clip-keyframes.png')
 PY
   rm -rf $S/clip-frames
   echo "$S/clip-hidden-gem-1920x1080.mp4"
+fi
+
+if [[ $what == all || $what == video ]]; then
+  # the 60 s Devpost video: video.html (one timeline, window.seek) → 30 fps PNG frames → H.264. Frames are ~2 GB:
+  # they go to $FRAMES (default: a temp dir) and are deleted after encoding. Sources: VIDEO-NOTES.md.
+  (cd .. && python3 -I media/tools/build_video_data.py)
+  F=${FRAMES:-${TMPDIR:-/tmp}/unsaid-video-frames}
+  rm -rf $F; mkdir -p $F
+  END=$(node tools/cdp.mjs eval "$U/video.html" "window.__END" 1920 1080 | tr -d '"')
+  node tools/cdp.mjs eval "$U/video.html" "JSON.stringify(window.__SFX)" 1920 1080 > $F/sfx.json
+  node tools/cdp.mjs frames "$U/video.html${URL:+?url=$URL}" $F 1920 1080 30 $END
+  python3 -I tools/video_audio.py $F/sfx.json $END $F/ui.wav
+  ffmpeg -y -loglevel error -framerate 30 -i $F/f%04d.png -i $F/ui.wav -c:v libx264 -pix_fmt yuv420p -crf 18 -preset slow \
+    -profile:v high -c:a aac -b:a 160k -shortest -movflags +faststart $S/video-60s-1920x1080.mp4
+  python3 - $F <<'PY'
+import sys
+from PIL import Image, ImageDraw, ImageFont
+F = sys.argv[1]
+ts = [2.6, 6.0, 10.8, 12.9, 15.0, 21.5, 23.6, 27.2, 29.6, 31.8, 36.0, 39.3, 41.8, 48.3, 51.8, 58.5]
+w, h, g = 640, 360, 8
+sheet = Image.new('RGB', (4 * w + 3 * g, 4 * (h + 26) + 3 * g), (40, 40, 38))
+d = ImageDraw.Draw(sheet)
+try: font = ImageFont.truetype('/System/Library/Fonts/Menlo.ttc', 16)
+except Exception: font = None
+for i, t in enumerate(ts):
+    x, y = (i % 4) * (w + g), (i // 4) * (h + 26 + g)
+    sheet.paste(Image.open(f'{F}/f{round(t * 30):04d}.png').convert('RGB').resize((w, h), Image.LANCZOS), (x, y + 26))
+    d.text((x + 6, y + 4), f'{int(t // 60)}:{t % 60:04.1f}', fill=(200, 198, 190), font=font)
+sheet.save('shots/video-keyframes.png')
+PY
+  rm -rf $F
+  echo "$S/video-60s-1920x1080.mp4"
 fi
 
 if [[ $what == all || $what == site ]]; then

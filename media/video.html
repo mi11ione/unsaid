@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>UNSAID video</title>
+<link rel="stylesheet" href="css/media.css">
+<style>
+  #stage { width: 1920px; height: 1080px; }
+  .sc { position: absolute; inset: 0; opacity: 0; }
+  .top { position: absolute; left: 72px; top: 40px; display: flex; gap: 28px; align-items: baseline; z-index: 5; }
+  .cap1 { position: absolute; left: 72px; font: 400 64px/1.12 var(--serif); color: var(--ink); letter-spacing: -.005em; }
+  .cap2 { position: absolute; left: 72px; font: 400 34px/1.3 var(--mono); color: var(--dim); }
+  .src { position: absolute; left: 72px; right: 72px; top: 1030px; font: 16px/1.45 var(--mono); color: var(--faint); white-space: nowrap; overflow: hidden; }
+  .x { position: relative; white-space: nowrap; }
+  .x::after { content: ''; position: absolute; left: -.04em; top: 54%; height: var(--h, .07em); width: calc(var(--k, 0) * (100% + .08em)); background: var(--c, var(--red)); }
+  /* s1 */
+  .eye { position: absolute; left: 72px; top: 118px; width: 960px; font: 400 76px/1.1 var(--serif); }
+  .ask { position: absolute; left: 72px; top: 318px; width: 960px; font: 400 30px/1.35 var(--mono); color: var(--dim); height: 82px; }
+  .gemN { position: absolute; left: 72px; top: 420px; font: 400 160px/1 var(--serif); color: var(--red); letter-spacing: -.02em; }
+  .row { position: absolute; left: 72px; display: flex; align-items: center; height: 50px; }
+  .row .who { width: 190px; font: 400 32px/1 var(--mono); color: var(--ink); }
+  .row .dots { display: flex; gap: 12px; }
+  .row .d { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--faint); box-sizing: border-box; }
+  .row .d.on { background: var(--red); border-color: var(--red); }
+  .row .n { margin-left: 30px; font: 400 44px/1 var(--serif); color: var(--red); white-space: nowrap; font-variant-numeric: lining-nums; }
+  /* s2 */
+  .wallbox { position: absolute; left: 72px; top: 250px; width: 1776px; height: 760px; overflow: hidden; }
+  .wl { position: absolute; left: 0; top: 0; width: 1776px; font: 400 15px/1.55 var(--serif); color: #9a978f; transform-origin: 0 0; }
+  .wl span { position: relative; white-space: nowrap; margin-right: .85em; display: inline-block; }
+  .wl span::after { content: ''; position: absolute; left: -1px; top: 55%; height: 1.5px; width: calc(var(--k, 0) * (100% + 2px)); background: var(--red); }
+  .cnt { position: absolute; right: 72px; top: 52px; text-align: right; }
+  .cnt .v { font: 400 150px/1 var(--serif); color: var(--red); font-variant-numeric: lining-nums tabular-nums; }
+  .cnt .l { font: 400 24px/1.3 var(--mono); color: var(--dim); margin-top: 6px; }
+  /* s3 chips + funnel */
+  .chips { position: absolute; left: 72px; top: 330px; display: flex; flex-direction: column; gap: 26px; }
+  .chip2 { display: inline-flex; align-items: baseline; gap: 22px; border: 2px solid var(--rule2); padding: 18px 28px; font: 400 58px/1.05 var(--serif); color: var(--ink); width: max-content; }
+  .chip2 i { font: 400 22px/1 var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--dim); font-style: normal; }
+  .fun { position: absolute; top: 330px; width: 520px; }
+  .fun .v { font: 400 190px/1 var(--serif); color: var(--white); font-variant-numeric: lining-nums; }
+  .fun .l { font: 400 28px/1.4 var(--mono); color: var(--dim); margin-top: 18px; }
+  .fun.r .v { color: var(--red); }
+  .arw { position: absolute; top: 380px; font: 400 90px/1 var(--mono); color: var(--faint); }
+  /* cards (the site's card, at video scale) */
+  .rowc { position: absolute; left: 72px; top: 0; transform-origin: 0 0; }
+  .card { position: absolute; top: 0; width: 330px; height: 516px; border: 1.5px solid var(--rule2); background: #111110; padding: 22px 24px; box-sizing: border-box; }
+  .card .r1 { display: flex; justify-content: space-between; font: 400 20px/1 var(--mono); color: var(--dim); }
+  .card .hood { font: 400 20px/1.2 var(--mono); color: var(--dim); margin-top: 14px; height: 24px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card .nm { font: 400 40px/1.08 var(--serif); color: var(--ink); margin-top: 12px; height: 88px; }
+  .card .nm .cx { text-decoration: line-through; text-decoration-thickness: 3px; text-decoration-color: transparent; }
+  .card .hb { position: absolute; left: -1.5px; bottom: -1.5px; height: 6px; background: var(--white); width: 0; }
+  .card .what { font: 400 20px/1.3 var(--mono); color: var(--dim); margin-top: 10px; height: 26px; white-space: nowrap; }
+  .card .rk { margin-top: 30px; font: 400 22px/1 var(--mono); color: var(--dim); }
+  .card .rk b { font: 700 56px/1 var(--mono); color: var(--white); margin-right: 10px; }
+  .card .any { font: 400 20px/1 var(--mono); color: var(--dim); margin-top: 12px; }
+  .card .bec { border-top: 1.5px solid var(--rule2); margin-top: 22px; padding-top: 16px; font: 400 19px/1.3 var(--mono); color: var(--dim); }
+  .card .bec b { display: block; font-weight: 400; color: var(--ink); font-size: 21px; margin-top: 4px; }
+  .card .tag { position: absolute; left: 24px; right: 24px; bottom: 16px; font: 400 18px/1.3 var(--mono); color: var(--ink); }
+  .card.risen { border-color: var(--white); }
+  .card.risen .tag { color: var(--dim); }
+  .hold { position: absolute; width: 96px; height: 96px; }
+  /* s3 detail */
+  .det { position: absolute; left: 560px; top: 250px; width: 1290px; }
+  .det .h { font: 400 104px/1.05 var(--serif); color: var(--white); letter-spacing: -.015em; white-space: nowrap; }
+  .det .h span { color: var(--dim); }
+  .det .of { font: 400 30px/1.4 var(--mono); color: var(--dim); margin-top: 18px; }
+  .det .k { margin-top: 44px; border-top: 1.5px solid var(--rule2); padding-top: 18px; }
+  .det .k .t { font: 700 22px/1 var(--mono); letter-spacing: .2em; color: var(--ink); }
+  .det .k .b { font: 400 44px/1.25 var(--serif); color: var(--ink); margin-top: 12px; }
+  /* s5 */
+  .pan { position: absolute; top: 250px; border: 1.5px solid var(--rule2); background: #111110; box-sizing: border-box; }
+  .pan .hd { display: flex; justify-content: space-between; padding: 18px 26px; border-bottom: 1.5px solid var(--rule2); font: 400 22px/1 var(--mono); color: var(--dim); letter-spacing: .08em; }
+  .pan .hd b { color: var(--ink); font-weight: 700; letter-spacing: .12em; }
+  .code { padding: 24px 26px; font: 400 27px/1.5 var(--mono); color: var(--ink); white-space: pre; }
+  .code .k { color: var(--dim); }
+  .code .cur { display: inline-block; width: .6em; height: 1.05em; background: var(--white); vertical-align: -4px; }
+  .rep { padding: 26px 30px; font: 400 40px/1.32 var(--serif); color: var(--ink); }
+  .rep p { margin: 0 0 26px; }
+  .rep b { font-weight: 700; }
+  .rep .gap { color: var(--faint); font-family: var(--mono); font-size: 30px; margin: -8px 0 18px; }
+  /* s6 */
+  .end { position: absolute; left: 0; right: 0; text-align: center; }
+  .mk { font: 700 54px/1 var(--mono); letter-spacing: .42em; color: var(--ink); padding-left: .42em; }
+  .mk s { text-decoration: none; position: relative; }
+  .mk s::after { content: ''; position: absolute; left: -2px; right: .3em; top: 52%; height: 5px; background: var(--ink); }
+  .fin { font: 400 300px/1 var(--serif); font-variant-numeric: lining-nums; letter-spacing: -.02em; }
+  .url { font: 400 44px/1 var(--mono); color: var(--white); }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<script src="../site/js/map.js"></script>
+<script>
+/* video.html: the 60-second Devpost video, one deterministic timeline. window.seek(t) draws the frame at t seconds
+   (0..END); render.sh video renders it at 30 fps with tools/cdp.mjs and encodes it with ffmpeg.
+   ?t=12.3 freezes a frame · ?play=1 plays in real time · ?url=<live url> fills the end card (default: a placeholder).
+   Data: media/data/live/video.json (tools/build_video_data.py, which checks every number against its source) and
+   site/data/map/stl.json. Every on-screen number and its source: media/VIDEO-NOTES.md.
+   window.__SFX lists the sound cues (t, kind) for the optional UI-sound track. */
+(async function () {
+  const { C, el, esc } = UM;
+  const [V, M] = await Promise.all([UM.json(UM.param('data', 'data/live/video.json')), UM.json('../site/data/map/stl.json')]);
+  const CE = V.census, CD = V.cedric, AG = V.agent;
+  const W = 1920, H = 1080;
+  const stage = document.getElementById('stage');
+  const clamp = (x, a = 0, z = 1) => Math.max(a, Math.min(z, x));
+  const ease = x => 1 - Math.pow(1 - clamp(x), 3);
+  const easeIO = x => { x = clamp(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+  const K = (t, a, d = .45) => ease((t - a) / d);
+  const show = (e, k, dy = 16) => { e.style.opacity = k; e.style.transform = k < 1 ? `translateY(${(1 - k) * dy}px)` : ''; };
+  const SFX = [];
+  const cue = (t, k) => SFX.push({ t: +t.toFixed(3), k });
+
+  // ---- scenes (seconds) ----
+  const S = { s1: [0, 13.4], s2: [13.4, 22.0], s3: [22.0, 37.4], s4: [37.4, 45.0], s5: [45.0, 52.4], s6: [52.4, 59.5] };
+  const END = 59.5, XF = .4;
+  const scene = id => { const d = el(stage, 'div'); d.className = 'sc'; d.id = id; return d; };
+  // a crossfade of XF s centred on each boundary
+  const vis = (t, [a, b], first, last) => (first ? 1 : ease((t - a + XF / 2) / XF)) * (last ? 1 : 1 - ease((t - b + XF / 2) / XF));
+  const srcLine = (p, html) => { const d = el(p, 'div', '', html); d.className = 'src'; return d; };
+
+  const top = el(stage, 'div', '', `<span class="mark" style="font-size:20px"><s>UN</s>SAID</span><span class="slug" style="font-size:16px">St. Louis · eat &amp; drink</span>`);
+  top.className = 'top';
+
+  // =============== S1 · the problem: ask an AI for a hidden gem ===============
+  const s1 = scene('s1');
+  const ctx = UM.canvas(s1, W, H);
+  const OUT = (M.outside || []).find(o => o.name === CE.gem);
+  const PM = { ...M, frame: (M.frame || M.places).concat(OUT ? [[OUT.lon, OUT.lat]] : []) };
+  const P = UM.projection(UM.frame(PM, []), { x: 1110, y: 120, w: 760, h: 860 });
+  const ai = M.ai.slice().sort((a, b) => b.count - a.count), cmax = ai[0].count;
+  const [mx, my] = OUT ? P(OUT.lon, OUT.lat) : [0, 0], mr = OUT ? UM.discD(OUT.count, cmax, 44, 5) / 2 : 0;
+  const [cx0, cy0] = P(-90.2, 38.63);
+  const delay = M.places.map(([lo, la]) => { const [x, y] = P(lo, la); return Math.hypot(x - cx0, y - cy0) / 900 * .8; });
+  const eye = el(s1, 'div', '', `Ask an AI for a hidden gem in St.&nbsp;Louis.`); eye.className = 'eye';
+  const ask = el(s1, 'div', ''); ask.className = 'ask';
+  const gemN = el(s1, 'div', '', `<span class="x" style="--h:.075em">${esc(CE.gem)}</span>`); gemN.className = 'gemN';
+  const mkRow = (who, y) => {
+    const r = el(s1, 'div', `top:${y}px`, `<span class="who">${who}</span><span class="dots">${CE.asks.map(() => '<span class="d"></span>').join('')}</span><span class="n"></span>`);
+    r.className = 'row'; return { r, dots: [...r.querySelectorAll('.d')], n: r.querySelector('.n') };
+  };
+  const RC = mkRow('Claude', 620), RG = mkRow('ChatGPT', 690);
+  const c1 = el(s1, 'div', 'top:800px;width:1000px', 'Different AIs. The same secret, told&nbsp;to&nbsp;everyone.'); c1.className = 'cap1'; c1.style.fontSize = '52px';
+  const c1b = el(s1, 'div', 'top:930px;width:1000px;font-size:26px', `Half of everything Claude recommends here is the same ${CE.k50_claude}&nbsp;places. ChatGPT’s:&nbsp;${CE.k50_chatgpt}.`); c1b.className = 'cap2';
+  const mlab = el(s1, 'div', `position:absolute;top:${my - 20}px;left:${mx + mr + 24}px;font:400 34px/1 var(--serif);color:#c9c6bd;white-space:nowrap`,
+    `<span class="x" style="--h:3px">${esc(CE.gem)}</span><div style="font:400 20px/1 var(--mono);color:var(--dim);margin-top:8px">${esc(CE.hood)}</div>`);
+  mlab.className = 'lab';
+  srcLine(s1, `census: ${esc(CE.model)} and ChatGPT ${esc(CE.chatgpt_model)}, no web search, the same ${CE.of} hidden-gem phrasings each (shown), ${esc(CE.date)}, pre-registered · ${CE.asks_per_city} St. Louis asks each<br>grey: mapped places to eat and drink, © OpenStreetMap contributors, ODbL · red: places Claude named, sized by mentions`);
+  // the 16 asks: three slow, then quicker
+  const A0 = 1.5, askT = CE.asks.map((_, i) => A0 + Math.min(i, 3) * .62 + Math.max(0, i - 3) * .36), LAND = .16;
+  askT.forEach((a, i) => cue(a + LAND, CE.asks[i].claude || CE.asks[i].chatgpt ? 'hit' : 'tick'));
+  const firstHit = askT[CE.asks.findIndex(a => a.claude || a.chatgpt)] + LAND;
+  const T1 = { cap: 9.0, cap2: 10.4, strike: 12.0 };
+  cue(T1.strike, 'strike');
+  function seek1(t) {
+    ctx.clearRect(0, 0, W, H);
+    ctx.save(); ctx.beginPath(); ctx.rect(1080, 90, 820, 920); ctx.clip();
+    UM.dots(ctx, M, P, { d: 4.2, alpha: .9, glow: 18, reveal: i => ease((t - .1 - delay[i]) / .4) });
+    ctx.restore();
+    const dk = K(t, .7, .6), dim = 1 - .6 * K(t, T1.strike + .2, .8);
+    if (dk > 0) ai.slice().reverse().forEach(a => { const [x, y] = P(a.lon, a.lat); UM.disc(ctx, x, y, UM.discD(a.count, cmax, 44, 5) * (.6 + .4 * dk), .8 * dk * dim * .9); });
+    if (OUT && dk > 0) UM.disc(ctx, mx, my, mr * 2 * (.6 + .4 * dk), .92 * dk);
+    show(eye, K(t, .15, .6));
+    let cur = -1, nc = 0, ng = 0, last = -9;
+    CE.asks.forEach((a, i) => {
+      if (t >= askT[i]) cur = i;
+      const on = t >= askT[i] + LAND;
+      RC.dots[i].classList.toggle('on', on && a.claude); RG.dots[i].classList.toggle('on', on && a.chatgpt);
+      RC.dots[i].style.opacity = RG.dots[i].style.opacity = t >= askT[i] ? 1 : .35;
+      if (on) { nc += a.claude; ng += a.chatgpt; if (a.claude || a.chatgpt) last = askT[i] + LAND; }
+    });
+    const askOut = 1 - K(t, askT[askT.length - 1] + .7, .4);
+    ask.innerHTML = cur >= 0 ? `“${esc(CE.asks[cur].ask)}”` : '';
+    ask.style.opacity = (cur >= 0 ? ease((t - askT[cur]) / .1) : 0) * askOut;
+    const n = cur + 1;
+    RC.n.textContent = n ? `${nc} of ${n}` : ''; RG.n.textContent = n ? `${ng} of ${n}` : '';
+    [RC.r, RG.r].forEach(r => show(r, K(t, A0 - .3, .4), 8));
+    show(gemN, K(t, firstHit, .35), 10);
+    // Mai Lee: a ring that pulses on each landing
+    if (OUT && t > firstHit) {
+      const rk = K(t, firstHit, .2), pk = clamp((t - last) / .4);
+      UM.ring(ctx, mx, my, mr + 9, 2, .9 * rk * dim);
+      if (pk < 1) UM.ring(ctx, mx, my, mr + 9 + 30 * ease(pk), 3, (1 - pk) * .8);
+    }
+    mlab.style.opacity = K(t, firstHit, .35);
+    show(c1, K(t, T1.cap, .5)); show(c1b, K(t, T1.cap2, .5));
+    const sk = easeIO((t - T1.strike) / .6);
+    gemN.firstChild.style.setProperty('--k', sk); mlab.firstChild.style.setProperty('--k', easeIO((t - T1.strike - .25) / .5));
+  }
+
+  // =============== S2 · the cross-out: the wall ===============
+  const s2 = scene('s2');
+  const c2 = el(s2, 'div', 'top:96px;width:1500px;font-size:60px;white-space:nowrap', 'UNSAID crosses out every place the AIs name.'); c2.className = 'cap1';
+  const c2b = el(s2, 'div', 'top:178px;width:1300px;font-size:28px', `Asked ${CD.asks} ways about St. Louis, Claude, ChatGPT and Gemini named ${CD.wall_n} places.`); c2b.className = 'cap2';
+  const cnt = el(s2, 'div', '', `<div class="v">0</div><div class="l">places · crossed out</div>`); cnt.className = 'cnt';
+  const wb = el(s2, 'div'); wb.className = 'wallbox';
+  const wl = el(wb, 'div'); wl.className = 'wl';
+  const names = CD.wall.map(w => { const s = document.createElement('span'); s.textContent = w.name; wl.appendChild(s); return s; });
+  // the base size that fits all of them, at the end of the zoom-out
+  let fs = 15; wl.style.fontSize = fs + 'px';
+  while (wl.offsetHeight > 740 && fs > 9) { fs -= .5; wl.style.fontSize = fs + 'px'; }
+  const Z0 = 3.4;
+  const app = names.map((_, i) => .6 + 4.2 * Math.pow(i / names.length, .72));
+  const c2c = el(s2, 'div', 'top:178px;width:1300px;font-size:28px;color:var(--ink)', 'Good places. Everyone already gets&nbsp;them.'); c2c.className = 'cap2';
+  srcLine(s2, `the wall behind Cedric’s set: ${CD.wall_n} distinct places from ${CD.asks} stored asks (Claude ${CD.asks_by.anthropic}, ChatGPT ${CD.asks_by.openai}, Gemini ${CD.asks_by.google}), dated, no web search · most-named first`);
+  for (let i = 0; i < names.length; i += 6) cue(S.s2[0] + app[i] + .3, 'scratch');
+  function seek2(u) {
+    show(c2, K(u, .1, .5));
+    c2b.style.opacity = K(u, .5, .5) * (1 - K(u, 5.6, .4));
+    c2c.style.opacity = K(u, 6.0, .5);
+    const z = Z0 + (1 - Z0) * easeIO((u - 1.6) / 4.4);
+    wl.style.transform = `scale(${z})`;
+    let n = 0;
+    names.forEach((s, i) => {
+      const a = app[i]; const k = ease((u - a) / .2);
+      s.style.opacity = k; if (u >= a) n++;
+      s.style.setProperty('--k', ease((u - a - .3) / .28));
+      s.style.color = u > a + .6 ? '#77756e' : '#b9b6ad';
+    });
+    cnt.firstChild.textContent = n;
+    cnt.style.opacity = K(u, .3, .4);
+  }
+
+  // =============== S3 · 7 for you ===============
+  const s3 = scene('s3');
+  const loves = CD.loves;
+  const TL = { artist: 'artist', movie: 'movie', tag: 'dish' };
+  const live = loves.filter(l => !l.dead), dead = loves.filter(l => l.dead);
+  const it = l => ['movie', 'tv_show', 'book'].includes(l.type) ? `<i style="font:inherit;font-style:italic;letter-spacing:0;text-transform:none;color:inherit">${esc(l.label)}</i>` : esc(l.label);
+  const c3a = el(s3, 'div', 'top:150px', 'Three things Cedric&nbsp;loves.'); c3a.className = 'cap1';
+  const chips = el(s3, 'div'); chips.className = 'chips';
+  const chipEls = loves.map(l => { const c = el(chips, 'div', '', `<span>${it(l)}</span><i>${TL[l.type] || l.type || ''}</i>`); c.className = 'chip2'; return c; });
+  // funnel: U → S → 7
+  const c3b = el(s3, 'div', 'top:150px;width:1700px', 'What’s left, Qloo ranks for&nbsp;him.'); c3b.className = 'cap1';
+  const F = [
+    el(s3, 'div', 'left:72px', `<div class="v">${CD.U}</div><div class="l">places Qloo finds for<br>his loves, within ${CD.R_mi} mi,<br>rated 4.3+ and open</div>`),
+    el(s3, 'div', 'left:700px', `<div class="v"><span class="x" style="--h:.06em">${CD.struck_in_U}</span></div><div class="l">of them were on<br>the AIs’ lists:<br>crossed out</div>`),
+    el(s3, 'div', 'left:1330px', `<div class="v">${CD.picks.length}</div><div class="l">for him, ranked by Qloo<br>from the ${CD.S} left<br>(+${CD.reserves.length} in reserve)</div>`)];
+  F.forEach((f, i) => { f.className = 'fun' + (i === 1 ? ' r' : ''); });
+  const arr = [el(s3, 'div', 'left:520px', '→'), el(s3, 'div', 'left:1150px', '→')]; arr.forEach(a => { a.className = 'arw'; });
+  // the cards row (shared by S3 and S4)
+  const c3c = el(s3, 'div', 'top:150px;width:1780px', `${CD.picks.length} for you. Ranked by&nbsp;Qloo.`); c3c.className = 'cap1';
+  const LOVES = live.map(it).join(' and ');
+  const c3d = el(s3, 'div', 'top:232px;width:1780px;font-size:26px',
+    `for <span style="color:var(--ink)">${LOVES}</span>.` + (dead.length ? ` ${esc(dead[0].label.charAt(0).toUpperCase() + dead[0].label.slice(1))}: Qloo scores every place here the same, so the other two ranked.` : ''));
+  c3d.className = 'cap2';
+  const CW = 330, CG = 22;
+  function cardHTML(c, i) {
+    return `<div class="r1"><span>${String(i + 1).padStart(2, '0')}</span><span>${Number(c.rating).toFixed(1)} · ${c.open ? 'open' : 'closed'}</span></div>
+      <div class="hood">${esc(c.neighbourhood)}</div><div class="nm"><span class="cx">${esc(c.name)}</span></div>
+      <div class="what">${esc(c.what)}</div><div class="rk"><b>#${c.fit_rank}</b>for you</div><div class="any">#${c.any_rank} for anyone</div>
+      <div class="bec">because you love<b>${esc(UM.typedName({ loves: loves.map(l => ({ label: l.qloo, text: l.label })) }, c.because))}</b></div><div class="tag"></div>`;
+  }
+  const mkRowC = (parent, list) => { const r = el(parent, 'div'); r.className = 'rowc';
+    return { r, cards: list.map((c, i) => { const d = el(r, 'div', `left:${i * (CW + CG)}px`, cardHTML(c, i)); d.className = 'card'; return d; }) }; };
+  const R3 = mkRowC(s3, CD.picks);
+  const scale7 = (W - 144) / (7 * CW + 6 * CG);
+  // card one in detail
+  const P1 = CD.picks[0];
+  const D1 = mkRowC(s3, [P1]);
+  const det = el(s3, 'div', '', `<div class="h">#${P1.fit_rank} for you. <span>#${P1.any_rank} for anyone.</span></div>
+    <div class="of">The same ${P1.U} places, ranked by Qloo:<br>for his taste, then by popularity.</div>
+    <div class="k"><div class="t">NEVER SAID</div><div class="b">Named 0 times in ${P1.never_said} asks.</div></div>
+    <div class="k"><div class="t">BECAUSE</div><div class="b">You love ${esc(UM.typedName({ loves: loves.map(l => ({ label: l.qloo, text: l.label })) }, P1.because))}.</div></div>`);
+  det.className = 'det';
+  const dk = [...det.children];
+  srcLine(s3, `Cedric · St. Louis (the site’s try-these set): Qloo Insights API, ${CD.qloo_calls} calls, ${esc(UM.day(CD.as_of))} · “for anyone” = Qloo’s popularity order of the same ${CD.U} places`);
+  const T3 = { chips: 0, fun: 3.4, cards: 7.4, det: 10.6 };
+  [0, 1, 2].forEach(i => cue(S.s3[0] + .5 + i * .32, 'tick'));
+  cue(S.s3[0] + T3.fun + 1.7, 'strike');
+  CD.picks.forEach((_, i) => cue(S.s3[0] + T3.cards + .35 + i * .09, 'tick'));
+  cue(S.s3[0] + T3.det + .2, 'rise');
+  function seek3(u) {
+    const a = 1 - K(u, T3.fun - .4, .35), b = K(u, T3.fun, .35) * (1 - K(u, T3.cards - .4, .35)), c = K(u, T3.cards, .35) * (1 - K(u, T3.det - .35, .35)), d = K(u, T3.det, .4);
+    c3a.style.opacity = K(u, .1, .5) * a;
+    chipEls.forEach((e, i) => { show(e, K(u, .5 + i * .32, .45) * a); if (loves[i].dead) e.style.opacity = +e.style.opacity * (u > 2.3 ? 1 - .45 * K(u, 2.3, .5) : 1); });
+    c3b.style.opacity = b;
+    show(F[0], K(u, T3.fun + .2, .45) * b);
+    arr[0].style.opacity = K(u, T3.fun + 1.0, .4) * b;
+    show(F[1], K(u, T3.fun + 1.1, .45) * b);
+    F[1].querySelector('.x').style.setProperty('--k', easeIO((u - T3.fun - 1.7) / .45));
+    arr[1].style.opacity = K(u, T3.fun + 2.2, .4) * b;
+    show(F[2], K(u, T3.fun + 2.3, .45) * b);
+    c3c.style.opacity = c; c3d.style.opacity = c * K(u, T3.cards + .8, .5);
+    R3.r.style.opacity = c; R3.r.style.top = '380px';
+    R3.r.style.transform = `scale(${scale7})`;
+    R3.cards.forEach((e, i) => show(e, K(u, T3.cards + .3 + i * .09, .4), 24));
+    // detail: card one large at left, its numbers at right
+    D1.r.style.opacity = d; D1.r.style.top = '250px'; D1.r.style.transform = `scale(${1.25})`;
+    show(D1.cards[0], d, 0);
+    dk.forEach((e, i) => show(e, K(u, T3.det + .3 + i * .7, .45)));
+  }
+
+  // =============== S4 · a judge strikes a card; a reserve rises ===============
+  const s4 = scene('s4');
+  const c4a = el(s4, 'div', 'top:150px;width:1780px', 'You’re the judge. Know one? Strike&nbsp;it.'); c4a.className = 'cap1';
+  const c4b = el(s4, 'div', 'top:150px;width:1780px', 'A reserve rises. No AI named that one&nbsp;either.'); c4b.className = 'cap1';
+  const R4 = mkRowC(s4, CD.picks);
+  const RES = CD.reserves[0];
+  const SI = 1;                                    // strike card 2; the first reserve rises in after it (site/js/app.js strike())
+  const rz = el(R4.r, 'div', `left:${(SI + 1) * (CW + CG)}px`, cardHTML(RES, SI + 1)); rz.className = 'card risen';
+  rz.querySelector('.tag').textContent = 'rose in its place · a reserve no AI named';
+  // numbers after the risen card move down one (as on the site)
+  R4.cards.forEach((e, i) => { if (i > SI) e.querySelector('.r1 span').dataset.n2 = String(i + 2).padStart(2, '0'); });
+  const hb = el(R4.cards[SI], 'div'); hb.className = 'hb';
+  srcLine(s4, `on the site: hold a card to strike it; the next reserve (Qloo’s, never named by an AI) rises in after it, and the numbers move down one`);
+  const T4 = { hold: 1.4, struck: 2.3, rise: 3.0, cap2: 3.4 };
+  cue(S.s4[0] + T4.struck, 'strike'); cue(S.s4[0] + T4.rise + .2, 'rise');
+  function seek4(u) {
+    c4a.style.opacity = K(u, .1, .4) * (1 - K(u, T4.cap2 - .3, .3));
+    c4b.style.opacity = K(u, T4.cap2, .4);
+    R4.r.style.top = '300px';
+    R4.r.style.transform = 'scale(1)';
+    const st = easeIO((u - T4.struck) / .5);
+    const tg = R4.cards[SI];
+    tg.querySelector('.nm .cx').style.textDecorationColor = `rgba(236,235,229,${st})`;
+    tg.style.opacity = 1 - .45 * K(u, T4.struck + .4, .5);
+    tg.querySelector('.tag').textContent = u >= T4.struck + .3 ? 'struck by you' : '';
+    // the hold: the card presses in and a bar fills along its bottom edge (the site's hold-to-strike, 0.9 s)
+    const hk = clamp((u - T4.hold) / (T4.struck - T4.hold)), hv = 1 - K(u, T4.struck + .15, .3);
+    hb.style.width = `calc(${hk * 100}% + 3px)`; hb.style.opacity = u >= T4.hold ? hv : 0;
+    tg.style.transform = u >= T4.hold && u < T4.struck + .2 ? `scale(${1 - .02 * ease(clamp((u - T4.hold) / .2))})` : '';
+    tg.style.borderColor = u >= T4.hold && u < T4.struck ? 'var(--dim)' : '';
+    // the rise: cards after the struck one slide right; the reserve comes up into the gap
+    const rk = easeIO((u - T4.rise) / .6);
+    R4.cards.forEach((e, i) => {
+      if (i > SI) { e.style.left = `${(i + rk) * (CW + CG)}px`; const s = e.querySelector('.r1 span'); s.textContent = rk > .5 ? s.dataset.n2 : String(i + 1).padStart(2, '0'); }
+    });
+    rz.style.opacity = K(u, T4.rise + .25, .4); rz.style.transform = `translateY(${(1 - easeIO((u - T4.rise - .2) / .6)) * 140}px)`;
+    R4.r.style.opacity = 1;
+  }
+
+  // =============== S5 · an agent calls it ===============
+  const s5 = scene('s5');
+  const c5 = el(s5, 'div', 'top:150px', 'Agents can call it&nbsp;too.'); c5.className = 'cap1';
+  const tu = AG.tool_use;
+  const J = o => JSON.stringify(o);
+  // the call's own JSON, verbatim; only the line breaks are ours
+  const CODE = `${tu.name}({\n  "loves": [\n${tu.input.loves.map(l => `    {"text": ${J(l.text)},\n     "type": ${J(l.type)}}`).join(',\n')}\n  ],\n  "city": ${J(tu.input.city)}\n})`;
+  const p1 = el(s5, 'div', 'left:72px;width:880px;height:690px', `<div class="hd"><b>TOOL_USE</b><span>Claude → unsaid_places</span></div><div class="code"></div>`); p1.className = 'pan';
+  const code = p1.querySelector('.code');
+  const md = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/'/g, '’');
+  const p2 = el(s5, 'div', 'left:990px;width:858px;height:690px', `<div class="hd"><b>CLAUDE</b><span>its reply · verbatim excerpt</span></div><div class="rep">${AG.reply.map((r, i) => (i ? '<div class="gap">…</div>' : '') + `<p>${md(r)}</p>`).join('')}</div>`); p2.className = 'pan';
+  const reps = [...p2.querySelectorAll('.rep > *')];
+  srcLine(s5, `tool_use: Claude’s own call to unsaid_places over MCP, verbatim (agent/demo) · reply: Claude Sonnet 5.5 with the live tool and Cedric’s three loves, ${esc(AG.reply_date)}, verbatim excerpt`);
+  const T5 = { type: [.6, 2.4], rep: 2.9 };
+  for (let x = T5.type[0]; x < T5.type[1]; x += .12) cue(S.s5[0] + x, 'key');
+  function seek5(u) {
+    show(c5, K(u, .1, .4)); show(p1, K(u, .25, .4)); show(p2, K(u, T5.rep - .3, .4));
+    const n = Math.round(clamp((u - T5.type[0]) / (T5.type[1] - T5.type[0])) * CODE.length);
+    const shown = CODE.slice(0, n);
+    code.innerHTML = esc(shown).replace(/^(\w+)/, '<span style="color:var(--white);font-weight:700">$1</span>').replace(/(&quot;\w+&quot;):/g, '<span class="k">$1</span>:') +
+      (u < T5.type[1] + .8 && Math.floor(u * 3) % 2 === 0 ? '<span class="cur"></span>' : '');
+    reps.forEach((e, i) => show(e, K(u, T5.rep + i * .9, .45), 10));
+  }
+
+  // =============== S6 · the end card ===============
+  const s6 = scene('s6');
+  const URL_ = UM.param('url', null);
+  const e1 = el(s6, 'div', 'top:190px', `<span class="mk"><s>UN</s>SAID</span>`); e1.className = 'end';
+  const e2 = el(s6, 'div', 'top:300px;font:400 64px/1.15 var(--serif);color:var(--ink)', 'Everything the AIs tell everyone, <span class="x" style="--h:.07em;--c:var(--ink)">crossed out</span>.'); e2.className = 'end';
+  const e3 = el(s6, 'div', 'top:420px', `<span class="fin" style="color:var(--red)">${CD.wall_n}</span><span class="fin" style="color:var(--faint);font-family:var(--mono);font-size:150px;vertical-align:40px;margin:0 50px"> → </span><span class="fin" style="color:var(--white)">${CD.picks.length}</span>`); e3.className = 'end';
+  const e4 = el(s6, 'div', 'top:740px;font:400 32px/1.4 var(--mono);color:var(--dim)', `places the AIs gave everyone · left for Cedric, ranked by Qloo`); e4.className = 'end';
+  const e5 = el(s6, 'div', 'top:860px', `<span class="url">${URL_ ? esc(URL_) : '<span class="ph">⟦LIVE_URL⟧</span>'}</span><div style="font:400 26px/1 var(--mono);color:var(--dim);margin-top:22px">try Cedric · St. Louis, or your own three loves</div>`); e5.className = 'end';
+  cue(S.s6[0] + .9, 'strike');
+  function seek6(u) {
+    show(e1, K(u, .1, .5)); show(e2, K(u, .4, .5));
+    e2.querySelector('.x').style.setProperty('--k', easeIO((u - .9) / .55));
+    show(e3, K(u, 1.6, .5)); show(e4, K(u, 2.1, .5)); show(e5, K(u, 2.8, .5));
+  }
+
+  const SC = [['s1', s1, seek1], ['s2', s2, seek2], ['s3', s3, seek3], ['s4', s4, seek4], ['s5', s5, seek5], ['s6', s6, seek6]];
+  function seek(t) {
+    t = clamp(t, 0, END);
+    SC.forEach(([id, node, f], i) => {
+      const [a, b] = S[id], v = vis(t, S[id], i === 0, i === SC.length - 1);
+      const on = t >= a - XF / 2 && t <= b + XF / 2 && v > 0;
+      node.style.opacity = on ? v : 0; node.style.display = on ? '' : 'none';
+      if (on) f(t - a);
+    });
+    top.style.opacity = K(t, .1, .5) * (1 - K(t, S.s6[0] - XF / 2, XF));
+  }
+  window.seek = seek;
+  window.__END = END; window.__S = S; window.__SFX = SFX.sort((a, b) => a.t - b.t);
+  seek(+UM.param('t', 0));
+  if (UM.param('play')) { const s0 = performance.now(); const f = () => { const t = (performance.now() - s0) / 1000; seek(t); if (t < END) requestAnimationFrame(f); }; requestAnimationFrame(f); }
+  window.__ready = true;
+})().catch(e => { window.__error = String(e && e.stack || e); window.__ready = true; });
+</script>
+</body>
+</html>
