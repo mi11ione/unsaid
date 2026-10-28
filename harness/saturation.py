@@ -33,7 +33,7 @@ TEMPLATES = ["where should I go for {occ} in {hood}, {city}? thinking {cui}",
              "{cui} in {hood}, {city}, for {occ}: where?",
              "best spot in or near {hood} ({city}) for {occ}, ideally {cui}"]
 CENSUS = {"claude": "claude_answers.jsonl", "codex": "codex_answers.jsonl"}
-FROZEN = os.path.expanduser("~/Desktop/qloo/private/frozen20")
+FROZEN = os.path.expanduser(os.environ.get("UNSAID_CARDS_DIR") or "~/Desktop/qloo/private/frozen20")
 
 
 def grid(ck):
