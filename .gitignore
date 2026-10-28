@@ -17,3 +17,7 @@ node_modules/
 __pycache__/
 *.pyc
 .DS_Store
+
+# live Qloo-derived results: shipped only by direct upload, never committed (UNSAID.md §3.5, §5.2)
+site/data/live/
+media/data/live/
