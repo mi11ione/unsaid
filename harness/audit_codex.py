@@ -31,7 +31,12 @@ BENIGN = {"codex/list_mcp_resources", "codex/list_mcp_resource_templates"}
 
 
 def contaminated(r):
+    """A no-search answer that searched or used any tool. In the SEARCH-ON lane web search is the point, so there only
+    foreign tools (apps, shell) count."""
     items = r.get("items") or []
+    if r.get("search_lane"):
+        foreign = [t for t in (r.get("foreign_tools") or []) if t not in BENIGN]
+        return bool(foreign or "command_execution" in items or r.get("commands"))
     foreign = [t for t in (r.get("foreign_tools") or []) if t not in BENIGN]
     called = [c for c in (r.get("tools_called") or []) if c not in BENIGN]
     ours = [c for c in called if str(c).startswith("unsaid/")]

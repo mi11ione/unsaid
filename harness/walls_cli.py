@@ -236,7 +236,8 @@ def item(r):
             "model": r.get("model"), "lane": r.get("lane", "dated"), "search": r.get("search", "off"),
             "phrasing_id": r["phrasing_id"], "phrasing": r["phrasing"], "prompt_v": r.get("prompt_v"),
             "asked_at": r.get("asked_at"), "hood": r.get("hood"), "status": r.get("status", "ok"),
-            "names": r.get("places") or [], "raw": r.get("raw") or ""}
+            "names": r.get("places") or [], "raw": r.get("raw") or "",
+            **({"search_lane": True} if r.get("search_lane") else {})}
 
 
 WALLS_DIR = os.path.join(os.path.dirname(HERE), "data", "walls")
@@ -299,7 +300,8 @@ def cmd_build(args):
             sys.exit("refusing: %d stored wall answers hash-match a held-out fresh ask: %s" % (len(bad), bad[:3]))
         per[w] = (recs, failed)
     meta = lambda ws, failed, counts: {"built_at": L.now(), "walls_used": ws, "prompt_v": P.PROMPT_V,  # noqa: E731
-                                       "failed_not_included": sorted(r["id"] for r in failed), "counts": counts}
+                                       "failed_not_included": sorted(r["id"] for r in failed), "counts": counts,
+                                       "search": any("search-on" in w for w in ws)}  # search-on lane: web search ON
     if args.out:
         recs = [r for w in args.walls for r in per[w][0]]
         failed = [r for w in args.walls for r in per[w][1]]

@@ -19,7 +19,7 @@ Instruments per lane, both arms identical but for the tool:
   gemini  REST, no JSON mode (it doesn't mix with function calling) [+ one functionDeclaration, calls run through
           the same MCP server by mcp_client.py]
 """
-import argparse, json, os, sys, threading
+import argparse, json, os, sys, threading, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -109,6 +109,109 @@ def opts_for(lane, arm, tool):
     return {}
 
 
+# ---------------------------------------------------------------- post-hoc third arm (harness/meter_unsaid.md)
+OUT_UNSAID = os.path.join(L.RUNS, "meter_unsaid.jsonl")   # never the frozen runs/meter.jsonl
+CFG_UNSAID = os.path.join(L.RUNS, ".meter_unsaid.mcp.json")
+UNSAID_URL_DEFAULT = "https://unsaid-ang.pages.dev"
+QLOO_CAP_UNSAID = 370
+FRESH_PER_HOUR = 3          # the host's per-address limit, unless the agent server sends the bench header
+DRIFT_SETS = ("stl-cedric", "stl-wilco")
+RETRY_STATUSES = ("limited", "degraded", "waking", "queued", "error")
+
+
+def write_cfg_unsaid():
+    os.makedirs(L.RUNS, exist_ok=True)
+    env = {"UNSAID_MODE": "remote", "UNSAID_TOKEN": "${UNSAID_TOKEN:-}", "UNSAID_URL": "${UNSAID_URL:-}",
+           "UNSAID_BENCH": "${UNSAID_BENCH:-}"}  # used once agent/unsaid_mcp.py sends X-Unsaid-Bench; no Qloo key here
+    json.dump({"mcpServers": {"unsaid": {"type": "stdio", "command": SERVER[0], "args": SERVER[1:], "env": env}}},
+              open(CFG_UNSAID, "w"), indent=1)
+    return CFG_UNSAID
+
+
+def host_engine_v():
+    import urllib.request
+    url = (os.environ.get("UNSAID_URL") or UNSAID_URL_DEFAULT).rstrip("/") + "/api/health"
+    try:
+        return json.loads(urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "unsaid-harness/0.1"}),
+                                                 timeout=30).read()).get("engine_v")
+    except Exception as e:
+        return "unknown (%s)" % type(e).__name__
+
+
+def unsaid_opts(lane):
+    if lane.name == "claude":
+        return {"meter": True, "mcp_config": write_cfg_unsaid(), "tool": "unsaid_places"}
+    return {"mcp": {"command": SERVER[0], "args": SERVER[1:], "tool": "unsaid_places",
+                    "env_vars": ["UNSAID_MODE", "UNSAID_TOKEN", "UNSAID_URL", "UNSAID_BENCH"]}}
+
+
+def run_unsaid(a, lanes):
+    """40 unsaid asks + 8 drift alone asks, sequential, set by set, so a set's first call is its only fresh run.
+    Pacing: <= 3 fresh sets per rolling hour unless UNSAID_BENCH is set (and honoured by the agent server)."""
+    os.environ["UNSAID_MODE"] = "remote"
+    os.environ.setdefault("UNSAID_URL", UNSAID_URL_DEFAULT)
+    if not os.environ.get("UNSAID_TOKEN"):
+        sys.exit("needs UNSAID_TOKEN (the hosted API's bearer token) in the env")
+    sets_doc = json.load(open(os.path.join(L.RUNS, "meter_sets.json")))
+    chosen_ids = [x["set"] for x in sets_doc["sets"]]
+    allsets, _ = ordered_sets(a.sets_file)
+    chosen = [x for x in allsets if x[1] in chosen_ids]
+    asks = []
+    for ck, sid, loves in chosen:
+        for x in build([(ck, sid, loves)], 1):
+            if x["arm"] == "alone" and sid in DRIFT_SETS:
+                asks.append(dict(x, id=x["id"].replace(":alone:", ":alone-drift:"), drift=True, posthoc=True))
+            if x["arm"] == "with":
+                asks.append(dict(x, id=x["id"].replace(":with:", ":unsaid:"), arm="unsaid", posthoc=True,
+                                 prompt_v="meter-v1 (data/meter.protocol.md) + post-hoc unsaid arm (harness/meter_unsaid.md)"))
+    done = L.done_ids(OUT_UNSAID)
+    spent = sum(((r.get("qloo") or {}).get("network") or 0) for r in L.load(OUT_UNSAID).values())
+    todo = [(lane, x) for x in asks for lane in lanes if "%s:%s" % (x["id"], lane.name) not in done]
+    bench = bool(os.environ.get("UNSAID_BENCH")) and "X-Unsaid-Bench" in open(SERVER[2]).read()  # only if the server sends it
+    print("[unsaid-arm] post-hoc: %d asks (%d unsaid + %d drift) x lanes, %d to ask; Qloo so far %d (cap %d); pacing %s%s" % (
+        len(asks) * len(lanes), sum(1 for x in asks if x["arm"] == "unsaid") * len(lanes),
+        sum(1 for x in asks if x.get("drift")) * len(lanes), len(todo), spent, QLOO_CAP_UNSAID,
+        "bench header" if bench else "%d fresh sets/hour" % FRESH_PER_HOUR, "" if a.go else " (dry run: add --go)"), flush=True)
+    if not a.go:
+        return
+    starts, first_v = [], None
+    for lane, x in todo:
+        if L.disk_low() or spent >= QLOO_CAP_UNSAID:
+            print("[unsaid-arm] stop: %s" % (L.disk_low() or "Qloo cap %d reached (%d)" % (QLOO_CAP_UNSAID, spent)), flush=True)
+            break
+        new_set = x["arm"] == "unsaid" and not any(r.get("set") == x["set"] and r.get("arm") == "unsaid"
+                                                    for r in L.load(OUT_UNSAID).values())
+        if new_set and not bench:
+            starts = [t for t in starts if time.time() - t < 3600]
+            if len(starts) >= FRESH_PER_HOUR:
+                wait = 3600 - (time.time() - starts[0]) + 5
+                print("[unsaid-arm] pacing: %d fresh sets this hour; waiting %d s" % (len(starts), wait), flush=True)
+                time.sleep(wait)
+            starts.append(time.time())
+        opts = unsaid_opts(lane) if x["arm"] == "unsaid" else opts_for(lane, "alone", None)
+        ev = host_engine_v() if x["arm"] == "unsaid" else None
+        for attempt in (1, 2):
+            r = lane.ask(x["prompt"], **opts)
+            st = [t.get("status") for t in (r.get("tool_results") or [])]
+            if x["arm"] != "unsaid" or not any(s_ in RETRY_STATUSES for s_ in st) or attempt == 2:
+                break
+            print("[unsaid-arm] %s: tool said %s; retrying once in 60 s" % (x["id"], st), flush=True)
+            time.sleep(60)
+        rec = dict(x, id="%s:%s" % (x["id"], lane.name))
+        rec.update(r, lane="dated", provider=lane.provider, assistant=lane.assistant, runner=lane.name, engine_v=ev,
+                   tool_failed=bool(x["arm"] == "unsaid" and (not r.get("tool_calls") or any(
+                       s_ in RETRY_STATUSES for s_ in [t.get("status") for t in (r.get("tool_results") or [])]))))
+        rec.pop("fatal", None)
+        first_v = first_v or ev
+        if ev and first_v and ev != first_v:
+            rec["engine_v_differs"] = True
+        L.append(OUT_UNSAID, rec)
+        spent += (r.get("qloo") or {}).get("network") or 0
+        print("[unsaid-arm] %s %s %ss tools %s qloo %s (total %d) engine %s%s" % (
+            rec["id"], rec["status"], rec["secs"], rec.get("tools_called"), (r.get("qloo") or {}).get("network"), spent, ev,
+            " TOOL_FAILED" if rec["tool_failed"] else ""), flush=True)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--lane", default="all")
@@ -121,6 +224,9 @@ def main():
     ap.add_argument("--allow-fake", action="store_true")
     ap.add_argument("--go", action="store_true")
     a = ap.parse_args()
+    if a.arm == "unsaid":  # post-hoc third arm; never touches runs/meter.jsonl
+        names = [x for x in (list(L.LANES) if a.lane == "all" else a.lane.split(",")) if x != "gemini"]
+        return run_unsaid(a, L.lanes_from(",".join(names)))
     arms = [x.strip() for x in a.arm.split(",")]
     allsets, src = ordered_sets(a.sets_file)
     chosen = [x for x in allsets if x[1] in set(a.sets.split(","))] if a.sets else allsets[:a.n_sets]

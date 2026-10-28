@@ -95,11 +95,15 @@ class ClaudeLane(Lane):
             return False, "needs the claude CLI (Claude Code) on PATH, signed in to Roman's plan"
         return True, "claude " + self.version
 
-    def cmd(self, prompt, meter=False, mcp_config=None):
+    def cmd(self, prompt, meter=False, mcp_config=None, search=False, system=None, tool="qloo_places"):
         """Walls, census, fresh asks: §3.6's line exactly. Meter (both arms, so they differ only in the tool):
         --safe-mode is swapped for --setting-sources local --disable-slash-commands, because --safe-mode drops every
         --mcp-config server (checked 27 Oct on 2.1.311: init showed mcp_servers [] and tools []). stream-json shows
         each tool_use. The "with" arm adds the one server and allows only qloo_places; unsaid_places is disallowed."""
+        if search:  # the SEARCH-ON lane only (28 Oct): web tools on, nothing else; never mixed into the no-search census
+            return ["claude", "-p", prompt, "--output-format", "stream-json", "--verbose", "--model", "sonnet",
+                    "--tools", "WebSearch,WebFetch", "--allowedTools", "WebSearch", "WebFetch",
+                    "--safe-mode", "--strict-mcp-config", "--no-session-persistence", "--system-prompt", system or SYS_CLAUDE]
         if not meter:
             return ["claude", "-p", prompt, "--output-format", "json", "--model", "sonnet", "--tools", "",
                     "--safe-mode", "--strict-mcp-config", "--no-session-persistence", "--system-prompt", SYS_CLAUDE]
@@ -107,22 +111,25 @@ class ClaudeLane(Lane):
              "--setting-sources", "local", "--disable-slash-commands", "--strict-mcp-config",
              "--no-session-persistence", "--system-prompt", SYS_CLAUDE]
         if mcp_config:
-            c += ["--mcp-config", mcp_config, "--allowedTools", "mcp__unsaid__qloo_places",
-                  "--disallowedTools", "mcp__unsaid__unsaid_places"]
+            other = "unsaid_places" if tool == "qloo_places" else "qloo_places"
+            c += ["--mcp-config", mcp_config, "--allowedTools", "mcp__unsaid__" + tool,
+                  "--disallowedTools", "mcp__unsaid__" + other]
         return c
 
-    def ask(self, prompt, meter=False, mcp_config=None, **_):
+    def ask(self, prompt, meter=False, mcp_config=None, search=False, system=None, tool="qloo_places", **_):
         t0, s = now(), time.time()
         res = {"tool": "claude-code " + self.version.split()[0] if self.version else "claude-code",
                "search": "off", "model": None, "model_source": "modelUsage"}
         with tempfile.TemporaryDirectory(prefix="unsaid-claude-") as cwd:
             try:
-                p = subprocess.run(self.cmd(prompt, meter, mcp_config), capture_output=True, text=True, cwd=cwd,
+                p = subprocess.run(self.cmd(prompt, meter, mcp_config, search, system, tool), capture_output=True, text=True, cwd=cwd,
                                    timeout=TIMEOUT, stdin=subprocess.DEVNULL)
             except subprocess.TimeoutExpired:
                 return _finish(dict(res, status="failed", error="timeout %ds" % TIMEOUT), "", t0, s)
         d, calls, results = None, [], []
-        if meter:  # stream-json: count tool_use blocks, take the final result event
+        if search:
+            res["search"] = "on"
+        if meter or search:  # stream-json: count tool_use blocks, take the final result event
             for line in p.stdout.splitlines():
                 try:
                     e = json.loads(line)
@@ -134,7 +141,7 @@ class ClaudeLane(Lane):
                 for b in ((e.get("message") or {}).get("content") or []) if e.get("type") == "assistant" else []:
                     if isinstance(b, dict) and b.get("type") in ("tool_use", "server_tool_use"):
                         calls.append(b.get("name"))
-                        if "search" in str(b.get("name")).lower():
+                        if re.search(r"search|fetch", str(b.get("name")), re.I):
                             res["search"] = "on"
                 for b in ((e.get("message") or {}).get("content") or []) if e.get("type") == "user" else []:
                     if isinstance(b, dict) and b.get("type") == "tool_result":
@@ -144,6 +151,7 @@ class ClaudeLane(Lane):
             res["tool_calls"], res["tools_called"] = len(calls), sorted(set(calls))
             if mcp_config:
                 res["qloo"] = qloo_counts(results)
+                res["tool_results"] = [trim_result(x) for x in results]
         else:
             try:
                 d = json.loads(p.stdout)
@@ -184,32 +192,32 @@ class CodexLane(Lane):
                            "(ids in ~/.codex/models_cache.json, e.g. gpt-5.5 or gpt-5.6-sol)")
         return True, "%s, model pinned %s" % (self.version, self.model)
 
-    def cmd(self, prompt, mcp=None, schema=SCHEMA):
+    def cmd(self, prompt, mcp=None, schema=SCHEMA, search=False):
         c = ["codex", "exec", "--json", "--ephemeral", "--skip-git-repo-check", "--sandbox", "read-only"]
         if schema:
             c += ["--output-schema", schema]
         # Added to §3.6's line, for the no-web-search rule: the user config.toml loads a browser plugin and MCP
         # servers, and codex's own web_search tool is on ("cached") by default.
-        c += ["--ignore-user-config", "-c", 'web_search="disabled"', "--disable", "apps", "--disable", "shell_tool",
-              "-m", self.model]
+        c += ["--ignore-user-config", "-c", 'web_search="live"' if search else 'web_search="disabled"',
+              "--disable", "apps", "--disable", "shell_tool", "-m", self.model]  # search: the SEARCH-ON lane only
         # --disable shell_tool (28 Oct): no shell at all, matching claude's --tools "". 6 street answers had run curl.
         # --disable apps: the built-in codex_apps connector exposes search_service.web_run, a web search that arrives
         # as an mcp_tool_call (seen 28 Oct in 8 of 128 census answers and in the first meter ask)
         if mcp:  # meter "with" arm: one MCP server, only the qloo_places tool
             c += ["-c", "mcp_servers.unsaid.command=%s" % json.dumps(mcp["command"]),
                   "-c", "mcp_servers.unsaid.args=%s" % json.dumps(mcp["args"]),
-                  "-c", "mcp_servers.unsaid.enabled_tools=[\"qloo_places\"]",
+                  "-c", "mcp_servers.unsaid.enabled_tools=%s" % json.dumps([mcp.get("tool", "qloo_places")]),
                   "-c", "mcp_servers.unsaid.env_vars=%s" % json.dumps(sorted(mcp.get("env_vars", [])))]
         return c + [prompt]
 
-    def ask(self, prompt, mcp=None, schema=SCHEMA, **_):
+    def ask(self, prompt, mcp=None, schema=SCHEMA, search=False, **_):
         t0, s = now(), time.time()
         res = {"tool": "codex-cli " + self.version.split()[-1] if self.version else "codex-cli",
                "search": "off", "model": self.model or None, "model_source": "pinned (-m)"}
         with tempfile.TemporaryDirectory(prefix="unsaid-codex-") as cwd:
             env = dict(os.environ)
             try:
-                p = subprocess.run(self.cmd(prompt, mcp, schema), capture_output=True, text=True, cwd=cwd,
+                p = subprocess.run(self.cmd(prompt, mcp, schema, search), capture_output=True, text=True, cwd=cwd,
                                    timeout=TIMEOUT, stdin=subprocess.DEVNULL, env=env)
             except subprocess.TimeoutExpired:
                 return _finish(dict(res, status="failed", error="timeout %ds" % TIMEOUT), "", t0, s)
@@ -233,6 +241,7 @@ class CodexLane(Lane):
                     text = it.get("text") or text
                 elif k == "web_search":
                     res["search"] = "on"
+                    res["search_calls"] = res.get("search_calls", 0) + 1
                 elif k == "command_execution":  # read-only sandbox, no network; kept so that stays checkable
                     cmd = str(it.get("command") or "")[:300]
                     res.setdefault("commands", []).append(cmd)
@@ -252,9 +261,36 @@ class CodexLane(Lane):
         res["items"] = sorted(set(x for x in kinds if x))
         if mcp:
             res["tool_calls"], res["tools_called"], res["qloo"] = calls, sorted(set(called)), qloo_counts(results)
+            res["tool_results"] = [trim_result(x) for x in results]
         if err or (p.returncode and not text):
             return _finish(dict(res, status="failed", error=err or ("exit %s: %s" % (p.returncode, p.stderr[-300:]))), "", t0, s)
         return _finish(res, text, t0, s)
+
+
+def trim_result(p):
+    """A tool result, kept small: status, flags, picks (name + Qloo id), host key/cache, engine version, wall snapshot,
+    Qloo call counts. Adherence is scored from this later, with no extra call."""
+    if isinstance(p, str):
+        try:
+            p = json.loads(p)
+        except Exception:
+            return {"text": p[:300]}
+    if isinstance(p, list):  # claude: [{"type": "text", "text": "<json>"}]; codex: {"content": [...], "structured_content": {...}}
+        txt = "".join(x.get("text", "") for x in p if isinstance(x, dict))
+        return trim_result(txt)
+    if isinstance(p, dict) and ("structured_content" in p or "content" in p) and "picks" not in p:
+        sc = p.get("structured_content") or p.get("structuredContent")
+        return trim_result(sc if sc else (p.get("content") or []))
+    if not isinstance(p, dict):
+        return {"text": str(p)[:300]}
+    diag = p.get("diag") or {}
+    return {"status": p.get("status"), "mode": p.get("mode"), "flags": p.get("flags"),
+            "picks": [{"name": x.get("name"), "qloo_id": x.get("qloo_id") or x.get("id")} for x in p.get("picks") or []],
+            "host": {k: (p.get("host") or {}).get(k) for k in ("key", "cached", "stored_at", "mode")},
+            "engine_v": diag.get("engine_v") or p.get("engine_v"),
+            "wall_snapshot": {k: (p.get("wall") or {}).get(k) for k in ("distinct_names", "answers", "source")}
+            if isinstance(p.get("wall"), dict) else diag.get("wall_snapshot"),
+            "qloo_calls": p.get("qloo_calls")}
 
 
 def qloo_counts(payloads):
@@ -270,7 +306,10 @@ def qloo_counts(payloads):
         if isinstance(q, dict):
             n += 1
             tot += int(q.get("total") or 0)
-            cached += int(q.get("from_cache") or 0)
+            if q.get("network") is not None:  # the hosted API reports its own network count
+                cached += int(q.get("total") or 0) - int(q.get("network") or 0)
+            else:
+                cached += int(q.get("from_cache") or 0)
     return {"results": n, "total": tot, "from_cache": cached, "network": tot - cached}
 
 

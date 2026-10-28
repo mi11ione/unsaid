@@ -1,0 +1,125 @@
+[claude] claude 2.1.312 (Claude Code)
+[codex] codex-cli 0.164.0, model pinned gpt-5.6-terra
+[codex] 48 asks, 0 already stored, 48 to ask
+[claude] 48 asks, 0 already stored, 48 to ask
+[claude] wsearch-on:city:stl:-:w00:claude ok 9.9s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:stl:-:w03:claude ok 12.4s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:stl:-:w02:claude ok 13.8s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:stl:-:h01:claude ok 9.5s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:stl:-:h00:claude ok 12.3s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:stl:-:w01:claude ok 23.0s 12 names claude-haiku-5-5
+[claude] wsearch-on:city:stl:-:h02:claude ok 13.5s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:stl:-:h04:claude ok 9.2s 12 names claude-sonnet-5-5
+[codex] wsearch-on:city:stl:-:w00:codex ok 32.0s 12 names gpt-5.6-terra
+[claude] wsearch-on:city:stl:-:h03:claude ok 11.5s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:stl:-:h05:claude ok 13.6s 6 names claude-sonnet-5-5
+[claude] wsearch-on:city:stl:-:h06:claude ok 11.8s 12 names claude-sonnet-5-5
+[codex] wsearch-on:city:stl:-:w01:codex ok 40.7s 12 names gpt-5.6-terra
+[claude] wsearch-on:city:stl:-:h08:claude ok 11.9s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:stl:-:h07:claude ok 14.5s 11 names claude-sonnet-5-5
+[claude] wsearch-on:city:stl:-:h11:claude ok 6.2s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:stl:-:h09:claude ok 16.2s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:stl:-:h10:claude ok 16.7s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:stl:-:h12:claude ok 13.1s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:stl:-:h13:claude ok 10.9s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:stl:-:h14:claude ok 14.3s 10 names claude-sonnet-5-5
+[claude] wsearch-on:city:stl:-:g01:claude ok 10.0s 12 names claude-sonnet-5-5
+[codex] wsearch-on:city:stl:-:w03:codex ok 29.2s 12 names gpt-5.6-terra
+[claude] wsearch-on:city:stl:-:g02:claude ok 10.6s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:stl:-:h15:claude ok 18.1s 10 names claude-haiku-5-5
+[claude] wsearch-on:city:stl:-:g05:claude ok 8.4s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:nyc:-:w00:claude ok 4.8s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:stl:-:g03:claude ok 12.6s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:nyc:-:w01:claude ok 7.4s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:nyc:-:w02:claude ok 5.2s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:nyc:-:w03:claude ok 4.8s 12 names claude-sonnet-5-5
+[codex] wsearch-on:city:stl:-:w02:codex ok 52.6s 12 names gpt-5.6-terra
+[claude] wsearch-on:city:nyc:-:h00:claude ok 11.2s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:nyc:-:h01:claude ok 10.3s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:nyc:-:h03:claude ok 9.7s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:nyc:-:h02:claude ok 13.6s 12 names claude-sonnet-5-5
+[codex] wsearch-on:city:stl:-:h00:codex ok 28.0s 12 names gpt-5.6-terra
+[claude] wsearch-on:city:nyc:-:h04:claude ok 8.6s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:nyc:-:h05:claude ok 9.1s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:nyc:-:h06:claude ok 10.0s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:nyc:-:h09:claude ok 6.0s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:nyc:-:h07:claude ok 16.5s 12 names claude-sonnet-5-5
+[codex] wsearch-on:city:stl:-:h02:codex ok 15.7s 12 names gpt-5.6-terra
+[claude] wsearch-on:city:nyc:-:h08:claude ok 15.6s 5 names claude-haiku-5-5
+[claude] wsearch-on:city:nyc:-:h10:claude ok 13.1s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:nyc:-:h12:claude ok 9.8s 12 names claude-sonnet-5-5
+[codex] wsearch-on:city:stl:-:h01:codex ok 38.4s 12 names gpt-5.6-terra
+[claude] wsearch-on:city:nyc:-:h13:claude ok 10.6s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:nyc:-:g01:claude ok 5.1s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:nyc:-:h15:claude ok 9.7s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:nyc:-:g02:claude ok 4.6s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:nyc:-:h14:claude ok 21.7s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:nyc:-:h11:claude ok 31.6s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:nyc:-:g03:claude ok 8.7s 12 names claude-sonnet-5-5
+[codex] wsearch-on:city:stl:-:h03:codex ok 36.3s 12 names gpt-5.6-terra
+[codex] wsearch-on:city:stl:-:h04:codex ok 27.6s 12 names gpt-5.6-terra
+[claude] wsearch-on:city:nyc:-:g05:claude ok 21.7s 12 names claude-sonnet-5-5
+[claude] done: 48 asked, 0 failed
+[codex] wsearch-on:city:stl:-:h05:codex ok 29.3s 12 names gpt-5.6-terra
+[codex] wsearch-on:city:stl:-:h06:codex ok 35.6s 12 names gpt-5.6-terra
+[codex] wsearch-on:city:stl:-:h07:codex ok 33.9s 12 names gpt-5.6-terra
+[codex] wsearch-on:city:stl:-:h09:codex ok 17.2s 10 names gpt-5.6-terra
+[codex] wsearch-on:city:stl:-:h08:codex ok 55.4s 12 names gpt-5.6-terra
+[codex] wsearch-on:city:stl:-:h10:codex ok 26.4s 12 names gpt-5.6-terra
+[codex] wsearch-on:city:stl:-:h11:codex ok 15.8s 12 names gpt-5.6-terra
+[codex] wsearch-on:city:stl:-:h12:codex ok 21.1s 12 names gpt-5.6-terra
+[codex] wsearch-on:city:stl:-:h13:codex ok 31.0s 12 names gpt-5.6-terra
+[codex] wsearch-on:city:stl:-:h14:codex ok 23.5s 12 names gpt-5.6-terra
+[codex] wsearch-on:city:stl:-:h15:codex ok 32.0s 12 names gpt-5.6-terra
+[codex] wsearch-on:city:stl:-:g01:codex ok 19.4s 12 names gpt-5.6-terra
+[codex] wsearch-on:city:stl:-:g02:codex ok 27.0s 12 names gpt-5.6-terra
+[codex] wsearch-on:city:stl:-:g03:codex ok 32.0s 12 names gpt-5.6-terra
+[codex] wsearch-on:city:nyc:-:w00:codex ok 29.9s 12 names gpt-5.6-terra
+[codex] wsearch-on:city:stl:-:g05:codex ok 46.1s 12 names gpt-5.6-terra
+[codex] wsearch-on:city:nyc:-:w01:codex ok 20.7s 12 names gpt-5.6-terra
+[codex] wsearch-on:city:nyc:-:w02:codex ok 19.3s 12 names gpt-5.6-terra
+[codex] wsearch-on:city:nyc:-:w03:codex ok 16.3s 12 names gpt-5.6-terra
+[codex] wsearch-on:city:nyc:-:h01:codex ok 21.2s 12 names gpt-5.6-terra
+[codex] wsearch-on:city:nyc:-:h00:codex ok 33.9s 12 names gpt-5.6-terra
+[codex] wsearch-on:city:nyc:-:h03:codex ok 15.5s 12 names gpt-5.6-terra
+[codex] wsearch-on:city:nyc:-:h02:codex ok 25.9s 12 names gpt-5.6-terra
+[codex] wsearch-on:city:nyc:-:h04:codex ok 27.9s 12 names gpt-5.6-terra
+[codex] wsearch-on:city:nyc:-:h05:codex ok 23.9s 12 names gpt-5.6-terra
+[codex] wsearch-on:city:nyc:-:h06:codex ok 37.0s 10 names gpt-5.6-terra
+[codex] wsearch-on:city:nyc:-:h07:codex ok 48.7s 12 names gpt-5.6-terra
+[codex] wsearch-on:city:nyc:-:h09:codex ok 38.3s 10 names gpt-5.6-terra
+[codex] wsearch-on:city:nyc:-:h08:codex ok 53.8s 12 names gpt-5.6-terra
+[codex] wsearch-on:city:nyc:-:h10:codex ok 20.4s 12 names gpt-5.6-terra
+[codex] wsearch-on:city:nyc:-:h11:codex ok 18.0s 12 names gpt-5.6-terra
+[codex] wsearch-on:city:nyc:-:h13:codex ok 30.1s 10 names gpt-5.6-terra
+[codex] wsearch-on:city:nyc:-:h12:codex ok 37.7s 12 names gpt-5.6-terra
+[codex] wsearch-on:city:nyc:-:h15:codex ok 41.1s 6 names gpt-5.6-terra
+[codex] wsearch-on:city:nyc:-:h14:codex ok 49.1s 12 names gpt-5.6-terra
+[codex] wsearch-on:city:nyc:-:g02:codex ok 18.5s 12 names gpt-5.6-terra
+[codex] wsearch-on:city:nyc:-:g01:codex ok 27.6s 12 names gpt-5.6-terra
+[codex] wsearch-on:city:nyc:-:g05:codex ok 28.3s 12 names gpt-5.6-terra
+[codex] wsearch-on:city:nyc:-:g03:codex ok 39.3s 12 names gpt-5.6-terra
+[codex] done: 48 asked, 0 failed
+wrote ../data/walls/search-on.json: 2 entries, 96 answers, 0.18 MB
+  stl {"city/claude": 24, "city/codex": 24}
+  nyc {"city/claude": 24, "city/codex": 24}
+codex_answers.jsonl      codex records  136, contaminated   8 (already superseded 8), unresolved ids 0
+runs/fresh.jsonl         codex records  124, contaminated   4 (already superseded 4), unresolved ids 0
+runs/fresh.v0.jsonl      codex records    7, contaminated   0 (already superseded 0), unresolved ids 0
+runs/meter.jsonl         codex records   42, contaminated   2 (already superseded 2), unresolved ids 0
+runs/wall-1.jsonl        codex records  170, contaminated  50 (already superseded 50), unresolved ids 0
+runs/wall-e1.jsonl       codex records   43, contaminated   0 (already superseded 0), unresolved ids 0
+runs/wall-search-on.jsonl codex records   48, contaminated   0 (already superseded 0), unresolved ids 0
+runs/wall-smoke.jsonl    codex records    1, contaminated   0 (already superseded 0), unresolved ids 0
+runs/wall-street-1.jsonl codex records   81, contaminated   7 (already superseded 6), unresolved ids 0
+search-on answers stored: {('claude', 'stl'): 24, ('codex', 'stl'): 24, ('claude', 'nyc'): 24, ('codex', 'nyc'): 24}
+answers that actually searched: {'claude': 6, 'codex': 48}
+claude stl: 24 asks, 106 distinct names, 84 (79%) already on the no-search wall; mentions 255/277 (92%)
+        hidden-gem tops: Mai Lee 14, Gioia's Deli 12, Lona's Lil Eats 10, Crown Candy Kitchen 8 | census gems: Gioia's Deli 12/16, Mai Lee 14/16
+claude nyc: 24 asks, 130 distinct names, 111 (85%) already on the no-search wall; mentions 261/281 (93%)
+        hidden-gem tops: Sripraphai 11, Jackson Diner 8, Lucali 7, Superiority Burger 7 | census gems: Sripraphai 11/16, Rolo's 0/16
+codex  stl: 24 asks, 155 distinct names, 79 (51%) already on the no-search wall; mentions 165/286 (58%)
+        hidden-gem tops: Monte Bello Pizzeria 8, Lona's Lil Eats 6, None of the Above 4, Balkan Treat Box 4 | census gems: Gioia's Deli 0/16, Mai Lee 4/16
+codex  nyc: 24 asks, 202 distinct names, 97 (48%) already on the no-search wall; mentions 149/276 (54%)
+        hidden-gem tops: Bong 3, Gourmega 3, Bolivian Llama Party 3, Sakagura 3 | census gems: Sripraphai 1/16, Rolo's 2/16
+frozen cards named by the search-on answers: 0 of 140 (none)

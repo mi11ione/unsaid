@@ -1,0 +1,78 @@
+[claude] claude 2.1.312 (Claude Code)
+[claude] 48 asks, 0 already stored, 48 to ask
+[claude] wsearch-on:city:stl:-:w00:claude-nudged ok 16.8s 12 names claude-haiku-5-5
+[claude] wsearch-on:city:stl:-:w01:claude-nudged ok 19.3s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:stl:-:w03:claude-nudged ok 23.0s 12 names claude-haiku-5-5
+[claude] wsearch-on:city:stl:-:w02:claude-nudged ok 24.2s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:stl:-:h00:claude-nudged ok 20.8s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:stl:-:h01:claude-nudged ok 21.1s 12 names claude-haiku-5-5
+[claude] wsearch-on:city:stl:-:h02:claude-nudged ok 21.6s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:stl:-:h03:claude-nudged ok 20.6s 12 names claude-haiku-5-5
+[claude] wsearch-on:city:stl:-:h07:claude-nudged ok 18.4s 9 names claude-haiku-5-5
+[claude] wsearch-on:city:stl:-:h05:claude-nudged ok 24.6s 10 names claude-sonnet-5-5
+[claude] wsearch-on:city:stl:-:h04:claude-nudged ok 27.5s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:stl:-:h06:claude-nudged ok 23.5s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:stl:-:h10:claude-nudged ok 15.8s 12 names claude-haiku-5-5
+[claude] wsearch-on:city:stl:-:h08:claude-nudged ok 18.3s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:stl:-:h09:claude-nudged ok 23.6s 8 names claude-haiku-5-5
+[claude] wsearch-on:city:stl:-:h11:claude-nudged ok 22.0s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:stl:-:h12:claude-nudged ok 21.9s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:stl:-:h14:claude-nudged ok 17.3s 10 names claude-haiku-5-5
+[claude] wsearch-on:city:stl:-:h13:claude-nudged ok 29.4s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:stl:-:h15:claude-nudged ok 25.8s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:stl:-:g02:claude-nudged ok 17.3s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:stl:-:g03:claude-nudged ok 14.0s 9 names claude-haiku-5-5
+[claude] wsearch-on:city:stl:-:g01:claude-nudged ok 23.8s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:nyc:-:w01:claude-nudged ok 6.4s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:stl:-:g05:claude-nudged ok 19.3s 12 names claude-haiku-5-5
+[claude] wsearch-on:city:nyc:-:w02:claude-nudged ok 9.6s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:nyc:-:w00:claude-nudged ok 14.4s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:nyc:-:w03:claude-nudged ok 18.8s 12 names claude-haiku-5-5
+[claude] wsearch-on:city:nyc:-:h02:claude-nudged ok 18.2s 12 names claude-haiku-5-5
+[claude] wsearch-on:city:nyc:-:h00:claude-nudged ok 24.1s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:nyc:-:h01:claude-nudged ok 23.5s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:nyc:-:h04:claude-nudged ok 9.9s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:nyc:-:h03:claude-nudged ok 19.9s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:nyc:-:h06:claude-nudged ok 18.9s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:nyc:-:h05:claude-nudged ok 20.9s 5 names claude-haiku-5-5
+[claude] wsearch-on:city:nyc:-:h07:claude-nudged ok 20.9s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:nyc:-:h08:claude-nudged ok 18.5s 10 names claude-haiku-5-5
+[claude] wsearch-on:city:nyc:-:h09:claude-nudged ok 22.0s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:nyc:-:h10:claude-nudged ok 24.2s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:nyc:-:h11:claude-nudged ok 21.1s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:nyc:-:h12:claude-nudged ok 24.2s 12 names claude-haiku-5-5
+[claude] wsearch-on:city:nyc:-:h13:claude-nudged ok 23.2s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:nyc:-:g01:claude-nudged ok 16.5s 7 names claude-haiku-5-5
+[claude] wsearch-on:city:nyc:-:h14:claude-nudged ok 25.0s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:nyc:-:h15:claude-nudged ok 23.3s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:nyc:-:g02:claude-nudged ok 18.5s 12 names claude-haiku-5-5
+[claude] wsearch-on:city:nyc:-:g03:claude-nudged ok 19.6s 12 names claude-sonnet-5-5
+[claude] wsearch-on:city:nyc:-:g05:claude-nudged ok 22.0s 11 names claude-haiku-5-5
+[claude] done: 48 asked, 0 failed
+wrote ../data/walls/search-on.json: 2 entries, 144 answers, 0.27 MB
+  stl {"city/claude": 48, "city/codex": 24}
+  nyc {"city/claude": 48, "city/codex": 24}
+codex_answers.jsonl      codex records  136, contaminated   8 (already superseded 8), unresolved ids 0
+runs/fresh.jsonl         codex records  124, contaminated   4 (already superseded 4), unresolved ids 0
+runs/fresh.v0.jsonl      codex records    7, contaminated   0 (already superseded 0), unresolved ids 0
+runs/meter.jsonl         codex records   42, contaminated   2 (already superseded 2), unresolved ids 0
+runs/wall-1.jsonl        codex records  170, contaminated  50 (already superseded 50), unresolved ids 0
+runs/wall-e1.jsonl       codex records   43, contaminated   0 (already superseded 0), unresolved ids 0
+runs/wall-search-on.jsonl codex records   48, contaminated   0 (already superseded 0), unresolved ids 0
+runs/wall-smoke.jsonl    codex records    1, contaminated   0 (already superseded 0), unresolved ids 0
+runs/wall-street-1.jsonl codex records   81, contaminated   7 (already superseded 6), unresolved ids 0
+search-on answers stored: {('claude', 'stl'): 24, ('codex', 'stl'): 24, ('claude', 'nyc'): 24, ('codex', 'nyc'): 24, ('claude-nudged', 'stl'): 24, ('claude-nudged', 'nyc'): 24}
+answers that actually searched: {'claude': 6, 'codex': 48, 'claude-nudged': 44}
+claude stl: 24 asks, 106 distinct names, 84 (79%) already on the no-search wall; mentions 255/277 (92%)
+        hidden-gem tops: Mai Lee 14, Gioia's Deli 12, Lona's Lil Eats 10, Crown Candy Kitchen 8 | census gems: Gioia's Deli 12/16, Mai Lee 14/16
+claude nyc: 24 asks, 130 distinct names, 111 (85%) already on the no-search wall; mentions 261/281 (93%)
+        hidden-gem tops: Sripraphai 11, Jackson Diner 8, Lucali 7, Superiority Burger 7 | census gems: Sripraphai 11/16, Rolo's 0/16
+claude-nudged stl: 24 asks, 122 distinct names, 85 (70%) already on the no-search wall; mentions 218/274 (80%)
+        hidden-gem tops: Gioia's Deli 9, Crown Candy Kitchen 8, Mai Lee 8, Taqueria Durango 6 | census gems: Gioia's Deli 9/16, Mai Lee 8/16
+claude-nudged nyc: 24 asks, 132 distinct names, 105 (80%) already on the no-search wall; mentions 238/273 (87%)
+        hidden-gem tops: Sripraphai 10, Di Fara Pizza 9, Lucali 7, Casa Adela 5 | census gems: Sripraphai 10/16, Rolo's 0/16
+codex  stl: 24 asks, 155 distinct names, 79 (51%) already on the no-search wall; mentions 165/286 (58%)
+        hidden-gem tops: Monte Bello Pizzeria 8, Lona's Lil Eats 6, None of the Above 4, Balkan Treat Box 4 | census gems: Gioia's Deli 0/16, Mai Lee 4/16
+codex  nyc: 24 asks, 202 distinct names, 97 (48%) already on the no-search wall; mentions 149/276 (54%)
+        hidden-gem tops: Bong 3, Gourmega 3, Bolivian Llama Party 3, Sakagura 3 | census gems: Sripraphai 1/16, Rolo's 2/16
+frozen cards named by the search-on answers: 0 of 140 (none)
