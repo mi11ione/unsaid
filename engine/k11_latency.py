@@ -5,8 +5,9 @@
 "First strike" is read as the first wall name on screen (the dated wall streams from static data within 1 s; a red
 strike needs U, ~7 s into a fresh run per §3.4). Both times are printed.
 
-  --url https://<host>/api/unsaid   streams NDJSON; the token (if any) comes from env UNSAID_TOKEN, sent as
-                                    'Authorization: Bearer <token>'; loves go as one JSON array: loves=["a","b","c"]
+  --url https://<host>/api/unsaid   streams NDJSON; the token (if any) comes from env UNSAID_TOKEN, sent as the query
+                                    param `token` (the Pages proxy forwards the query string as is); loves go as the
+                                    set spec's [text, hint] pairs: loves=[["Frankie Beverly & Maze","artist"],...]
   --runs N                          default 5 fake, 3 live (each live in-process run costs ~27 Qloo calls)"""
 import json, os, sys, time, urllib.parse, urllib.request
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -23,12 +24,12 @@ print("== k11_latency  %s  %s" % ("[FAKE]" if args.fake else "[LIVE]", args.url 
 
 
 def run_http(city, spec):
-    qs = urllib.parse.urlencode([("city", SD.CITY_QUERY[city][0]), ("loves", json.dumps([t for t, _ in spec]))])
-    req = urllib.request.Request(args.url + ("&" if "?" in args.url else "?") + qs,
-                                 headers={"Accept": "application/x-ndjson", "User-Agent": "Python-urllib/3"})
+    params = [("city", SD.CITY_QUERY[city][0]), ("loves", json.dumps([[t, h] for t, h in spec]))]
     tok = os.environ.get("UNSAID_TOKEN")
     if tok:
-        req.add_header("Authorization", "Bearer " + tok)
+        params.append(("token", tok))          # never printed: only args.url (without the query) is logged
+    req = urllib.request.Request(args.url + ("&" if "?" in args.url else "?") + urllib.parse.urlencode(params),
+                                 headers={"Accept": "application/x-ndjson", "User-Agent": "Python-urllib/3"})
     t0 = time.monotonic()
     marks = {}
     with urllib.request.urlopen(req, timeout=120) as r:

@@ -12,37 +12,38 @@
   [PASS] no pick is on the wall's top names
 
 --- tools/call unsaid_places (legacy) -> content[0] ---
-ok · St. Louis: AIs named 62 distinct places in 8 answers (8 were in this taste pool, all struck). 7 left for these loves, ranked by Qloo:
-1. Linpell Smokehouse (The Hill) · #3 for you · #81 for anyone · holds 3 of 3 · because you love Frankie Beverly & Maze · named by 0 of 8 AI answers · qloo:55C47E29-C723-5A8E-8F1E-3901A44B2185
-2. Quinzan Smokehouse (Delmar Loop) · #7 for you · #75 for anyone · holds 2 of 3 · because you love Rib Tips · named by 0 of 8 AI answers · qloo:ECEF77A3-17EA-5187-BAC0-FA4211A2E688
-3. Dravash Kitchen (Delmar Loop) · #10 for you · #111 for anyone · holds 2 of 3 · because you love Rib Tips · named by 0 of 8 AI answers · qloo:E7E1F4D8-54B7-55A2-AE0D-4623E0CD5842
-4. Osktor Smokehouse (Downtown) · #13 for you · #118 for anyone · holds 2 of 3 · because you love Rib Tips · named by 0 of 8 AI answers · qloo:8FD06827-81EC-5FFB-9529-4738658F3DE3
-5. Ravprae Cafe (The Hill) · #17 for you · #106 for anyone · holds 2 of 3 · because you love Rib Tips · named by 0 of 8 AI answers · qloo:67C0ECE0-3AF1-55FB-9C72-15A14CDC8102
-6. Ilofen Grill (Midtown) · #21 for you · #110 for anyone · holds 2 of 3 · because you love Frankie Beverly & Maze · named by 0 of 8 AI answers · qloo:C2DFAB6C-A92E-5706-8758-F73846BB6BE1
-7. Ravthu Trattoria (Downtown) · #23 for you · #92 for anyone · holds 2 of 3 · because you love Rib Tips · named by 0 of 8 AI answers · qloo:D9183238-755A-5CA7-A727-39A4B09C5A9E
+ok · St. Louis: AIs named 62 distinct places in 8 answers (15 were in this taste pool, all struck). 7 left for these loves, ranked by Qloo:
+1. Osktor Smokehouse (Downtown) · #4 for you · #170 for anyone · holds 3 of 3 · because you love Rib Tips · named by 0 of 8 AI answers · qloo:8FD06827-81EC-5FFB-9529-4738658F3DE3
+2. Ravcael Wine Bar (Central West End) · #6 for you · #137 for anyone · holds 3 of 3 · because you love Maze Featuring Frankie Beverly · named by 0 of 8 AI answers · qloo:87980350-0772-5E7D-A9EB-8817BD781D3D
+3. Ilovash Smokehouse (Benton Park) · #11 for you · #103 for anyone · holds 3 of 3 · because you love Rib Tips · named by 0 of 8 AI answers · qloo:DA6C96E9-1BB6-5F22-9191-D30B0785F8B1
+4. Ravthu Trattoria (Downtown) · #13 for you · #123 for anyone · holds 3 of 3 · because you love Maze Featuring Frankie Beverly · named by 0 of 8 AI answers · qloo:D9183238-755A-5CA7-A727-39A4B09C5A9E
+5. Dranyr Noodle Bar (Midtown) · #22 for you · #164 for anyone · holds 3 of 3 · because you love Maze Featuring Frankie Beverly · named by 0 of 8 AI answers · qloo:2BD1F0A1-DF6B-56EB-A317-26CDF2BB1450
+6. Oskcorb Room (Cherokee Street) · #43 for you · #169 for anyone · holds 2 of 3 · because you love Maze Featuring Frankie Beverly · named by 0 of 8 AI answers · qloo:2E1B31B1-AF81-5A2D-94B9-A645149E9F17
+7. Vashesk Smokehouse (Lafayette Square) · #54 for you · #172 for anyone · holds 2 of 3 · because you love Rib Tips · named by 0 of 8 AI answers · qloo:72273497-26DB-50C7-B83A-7451B0D745D1
 Everyone else gets: Pappy's Smokehouse, Blueberry Hill, BB's Jazz, Blues & Soups, Bogart's Smokehouse, Broadway Oyster Bar, Crown Candy Kitchen, Hodak's, Sweetie Pie's
 FAKE MODE: pick names and ranks come from the kit's synthetic Qloo world and prove the code path only. The wall is real saved AI answers (fixtures/consensus.py STL Cedric (8 answers)).
-  wall: {"distinct_names": 62, "answers": 8, "struck_in_pool": 8, "top_names": ["Pappy's Smokehouse", "Blueberry Hill", "BB's Jazz, Blues & Soups", "Bogart's Smokehouse", "Broadway Oyster Bar", "Crown Candy Kitchen", "Hodak's", "Sweetie Pie's"], "source": "fixtures/consensus.py STL Cedric (8 answers)"}
-  qloo_calls: {"loves /search+/v2/tags": 3, "taste pool /v2/insights": 4, "AI names -> Qloo ids /search": 2, "same places, each love dropped /v2/insights": 9, "CAP": 1, "total": 19, "from_cache": 0}
+  wall: {"distinct_names": 62, "answers": 8, "struck_in_pool": 15, "top_names": ["Pappy's Smokehouse", "Blueberry Hill", "BB's Jazz, Blues & Soups", "Bogart's Smokehouse", "Broadway Oyster Bar", "Crown Candy Kitchen", "Hodak's", "Sweetie Pie's"], "source": "fixtures/consensus.py STL Cedric (8 answers)"}
+  qloo_calls: {"loves /search+/v2/tags": 2, "taste pool /v2/insights": 8, "AI names -> Qloo ids /search": 3, "same places, each love dropped /v2/insights": 12, "CAP": 1, "total": 26, "from_cache": 26}
   loves resolved: [["Frankie Beverly & Maze", "entity", "ok"], ["Kings of Comedy", "entity", "ok"], ["rib tips", "tag", "ok"]]
   [PASS] qloo_places: isError=false, validates against its outputSchema
   [PASS] qloo_places: top 50 of the taste pool, ranked 1..n
-  [PASS] qloo_places: nothing subtracted (same pool U=118 that unsaid_places strikes down to 110)
+  [PASS] qloo_places: nothing subtracted (same pool U=183 that unsaid_places strikes down to 168)
   [PASS] qloo_places never calls unsaid_places, the engine run, the wall or the matcher
 
 --- tools/call qloo_places (legacy) -> content[0], first lines ---
-ok · St. Louis: the top 50 of Qloo's taste pool for these loves (118 places after the quality floor). Nothing removed.
-1. Oskfen Tavern (Midtown) · Restaurant, Restaurant, Bar · qloo:1395AB35-4E46-577F-A4BC-FE001F629580
-2. Brinjun Grill (Lafayette Square) · Restaurant, Restaurant · qloo:9934CC79-5D9E-50D2-84BB-DA3E1E1D7AD1
-3. Ilofen Grill (Midtown) · Restaurant, Restaurant · qloo:C2DFAB6C-A92E-5706-8758-F73846BB6BE1
-4. Quincael House (Lafayette Square) · Restaurant, Restaurant · qloo:EDBBF6B6-5D4D-5E9C-9729-36F97401AEFF
-5. Hollovel Noodle Bar (Central West End) · Restaurant, Restaurant, Bar · qloo:86F8B435-EE9B-5B57-ACC9-B99754063832
-6. Eskdun Bar (Downtown) · Restaurant, Restaurant, Bar · qloo:EFE11207-F7AA-5777-9E3C-86F800E51E73
-7. Linpell Smokehouse (The Hill) · Restaurant, Restaurant, Barbecue · qloo:55C47E29-C723-5A8E-8F1E-3901A44B2185
-8. Lombel House (North City) · Restaurant, Restaurant · qloo:99772F79-8952-5C42-A935-49FC01CD2869
-9. Caellin Kitchen (Downtown) · Restaurant, Restaurant · qloo:28727232-DE9D-53BF-90DF-2B6976957A5A
-10. Fenmira Smokehouse (Midtown) · Restaurant, Restaurant, Barbecue · qloo:3C9DFAAA-47AB-535F-9ED3-B5A04EAA6524
-11. Zanlom Trattoria (Midtown) · Restaurant, Restaurant, Italian · qloo:FBDF604F-2D93-58C4-A142-F1709C1F64AF
+ok · St. Louis: the top 50 of Qloo's taste pool for these loves (183 places after the quality floor). Nothing removed.
+1. Velilo Wine Bar (Central West End) · Restaurant, Restaurant, Bar · qloo:AAD3A5F1-37FD-5B75-AE1A-4A91B114A5CE
+2. Ilobel Smokehouse (Delmar Loop) · Restaurant, Restaurant, Barbecue · qloo:74B95474-0A97-5165-A7C5-CB76E159970E
+3. Caelsor House (Delmar Loop) · Restaurant, Restaurant · qloo:18250BEF-46EB-5F7A-814E-E9830370BC72
+4. Ravcael Wine Bar (Central West End) · Restaurant, Restaurant, Bar · qloo:87980350-0772-5E7D-A9EB-8817BD781D3D
+5. Brindun Oyster Bar (Lafayette Square) · Restaurant, Restaurant, Bar · qloo:9472018F-5992-5C81-B076-102CD71054AC
+6. Lona's Lil Eats (Central West End) · Restaurant, Restaurant, Live Music · qloo:A897A185-22D1-5AB2-8286-EA75071ED9B3
+7. Pelljun Tavern (Cherokee Street) · Restaurant, Restaurant, Bar · qloo:E2A02D11-E398-5B30-946B-805E3F94FAD8
+8. Lomvel Tavern (Midtown) · Restaurant, Restaurant, Bar · qloo:9CF94CEA-812C-528D-818D-CA5A6EF27504
+9. Vashcorb Wine Bar (The Hill) · Restaurant, Restaurant, Bar · qloo:1281B323-0F45-5230-9F25-8B48942257B7
+10. Markess House (The Hill) · Restaurant, Restaurant · qloo:728DFFE9-9F3C-5B17-92EA-847D51181E6B
+11. Fenzan Wine Bar (Delmar Loop) · Restaurant, Restaurant, Bar · qloo:372239FE-1BA9-5678-96EB-CCBD0C65CE66
+  [PASS] [text, type] pairs accepted; 'rib tips' with type tag resolves to a tag (Rib Tips)
   [PASS] untyped ambiguous love -> ok (FAKE MODE: pick names and ranks come from the kit's synthetic Qloo world and prove the cod)
   [PASS] ambiguous city -> needs_input: 'Richmond' is ambiguous: Richmond (Staten Island, New York); Richmond (Richmond, Virginia)
   [PASS] empty loves -> tool execution error (isError=true), model can self-correct
@@ -59,4 +60,4 @@ ok · St. Louis: the top 50 of Qloo's taste pool for these loves (118 places aft
   [PASS] missing clientCapabilities -> -32602
 
 server stderr (first lines): [unsaid] ready (mode=fake, kit=/Users/mi11ion/Desktop/qloo/unsaid/engine)
-31 messages, 1.3 s, 0 failed checks; full wire log: transcript.jsonl
+33 messages, 2.5 s, 0 failed checks; full wire log: transcript.jsonl

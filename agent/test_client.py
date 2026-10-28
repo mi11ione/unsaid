@@ -130,6 +130,13 @@ def run_legacy():
     print("  qloo_calls: %s" % json.dumps(sc["qloo_calls"]))
     print("  loves resolved: %s" % json.dumps([(l["text"], l["kind"], l["status"]) for l in sc["loves"]]))
     run_qloo_places(c, qschema, sc)
+    pairs = {"loves": [["Frankie Beverly & Maze", "artist"], ["The Original Kings of Comedy", "movie"],
+                       ["rib tips", "tag"]], "city": "St. Louis, MO"}
+    r = c.req("tools/call", {"name": "unsaid_places", "arguments": pairs})
+    sp = r["result"].get("structuredContent") or {}
+    rib = next((l for l in sp.get("loves", []) if l["text"] == "rib tips"), {})
+    check(sp.get("status") == "ok" and rib.get("kind") == "tag",
+          "[text, type] pairs accepted; 'rib tips' with type tag resolves to a tag (%s)" % rib.get("resolved"))
     r = c.req("tools/call", {"name": "unsaid_places", "arguments": {"loves": ["Kings of Comedy", "rib tips", "Frankie Beverly & Maze"],
                                                                     "city": "St. Louis"}})
     sc2 = r["result"]["structuredContent"]

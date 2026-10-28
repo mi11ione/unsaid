@@ -6,11 +6,12 @@
 
 ```bash
 curl -N -H "Authorization: Bearer $UNSAID_TOKEN" \
-  "https://unsaid.pages.dev/api/unsaid?city=st-louis&loves=%5B%22Frankie%20Beverly%20%26%20Maze%22%2C%22rib%20tips%22%5D"
+  "https://unsaid-ang.pages.dev/api/unsaid?city=st-louis&loves=%5B%5B%22Frankie%20Beverly%20%26%20Maze%22%2C%20%22artist%22%5D%2C%20%5B%22The%20Original%20Kings%20of%20Comedy%22%2C%20%22movie%22%5D%2C%20%5B%22rib%20tips%22%2C%20%22tag%22%5D%5D"
+# loves = [["Frankie Beverly & Maze", "artist"], ["The Original Kings of Comedy", "movie"], ["rib tips", "tag"]]
 # or: ...&token=$UNSAID_TOKEN   (or the header X-Unsaid-Token: $UNSAID_TOKEN)
 ```
 
-`loves` is a JSON array of up to three items: plain text, `{"text": "...", "type": "movie"}`, or a chip from `/api/resolve`. A `|`-separated list also works. The reply is NDJSON; the last line is `{"type":"done","result":{...}}`. `GET /api/health` never needs the token.
+`loves` is a JSON array of up to three `[text, type]` pairs. Give a type for a dish (`"tag"`) and for a place (`"place"`): untyped, `"rib tips"` can resolve to a restaurant. Types: artist, movie, tv_show, book, podcast, videogame, brand, place, tag. Plain text, `{"text": "...", "type": "movie"}` and chips from `/api/resolve` also work. The reply is NDJSON; the last line is `{"type":"done","result":{...}}`. `GET /api/health` never needs the token.
 
 **MCP.** The MCP server runs locally over stdio, so it needs no token:
 
@@ -18,6 +19,6 @@ curl -N -H "Authorization: Bearer $UNSAID_TOKEN" \
 claude mcp add unsaid -e UNSAID_MODE=fake -- python3 -I /path/to/unsaid/agent/unsaid_mcp.py
 ```
 
-Two tools: `unsaid_places(loves, city)` returns the places no AI names, ranked by Qloo. `qloo_places(loves, city)` returns Qloo's top 50 for the same loves with nothing crossed out; it is the meter's "with" arm. A remote `/mcp` endpoint, if it ships, sits behind the same token.
+Loves take the same `[text, type]` pairs. Two tools: `unsaid_places(loves, city)` returns the places no AI names, ranked by Qloo. `qloo_places(loves, city)` returns Qloo's top 50 for the same loves with nothing crossed out; it is the meter's "with" arm. A remote `/mcp` endpoint, if it ships, sits behind the same token.
 
 The meter line: ⟦M_ALONE⟧ → ⟦M_QLOO⟧ (filled from `k10_meter.py`, or the sentence is deleted under the bracket rule).

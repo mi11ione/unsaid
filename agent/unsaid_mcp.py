@@ -63,21 +63,27 @@ TOOL = {
         "For where to eat and drink, use only these picks, in the order given; keep your own non-venue color "
         "(neighbourhoods, history, music, what to order). Say once that the usual places (wall.top_names) are "
         "great but everyone gets them. If status is needs_input, fix the input it names (e.g. a full title or a "
-        "type) and call again. Takes ~1-25 s live."),
+        "type) and call again. Pass a type for dishes and places ('tag' for a dish like rib tips, 'place' for a "
+        "restaurant or bar): untyped, they can resolve to the wrong thing. Takes ~1-25 s live."),
     "inputSchema": {
         "type": "object",
         "properties": {
             "loves": {
                 "type": "array", "minItems": 1, "maxItems": 3,
-                "description": "Exactly three works best. Each is a string (\"Frankie Beverly & Maze\") or "
-                               "{\"text\", \"type\"}; give type when the name is ambiguous. Use 'tag' for a dish, "
-                               "cuisine or vibe (\"rib tips\"). Prefer full official titles.",
+                "description": "Exactly three works best. Each is a string (\"Frankie Beverly & Maze\"), "
+                               "{\"text\", \"type\"}, or a [text, type] pair. ALWAYS give a type for a dish and "
+                               "for a place: 'tag' for a dish, cuisine or vibe ({\"text\": \"rib tips\", \"type\": "
+                               "\"tag\"}; untyped, \"rib tips\" can resolve to a restaurant), 'place' for a "
+                               "restaurant or bar. Give a type whenever a name is ambiguous. Prefer full official "
+                               "titles.",
                 "items": {"anyOf": [
                     {"type": "string", "minLength": 1, "maxLength": 120},
                     {"type": "object", "properties": {
                         "text": {"type": "string", "minLength": 1, "maxLength": 120},
                         "type": {"type": "string", "enum": TYPES}},
-                     "required": ["text"], "additionalProperties": False}]}},
+                     "required": ["text"], "additionalProperties": False},
+                    {"type": "array", "minItems": 1, "maxItems": 2,
+                     "items": {"type": ["string", "null"], "maxLength": 120}}]}},
             "city": {"type": "string", "minLength": 2, "maxLength": 80,
                      "description": "City, with region when ambiguous: \"St. Louis, Missouri\"."},
         },
@@ -212,10 +218,13 @@ def _city_key(c):
 
 
 def _parse_loves(raw):
+    """-> [(text, hint)]; the hint goes through to the engine's resolve_love(text, hint)."""
     out = []
     for x in raw:
         if isinstance(x, str):
             out.append((x.strip(), None))
+        elif isinstance(x, (list, tuple)):
+            out.append((x[0].strip(), x[1] if len(x) == 2 else None))
         else:
             out.append((x["text"].strip(), x.get("type")))
     return out
@@ -333,8 +342,7 @@ def qloo_places(loves, city):
         return dict(base, status="needs_input", city=city_out, loves=loves_out, qloo_calls=_calls(q.trace),
                     message="Qloo found no entity or tag for: %s. Give the full official title, or a type "
                             "(artist, movie, tv_show, book, brand, place, or tag for a dish/cuisine)." % ", ".join(bad))
-    pool, _, _ = E.taste_pool(q, c, resolved)
-    U, drops = E.floor(pool)                       # the quality floor (rating, open) only; nothing is crossed out
+    pool, U, drops = _qloo_pool(q, c, resolved)
     top = sorted(U, key=lambda e: e["_pos"])[:QLOO_TOP]
     places = [{"rank": i, "qloo_id": e["entity_id"], "name": e.get("name"),
                "neighbourhood": prop(e, "neighborhood"),
@@ -343,12 +351,30 @@ def qloo_places(loves, city):
                "open": (not prop(e, "is_closed")) if prop(e, "is_closed") is not None else None}
               for i, e in enumerate(top, 1)]
     out = dict(base, status="ok" if places else "empty_none", city=city_out, loves=loves_out, places=places,
-               pool={"P": len(pool), "U": len(U), "floor": drops}, qloo_calls=_calls(q.trace))
+               pool={"P": len(pool), "U": len(U), "floor": {k: v for k, v in drops.items() if k != "ids"}},
+               qloo_calls=_calls(q.trace))
     if FAKE:
         out["message"] = ("FAKE MODE: place names and ranks come from the kit's synthetic Qloo world and prove the "
                           "code path only.")
     _CACHE[key] = out
     return out
+
+
+def _qloo_pool(q, c, loves):
+    """The same U the engine ranks (per-love pools, the client floor with its distance check, extra pages when U
+    is small), built from the engine's pool and floor steps only: no wall, no strike."""
+    if not hasattr(E, "per_love_pools"):                       # the round-3 kit
+        pool, _, _ = E.taste_pool(q, c, loves)
+        U, drops = E.floor(pool)
+        return pool, U, drops
+    pool, _ = E.per_love_pools(q, c, loves)
+    U, drops = E.floor(pool, c)
+    if len(U) < E.CFG.get("U_MIN", 0) and E.CFG.get("EXTRA_OFFSETS"):
+        more, _ = E.per_love_pools(q, c, loves, offsets=E.CFG["EXTRA_OFFSETS"])
+        have = {e["entity_id"] for e in pool}
+        pool += [e for e in more if e["entity_id"] not in have]
+        U, drops = E.floor(pool, c)
+    return pool, U, drops
 
 
 def qloo_summary(r):
@@ -405,7 +431,10 @@ def _check_args(a):
         if isinstance(x, dict) and isinstance(x.get("text"), str) and x["text"].strip() and \
                 (x.get("type") is None or x.get("type") in TYPES) and not (set(x) - {"text", "type"}):
             continue
-        raise ValueError("each love is a string or {text, type}; type is one of %s" % ", ".join(TYPES))
+        if isinstance(x, list) and 1 <= len(x) <= 2 and isinstance(x[0], str) and x[0].strip() and \
+                (len(x) == 1 or x[1] is None or x[1] in TYPES):
+            continue
+        raise ValueError("each love is a string, {text, type} or [text, type]; type is one of %s" % ", ".join(TYPES))
     return loves, city.strip()
 
 

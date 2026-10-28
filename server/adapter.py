@@ -169,10 +169,31 @@ def resolve_love(text, hint, q, mode):
             "alternatives": [a for a in (r.get("alternatives") or []) if a]}
 
 
+HINT_ALIASES = {"dish": "tag", "cuisine": "tag", "food": "tag", "drink": "tag", "vibe": "tag", "film": "movie",
+                "tv": "tv_show", "show": "tv_show", "series": "tv_show", "game": "videogame", "restaurant": "place",
+                "bar": "place", "venue": "place", "musician": "artist", "band": "artist"}
+
+
+def hint_of(h):
+    """A type hint for resolve_love(text, hint): one of TYPES, an alias of one, or None."""
+    if h is None or (isinstance(h, str) and not h.strip()):
+        return None
+    if not isinstance(h, str):
+        raise ValueError("a type hint is a string")
+    k = h.strip().lower().replace(" ", "_").split(":")[-1]
+    k = HINT_ALIASES.get(k, k)
+    if k not in TYPES:
+        raise ValueError("type is one of %s" % ", ".join(sorted(TYPES)))
+    return k
+
+
 def parse_love(x):
-    """A love is plain text, {"text", "type"} or a resolved chip {"id", "label", "kind", "type"}."""
+    """A love is plain text, a [text, hint] pair (the sets-file form), {"text", "type"} (or "hint"),
+    or a resolved chip {"id", "label", "kind", "type"}. Hints go through to resolve_love(text, hint)."""
     if isinstance(x, str) and x.strip():
         return {"text": x.strip()[:120]}
+    if isinstance(x, (list, tuple)) and 1 <= len(x) <= 2 and isinstance(x[0], str) and x[0].strip():
+        return {"text": x[0].strip()[:120], "hint": hint_of(x[1] if len(x) == 2 else None)}
     if isinstance(x, dict):
         if x.get("id") is not None:
             if not (isinstance(x["id"], str) and ID_RE.match(x["id"]) and isinstance(x.get("label"), str)):
@@ -180,10 +201,8 @@ def parse_love(x):
             return {"chip": {"id": x["id"], "label": x["label"][:120], "kind": x.get("kind") or "entity",
                              "type": x.get("type")}}
         if isinstance(x.get("text"), str) and x["text"].strip():
-            if x.get("type") is not None and x["type"] not in TYPES:
-                raise ValueError("type is one of %s" % ", ".join(sorted(TYPES)))
-            return {"text": x["text"].strip()[:120], "hint": x.get("type")}
-    raise ValueError("each love is text, {text, type} or a chip {id, label, kind, type}")
+            return {"text": x["text"].strip()[:120], "hint": hint_of(x.get("type", x.get("hint")))}
+    raise ValueError('each love is text, a [text, hint] pair, {"text", "type"} or a chip {id, label, kind, type}')
 
 
 def prepare(city_text, loves, q, mode):

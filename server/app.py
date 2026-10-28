@@ -375,7 +375,7 @@ def parse_loves(values):
         raw = values
     out = []
     for x in raw:
-        if isinstance(x, str) and x.lstrip().startswith("{"):
+        if isinstance(x, str) and x.lstrip()[:1] in ("{", "["):   # repeated loves=... params, each a pair or object
             x = json.loads(x)
         out.append(adapter.parse_love(x))
     if not 1 <= len(out) <= 3:

@@ -220,6 +220,37 @@ class Gemini(unittest.TestCase):
         self.assertEqual(fn("The Hill", "St. Louis"), [])
 
 
+class Loves(unittest.TestCase):
+    def test_forms_and_hints_reach_resolve_love(self):
+        P = app.parse_loves
+        want = [{"text": "Frankie Beverly & Maze", "hint": "artist"}, {"text": "rib tips", "hint": "tag"}]
+        self.assertEqual(P(['[["Frankie Beverly & Maze","artist"],["rib tips","tag"]]']), want)          # sets file
+        self.assertEqual(P(['[{"text":"Frankie Beverly & Maze","type":"artist"},{"text":"rib tips","hint":"dish"}]']),
+                         want)                                                                          # objects
+        self.assertEqual(P(['["Frankie Beverly & Maze","artist"]', '["rib tips","tag"]']), want)         # repeated
+        self.assertEqual(P(['[["Rounders",null],"Carbone"]']), [{"text": "Rounders", "hint": None}, {"text": "Carbone"}])
+        self.assertEqual(P(["Al Green|rib tips"]), [{"text": "Al Green"}, {"text": "rib tips"}])
+        for bad in ('[["rib tips","nonsense"]]', '[["a","b","c"]]', '[[]]'):
+            self.assertRaises(ValueError, P, [bad])
+        seen = []
+        real = app.adapter.resolve_love
+
+        def spy(text, hint, q, mode):
+            seen.append((text, hint))
+            return real(text, hint, q, mode)
+        app.adapter.resolve_love = spy
+        try:
+            H.reset_limits()
+            ev, r = H.run(P(['[["Frankie Beverly & Maze","artist"],["The Original Kings of Comedy","movie"],'
+                              '["rib tips","tag"]]']), ip="192.0.2.90")
+        finally:
+            app.adapter.resolve_love = real
+        self.assertEqual(seen, [("Frankie Beverly & Maze", "artist"), ("The Original Kings of Comedy", "movie"),
+                                ("rib tips", "tag")])
+        rib = next(l for l in r["loves"] if "rib" in (l.get("label") or "").lower())
+        self.assertEqual(rib["kind"], "tag")
+
+
 class Walls(unittest.TestCase):
     def tearDown(self):
         os.environ["UNSAID_WALLS"] = H.WALLS_DIR
