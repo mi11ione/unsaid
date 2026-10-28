@@ -27,6 +27,14 @@ services:
         sync: false
       - key: UNSAID_MAX_ACTIVE      # optional, default 2 concurrent fresh runs
         sync: false
+      - key: UNSAID_TOKEN_REQUIRED  # 1 until 30 Oct 23:45 ET; the flip sets 0 and KEEPS UNSAID_TOKEN (its 60/h bucket)
+        sync: false
+      - key: UNSAID_TOKEN_PER_HOUR  # optional, default 60 fresh runs/h for the token holder (connectors share an IP)
+        sync: false
+      - key: UNSAID_FRESH_PER_HOUR  # optional; default 15/h per IP through 6 Nov 2026 ET, then 3
+        sync: false
+      - key: UNSAID_RSS_SOFT_MB     # optional, default 300: above it the server clears the engine's memo caches
+        sync: false
       - key: UNSAID_PRIORS_DIR      # /etc/secrets: the priors are Render secret files (server/push_priors.py), never in git
         sync: false
       - key: QLOO_API_KEY

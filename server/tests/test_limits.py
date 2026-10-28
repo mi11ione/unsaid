@@ -28,7 +28,7 @@ def loves_q(loves):
 class Http(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        app.TOKEN = "t0ken"
+        app.TOKEN, app.TOKEN_REQUIRED, app.TOKEN_KEY = "t0ken", True, "token:test"
         cls.srv = app.make_server("127.0.0.1", 0)
         cls.base = "http://127.0.0.1:%d" % cls.srv.server_address[1]
         threading.Thread(target=cls.srv.serve_forever, daemon=True).start()
@@ -36,50 +36,39 @@ class Http(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.srv.shutdown()
-        app.TOKEN = ""
+        app.TOKEN, app.TOKEN_REQUIRED, app.TOKEN_KEY = "", False, None
 
-    def get(self, path, token="t0ken"):
-        req = urllib.request.Request(self.base + path, headers={"Authorization": "Bearer " + token} if token else {})
+    def setUp(self):
+        app.TOKEN_REQUIRED = True
+        os.environ["UNSAID_FRESH_PER_HOUR"], os.environ["UNSAID_TOKEN_PER_HOUR"] = "3", "5"
+        app.FRESH_IPS = L.IpLimiter(per_hour=app.fresh_per_hour)
+        app.ADMIT = L.Admission(max_active=2)
+        H.clear_results()
+
+    def tearDown(self):
+        os.environ.pop("UNSAID_FRESH_PER_HOUR", None)
+        os.environ.pop("UNSAID_TOKEN_PER_HOUR", None)
+        app.TOKEN_REQUIRED = True
+
+    def get(self, path, token="t0ken", headers=None):
+        h = dict(headers or {})
+        if token:
+            h["Authorization"] = "Bearer " + token
+        req = urllib.request.Request(self.base + path, headers=h)
         try:
             with urllib.request.urlopen(req, timeout=60) as r:
                 return r.status, r.read().decode()
         except urllib.error.HTTPError as e:
             return e.code, e.read().decode()
 
-    def unsaid(self, loves):
-        code, body = self.get("/api/unsaid?city=st-louis&loves=" + loves_q(loves))
-        self.assertEqual(code, 200)
+    def unsaid(self, loves, token="t0ken", headers=None):
+        code, body = self.get("/api/unsaid?city=st-louis&loves=" + loves_q(loves), token, headers)
+        self.assertEqual(code, 200, body[:200])
         lines = [json.loads(l) for l in body.splitlines()]
         self.assertEqual(lines[-1]["type"], "done")
         return lines
 
-    def test_bench_header_skips_the_ip_limit(self):
-        H.reset_limits()
-        H.clear_results()
-        app.BENCH_SECRET = "bench-s3cret"
-        try:
-            def go(loves, bench=None):
-                h = {"Authorization": "Bearer t0ken"}
-                if bench:
-                    h["X-Unsaid-Bench"] = bench
-                req = urllib.request.Request(self.base + "/api/unsaid?city=st-louis&loves=" + loves_q(loves), headers=h)
-                with urllib.request.urlopen(req, timeout=60) as r:
-                    return json.loads(r.read().decode().splitlines()[-1])["result"]["status"]
-            got = [go(s, "bench-s3cret") for s in (H.CEDRIC, H.JASON, H.AL_GREEN, H.SOUL)]
-            self.assertNotIn("limited", got)
-            H.clear_results()
-            for _ in range(3):
-                app.FRESH_IPS.record("127.0.0.1")
-            self.assertEqual(go(H.CEDRIC, "wrong"), "limited")
-            self.assertEqual(go(H.CEDRIC), "limited")
-            self.assertNotEqual(go(H.CEDRIC, "bench-s3cret"), "limited")
-        finally:
-            app.BENCH_SECRET = ""
-
-    def test_unsupported_city_is_a_400(self):
-        code, body = self.get("/api/unsaid?city=Chicago&loves=" + loves_q(H.JASON))
-        self.assertEqual(code, 400)
-        self.assertEqual(json.loads(body)["status"], "unsupported_city")
+    SETS = property(lambda self: [H.CEDRIC, H.JASON, H.AL_GREEN, H.SOUL, H.CEDRIC[:2], H.JASON[:2]])
 
     def test_token(self):
         self.assertEqual(self.get("/api/health", token=None)[0], 200)
@@ -88,20 +77,56 @@ class Http(unittest.TestCase):
             self.assertEqual(self.get(p, token="wrong")[0], 401, p)
         self.assertEqual(self.get("/api/resolve?kind=city&q=nyc&token=t0ken", token=None)[0], 200)
 
-    def test_fourth_fresh_run_is_limited(self):
-        H.reset_limits()
-        H.clear_results()
-        sets = [H.CEDRIC, H.JASON, H.AL_GREEN, H.SOUL]
-        out = [self.unsaid(s)[-1]["result"] for s in sets]
-        self.assertEqual([r["status"] for r in out[:3]], ["ok", "ok", "ok"])
-        r4 = out[3]
-        print("\n  4th fresh run from one IP -> status=%s note=%r picks=%d" % (r4["status"], r4.get("note"), len(r4["picks"])))
+    def test_ip_limit_after_the_flip(self):
+        """Token off (UNSAID_TOKEN_REQUIRED=0): no token -> the per-IP limit; the 4th fresh run is limited, says when
+        to retry, and streams no wall names or counts; a cached key is still served."""
+        app.TOKEN_REQUIRED = False
+        out = [self.unsaid(s, token=None) for s in self.SETS[:4]]
+        self.assertEqual([r[-1]["result"]["status"] for r in out[:3]], ["ok", "ok", "ok"])
+        ev4, r4 = out[3], out[3][-1]["result"]
+        print("\n  4th fresh run from one IP -> status=%s retry_after=%s limited_by=%s" % (
+            r4["status"], r4.get("retry_after"), r4.get("limited_by")))
         self.assertEqual(r4["status"], "limited")
         self.assertEqual(r4["note"], "Fresh runs are limited so everyone gets through. These open instantly:")
-        self.assertEqual(r4["picks"], [])
-        again = self.unsaid(H.CEDRIC)[-1]["result"]          # a cached key is not a fresh run
+        self.assertEqual((r4["limited_by"], r4["picks"], r4["wall"], r4["counts"]), ("ip", [], [], {}))
+        self.assertTrue(3500 <= r4["retry_after"] <= 3600, r4["retry_after"])
+        self.assertEqual([e for e in ev4 if e["type"] in ("wall_name", "strike", "calls", "pool", "card")], [])
+        again = self.unsaid(H.CEDRIC, token=None)[-1]["result"]          # a cached key is not a fresh run
         self.assertTrue(again["cached"])
         self.assertEqual(again["status"], "ok")
+
+    def test_token_gets_its_own_bucket(self):
+        """With the valid token (query or Bearer), runs count in the token's bucket, not the shared IP's."""
+        app.TOKEN_REQUIRED = False
+        for _ in range(3):
+            app.FRESH_IPS.record("127.0.0.1")                             # the IP is spent
+        self.assertEqual(self.unsaid(H.CEDRIC, token=None)[-1]["result"]["status"], "limited")
+        got = [self.unsaid(s)[-1]["result"]["status"] for s in self.SETS[1:6]]       # 5 = UNSAID_TOKEN_PER_HOUR here
+        self.assertNotIn("limited", got)
+        r = self.unsaid(H.CEDRIC)[-1]["result"]
+        self.assertEqual((r["status"], r["limited_by"]), ("limited", "ip"))      # the token's own bucket is spent
+        code, body = self.get("/api/unsaid?city=st-louis&token=t0ken&loves=" + loves_q(H.SOUL[:1]), token=None)
+        self.assertEqual(json.loads(body.splitlines()[-1])["result"]["status"], "limited")   # query token: same bucket
+
+    def test_bench_header_skips_the_ip_limit(self):
+        app.BENCH_SECRET = "bench-s3cret"
+        app.TOKEN_REQUIRED = False
+        try:
+            st = lambda loves, **h: self.unsaid(loves, token=None, headers=h)[-1]["result"]["status"]  # noqa: E731
+            self.assertNotIn("limited", [st(s, **{"X-Unsaid-Bench": "bench-s3cret"}) for s in self.SETS[:4]])
+            H.clear_results()
+            for _ in range(3):
+                app.FRESH_IPS.record("127.0.0.1")
+            self.assertEqual(st(H.CEDRIC, **{"X-Unsaid-Bench": "wrong"}), "limited")
+            self.assertEqual(st(H.CEDRIC), "limited")
+            self.assertNotEqual(st(H.CEDRIC, **{"X-Unsaid-Bench": "bench-s3cret"}), "limited")
+        finally:
+            app.BENCH_SECRET = ""
+
+    def test_unsupported_city_is_a_400(self):
+        code, body = self.get("/api/unsaid?city=Chicago&loves=" + loves_q(H.JASON))
+        self.assertEqual(code, 400)
+        self.assertEqual(json.loads(body)["status"], "unsupported_city")
 
 
 class Guards(unittest.TestCase):
@@ -395,6 +420,20 @@ class Output(unittest.TestCase):
         self.assertEqual([e["type"] for e in ev if e["type"] == "wall_name"], [])
         rc = app.adapter.resolve_city("Chicago", app.adapter.make_qloo("fake", H.TMP), "fake")
         self.assertEqual(rc["status"], "unsupported_city")
+
+    def test_memory_guard_trims_caches_without_changing_results(self):
+        H.reset_limits()
+        H.clear_results()
+        _, a = H.run(H.CEDRIC, ip="192.0.2.130")
+        out = app.memory_guard(force=True)
+        self.assertGreater(out["lru"], 0)
+        self.assertGreater(out["caches"], 0)
+        H.clear_results()                                   # recompute from scratch, not a cache hit
+        _, b = H.run(H.CEDRIC, ip="192.0.2.131")
+        self.assertFalse(b["cached"])
+        self.assertEqual([p["id"] for p in a["picks"]], [p["id"] for p in b["picks"]])
+        self.assertEqual(a["counts"].get("wall"), b["counts"].get("wall"))
+        self.assertLessEqual(len(app.RESULTS.mem), app.RESULTS.max_mem)
 
     def test_ratings_have_one_decimal(self):
         self.assertEqual(app.round_card({"rating": 4.1999998})["rating"], 4.2)

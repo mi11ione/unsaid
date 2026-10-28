@@ -44,7 +44,10 @@ def wall_hash(answers):
 
 
 class ResultCache:
-    def __init__(self, root=None, max_mem=500):
+    def __init__(self, root=None, max_mem=None):
+        # a result holds every wall item as Python objects (~7 MB in memory for NYC), so only a few stay in memory;
+        # the rest are read back from disk on an exact-key hit
+        max_mem = max_mem if max_mem is not None else int(os.environ.get("UNSAID_RESULT_MEM", "6"))
         self.root = os.path.join(root or CACHE_DIR, "results")
         self.mem = OrderedDict()
         self.max_mem = max_mem

@@ -109,6 +109,31 @@ CITY_NOT_COVERED = ("UNSAID covers St. Louis and New York, the cities where we c
 CANON = {"stl": "St. Louis", "nyc": "New York City"}
 
 
+ENGINE_CACHES = ("_POOL_CACHE", "_RCACHE", "_NRB", "_DETAIL")   # module-level dict/list memo caches (pure)
+
+
+def trim_caches():
+    """Clears the engine's pure memo caches (functools lru caches in matcher/engine, the pool and reverse-index
+    caches, per-entity memo dicts). Results are unchanged: everything is recomputed on demand. Returns a summary.
+    Called by the server's memory guard on a 512 MB host; the walls are re-warmed afterwards."""
+    import gc
+    n_lru, n_obj = 0, 0
+    mods = [M, E] + ([API] if API else [])
+    for mod in mods:
+        for name in dir(mod):
+            obj = getattr(mod, name, None)
+            if callable(getattr(obj, "cache_clear", None)) and getattr(obj, "__module__", None) == mod.__name__:
+                obj.cache_clear()
+                n_lru += 1
+        for name in ENGINE_CACHES:
+            obj = getattr(mod, name, None)
+            if isinstance(obj, (dict, list)):
+                obj.clear()
+                n_obj += 1
+    gc.collect()
+    return {"lru": n_lru, "caches": n_obj}
+
+
 def city_key(text):
     """City text, slug or alias -> ("stl"|"nyc"|None, text for the engine). Slugs the site sends (new-york,
     st-louis) map to the canonical name, so a resolved city is never sent back for disambiguation."""

@@ -92,8 +92,10 @@ class Admission:
 
 
 class IpLimiter:
+    """per_hour is an int or a callable returning one (so a dated rule can change the limit without a restart)."""
+
     def __init__(self, per_hour=3, window_s=3600):
-        self.per_hour, self.window = int(per_hour), float(window_s)
+        self.per_hour, self.window = per_hour, float(window_s)
         self.hits = {}
         self.lock = threading.Lock()
 
@@ -103,15 +105,28 @@ class IpLimiter:
             q.popleft()
         return q
 
+    def limit(self, key=None):
+        return int(self.per_hour(key) if callable(self.per_hour) else self.per_hour)
+
     def allowed(self, ip):
         with self.lock:
-            return len(self._trim(ip, time.time())) < self.per_hour
+            return len(self._trim(ip, time.time())) < self.limit(ip)
+
+    def retry_after(self, ip):
+        """Seconds until this IP may start a fresh run again (0 if it may now)."""
+        with self.lock:
+            now = time.time()
+            q = self._trim(ip, now)
+            n = self.limit(ip)
+            if len(q) < n:
+                return 0
+            return max(1, int(q[len(q) - n] + self.window - now + 0.999))
 
     def record(self, ip):
         with self.lock:
             now = time.time()
             q = self._trim(ip, now)
-            if len(q) >= self.per_hour:
+            if len(q) >= self.limit(ip):
                 return False
             q.append(now)
             return True

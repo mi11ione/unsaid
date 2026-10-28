@@ -55,6 +55,10 @@ if MODE == "live" and not os.environ.get("QLOO_API_KEY", "").strip():
 if MODE != "live":
     MODE = "fake"
 TOKEN = os.environ.get("UNSAID_TOKEN", "")
+# The token-off flip sets UNSAID_TOKEN_REQUIRED=0 and keeps UNSAID_TOKEN: the token is no longer required, but a
+# request that carries it still gets the token's own bucket (connectors on Claude.ai all call from Anthropic's IPs).
+TOKEN_REQUIRED = bool(TOKEN) and os.environ.get("UNSAID_TOKEN_REQUIRED", "1") != "0"
+TOKEN_KEY = "token:" + __import__("hashlib").sha256(TOKEN.encode()).hexdigest()[:12] if TOKEN else None
 PROXY_SECRET = os.environ.get("UNSAID_PROXY_SECRET", "")
 BENCH_SECRET = os.environ.get("UNSAID_BENCH_SECRET", "")   # its own secret: k11's bypass of the per-IP limit
 CACHE_DIR = C.CACHE_DIR
@@ -65,8 +69,19 @@ FAKE_PACE = os.environ.get("UNSAID_FAKE_PACE") == "1"    # pace fake calls throu
 
 BUCKET = L.SharedBucket(rate=float(os.environ.get("QLOO_RATE", "3")), burst=env_int("QLOO_BURST", 5))
 ADMIT = L.Admission(max_active=env_int("UNSAID_MAX_ACTIVE", 2))
-FRESH_IPS = L.IpLimiter(per_hour=env_int("UNSAID_FRESH_PER_HOUR", 3))
-RESOLVE_IPS = L.IpLimiter(per_hour=env_int("UNSAID_RESOLVE_PER_10MIN", 60), window_s=600)
+def fresh_per_hour(key=None):
+    """Fresh runs per hour. A valid-token holder: 60 per token (UNSAID_TOKEN_PER_HOUR). Otherwise per IP: 15 through
+    6 Nov 2026 ET (judges share office IPs), then 3 (UNSAID_FRESH_PER_HOUR overrides)."""
+    if key and str(key).startswith("token:"):
+        return env_int("UNSAID_TOKEN_PER_HOUR", 60)
+    if os.environ.get("UNSAID_FRESH_PER_HOUR"):
+        return env_int("UNSAID_FRESH_PER_HOUR", 3)
+    return 15 if dt.datetime.now(ET).date() <= dt.date(2026, 11, 6) else 3
+
+
+FRESH_IPS = L.IpLimiter(per_hour=fresh_per_hour)
+RESOLVE_IPS = L.IpLimiter(per_hour=lambda key: env_int("UNSAID_RESOLVE_PER_10MIN", 60) * (
+    10 if key and str(key).startswith("token:") else 1), window_s=600)
 QUOTA = L.QlooQuota(os.path.join(CACHE_DIR, "qloo_quota.json"), monthly=env_int("QLOO_MONTHLY_QUOTA", 10000),
                     threshold=float(os.environ.get("QLOO_QUOTA_GUARD", "0.85")),
                     headers=os.environ.get("QLOO_QUOTA_HEADERS", ""))
@@ -78,6 +93,24 @@ WARM = {"state": "pending", "cpu_s": None}
 SHUTDOWN = threading.Event()        # SIGTERM (Render deploy or spin-down): open streams end cleanly, then exit
 STREAMS = {"open": 0}
 STREAMS_LOCK = threading.Lock()
+
+
+RSS_SOFT_MB = float(os.environ.get("UNSAID_RSS_SOFT_MB", "300"))
+MEM = {"trims": 0, "last_trim": None}
+
+
+def memory_guard(force=False):
+    """After a run: above the soft limit (512 MB host), clear the engine's pure caches and re-warm the walls."""
+    cur, _ = rss_mb()
+    if not force and (cur is None or cur < RSS_SOFT_MB):
+        return None
+    out = adapter.trim_caches()
+    MEM["trims"] += 1
+    MEM["last_trim"] = {"at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "rss_before_mb": cur,
+                        "rss_after_mb": rss_mb()[0], "cleared": out}
+    threading.Thread(target=warm, name="rewarm", daemon=True).start()
+    print("[unsaid] memory guard: %s" % MEM["last_trim"], file=sys.stderr)
+    return out
 
 
 def rss_mb():
@@ -291,7 +324,11 @@ def stream_unsaid(city_text, loves, ip, country, emit, bench=False):
             if k not in sent:
                 sent.add(k)
                 emit(dict(it, type="wall_name"))
-    wall_names(adapter.city_wall(city_text, CACHE_DIR))       # first name on screen: static data, before any call
+    # Over a limit: no early wall. Only an exact-key cache hit is served (with its wall); otherwise the limited reply
+    # carries no wall names and no counts, so it can never show numbers that differ from a real run's.
+    over = "quota" if (MODE == "live" and QUOTA.fired()) else ("ip" if not bench and not FRESH_IPS.allowed(ip) else None)
+    if not over:
+        wall_names(adapter.city_wall(city_text, CACHE_DIR))   # first name on screen: static data, before any call
     q = timing.instrument(adapter.make_qloo(MODE, CACHE_DIR, BUCKET, QUOTA, FAKE_PACE))
     try:
         prep = adapter.prepare(city_text, loves, q, MODE)
@@ -307,6 +344,15 @@ def stream_unsaid(city_text, loves, ip, country, emit, bench=False):
         return done(r)
 
     wall = adapter.wall_for(prep["city"], prep["loves"], CACHE_DIR)
+    lane = "live" if session.live else "dated_only"
+    key0 = C.result_key(adapter.ENGINE_V, MODE, prep["city"]["id"], [c["id"] for c in prep["loves"]], "unsaid",
+                        C.wall_hash(wall["answers"]), lane)
+    if over and not RESULTS.get(key0):
+        status("limited", COPY["limited"])
+        r = shell("limited", prep, None, COPY["limited"])
+        r.update(key=key0, limited_by=over, counts={}, wall=[],
+                 retry_after=FRESH_IPS.retry_after(ip) if over == "ip" else None)
+        return done(r)
     wall_names(wall["answers"])                                       # the set's own taste answers, from static data
     lane = "live" if session.live else "dated_only"                   # decided before the key, never after
     key = C.result_key(adapter.ENGINE_V, MODE, prep["city"]["id"], [c["id"] for c in prep["loves"]], "unsaid",
@@ -331,14 +377,9 @@ def stream_unsaid(city_text, loves, ip, country, emit, bench=False):
         r["key"], r["degraded_reason"] = key, why
         return done(r)
 
-    # ---- limits: a fresh run is admitted only below both guards
-    if (MODE == "live" and QUOTA.fired()) or (not bench and not FRESH_IPS.allowed(ip)):
-        if rec:
-            return from_stale("limited")
-        status("limited", COPY["limited"])
-        r = shell("limited", prep, wall, COPY["limited"])
-        r["key"] = key
-        return done(r)
+    # ---- limits: a fresh run is admitted only below both guards (the no-cache case returned above)
+    if over:
+        return from_stale("limited")
 
     # ---- the same key already running: wait for it instead of spending quota twice
     with INFLIGHT_LOCK:
@@ -390,6 +431,10 @@ def stream_unsaid(city_text, loves, ip, country, emit, bench=False):
         finally:
             ADMIT.release(time.monotonic() - started)
             fl["event"].set()
+            try:
+                memory_guard()
+            except Exception as e:      # a guard must never break a run
+                print("[unsaid] memory guard failed: %s" % type(e).__name__, file=sys.stderr)
             with INFLIGHT_LOCK:
                 INFLIGHT.pop(key, None)
 
@@ -512,6 +557,13 @@ class Handler(BaseHTTPRequestHandler):
         return bool(PROXY_SECRET) and hmac.compare_digest(got.encode(), PROXY_SECRET.encode())
 
     def client_ip(self):
+        """The key the per-requester limits count under: the token's bucket when the request carries the valid
+        token (never the token itself), else the visitor's IP. /api and /mcp both use it."""
+        if self.token_valid():
+            return TOKEN_KEY
+        return self.real_ip()
+
+    def real_ip(self):
         if self._trusted_proxy() and self.headers.get("X-Unsaid-Client-IP"):
             return self.headers["X-Unsaid-Client-IP"].strip()[:64]
         xff = self.headers.get("X-Forwarded-For")
@@ -531,16 +583,22 @@ class Handler(BaseHTTPRequestHandler):
         got = self.headers.get("X-Unsaid-Bench", "")
         return bool(BENCH_SECRET) and bool(got) and hmac.compare_digest(got.encode(), BENCH_SECRET.encode())
 
-    def authorized(self, qs):
-        if not TOKEN:
-            return True
+    def presented_token(self):
         got = self.headers.get("X-Unsaid-Token") or ""
         auth = self.headers.get("Authorization") or ""
         if not got and auth.lower().startswith("bearer "):
             got = auth[7:].strip()
         if not got:
+            qs = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
             got = (qs.get("token") or [""])[0]
-        return hmac.compare_digest(got.encode(), TOKEN.encode())
+        return got
+
+    def token_valid(self):
+        got = self.presented_token()
+        return bool(TOKEN) and bool(got) and hmac.compare_digest(got.encode(), TOKEN.encode())
+
+    def authorized(self, qs=None):
+        return (not TOKEN_REQUIRED) or self.token_valid()
 
     # -- routes
     def do_HEAD(self):
@@ -574,7 +632,7 @@ class Handler(BaseHTTPRequestHandler):
                 cur, peak = rss_mb()
                 return self._json(200, {"ok": True, "state": "warm", "boot_warm": WARM["state"],
                                         "rss_mb": cur, "peak_rss_mb": peak, "streams": STREAMS["open"],
-                                        "priors": adapter.PRIORS,
+                                        "priors": adapter.PRIORS, "memory": {"soft_mb": RSS_SOFT_MB, **MEM},
                                         "mode": MODE, "backend": adapter.BACKEND,
                                         "engine_v": adapter.ENGINE_V, "uptime_s": int(time.time() - BOOT),
                                         "queue": {"active": a, "waiting": w}})

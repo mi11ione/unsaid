@@ -79,6 +79,8 @@ A cold engine answers `503` with `{"state":"waking"}` (or a `waking` NDJSON stre
 
 `.github/workflows/keepwarm.yml` GETs `https://unsaid-a1wy.onrender.com/api/health` every 10 minutes (GitHub runs schedules best-effort, sometimes late). It is ordinary inbound traffic and keeps Render from sleeping (it spins down after 15 min idle). One service around the clock uses about 744 of the 750 free instance-hours a month. On a private repo each run bills at least one Actions minute: about 144 a day, so about 1,150 through 5 Nov, inside the free 2,000 if nothing else uses Actions. Stop it after 5 Nov by disabling the workflow.
 
-## 5. After 23:45 ET on 30 Oct
+## 5. After 23:45 ET on 30 Oct (the token-off flip)
 
-To open the API: remove `UNSAID_TOKEN` in Render, then redeploy. Per-IP limits (3 fresh runs per hour) and the quota guards stay on.
+Set `UNSAID_TOKEN_REQUIRED=0` on Render and redeploy. Keep `UNSAID_TOKEN`: the API and `/mcp` stop requiring it, but a request that carries it (query `token=` or `Authorization: Bearer`) gets the token's own bucket of 60 fresh runs an hour. Claude.ai connectors all call from Anthropic's servers, so they would otherwise share one IP's limit. Without the token, the per-IP limit is 15 fresh runs an hour through 6 Nov, then 3. The Qloo quota guard applies to everyone. A limited reply carries `retry_after` (seconds) and `limited_by` (`ip` or `quota`).
+
+Memory (512 MB host): `/api/health` shows `rss_mb`, `peak_rss_mb` and `memory.trims`. Above `UNSAID_RSS_SOFT_MB` (300) the server clears the engine's pure memo caches after a run and re-warms the walls. Results are unchanged.
