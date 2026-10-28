@@ -123,6 +123,7 @@ PICK_SCHEMA = {
         "for_you": {"type": "integer"}, "for_anyone": {"type": ["integer", "null"]}, "of": {"type": "integer"},
         "ranks": {"type": "string"}, "lift_pts": {"type": ["integer", "null"]},
         "address": {"type": ["string", "null"]}, "url": {"type": ["string", "null"]},
+        "why": {"type": ["string", "null"]},
         "holds": {"type": "string"},
         "because": {"type": "object", "properties": {"love": {"type": ["string", "null"]},
                                                      "share": {"type": ["number", "null"]},
@@ -279,7 +280,9 @@ def _pick(c):
         "lift_pts": int(round(100 * lift)) if isinstance(lift, (int, float)) else None,
         "holds": ("%d of %d" % (holds, nl)) if holds is not None else "n/a (1 love)",
         "because": {"love": c.get("because"), "share": None, "source": "best per-love rank (C6')",
+                    "detail": c.get("because_detail"),
                     "line": ("because you love %s" % c["because"]) if c.get("because") else None},
+        "why": c.get("why"),
         "ai_named": 0, "ai_asked": (c.get("never_said") or {}).get("asks") or 0}
 
 
@@ -587,9 +590,10 @@ def summary(r):
                  "%d left for these loves, ranked by Qloo:" % (r["status"], r["city"]["name"], w["distinct_names"],
                                                               w["answers"], w["struck_in_pool"], len(r["picks"]))]
     for i, p in enumerate(r["picks"], 1):
-        lines.append("%d. %s (%s) · %s · %s · holds %s · %s · named by %d of %d AI answers · qloo:%s" % (
-            i, p["name"], p["neighbourhood"], " · ".join(p["what"]) or "-", p["ranks"], p["holds"],
-            p["because"].get("line"), p["ai_named"], p["ai_asked"], p["qloo_id"]))
+        lines.append("%d. %s (%s) · %s · %s · holds %s · %s%s · named by %d of %d AI answers · qloo:%s" % (
+            i, p["name"], p["neighbourhood"] or "-", " · ".join(p["what"]) or "-", p["ranks"], p["holds"],
+            p["because"].get("line"), (" · " + p["why"]) if p.get("why") else "", p["ai_named"], p["ai_asked"],
+            p["qloo_id"]))
     if w["top_names"]:
         lines.append("Everyone else gets: " + ", ".join(w["top_names"]))
     if r.get("message"):

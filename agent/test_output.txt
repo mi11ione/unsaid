@@ -12,18 +12,18 @@
   [PASS] no pick is on the wall's top names
 
 --- tools/call unsaid_places (legacy) -> content[0] ---
-ok · St. Louis: AIs named 675 distinct places in 256 answers (28 were in this taste pool, all struck). 7 left for these loves, ranked by Qloo:
-1. Osktor Smokehouse (Downtown) · soul food · barbecue · #4 for you · #170 for anyone · holds 3 of 3 · because you love Rib Tips · named by 0 of 256 AI answers · qloo:8FD06827-81EC-5FFB-9529-4738658F3DE3
-2. Ravcael Wine Bar (Central West End) · restaurant · bar · #6 for you · #137 for anyone · holds 3 of 3 · because you love Maze Featuring Frankie Beverly · named by 0 of 256 AI answers · qloo:87980350-0772-5E7D-A9EB-8817BD781D3D
-3. Ravthu Trattoria (Downtown) · italian · restaurant · #13 for you · #123 for anyone · holds 3 of 3 · because you love Maze Featuring Frankie Beverly · named by 0 of 256 AI answers · qloo:D9183238-755A-5CA7-A727-39A4B09C5A9E
-4. Dranyr Noodle Bar (Midtown) · restaurant · bar · #22 for you · #164 for anyone · holds 3 of 3 · because you love Maze Featuring Frankie Beverly · named by 0 of 256 AI answers · qloo:2BD1F0A1-DF6B-56EB-A317-26CDF2BB1450
-5. Phil's BBQ (North City) · soul food · barbecue · #30 for you · #124 for anyone · holds 2 of 3 · because you love Rib Tips · named by 0 of 256 AI answers · qloo:68568B7E-B72D-57D5-A8F2-99F24CFB3973
-6. Oskcorb Room (Cherokee Street) · restaurant · #43 for you · #169 for anyone · holds 2 of 3 · because you love Maze Featuring Frankie Beverly · named by 0 of 256 AI answers · qloo:2E1B31B1-AF81-5A2D-94B9-A645149E9F17
-7. Vashesk Smokehouse (Lafayette Square) · barbecue · restaurant · #54 for you · #172 for anyone · holds 2 of 3 · because you love Rib Tips · named by 0 of 256 AI answers · qloo:72273497-26DB-50C7-B83A-7451B0D745D1
-Everyone else gets: Mai Lee, Gioia's Deli, Pappy's Smokehouse, Balkan Treat Box, Lona's Lil Eats, Sidney Street Cafe, Louie, Crown Candy Kitchen
-FAKE MODE: pick names and ranks come from the kit's synthetic Qloo world and prove the code path only. The wall is real saved AI answers (walls (stl: census, city, city)).
-  wall: {"distinct_names": 675, "answers": 256, "struck_in_pool": 28, "top_names": ["Mai Lee", "Gioia's Deli", "Pappy's Smokehouse", "Balkan Treat Box", "Lona's Lil Eats", "Sidney Street Cafe", "Louie", "Crown Candy Kitchen"], "source": "walls (stl: census, city, city)"}
-  qloo_calls: {"pool": 10, "rescore": 12, "ids": 12, "cap": 1, "loves": 3, "city": 0, "total": 38, "network": 1}
+ok · St. Louis: AIs named 823 distinct places in 328 answers (28 were in this taste pool, all struck). 7 left for these loves, ranked by Qloo:
+1. Osktor Smokehouse (Downtown) · soul food · barbecue · #4 for you · #170 for anyone · holds 3 of 3 · because you love Rib Tips · fits you better than 166 of the 169 more popular places · named by 0 of 328 AI answers · qloo:8FD06827-81EC-5FFB-9529-4738658F3DE3
+2. Ravcael Wine Bar (Central West End) · restaurant · bar · #6 for you · #137 for anyone · holds 3 of 3 · because you love Maze Featuring Frankie Beverly · fits you better than 132 of the 136 more popular places · named by 0 of 328 AI answers · qloo:87980350-0772-5E7D-A9EB-8817BD781D3D
+3. Ravthu Trattoria (Downtown) · italian · restaurant · #13 for you · #123 for anyone · holds 3 of 3 · because you love Maze Featuring Frankie Beverly · fits you better than 113 of the 122 more popular places · named by 0 of 328 AI answers · qloo:D9183238-755A-5CA7-A727-39A4B09C5A9E
+4. Dranyr Noodle Bar (Midtown) · restaurant · bar · #22 for you · #164 for anyone · holds 3 of 3 · because you love Maze Featuring Frankie Beverly · fits you better than 143 of the 163 more popular places · named by 0 of 328 AI answers · qloo:2BD1F0A1-DF6B-56EB-A317-26CDF2BB1450
+5. Phil's BBQ (North City) · soul food · barbecue · #30 for you · #124 for anyone · holds 2 of 3 · because you love Rib Tips · fits you better than 98 of the 123 more popular places · named by 0 of 328 AI answers · qloo:68568B7E-B72D-57D5-A8F2-99F24CFB3973
+6. Oskcorb Room (Cherokee Street) · restaurant · #43 for you · #169 for anyone · holds 2 of 3 · because you love Maze Featuring Frankie Beverly · fits you better than 127 of the 168 more popular places · named by 0 of 328 AI answers · qloo:2E1B31B1-AF81-5A2D-94B9-A645149E9F17
+7. Vashesk Smokehouse (Lafayette Square) · barbecue · restaurant · #54 for you · #172 for anyone · holds 2 of 3 · because you love Rib Tips · fits you better than 118 of the 171 more popular places · named by 0 of 328 AI answers · qloo:72273497-26DB-50C7-B83A-7451B0D745D1
+Everyone else gets: Mai Lee, Gioia's Deli, Pappy's Smokehouse, Lona's Lil Eats, Balkan Treat Box, Sidney Street Cafe, Crown Candy Kitchen, Louie
+FAKE MODE: pick names and ranks come from the kit's synthetic Qloo world and prove the code path only. The wall is real saved AI answers (walls (stl: census, city, city, city)).
+  wall: {"distinct_names": 823, "answers": 328, "struck_in_pool": 28, "top_names": ["Mai Lee", "Gioia's Deli", "Pappy's Smokehouse", "Lona's Lil Eats", "Balkan Treat Box", "Sidney Street Cafe", "Crown Candy Kitchen", "Louie"], "source": "walls (stl: census, city, city, city)"}
+  qloo_calls: {"pool": 10, "rescore": 12, "ids": 13, "cap": 1, "loves": 3, "city": 0, "total": 39, "network": 1}
   loves resolved: [["Frankie Beverly & Maze", "entity", "ok"], ["Kings of Comedy", "entity", "ok"], ["rib tips", "tag", "ok"]]
   [PASS] qloo_places: isError=false, validates against its outputSchema
   [PASS] qloo_places: top 50 of the taste pool, ranked 1..n
@@ -45,7 +45,7 @@ ok · St. Louis: the top 50 of Qloo's taste pool for these loves (183 places aft
 11. Fenzan Wine Bar (Delmar Loop) · Restaurant, Restaurant, Bar · qloo:372239FE-1BA9-5678-96EB-CCBD0C65CE66
   [PASS] [text, type] pairs accepted; 'rib tips' with type tag resolves to a tag (Rib Tips)
   [PASS] untyped ambiguous love -> ok (FAKE MODE: pick names and ranks come from the kit's synthetic Qloo world and prove the cod)
-  [PASS] ambiguous city -> needs_input: city: 'Richmond' is ambiguous: Richmond (Staten Island, New York); Richmond (Richmond, Virginia). Pass a love 
+  [PASS] ambiguous city -> needs_input: city: 'Richmond' is ambiguous: Richmond (Staten Island, New York); Richmond (Richmond, Virginia); love 'Al Gre
   [PASS] empty loves -> tool execution error (isError=true), model can self-correct
   [PASS] unknown tool -> JSON-RPC -32602
   [PASS] ping -> {}
@@ -63,4 +63,4 @@ ok · St. Louis: the top 50 of Qloo's taste pool for these loves (183 places aft
   [SKIP] UNSAID_TOKEN is not set (it is in the Devpost testing instructions)
 
 server stderr (first lines): [unsaid] ready (mode=fake, kit=/Users/mi11ion/Desktop/qloo/unsaid/engine)
-33 fake-mode messages, 2.6 s, 0 failed checks; wire log: out/transcript.jsonl
+33 fake-mode messages, 4.8 s, 0 failed checks; wire log: out/transcript.jsonl
