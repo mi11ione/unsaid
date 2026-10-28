@@ -407,6 +407,13 @@ def _get(path, params, accept="application/json"):
         if e.code == 401:
             raise RemoteError("the hosted API needs the UNSAID token: set UNSAID_TOKEN in this server's env (it is "
                               "in the Devpost testing instructions)")
+        if e.code == 400:
+            try:
+                body = json.loads(e.read().decode("utf-8"))
+            except (ValueError, OSError):
+                body = {}
+            raise RemoteError("the hosted API refused the input (%s): %s" % (
+                body.get("status") or "HTTP 400", body.get("note") or "check the city and the loves"))
         if e.code in (429, 503):
             raise RemoteError("the hosted API is busy (HTTP %d); try again in %s s" % (e.code, e.headers.get("Retry-After") or "60"))
         raise RemoteError("the hosted API returned HTTP %d" % e.code)
