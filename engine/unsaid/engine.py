@@ -68,6 +68,26 @@ CFG = {
                           "grocery store", "supermarket", "butcher", "butcher shop", "music venue",
                           "live music venue", "concert hall", "gym", "fitness center"],
     "DEAD_TAG_PATTERNS": [":vibe", ":mood", "style:qloo", ":keyword:"],   # vibe/mood tags: dead on arrival
+    # Not a place to eat or drink, whatever else it is tagged (28 Oct, the 20 frozen sets): adult entertainment, and
+    # places whose draw is an activity or a service. Venue tags (event/wedding/music venue, banquet hall, tourist
+    # attraction) and cafes stay. Matched on urn:tag:category:place:<x>; adult also on any genre tag.
+    "NON_FOOD_CATEGORIES": ["adult_entertainment_club", "adult_entertainment_store", "strip_club", "check_cashing_service",
+                            "table_tennis_facility", "bowling_alley", "bowling_supply_shop", "video_arcade",
+                            "laser_tag_center", "golf_course", "golf_driving_range", "golf_instructor", "golf_shop",
+                            "tennis_court", "beach_volleyball_court", "sports_complex", "movie_theater", "museum",
+                            "historical_place_museum", "exhibit", "observatory", "observation_deck", "scenic_spot",
+                            "cannabis_store", "laundromat", "coworking_space", "learning_center", "music_school",
+                            "painting_studio", "painting_lessons", "art_studio", "conference_center", "talent_agency",
+                            "rehearsal_studio", "puppet_theater", "cruise_agency", "casino",
+                            # judge 2 (28 Oct): stores and banquet/event businesses. event_venue and wedding_venue
+                            # stay: every pool place carrying them is also a bar or restaurant (92 and 15 of 1,178)
+                            "liquor_store", "wine_store", "beer_store", "banquet_hall", "event_planner",
+                            "party_planner", "wedding_planner", "event_management_company"],
+    # Diversity (28 Oct): "everyone's taste" prior per city, data/priors/<city>.json (build_priors.py). A place's
+    # prior is its mean fit percentile over the preset sets that share no love with this query (>= PRIOR_MIN_SETS).
+    "PRIORS_DIR": os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                               "data", "priors"),
+    "PRIOR_MIN_SETS": 1, "PRIOR_ENABLED": True,   # 1: with 10 sets a city, one other taste is evidence
 }
 PLACE = "urn:entity:place"
 GENERIC_WHAT = {"urn:tag:category:place:restaurant", "urn:tag:category:place:bar", "urn:tag:genre:place:restaurant",
@@ -326,13 +346,13 @@ _TAG_FACTS = {"cfg": None, "memo": {}}
 def _tag_facts(t):
     """(eatery, kind_tag, fast, hit, music) for one tag dict. Pure in the tag and CFG, so memoised: Qloo's tag
     vocabulary is small and every place repeats it."""
-    cfg = (tuple(CFG["EXCLUDE_TAG_PATTERNS"]), tuple(CFG["EXCLUDE_TAG_NAMES"]))
+    cfg = (tuple(CFG["EXCLUDE_TAG_PATTERNS"]), tuple(CFG["EXCLUDE_TAG_NAMES"]), tuple(CFG["NON_FOOD_CATEGORIES"]))
     if _TAG_FACTS["cfg"] != cfg:
         _TAG_FACTS["cfg"], _TAG_FACTS["memo"] = cfg, {}
     key = (t.get("id"), t.get("tag_id"), t.get("name"))
     f = _TAG_FACTS["memo"].get(key)
     if f is None:
-        pats, names = cfg
+        pats, names, nonfood = cfg
         tid = (t.get("id") or t.get("tag_id") or "").lower()
         eatery = tid in ("urn:tag:category:place:restaurant", "urn:tag:category:place:bar") or \
             (tid.startswith("urn:tag:genre:place:restaurant") and "fast_food" not in tid)
@@ -342,7 +362,9 @@ def _tag_facts(t):
         fast = "fast_food" in tid and (kind_tag or tid.startswith(("urn:tag:cuisine:", "urn:tag:culinary_style:")))
         hit = any(p in tid for p in pats) or (t.get("name") or "").strip().lower() in names
         music = any(m in tid for m in ("music_venue", "concert_venue", "concert_hall"))
-        f = (eatery, kind_tag, fast, hit, music)
+        never = ("adult_entertainment" in tid or "strip_club" in tid or
+                 (tid.startswith("urn:tag:category:place:") and tid[len("urn:tag:category:place:"):] in nonfood))
+        f = (eatery, kind_tag, fast, hit, music, never)
         if len(_TAG_FACTS["memo"]) > 100000:
             _TAG_FACTS["memo"] = {}
         _TAG_FACTS["memo"][key] = f
@@ -353,7 +375,10 @@ def excluded_kind(e):
     tags = [t for t in (e.get("tags") or []) if isinstance(t, dict)]
     facts = [_tag_facts(t) for t in tags]
     eatery = any(f[0] for f in facts)
-    for t, (_, kind_tag, fast, hit, music) in zip(tags, facts):
+    for t, f in zip(tags, facts):
+        if f[5]:
+            return t.get("id") or t.get("name")      # not a place to eat or drink, whatever else it is
+    for t, (_, kind_tag, fast, hit, music, _n) in zip(tags, facts):
         # §3.1 hard-excludes food courts, hotels, malls, groceries, butchers and gyms outright; only a music
         # venue that is also tagged a restaurant or bar (a jazz bar with a kitchen) is kept
         if hit and (fast or (kind_tag and (not music or not eatery))):
@@ -917,6 +942,46 @@ def hood_of(e, centroids, max_mi=1.5):
     return "", None
 
 
+# ---------------------------------------------------------------- the "everyone's taste" prior
+_PRIORS = {}
+
+
+def load_prior(city_key):
+    fp = os.path.join(CFG["PRIORS_DIR"], "%s.json" % city_key)
+    try:
+        mt = os.path.getmtime(fp)
+    except OSError:
+        return None
+    hit = _PRIORS.get(city_key)
+    if hit and hit[0] == mt:
+        return hit[1]
+    with open(fp) as f:
+        doc = json.load(f)
+    _PRIORS[city_key] = (mt, doc)
+    return doc
+
+
+def everyone_pct(city, ids, love_ids):
+    """{place: percentile within this U of its mean fit over the preset sets sharing no love with this query}.
+    Leave-one-out by love: a frozen set never sees its own data, and a fresh query never sees a set it overlaps."""
+    doc = load_prior(city.get("key")) if CFG["PRIOR_ENABLED"] else None
+    if not doc:
+        return {}, {"used": False, "why": "no prior for this city"}
+    sets = [s for s in doc["sets"] if not ({l["id"] for l in s["loves"]} & love_ids)]
+    mean = {}
+    for i in ids:
+        v = [s["fit_pct"][i] for s in sets if i in s["fit_pct"]]
+        if len(v) >= CFG["PRIOR_MIN_SETS"]:
+            mean[i] = sum(v) / len(v)
+    if len(mean) < 3:
+        return {}, {"used": False, "why": "too few places with a prior", "sets": len(sets)}
+    rk = ST.rank(mean)                       # 1 = fits everyone best
+    n = len(mean)
+    return ({i: ST.pct(rk[i], n) for i in mean},
+            {"used": True, "sets": len(sets), "excluded_sets": len(doc["sets"]) - len(sets), "covered": n,
+             "U": len(ids), "built_at": doc.get("built_at")})
+
+
 # ---------------------------------------------------------------- CAP and the popularity proofs
 def popularity_cap(q, city, loves, U, struck_u, pop, pop_rank):
     k = len(struck_u)
@@ -1103,7 +1168,10 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
     fit = ordinal(fy_score, ids)
     fit_avg = ST.rank(fy_score)
     pct = lambda r: ST.pct(r, N)  # noqa: E731
-    lift = {i: pct(fit[i]) - pct(pop_ord[i]) for i in ids}
+    # lift = pct(fit for you) - max(pct(popularity), pct(fit for everyone)): what fits THIS person, beyond what is
+    # famous and beyond what fits every taste. No prior for a place (fewer than PRIOR_MIN_SETS other sets) -> popularity.
+    everyone, prior_diag = everyone_pct(city, ids, {l["id"] for l in loves if l.get("id")})
+    lift = {i: pct(fit[i]) - max(pct(pop_ord[i]), everyone.get(i, 0.0)) for i in ids}
     rho_tp = ST.spearman(fit_avg, pop_rank_avg)
     flat = all_dead or not (rho_tp == rho_tp) or rho_tp > CFG["FLAT_RHO"]
     # RHO_RES = partial Spearman rho(for-you, popularity | the city's no-signal rank). Undefined (None) when the
@@ -1395,7 +1463,7 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
                           "struck_in_U": len(struck_u)})
     res["diag"].update({
         "N": N, "S": len(S), "kept": len(eligible), "flat": flat, "all_dead": all_dead, "thin_taste": thin,
-        "tie_share": tie_share, "tie_by_love": tie_by_love, "rescore": rs_diag, "rho_tp": rho_tp, "rho_res": rho_res, "rho_res_note": rho_res_note,
+        "prior": prior_diag, "tie_share": tie_share, "tie_by_love": tie_by_love, "rescore": rs_diag, "rho_tp": rho_tp, "rho_res": rho_res, "rho_res_note": rho_res_note,
         "rho_taste_base": rho_tp, "rho_taste_pop": rho_tp, "baseline": base_label,
         "cap_keep": cap.get("cap_keep"), "cap_shared": len(cap_ids & set(picks)) if cap.get("cap7") else None,
         "popcap_overlap": cap.get("overlap", float("nan")), "cap": {k: v for k, v in cap.items() if k != "topk"},
