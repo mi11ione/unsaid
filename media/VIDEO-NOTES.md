@@ -14,8 +14,7 @@ no voice-over cut. Sound: UI cues only (ticks, a strike swish, a two-note rise, 
 
 Every name, number and place in `video.html` comes from `data/live/video.json` (built from the files below), so
 `./render.sh video` at the 30 Oct 12:00 ET freeze picks up the new cards, wall counts and live transcript with no edits.
-The only fixed choices are copy (captions), the scene lengths, and which card the judge strikes (card 2). Four lines
-of ranking copy sit in one `COPY` block, marked PENDING until the orchestrator sends the new ranking's wording.
+The only fixed choices are copy (captions), the scene lengths, and which card the judge strikes (card 2). The ranking copy sits in one `COPY` block, worded for D's selection score (93987d4).
 
 ## Shots (59.5 s with the agent scene; 52.1 s without it)
 

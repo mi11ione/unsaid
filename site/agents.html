@@ -36,7 +36,7 @@
     }
   }
 }</pre>
-    <p class="dim">The token is the one from the Devpost testing instructions. After 30 Oct 23:45 ET, leave it out. In remote mode the server lists one tool, <code>unsaid_places(loves, city)</code>. Pass loves as <code>[text, type]</code> pairs. A city with no AI answers on file comes back with the <code>no_wall</code> flag, and nothing is crossed out. <code>UNSAID_MODE=fake</code> runs offline on a synthetic Qloo world, tagged FAKE. With your own <code>QLOO_API_KEY</code>, <code>UNSAID_MODE=live</code> runs the engine locally and also lists <code>qloo_places(loves, city)</code>: Qloo’s top 50 for the same loves, with nothing crossed out. That tool is the meter’s “with” arm.</p>
+    <p class="dim">The token is the one from the Devpost testing instructions. After 30 Oct 23:45 ET, leave it out. In remote mode the server lists one tool, <code>unsaid_places(loves, city)</code>. Pass loves as <code>[text, type]</code> pairs. It covers St. Louis and New York, the cities where we collected what the AIs say. With your own <code>QLOO_API_KEY</code>, <code>UNSAID_MODE=live</code> runs the engine locally and also lists <code>qloo_places(loves, city)</code>: Qloo’s top 50 for the same loves, with nothing crossed out. That tool is the meter’s “with” arm.</p>
 
     <h2>One real run</h2>
     <pre>claude -p "I love Frankie Beverly &amp; Maze, The Original Kings of Comedy and rib tips. Where should I go in St. Louis tonight?" \
@@ -58,10 +58,13 @@
   document.getElementById('curl').textContent =
     `curl -N -H "Authorization: Bearer $UNSAID_TOKEN" \\\n  "${o}/api/unsaid?city=st-louis&loves=${encodeURIComponent(loves)}"`;
   const m = await UM.json('data/meter.json');
-  // "alone ⟦M_ALONE⟧ of 12 on the everyone-list · with Qloo ⟦M_QLOO⟧" (UNSAID.md §6.3)
-  // TOKEN_NOTE.md: "The meter line: ⟦M_ALONE⟧ → ⟦M_QLOO⟧" (filled from k10_meter.py via data/meter.json)
-  document.getElementById('meter').innerHTML =
-    `Picks on the other AIs’ everyone-list, of ${m.of}: alone ${UM.ph(m.m_alone, 'M_ALONE')} → with Qloo ${UM.ph(m.m_qloo, 'M_QLOO')} (${m.sets} sets, ${m.assistants} assistants).`;
+  // the meter as measured (data/meter.json, from k10_meter.py), printed whatever it said; the line is dropped if unmeasured
+  const me = document.getElementById('meter');
+  if (m.m_alone != null && m.m_qloo != null) {
+    me.textContent = `We asked ${m.assistants === 2 ? 'two' : m.assistants} AI assistants to plan a night in ${m.city || 'the city'} “but nothing every AI would tell me”, then graded their picks against the other AIs’ everyone-list. ` +
+      `Alone, a median ${m.m_alone} of ${m.of} picks were on it. With Qloo as their only tool and nothing crossed out, ${m.m_qloo} of ${m.of} (${m.sets} sets). ` +
+      (m.gate === 'FAIL' ? `That missed the bar we set in advance (${m.bar}; it was ${m.below4_sets}), so a taste tool on its own moves it only a little. That’s why UNSAID crosses out first.` : '');
+  } else me.parentNode.removeChild(me.previousElementSibling), me.remove();
   const d = await UM.json('data/live/agent_demo.json').catch(() => null);
   if (d && d.answer) {
     const run = document.getElementById('run');

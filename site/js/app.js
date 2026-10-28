@@ -2,7 +2,9 @@
    Every number on screen comes from data (the stream, the result, census.json); a ⟦placeholder⟧ only ever
    stands for a null field. Mock data is always marked MOCK. */
 (async function () {
-  const { el, esc, ph, et, hhmm } = UM;
+  const { el, esc, et, hhmm } = UM;
+  // a null field shows as a quiet dash for visitors; the ⟦bracket⟧ placeholders are for ?mock= development only
+  const ph = (v, label) => (v === null || v === undefined) ? (API.FORCE_MOCK ? UM.ph(v, label) : '<span class="faint">–</span>') : esc(v);
   const $ = (s, r = document) => r.querySelector(s);
   const [CFG, CEN, TRY, LIVE] = await Promise.all([UM.json('data/config.json'), UM.json('data/census.json'), UM.json('data/try.json'),
     UM.json('data/live/index.json').catch(() => null)]);
@@ -19,6 +21,8 @@
   const isPhone = () => matchMedia('(max-width: 720px)').matches;
   // a chip's kind for people: the server's type_label ("artist"), else the tail of a Qloo URN
   const tl = c => c && (c.type_label || (c.type ? String(c.type).split(':').pop() : null));
+  // what tells two matches apart: the type, and the year or address when Qloo gives one ("film, 1988")
+  const kindOf = c => [tl(c) || c.kind, c.disamb].filter(Boolean).map(esc).join(', ');
   const urlTok = (() => { const t = new URLSearchParams(location.search).get('token'); return t ? `token=${encodeURIComponent(t)}&` : ''; })();
   let ctl = null;
 
@@ -29,10 +33,11 @@
       `<span class="grow"></span>` + (mock ? `<span class="mock">${esc(mock)}</span>` : '');
   }
 
-  function tryList(head = 'Or try one (instant):') {
-    return `<div class="try"><h3>${head}</h3><ul>` + TRY.sets.map(s => {
-      const loves = s.loves.map(l => l == null ? ph(null, 'love') : esc(l)).join(' · ');
-      const inner = `<b>${esc(s.label)}</b>` + (s.src && s.ran ? `<span class="when">ran ${esc(et(s.ran))}</span>` : '') + `<span class="dim">${loves}</span>` + (s.mock ? '<span class="mock">mock</span>' : '');
+  function tryList(head = 'Or open one, instantly') {
+    const ran = UM.days(TRY.sets.filter(s => s.src && s.ran).map(s => s.ran));
+    return `<div class="try"><h3>${head}${head && ran ? ` <span class="faint">· ran ${esc(ran)}</span>` : ''}</h3><ul>` + TRY.sets.map(s => {
+      const loves = s.loves.filter(l => l != null).map(esc).join(' · ');
+      const inner = `<b>${esc(s.label)}</b><span class="dim">${loves}</span>` + (s.mock ? '<span class="mock">mock</span>' : '');
       return `<li>${s.src ? `<a href="#/r?set=${encodeURIComponent(s.id)}">${inner}</a>` : `<span class="row off">${inner}</span>`}</li>`;
     }).join('') + '</ul></div>';
   }
@@ -44,35 +49,63 @@
     { ph: 'something you’d order', hint: null },
   ];
   const s1 = { loves: [null, null, null], city: null };
-  const CITIES = ['St. Louis', 'New York'];
+  // the two cities with collected AI answers (a city with none would have nothing to cross out): a choice, not a search
+  // how the seven are chosen, in one line (D's selection score, 28 Oct): the card sheet and the popularity sheet carry it
+  const EXPLAIN = 'Qloo scores every place for each of your loves. We keep the places that fit you much more than they fit most people’s taste, or than their popularity alone would say.';
+  const CITIES = Object.entries(CFG.cities).map(([slug, c]) => ({ slug, name: c.name }));
+  // the census hook (UNSAID.md §0: the Mai Lee two-AI line), from census.json only
+  function hookLine() {
+    const S = CEN.stl, M = S && S.mailee_claude, G = S && S.chatgpt && S.chatgpt.gem;
+    if (!M) return '';
+    return `<p class="hook">Ask ${esc(CEN.provider)} for a hidden gem in ${esc(S.city)}: <span class="gx">${esc(M.name)}</span>, <span class="red">${M.hits} times out of ${M.of}</span>.` +
+      (G && G.name === M.name ? ` Ask ${esc(CEN.chatgpt_provider)}: ${esc(G.name)} again, <span class="red">${G.hits} of ${G.of}</span>.` : '') + `</p>`;
+  }
 
   function inputView() {
     if (ctl) { ctl.abort(); ctl = null; }
     topbar({});
-    view.innerHTML = `<section class="s1">
+    view.innerHTML = `<div class="land"><section class="s1">
       <h1>Everything the AIs tell everyone, <s>crossed out</s>.</h1>
+      <p class="subhead">Three things you love → seven bars and restaurants in ${CITIES.map(c => esc(c.name)).join(' or ')} that ChatGPT, Claude and Gemini never named when we asked, ranked for you by Qloo.</p>
+      ${hookLine()}
       <div class="fields">
         ${FIELDS.map((f, i) => `<div class="fld"><span class="n">0${i + 1}</span><input data-i="${i}" placeholder="${esc(f.ph)}" autocomplete="off" spellcheck="false"><div class="res" id="res${i}"></div></div>`).join('')}
       </div>
       <div class="helper">or anything: a bar, a book, a team</div>
-      <div class="fields" style="margin-top:18px"><div class="fld"><span class="n">in</span><select id="city" aria-label="city"><option value="">a city</option>${CITIES.map(c => `<option>${esc(c)}</option>`).join('')}</select><div class="res" id="resc"></div></div></div>
+      <div class="fields" style="margin-top:18px"><div class="fld"><span class="n">in</span><div class="cityopts" role="radiogroup" aria-label="city">${CITIES.map(c => `<button role="radio" aria-checked="false" data-c="${esc(c.slug)}">${esc(c.name)}</button>`).join('')}</div></div></div>
       <div class="go"><button class="btn solid" id="cross" disabled>Cross out</button></div>
       ${tryList()}
       <div class="legal">Your three loves go to Qloo and to Gemini’s free tier (Google may use free-tier prompts to improve its products). Don’t type anything personal. 18+.</div>
-    </section>`;
+    </section><aside class="landcard" id="landcard"></aside></div>`;
     view.querySelectorAll('input[data-i]').forEach(inp => {
       const i = +inp.dataset.i;
       if (s1.loves[i]) { inp.value = s1.loves[i].text; drawLove(i); }
       inp.addEventListener('blur', () => resolveLove(i, inp.value));
       inp.addEventListener('input', () => { if (s1.loves[i] && s1.loves[i].text !== inp.value) { s1.loves[i] = null; drawLove(i); } });
     });
-    const ci = $('#city');
-    if (s1.city) { ci.value = s1.city.text; drawCity(); }
-    // only the cities with collected AI answers (a city with none would have nothing to cross out)
-    ci.addEventListener('change', () => { if (s1.city && s1.city.text !== ci.value) s1.city = null; resolveCity(ci.value); });
+    view.querySelectorAll('.cityopts button').forEach(b => b.addEventListener('click', () => {
+      const c = CITIES.find(x => x.slug === b.dataset.c);
+      s1.city = { text: c.name, city: { slug: c.slug, name: c.name } }; drawCity();
+    }));
+    drawCity();
     $('#cross').addEventListener('click', go);
     gate();
+    landCard();
   }
+  // desktop: the Cedric share card beside the form, opening his set (the same image the share sheet draws)
+  async function landCard() {
+    const box = $('#landcard'), set = TRY.sets.find(s => s.id === 'stl-cedric');
+    if (!box || !set || !set.src || set.mock) return;
+    try {
+      const R = await UM.result(set.src);
+      if (!$('#landcard')) return;
+      box.innerHTML = `<a href="#/r?set=stl-cedric" aria-label="Open ${esc(set.label)}"><canvas class="sharecv"></canvas></a><p class="dim">${esc(set.label)}: <a class="link" href="#/r?set=stl-cedric">open his seven →</a></p>`;
+      const seen = new Set();
+      const wallNames = (R.wall || []).filter(w => w.name && !seen.has(w.place || w.norm) && seen.add(w.place || w.norm)).map(w => UM.cleanName(w.name));
+      Share.draw(box.querySelector('canvas'), { ...R, loves: UM.typedLoves(R, set.loves), wallNames, site: siteHost() });
+    } catch (e) { box.innerHTML = ''; }
+  }
+  const siteHost = () => location.protocol.startsWith('http') && !/^(127\.|localhost)/.test(location.host) ? location.host : (CFG.site || '');
 
   async function resolveLove(i, text) {
     text = text.trim();
@@ -92,15 +125,15 @@
     else if (L.pending) box.innerHTML = '<span class="faint">looking up…</span>';
     else if (L.chip) {
       const alts = (L.r.alternatives || []);
-      box.innerHTML = `<span class="chip">${esc(L.chip.label)}${tl(L.chip) ? ` · <i>${esc(tl(L.chip))}</i>` : ' · <i>as typed</i>'}</span>` +
+      box.innerHTML = `<span class="chip">${esc(L.chip.label)}${tl(L.chip) ? ` · <i>${esc(tl(L.chip))}</i>` : ' · <i>as typed</i>'}${L.chip.disamb ? ` <span class="dim">${esc(L.chip.disamb)}</span>` : ''}</span>` +
         (alts.length ? `<button data-a="toggle">other matches</button>` : '') + (L.r.mock ? '<span class="mock">mock</span>' : '') +
-        (L.open ? `<span class="alts">${alts.map((a, k) => `<button data-a="${k}">${esc(a.label)} (${esc(tl(a) || a.kind)})</button>`).join('')}</span>` : '');
+        (L.open ? `<span class="alts">${alts.map((a, k) => `<button data-a="${k}">${esc(a.label)} (${kindOf(a)})</button>`).join('')}</span>` : '');
     } else if (L.r.status === 'needs_input') {
       // amber chip: "rib tips → Rib tips (dish)? · other"
       const c = L.r.chip, alts = L.r.alternatives || [];
-      box.innerHTML = `<span class="need">${esc(L.text)} → <button data-a="accept">${esc(c.label)} (${esc(tl(c) || c.kind)})?</button> · <button data-a="toggle">other</button></span>` +
+      box.innerHTML = `<span class="need">${esc(L.text)} → <button data-a="accept">${esc(c.label)} (${kindOf(c)})?</button> · <button data-a="toggle">other</button></span>` +
         (L.r.mock ? '<span class="mock">mock</span>' : '') +
-        (L.open ? `<span class="alts">${alts.map((a, k) => `<button data-a="${k}">${esc(a.label)} (${esc(tl(a) || a.kind)})</button>`).join('')}</span>` : '');
+        (L.open ? `<span class="alts">${alts.map((a, k) => `<button data-a="${k}">${esc(a.label)} (${kindOf(a)})</button>`).join('')}</span>` : '');
     } else if (L.r.status === 'unauthorized') box.innerHTML = '<span class="need">needs the token from the testing instructions: add ?token=… to this page’s address</span>';
     else box.innerHTML = `<span class="need">${esc(L.text)}: not found · try the full name</span>`;
     box.querySelectorAll('button').forEach(b => b.addEventListener('mousedown', e => e.preventDefault()));
@@ -116,37 +149,8 @@
 
   function httpUrl(u) { return typeof u === 'string' && /^https?:\/\//i.test(u.trim()); }   // never javascript:, data:, …
 
-  async function resolveCity(text) {
-    text = text.trim();
-    if (!text) { s1.city = null; return drawCity(); }
-    if (s1.city && s1.city.text === text) return;
-    s1.city = { text, pending: true }; drawCity();
-    const r = await API.resolve('city', text);
-    if (!s1.city || s1.city.text !== text) return;
-    s1.city = { text, r, city: r.status === 'ok' ? r.city : null };
-    drawCity();
-  }
   function drawCity() {
-    const box = $('#resc'); if (!box) return;
-    const C = s1.city;
-    if (!C) box.innerHTML = '';
-    else if (C.pending) box.innerHTML = '<span class="faint">looking up…</span>';
-    else if (C.city) box.innerHTML = `<span class="chip">${esc(C.city.name)}${C.city.region ? ` <i>${esc(C.city.region)}</i>` : ''}</span>` + (C.r.mock ? '<span class="mock">mock</span>' : '');
-    else if (C.r.status === 'needs_input') {
-      // "Richmond → Staten Island? No: Richmond, Virginia"
-      // "Richmond → Staten Island? No: Richmond, Virginia"
-      const all = C.r.alternatives || [];
-      const guess = C.r.city || all[0], rest = C.r.city ? all : all.slice(1), off = C.r.city ? 0 : 1;
-      const nm = a => esc(a.disamb || a.name);
-      box.innerHTML = `<span class="need">${esc(C.text)} → <button data-a="guess">${nm(guess)}?</button>` +
-        (rest.length ? ` No: ${rest.map((a, k) => `<button data-a="${k + off}">${nm(a)}</button>`).join(' · ')}` : '') + '</span>' + (C.r.mock ? '<span class="mock">mock</span>' : '');
-    }
-    box.querySelectorAll('button').forEach(b => b.addEventListener('mousedown', e => e.preventDefault()));
-    box.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
-      C.city = b.dataset.a === 'guess' ? (C.r.city || C.r.alternatives[0]) : C.r.alternatives[+b.dataset.a];
-      $('#city').value = C.text = C.city.disamb || C.city.name;
-      drawCity();
-    }));
+    view.querySelectorAll('.cityopts button').forEach(b => { const on = !!(s1.city && s1.city.city && s1.city.city.slug === b.dataset.c); b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
     gate();
   }
   function gate() {
@@ -182,7 +186,7 @@
     const st = {
       slug, cityName, loves, wall: new Map(), asks: new Map(), U: null, calls: null, cards: new Map(), result: null, status: null,
       burned: [], struck: new Map(), slots: [], reserves: [], risen: new Map(), done: false, fake: false,
-      mock: false, t0: Date.now(), firstServerEvent: false, order: [],
+      mock: false, t0: Date.now(), firstServerEvent: false, order: [], fresh: !src,
     };
     topbar({ city: cityName, loves: loves.map((l, i) => ({ ...l, label: TYPED[i] || l.label })) });
     view.innerHTML = `<div class="res" id="res">
@@ -190,15 +194,14 @@
       <div class="status" id="status"><span class="live"></span><span id="stxt"></span></div>
       <div class="note" id="notes"></div>
       <section class="sec" id="s-wall">
-        <div class="sh"><h2>Everyone gets these</h2><span class="sub">Good places. Already on the AIs’ lists.</span>
-          <div class="tr"><div class="counter" id="counter"></div><div class="counter-cap">places the AIs gave everyone · left for you, ranked by Qloo</div></div></div>
-        <div class="fieldwrap" id="fw"><div class="field" id="field"></div><div class="note" id="legend"></div>
+        <div class="sh"><h2>Everyone gets these</h2><span class="sub">Good places. Already on the AIs’ lists, most-named first.</span>
+          <div class="tr"><div class="counter" id="counter"></div><div class="counter-cap" id="countercap"></div></div></div>
+        <div class="fieldwrap" id="fw"><div class="field" id="field"></div>
           <button class="showall" id="showall"></button>
-          <button class="showrow" id="showrow"><span>everything the AI named, <span class="red">crossed out</span></span><span class="dim">show ›</span></button></div>
+          <button class="showrow" id="showrow"><span>everything the AIs named, <span class="red">crossed out</span></span><span class="dim">show ›</span></button></div>
       </section>
       <div class="burnline" id="burn"></div>
       <section class="sec" id="s-left" hidden>
-        <div class="sh"><h2>Left for you</h2><span class="sub"></span><div class="tr cap">for-you order</div></div>
         <div id="leftbody"></div>
       </section>
     </div>`;
@@ -216,7 +219,7 @@
     const wn = w => w.name ? esc(UM.cleanName(w.name)) : ph(null, w.ph || 'name');  // a wall item with no name is a fictional placeholder (mock)
     function addAsk(w) {
       const key = (w.provider || '') + '|' + (w.phrasing_id || '') + '|' + (w.asked_at || '');
-      if (!st.asks.has(key)) st.asks.set(key, { provider: UM.provider(w.provider), model: w.model, phrasing: w.phrasing, asked_at: w.asked_at, lane: w.lane, names: 0 });
+      if (!st.asks.has(key)) st.asks.set(key, { provider: UM.provider(w.provider), model: w.model, phrasing: w.phrasing, phrasing_id: w.phrasing_id, asked_at: w.asked_at, lane: w.lane, names: 0 });
       st.asks.get(key).names++;
     }
     // one entry per place: the result's `place` key merges spellings ("Gioia's Deli (hot salami)" = "Gioia's Deli")
@@ -225,23 +228,28 @@
       w = { ...w, provider: UM.provider(w.provider) };
       const k = wk(w);
       addAsk(w);
-      if (st.wall.has(k)) { const o = st.wall.get(k); o.n = (o.n || 1) + 1; if (o.lane !== 'live' && w.lane === 'live') { o.lane = 'live'; o.el.classList.add('live'); } return; }
-      const o = { ...w, key: k, n: 1, outcome: null };
+      const ak = (w.provider || '') + '|' + (w.phrasing_id || '') + '|' + (w.asked_at || '');
+      if (st.wall.has(k)) {
+        const o = st.wall.get(k); o.n = (o.n || 1) + 1; o.hits.set(ak, w);
+        if (o.lane !== 'live' && w.lane === 'live') { o.lane = 'live'; o.el.classList.add('live'); }
+        return;
+      }
+      const o = { ...w, key: k, n: 1, outcome: null, hits: new Map([[ak, w]]) };
       o.el = el(fieldEl, 'span', null, `<button title="">${wn(w)}</button>`);
-      o.el.className = 'nm' + (w.lane === 'live' ? ' live' : '');
+      o.el.className = 'nm x' + (w.lane === 'live' ? ' live' : '');
       o.el.querySelector('button').addEventListener('click', () => nameSheet(o));
       st.wall.set(k, o);
     }
     function setOutcome(k, outcome, reason, qid) {
       const o = st.wall.get(k); if (!o) return;
       o.outcome = outcome; o.reason = reason; o.qloo_id = qid ?? o.qloo_id;
-      o.el.classList.toggle('x', outcome === 'struck');
-      o.el.classList.toggle('dimmed', outcome === 'dimmed');
-      const sup = o.el.querySelector('sup');
-      if (sup) sup.remove();
-      // "not in your R mi pool" is most of the wall: it is said once, in the legend under the field, not on every name
-      if (outcome === 'dimmed' && reason !== 'not in pool') el(o.el, 'sup', null, esc(reason || ''));
-      if (outcome === 'dimmed' && reason === 'not in pool') legend();
+      // every name the AIs gave is crossed out; the ones that were in this person's Qloo pool (and so cost a card) stand out
+      o.el.classList.toggle('inpool', outcome === 'struck');
+    }
+    // most-named first: the first names on the list are the ones every AI gives everyone
+    function sortField() {
+      const items = [...st.wall.values()].sort((a, b) => b.hits.size - a.hits.size || String(a.name).localeCompare(String(b.name)));
+      items.forEach(o => fieldEl.appendChild(o.el));
     }
 
     // the dated city wall streams from static data first (within 1 s), whatever the engine is doing
@@ -249,7 +257,7 @@
       UM.json(cc.wall).then(W => {
         const names = W.answers.flatMap(a => a.names.map(n => ({ name: n, provider: a.provider, model: a.model, phrasing_id: a.phrasing_id, phrasing: a.phrasing, asked_at: a.asked_at, lane: a.lane })));
         // dated names are not happening now: they appear at once, without a landing animation
-        if (!st.reconciled) { names.forEach(addName); counter(); status(); }
+        if (!st.reconciled) { names.forEach(addName); sortField(); counter(); status(); }
       }).catch(() => {});
     }
 
@@ -258,22 +266,26 @@
     function counter() {
       const W = st.result && st.result.counts && st.result.counts.wall != null ? st.result.counts.wall : st.wall.size;
       $('#showall').textContent = `show all ${W} ›`;
-      $('#counter').innerHTML = `<span class="w">${W}</span>` + (st.done && st.result && (st.slots.length || st.result.status === 'empty_none') ? `<span class="ar">→</span>${liveIds().length}` : '');
+      $('#counter').innerHTML = `<span class="w">${W}</span>`;
+      const K = st.result && st.result.counts, A = K && K.asks;
+      // the honest funnel: all of them are crossed out; only the ones in this person's pool cost a card
+      $('#countercap').innerHTML = `places the AIs named${A ? ` in ${A} asks` : ''}, all crossed out` +
+        (K && K.struck_in_U != null && K.U != null ? `<br>${K.struck_in_U} of them were in your ${K.U}-place Qloo pool` : '');
     }
     function statusLine() {
       const s = st.status && st.status.state;
       const R = st.result, D = R && R.diag;
       // the server's own §2.2 copy wins when it sends it (status events' text, result.notes); otherwise the same copy is built here
-      const SERVER_STATES = ['queued', 'waking', 'dated_only', 'partial', 'degraded', 'limited', 'ranking'];
+      const SERVER_STATES = ['queued', 'waking', 'dated_only', 'partial', 'degraded', 'limited', 'ranking', 'unsupported_city'];
       if (s === 'unauthorized') return 'needs the token from the testing instructions: add ?token=… to this page’s address';
       if (R && R.notes && R.notes.length) {
         const keep = [...new Set(R.notes.map(n => n.text).filter(Boolean))];
         if (keep.length) return keep.map(esc).join(' · ');
       }
       if (!st.done && s && SERVER_STATES.includes(s) && st.status.text) return esc(st.status.text);
-      if (s === 'waking' && !st.done) return 'waking the ranker · about a minute';
+      if (s === 'waking' && !st.done) return 'waking the ranker up · about a minute';
       if (s === 'queued') { const a = st.status.ahead; return `${a == null ? ph(null, 'n') : word(a, true)} run${a === 1 ? '' : 's'} ahead of yours · about ${ph(st.status.eta_s, 's')} s`; }
-      if (API.health === 'waking' && !st.firstServerEvent) return 'waking the ranker · about a minute';
+      if (API.health === 'waking' && !st.firstServerEvent) return 'waking the ranker up · about a minute';
       const items = [...st.asks.values()];
       const datedAt = items.filter(a => a.lane !== 'live' && a.provider).map(a => a.asked_at).filter(Boolean).sort().pop() || null;
       const fl = (R && R.flags) || [];
@@ -291,8 +303,11 @@
       // the live lane names its model from the data: "Gemini (gemini-3-flash-preview): asked just now"
       if (live.length) parts.push(live.map(p => { const m = items.find(a => a.lane === 'live' && a.provider === p && a.model); return esc(p) + (m ? ` (${esc(m.model)})` : ''); }).join(', ') + ': asked just now');
       const U = (R && R.counts && R.counts.U) ?? st.U;
-      if (st.done && R && R.counts) parts.push(`Qloo ranked your ${ph(U, 'U')} places · ${ph(D && D.qloo_calls, 'N')} calls`);
-      else if (st.calls) parts.push(`Qloo is ranking your ${U != null ? U + ' ' : ''}places · ${st.calls.done} of ${ph(st.calls.total, 'N')} calls`);
+      // a missing count is left out, never shown as a placeholder
+      const calls = D && D.qloo_calls;
+      if (st.done && R && R.counts) parts.push(`Qloo ranked your ${U != null ? U + ' ' : ''}places` + (calls != null ? ` · ${calls} calls` : ''));
+      else if (st.calls) parts.push(`Qloo is ranking your ${U != null ? U + ' ' : ''}places · ${st.calls.done}${st.calls.total != null ? ` of ${st.calls.total}` : ''} calls`);
+      else if (!st.done && st.fresh) parts.push('ranking with Qloo · about 20 seconds');
       return parts.join(' · ');
     }
     function status() {
@@ -314,7 +329,8 @@
     // one labelled ask count, the same field everywhere (lead line, card back): counts.asks and diag.as_of
     function askLine() {
       const R = st.result || {}, n = R.counts && R.counts.asks;
-      return `${ph(n, 'n')} asks (${esc(cityName)} lists + census + street) · ${ph(UM.day(R.diag && R.diag.as_of), 'date')}`;
+      const d = UM.day(R.diag && R.diag.as_of);
+      return `${n != null ? n + ' ' : ''}asks about ${esc(cityName)}` + (d ? ` (${esc(d)})` : '');
     }
         // ---- burn beat: street checks are DATED (asked in advance), so the line states a result and never moves
     function burnLine() {
@@ -359,10 +375,6 @@
       }
       counter(); status();
     }
-    function legend() {
-      const n = [...st.wall.values()].filter(w => w.reason === 'not in pool').length;
-      $('#legend').innerHTML = n ? `dim: not in your ${st.R_mi != null ? st.R_mi : (st.done ? ph(null, 'R') : '')}${st.R_mi != null || st.done ? ' mi ' : ''}pool (${n})` : '';
-    }
     function finish(R) {
       st.result = R; st.done = true;
       if ((R.flags || []).includes('fake')) st.fake = true;
@@ -372,7 +384,7 @@
         fieldEl.innerHTML = ''; st.wall.clear(); st.asks.clear(); st.reconciled = true;
         R.wall.forEach(w => { addName(w); setOutcome(wk(w), w.outcome, w.reason, w.qloo_id); });
       } else (R.wall || []).forEach(w => { if (!st.wall.has(wk(w))) addName(w); setOutcome(wk(w), w.outcome, w.reason, w.qloo_id); });
-      legend();
+      sortField();
       [...(R.picks || []), ...(R.reserves || []), ...(R.known || [])].forEach(c => { st.cards.set(c.id, c); if (!st.order.includes(c.id)) st.order.push(c.id); });
       (R.burn && R.burn.burned || []).forEach(b => { if (!st.burned.find(x => x.card_id === b.card_id)) st.burned.push({ ...b, seen: hhmm() }); if (b.replaced_by) st.risen.set(b.replaced_by, 'rose in its place'); });
       st.slots = (R.picks || []).map(c => c.id);
@@ -380,6 +392,7 @@
       burnLine(); notes(); left(); counter(); status(); mapDraw();
       if (isPhone()) $('#fw').classList.add('collapsed'); else if ($('#field').scrollHeight > 260) $('#fw').classList.add('clipped');
       $('#res').classList.add('done');
+      clearTimeout(st.failT);
     }
 
     // ---- LEFT FOR YOU
@@ -396,8 +409,14 @@
           `<div class="go"><a class="btn" href="#/">Fix it</a></div>`;
         return;
       }
-      if (R.status === 'error' || R.status === 'unauthorized') {
+      if (R.status === 'error' || R.status === 'unauthorized' || R.status === 'unsupported_city' || R.status === 'bad_request') {
         body.innerHTML = `<p class="empty">${R.status === 'unauthorized' ? 'needs the token from the testing instructions: add ?token=… to this page’s address' : esc(R.note || 'That didn’t go through.')}</p><div class="go"><a class="btn" href="#/">Fix it</a></div>`;
+        return;
+      }
+      // the server restarted mid-run: its own note, and Retry
+      if (flags.includes('restarting') && !n) {
+        body.innerHTML = `<p class="empty">${esc(R.note || 'The ranker restarted mid-run. Try again; nothing you typed was lost.')}</p><div class="go"><button class="btn solid" id="retry">Retry</button></div>${tryList()}`;
+        $('#retry').addEventListener('click', () => route());
         return;
       }
       if (R.status === 'limited') { body.innerHTML = `<p class="empty">Fresh runs are limited so everyone gets through. These open instantly:</p>${tryList('')}`; return; }
@@ -413,17 +432,21 @@
       }
       const lead = R.status === 'empty_few'
         ? `<p class="empty">Only ${n} places in ${esc(cityName)} fit you that no AI names. Here they are.</p>`
-        : `<div class="lead"><span class="n">${n}</span><span class="c">None of these ${n} came up in ${askLine()}.</span></div>`;
+        : `<h2 class="lead2"><span class="n">${n}</span> for you</h2><p class="leadsub">What’s left, ranked by Qloo for what fits you, not everyone. No AI named any of these in ${askLine()}.</p>`;
+      let hinted = false; try { hinted = localStorage.getItem('unsaid.hint') === '1'; } catch (e) { /* private mode */ }
+      const hint = hinted ? '' : `<p class="hint" id="hint">Know one already? Tap <b>✕</b> on its card (or hold the card) to strike it. A reserve no AI named takes its place.</p>`;
       // shown only when the data says so: every fit rank above card 1 was struck by the wall
       const k = R.picks && R.picks[0] && R.picks[0].fit_rank, SR = new Set((R.diag && R.diag.struck_fit_ranks) || []);
       const above = k > 1 && [...Array(k - 1)].every((_, j) => SR.has(j + 1))
         ? `<p class="above">${k === 2 ? 'Your #1 was' : `Your #1–#${k - 1} were`} on the AIs’ lists.</p>` : '';
-      body.innerHTML = lead + above + `<div class="cards" id="cards"></div>
-        <div class="dare"><label for="dare">Ask any AI yourself. Paste what it says: any of these ${n} it names burns.</label>
+      body.innerHTML = lead + above + hint + `<div class="cards" id="cards"></div>
+        <div class="dare"><label for="dare" id="darelabel">${dareLabel()}</label>
           <div class="copyrow"><button class="link" id="copyask">copy an ask</button><span class="dim" id="askq">“hidden gems to eat and drink in ${esc(cityName)}”</span></div>
           <textarea id="dare" placeholder="paste an answer here" spellcheck="false"></textarea><div class="out" id="dareout"></div></div>
-        <div class="links"><button class="link" id="lnk-pop">not a popularity filter →</button><button class="link" id="lnk-share">share</button></div>`;
+        <div class="links"><button class="link" id="lnk-pop">not a popularity filter →</button><button class="link" id="lnk-share">share</button></div>
+        <div id="agentblk"></div>`;
       drawCards();
+      agentBlock();
       $('#cards').after($('#burn'));          // the burn line sits after the seven, never before cards not yet seen
       $('#copyask').addEventListener('click', () => {
         const q = `hidden gems to eat and drink in ${cityName}`, b = $('#copyask');
@@ -436,21 +459,67 @@
       $('#dare').addEventListener('input', e => { clearTimeout(t); t = setTimeout(() => dare(e.target.value), 250); });
     }
 
+    const cap1 = x => String(x).charAt(0).toUpperCase() + String(x).slice(1);
+    // engine lines name a love by Qloo's entity name ("Maze Featuring Frankie Beverly"); people typed "Frankie Beverly & Maze"
+    const typedText = x => tLoves().reduce((t, l) => l.qloo_label && l.label && l.qloo_label !== l.label ? t.split(l.qloo_label).join(l.label) : t, String(x));
+    const dareLabel = () => `Ask any AI yourself. Paste what it says: any of these ${liveIds().length} it names burns.`;
+    // "Use it from Claude": one recorded run of Claude with the unsaid_places tool (data/live/agent_demo.json), shown
+    // only on the set whose loves it was asked about. The call is verbatim; the answer is its own first lines.
+    async function agentBlock() {
+      const box = $('#agentblk'); if (!box) return;
+      const d = await UM.json('data/live/agent_demo.json').catch(() => null);
+      const norm = x => String(x || '').toLowerCase().trim();
+      const asked = d && d.input && (d.input.loves || []).map(l => norm(Array.isArray(l) ? l[0] : l && typeof l === 'object' ? l.text : l));
+      if (!d || !d.answer || !asked || !TYPED.every(t => asked.includes(norm(t)))) return;
+      // a line that names no card: the recorded run can predate today's cards
+      const cardNames = [...st.cards.values()].map(c => norm(c.name)).filter(Boolean);
+      const plan = d.answer.split('\n').map(l => l.trim()).filter(Boolean).reverse()
+        .find(l => /every ai|everyone gets/i.test(l) && !cardNames.some(n => norm(l).includes(n)));
+      const md = x => esc(x).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\*(.+?)\*/g, '<i>$1</i>');
+      box.innerHTML = `<section class="agentblk"><div class="sh"><h2>Use it from Claude</h2><span class="sub">one real run, ${esc(UM.day(d.recorded_at) || '')}</span></div>
+        <p class="q">“${esc(d.question)}”</p>
+        <pre>${esc(d.tool)}(${esc(JSON.stringify(d.input))})</pre>
+        ${plan ? `<p class="a">${md(plan)}</p>` : ''}
+        <p class="dim">${esc(d.model || '')} via Claude Code, with UNSAID as its only tool. <a class="link" href="agents">Set it up in your agent →</a></p></section>`;
+    }
     function cardHTML(c, i, known) {
       const R = st.result || {}, flags = R.flags || [];
       const flat = flags.includes('flat');
       const rank = c.tied || c.fit_rank == null ? '' : `<b>#${c.fit_rank}</b>for you`;
-      const any = flat ? '' : `<span class="any">#${ph(c.any_rank, 'ANY')} for anyone</span>`;
+      const any = flat || c.any_rank == null ? '' : `<span class="any">#${c.any_rank} for anyone</span>`;
       const tag = st.struck.get(c.id), rose = st.risen.get(c.id);
+      const meta = [c.rating != null ? Number(c.rating).toFixed(1) : null, c.open == null ? null : (c.open ? 'open' : 'closed'), price(c)].filter(Boolean).join(' · ');
       return `<div class="card${tag ? ' struck' : ''}${tag && tag.human ? ' byyou' : ''}${rose ? ' risen' : ''}" data-id="${esc(c.id)}">
-        <div class="row1"><span>${String(i + 1).padStart(2, '0')}</span><span>${c.rating == null ? ph(null, 'rating') : Number(c.rating).toFixed(1)} · ${c.open == null ? ph(null, 'open') : (c.open ? 'open' : 'closed')}</span></div>
-        <div class="hood">${ph(c.neighbourhood, 'neighbourhood')}</div>
-        <div class="name">${known ? (c.name ? esc(c.name) : ph(null, `place ${i + 1}`)) : placeName(c, c.id)}</div>
-        <div class="what">${ph(c.what, 'what it is')}</div>
-        ${known ? '' : `<div class="rk">${rank}${any}</div>
-        <div class="because">because you love<b>${c.because == null ? ph(null, 'love') : esc(tName(c.because))}</b></div>`}
+        <div class="row1"><span>${String(i + 1).padStart(2, '0')}</span><span>${esc(meta)}${known || tag ? '' : `<button class="xbtn" data-x="1" aria-label="strike ${esc(c.name || 'this card')}" title="I know it: strike it">✕</button>`}</span></div>
+        ${c.neighbourhood ? `<div class="hood">${esc(c.neighbourhood)}</div>` : ''}
+        <div class="name">${known ? (c.name ? esc(c.name) : '') : placeName(c, c.id)}</div>
+        ${c.what ? `<div class="what">${esc(c.what)}</div>` : ''}
+        ${known ? '' : `<div class="rk">${rank}${any}${c.why ? `<span class="whyl">${esc(c.why)}</span>` : ''}</div>
+        <div class="because">because you love<b>${c.because == null ? '' : esc(tName(c.because))}</b>${c.because_detail ? `<span class="why">${esc(typedText(c.because_detail))}</span>` : ''}</div>`}
+        ${street(c) ? `<div class="addr">${esc(street(c))}${hours(c) ? ` · ${esc(hours(c))}` : ''}<span class="maps">${mapsLinks(c)}</span></div>` : ''}
         <div class="tag${rose && !tag ? ' rose' : ''}">${tag ? esc(tag.text) : (rose ? esc(rose) : '')}</div>
       </div>`;
+    }
+    // the street part of a Qloo address ("8734 Goodfellow Blvd St. Louis, MO 63147" -> "8734 Goodfellow Blvd")
+    function street(c) {
+      const a = String(c.address || '').trim(); if (!a) return '';
+      const k = a.toLowerCase().indexOf(String(cityName).toLowerCase());
+      return (k > 0 ? a.slice(0, k) : a.split(',')[0]).replace(/[\s,]+$/, '');
+    }
+    // today's hours and the price level, only when the data carries them (Qloo `hours` / `price_level`)
+    function hours(c) {
+      const h = c.hours_today || c.hours; if (!h) return '';
+      if (typeof h === 'string') return h;
+      const day = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+      const t = h[day] || h[day.slice(0, 3)] || null;
+      return Array.isArray(t) ? t.map(x => typeof x === 'string' ? x : [x.opens, x.closes].filter(Boolean).join('–')).join(', ') : (t || '');
+    }
+    const price = c => { const p = c.price_level ?? c.price; return p == null || p === '' ? '' : typeof p === 'number' ? '$'.repeat(Math.max(1, Math.min(4, Math.round(p)))) : String(p); };
+    function mapsLinks(c) {
+      const q = [c.name, c.address].filter(Boolean).join(', ');
+      const apple = `https://maps.apple.com/?q=${encodeURIComponent(c.name || '')}` + (c.lat != null ? `&ll=${c.lat},${c.lon}` : '') + (c.address ? `&address=${encodeURIComponent(c.address)}` : '');
+      const google = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+      return `<a href="${esc(apple)}" target="_blank" rel="noopener">Apple Maps</a><a href="${esc(google)}" target="_blank" rel="noopener">Google Maps</a>`;
     }
     function cardEl(id) {
       const c = st.cards.get(id);
@@ -460,13 +529,17 @@
       let timer = null, held = false;
       const cancel = () => { clearTimeout(timer); node.classList.remove('holding'); };
       node.addEventListener('pointerdown', e => {
-        if (st.struck.has(id) || e.button > 0) return;
+        if (st.struck.has(id) || e.button > 0 || e.target.closest('a, .xbtn')) return;
         held = false; node.classList.add('holding');
         timer = setTimeout(() => { held = true; node.classList.remove('holding'); strike(id, `struck by you · ${hhmm()}`, true); }, 900);
       });
       ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => node.addEventListener(ev, cancel));
       node.addEventListener('contextmenu', e => e.preventDefault());
-      node.addEventListener('click', () => { if (held) { held = false; return; } cardSheet(id); });
+      node.addEventListener('click', e => {
+        if (e.target.closest('a')) return;
+        if (e.target.closest('.xbtn')) { e.stopPropagation(); strike(id, `struck by you · ${hhmm()}`, true); return; }
+        if (held) { held = false; return; } cardSheet(id);
+      });
       return node;
     }
     function drawCards() {
@@ -478,13 +551,21 @@
     // in under it, and every number after it moves down one, on the cards and the map alike
     function strike(id, text, human) {
       st.struck.set(id, { text, human: !!human });
+      if (human) { try { localStorage.setItem('unsaid.hint', '1'); } catch (e) { /* */ } const h = $('#hint'); if (h) h.remove(); }
       const rid = st.reserves.shift();
       if (rid) {
         st.risen.set(rid, 'rose in its place · a reserve no AI named');
         st.slots.splice(st.slots.indexOf(id) + 1, 0, rid);
       }
       drawCards(); counter(); mapDraw();
+      const dl = $('#darelabel'); if (dl) dl.textContent = dareLabel();
       return rid;
+    }
+    // a burned card: scrolled to and flashed, so the paste visibly did something
+    function flash(id) {
+      const n = $(`#cards .card[data-id="${CSS.escape(id)}"]`); if (!n) return;
+      n.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      n.classList.remove('flash'); void n.offsetWidth; n.classList.add('flash');
     }
     function dare(text) {
       const out = $('#dareout');
@@ -492,12 +573,15 @@
       const ids = liveIds();
       const hits = Matcher.find(text, ids.map(id => st.cards.get(id).name));
       if (!hits.length) { out.innerHTML = `None of these ${ids.length} named.`; return; }
+      const burned = [];
       out.innerHTML = hits.map(h => {
         const id = ids[h.index], c = st.cards.get(id);
         const rid = strike(id, `named in your paste · ${hhmm()}`);
+        burned.push(id);
         const r = rid && st.cards.get(rid);
         return `<span class="red">It named ${esc(c.name)} · burned.</span>` + (r ? ` ${placeName(r, rid)} takes its place.` : '');
       }).join('<br>');
+      if (burned.length) flash(burned[0]);
     }
 
     // ---- S3 · card back
@@ -508,7 +592,7 @@
       const ns = c.never_said || {};
       const fit = c.tied ? null : c.fit_rank;
       const head = fit == null ? (c.name ? esc(c.name) : ph(null, `place ${cardNo(id)}`)) + '.'
-        : `#${fit} for you.` + (flat ? '' : ` <span class="any">#${ph(c.any_rank, 'ANY')} for anyone.</span>`);
+        : `#${fit} for you.` + (flat || c.any_rank == null ? '' : ` <span class="any">#${c.any_rank} for anyone.</span>`);
       const pct = r => Math.max(0, Math.min(100, ((r - 1) / Math.max(1, (U || 1) - 1)) * 100));
       const pos = r => `${pct(r)}%`;
       // a label near either end hangs inward, so it never leaves the sheet
@@ -517,24 +601,27 @@
           ${fit != null ? `<div class="tick" style="left:${pos(fit)}"></div><div class="tl" style="${lab(fit)}">#${fit} for you</div>` : ''}
           ${c.any_rank != null ? `<div class="tick any" style="left:${pos(c.any_rank)}"></div><div class="tl any" style="${lab(c.any_rank)}">#${c.any_rank} for anyone</div>` : ''}
           <div class="end" style="left:0">#1</div><div class="end" style="right:0">#${U}</div></div>`;
-      const holds = c.holds != null && c.n_loves != null && c.holds >= c.n_loves ? 'holds even if you drop any one love'
-        : `holds without ${c.holds_without ? [].concat(c.holds_without).map(x => esc(tName(x))).join(' or ') : ph(null, 'love')}`;
+      const holds = c.holds != null && c.n_loves != null && c.holds >= c.n_loves ? 'It stays a pick even if you drop any one love.'
+        : c.holds_without ? `It stays a pick without ${[].concat(c.holds_without).map(x => esc(tName(x))).join(' or ')}.` : '';
       const st3 = st.struck.get(id);
       openSheet(`
-        <div class="cap">${esc(cityName)} · card ${cardNo(id)} · ${c.name ? esc(c.name) : ph(null, `place ${cardNo(id)}`)} · ${ph(c.neighbourhood, 'neighbourhood')}</div>
+        <div class="cap">${esc(cityName)} · card ${cardNo(id)} · ${esc(c.name || '')}${c.neighbourhood ? ' · ' + esc(c.neighbourhood) : ''}</div>
         <h1>${head}</h1>
         ${st3 ? `<div class="red">${esc(st3.text)}</div>` : ''}
         ${flat ? '<div class="sub">your loves barely move this city’s order</div>' : ''}
-        ${thin ? `<div class="sub">out of ${ph(U, 'U')}; many places tie for you here</div>` : ''}
+        ${thin && U != null ? `<div class="sub">out of ${U}; many places tie for you here</div>` : ''}
         <div class="blk"><div class="sh"><h2>Never said</h2></div>
           <p>Named 0 times in ${askLine()}.</p></div>
         <div class="blk"><div class="sh"><h2>Fits you</h2></div>${slider}
-          <p class="dim">of ${ph(U, 'U')} places within ${ph(Rmi, 'R')} mi, rated ${CFG.floor.rating}+, open. ‘Anyone’ is Qloo’s popularity order of the same places.</p></div>
+          ${c.why ? `<p>${esc(cap1(c.why))}.</p>` : ''}
+          <p class="dim">${U != null ? `Out of ${U} places` : 'Out of the places'}${Rmi != null ? ` within ${Rmi} mi` : ''}, rated ${CFG.floor.rating}+ and open. “For anyone” is Qloo’s popularity order of the same places.</p>
+          <p class="dim">${EXPLAIN}</p></div>
         <div class="blk"><div class="sh"><h2>Because</h2></div>
-          <div class="big1">${c.because == null ? ph(null, 'love') : esc(tName(c.because))}</div><p class="dim">${holds}</p></div>
-        <div class="blk">${httpUrl(c.url) ? `<a class="btn solid" href="${esc(c.url)}" target="_blank" rel="noopener">Go ↗</a>`
-          : c.address ? `<a class="btn solid" href="https://www.openstreetmap.org/search?query=${encodeURIComponent(c.address)}" target="_blank" rel="noopener">Directions ↗</a>` : ''}
-          ${c.last_seen ? `<p class="dim">Hours and address listed in Qloo · checked ${ph(UM.day(c.last_seen.checked_at), 'date')}</p>` : ''}
+          <div class="big1">${c.because == null ? '' : 'You love ' + esc(tName(c.because)) + '.'}</div>${c.because_detail ? `<p>${esc(cap1(typedText(c.because_detail)))}.</p>` : ''}<p class="dim">${holds}</p></div>
+        <div class="blk"><div class="sh"><h2>Go</h2></div>
+          ${c.address ? `<p>${esc(c.address)}${hours(c) ? `<br><span class="dim">today ${esc(hours(c))}</span>` : ''}${price(c) ? ` <span class="dim">· ${esc(price(c))}</span>` : ''}</p>` : ''}
+          <div class="links">${httpUrl(c.url) ? `<a class="btn" href="${esc(c.url)}" target="_blank" rel="noopener">Website ↗</a>` : ''}${mapsLinks(c).replace(/<a /g, '<a class="btn solid" ').replace(/<\/a>/g, ' ↗</a>')}</div>
+          ${c.last_seen && UM.day(c.last_seen.checked_at) ? `<p class="dim">Hours and address listed in Qloo · checked ${esc(UM.day(c.last_seen.checked_at))}</p>` : ''}
           <p class="dim">No place can pay to be picked.</p></div>
         <details class="log"><summary>Raw log</summary><div class="logbody">${rawLog(c)}</div></details>`);
     }
@@ -558,9 +645,23 @@
       return L.join('');
     }
     function nameSheet(o) {
+      const hits = [...o.hits.values()];
+      const all = [...st.asks.values()];
+      const byP = p => ({ n: hits.filter(h => h.provider === p).length, of: all.filter(a => a.provider === p).length });
+      const provs = [...new Set(hits.map(h => h.provider).filter(Boolean))];
+      // the hidden-gem asks (the census's 16 phrasings), per AI: "Claude named it in 13 of its 16 hidden-gem asks"
+      const gemOf = p => { const H = all.filter(a => a.provider === p && /-hidden-/.test(a.phrasing_id || '')); return H.length ? { n: hits.filter(h => h.provider === p && /-hidden-/.test(h.phrasing_id || '')).length, of: H.length } : null; };
+      const lines = provs.map(p => { const g = gemOf(p), b = byP(p);
+        return g && g.n ? `<b>${esc(p)}</b> named it in <span class="red">${g.n} of its ${g.of}</span> hidden-gem asks, and in ${b.n} of all ${b.of} of its asks here.`
+          : `<b>${esc(p)}</b> named it in ${b.n} of its ${b.of} asks here.`; });
+      const first = hits.slice().sort((a, b) => String(a.asked_at).localeCompare(String(b.asked_at)))[0] || o;
+      const why = o.outcome === 'struck' ? 'It was in your Qloo pool, so crossing it out cost you a card.' : o.reason === 'not in pool' ? 'It wasn’t in your Qloo pool for these loves, so crossing it out cost you nothing.' : '';
       openSheet(`<div class="cap">everyone gets these</div><h1 style="font-size:32px"><span style="text-decoration:line-through;text-decoration-color:var(--red);text-decoration-thickness:2px">${wn(o)}</span></h1>
-        <p class="dim">${o.provider ? esc(o.provider) + ' ' + esc(o.model || '') : '<span class="mock">mock</span>'} · ${o.lane === 'live' ? 'asked just now' : 'dated, asked ' + ph(et(o.asked_at), 'date')}</p>
-        <p>“${esc(o.phrasing || '')}”</p><p class="dim">named in ${o.n} answer${o.n === 1 ? '' : 's'} here · ${o.qloo_id ? 'Qloo ID ' + esc(o.qloo_id) : 'no Qloo ID'}${o.reason ? ' · ' + esc(o.reason) : ''}</p>`);
+        ${lines.map(l => `<p>${l}</p>`).join('')}
+        ${why ? `<p class="dim">${why}</p>` : ''}
+        <p class="dim">For example, asked “${esc(first.phrasing || '')}”${first.asked_at ? ` (${esc(et(first.asked_at))})` : ''}.</p>
+        <details class="log"><summary>Raw</summary><div class="logbody">${hits.map(h => `<div>${esc(et(h.asked_at) || '')} · <span class="v">${esc(h.provider || '')}</span> ${esc(h.model || '')} · ${h.lane === 'live' ? 'live' : 'dated'} · “${esc(h.phrasing || '')}”</div>`).join('')}
+          <div>${o.qloo_id ? 'Qloo ID ' + esc(o.qloo_id) : 'no Qloo ID'}${o.reason ? ' · ' + esc(o.reason) : ''}</div></div></details>`);
     }
 
     // ---- S4 · not a popularity filter
@@ -568,13 +669,22 @@
       const R = st.result, D = R.diag || {}, K = R.counts || {}, F = K.floor || {};
       const cut = K.U != null && K.S != null ? K.U - K.S : null;
       const nm = n => n == null ? null : (typeof n === 'object' ? n.name : n);
-      const list = (xs, x) => xs == null ? `<li>${ph(null, 'names')}</li>` : !xs.length ? '<li class="dim">none</li>' : xs.map(n => `<li class="${x ? 'x' : ''}"><span>${nm(n) == null ? ph(null, 'name') : esc(nm(n))}</span></li>`).join('');
+      const names = xs => (xs || []).map(nm).filter(Boolean);
+      const obscure = names(D.obscure_names ?? D.obscure), known = names(D.known_names ?? D.known);
+      const say = xs => xs.length === 1 ? esc(xs[0]) : xs.slice(0, -1).map(esc).join(', ') + ' and ' + esc(xs[xs.length - 1]);
+      const P = [];
+      if (cut != null && D.cap_keep != null) P.push(`If we had just cut the ${cut} most popular places instead, ${D.cap_keep} of the places the AIs named would still be on your list` +
+        (D.cap_shared != null ? `, and that list’s top ${st.slots.length} would share only ${D.cap_shared} with yours.` : '.'));
+      if (obscure.length) P.push(`The AIs also name little-known places, and those get crossed out too: ${say(obscure)}.`);
+      if (known.length) P.push(`And well-known places no AI named stay in: ${say(known)}.`);
+      const T = [];
+      if (D.rho_tp != null) T.push(`taste vs popularity, Spearman ρ ${Number(D.rho_tp).toFixed(2)}`);
+      if (D.rho_res != null) T.push(`after the city’s own order is taken away, ρ ${Number(D.rho_res).toFixed(2)}`);
+      if (K.P != null && K.U != null) T.push(`${K.P} places from Qloo → ${K.U} kept` + [['closed', F.closed], [`rated below ${CFG.floor.rating}`, F.below_43], [`outside ${K.R_mi} mi`, F.outside_R], ['not a restaurant or bar', F.not_venue]]
+        .filter(([, v]) => v != null).map(([k, v]) => ` · ${k} ${v}`).join(''));
       openSheet(`<div class="cap">${esc(cityName)}</div><h1>Not a popularity filter.</h1>
-        <div class="cols"><div><div class="sh"><h2>Struck though obscure</h2></div><ul>${list(D.obscure_names ?? D.obscure, true)}</ul></div>
-          <div><div class="sh"><h2>Kept though known</h2></div><ul>${list(D.known_names ?? D.known, false)}</ul></div></div>
-        <div class="blk"><p>A popularity cap cutting the same ${ph(cut, 'S')} would keep ${ph(D.cap_keep, 'CAP_KEEP')} of the places the AIs named. Its ${st.slots.length} and yours share ${ph(D.cap_shared, 'CAP_SHARED')}.</p>
-          <p>Taste vs popularity ρ ${ph(D.rho_tp, 'RHO_TP')}; after the city’s own order is taken away, ρ ${ph(D.rho_res, 'RHO_RES')}.</p>
-          <p class="dim">${ph(K.P, 'P')} → ${ph(K.U, 'U')} (closed ${ph(F.closed, 'c')}, below ${CFG.floor.rating} ${ph(F.below_43, 'f')}, outside ${ph(K.R_mi, 'R')} mi ${ph(F.outside_R, 'd')}, not a restaurant or bar ${ph(F.not_venue, 'v')}).</p></div>`);
+        <div class="blk"><p>${EXPLAIN}</p>${P.map(t => `<p>${t}</p>`).join('')}</div>
+        ${T.length ? `<details class="log"><summary>The numbers</summary><div class="logbody">${T.map(t => `<div>${t}</div>`).join('')}</div></details>` : ''}`);
     }
 
     // ---- share
@@ -582,7 +692,7 @@
       openSheet(`<div class="cap">share</div><canvas class="sharecv" id="sharecv"></canvas>
         <div class="links"><a class="btn solid" id="dl" download="unsaid.png" href="#">Save image</a>${navigator.share ? '<button class="btn" id="sh">Share</button>' : ''}</div>`);
       const cv = $('#sharecv');
-      Share.draw(cv, shareData());
+      Share.draw(cv, { ...shareData(), site: siteHost() });
       cv.toBlob(b => {
         const u = URL.createObjectURL(b); $('#dl').href = u;
         const sb = $('#sh');
@@ -597,7 +707,18 @@
 
     // ---- go
     if (API.health === 'waking' && !src) status();
-    ctl = API.run({ city: slug, loves, src, instant: !!set }, onEvent, () => { if (!st.done) { status(); } });
+    // a fresh run that hasn't finished in 90 s, or a stream that ends without a result, says so plainly, with Retry
+    function fail() {
+      if (st.done || st.failed || window.__st !== st) return;   // a later page owns the screen now
+      st.failed = true; clearTimeout(st.failT); if (ctl) ctl.abort();
+      $('#status').classList.remove('busy');
+      $('#s-left').hidden = false; $('#res').classList.add('done');
+      $('#leftbody').innerHTML = `<p class="empty">That run didn’t finish. The ranker may be waking up or busy; your three loves are saved in this link.</p>
+        <div class="go"><button class="btn solid" id="retry">Retry</button><a class="link" href="#/">change your three</a></div>${tryList()}`;
+      $('#retry').addEventListener('click', () => route());
+    }
+    if (!src) st.failT = setTimeout(fail, 90000);
+    ctl = API.run({ city: slug, loves, src, instant: !!set }, onEvent, () => { if (!st.done) { status(); fail(); } });
     st.mock = ctl.mock;
     window.__st = st;
     status(); counter();
@@ -605,37 +726,44 @@
 
   // ------------------------------------------------------------------ the map header
   function mapHeader(box, M, cen, st) {
+    // the hero (UNSAID.md §0): St. Louis leads with Mai Lee, named by both AIs; elsewhere the city's own census gem
+    const two = cen.mailee_claude && cen.chatgpt && cen.chatgpt.gem && cen.chatgpt.gem.name === cen.mailee_claude.name ? cen.mailee_claude : null;
+    const gem = two || cen.gem;
+    const gemXY = (M.ai || []).find(a => a.name === gem.name) || (M.outside || []).find(a => a.name === gem.name) || null;
     function draw() {
       box.innerHTML = '';
       const W = box.clientWidth, phone = W < 600;
-      const story = el(box, 'div', phone ? 'position:relative;margin:18px 0 6px' : `position:absolute;left:${Math.round(W * .56)}px;top:50%;transform:translateY(-50%);width:${Math.round(W * .44)}px`);
-      // harness/census_stats_claude.txt:58 (13 of 16) and :46 + :52 (11 of 14); ChatGPT's line from census_stats_codex.txt, via census.json
+      const story = el(box, 'div', phone ? 'position:relative;margin:6px 0 4px' : `position:absolute;left:${Math.round(W * .56)}px;top:50%;transform:translateY(-50%);width:${Math.round(W * .44)}px`);
       const cg = cen.chatgpt && cen.chatgpt.gem;
-      const also = cg && cen.mailee_claude && cen.mailee_claude.name === cg.name ? ` · ${esc(CEN.provider)} says it ${cen.mailee_claude.hits} times too` : '';
-      story.innerHTML = `<div style="font:400 ${phone ? 20 : 26}px/1.15 var(--serif)">Ask ${esc(CEN.provider)} for a hidden gem in ${esc(cen.city)}.</div>
-        <div style="margin-top:10px"><span style="position:relative;font:400 ${phone ? 40 : 54}px/1 var(--serif);color:var(--red);white-space:nowrap">${esc(cen.gem.name).replace("'", '’')}<span style="position:absolute;left:-.04em;right:-.04em;top:56%;height:.07em;background:var(--red);box-shadow:0 0 0 .022em var(--bg)"></span></span></div>
-        <div style="margin-top:10px;font:400 ${phone ? 16 : 19}px/1.3 var(--serif)"><span class="red">${cen.gem.hits} times out of ${cen.gem.of}</span>` +
-        (cen.plain ? `<br><span class="dim">also on ${cen.plain.hits} of its ${cen.plain.of} plain lists</span>`
-          : cen.gem.first != null ? `<br><span class="dim">named first in ${cen.gem.first}</span>` : '') + '</div>' +
-        (cg ? `<div class="dim" style="margin-top:8px;font:400 ${phone ? 13 : 14}px/1.4 var(--mono)">${esc(CEN.chatgpt_provider)}’s: ${esc(cg.name)}, ${cg.hits} of ${cg.of}${also}</div>` : '');
-      const H = phone ? 320 : 430, mw = phone ? W : W * .56;
-      const holder = el(box, 'div', `position:relative;height:${H}px;width:${phone ? W : W}px`);
+      const gx = `<span class="gx" style="font:400 ${phone ? 30 : 54}px/1 var(--serif)">${esc(gem.name).replace("'", '’')}</span>`;
+      story.innerHTML = two
+        // census_stats_claude.txt:59 (13 of 16) and census_stats_codex.txt:60 (10 of 16), via census.json
+        ? `<div style="font:400 ${phone ? 17 : 26}px/1.2 var(--serif)">Ask an AI for a hidden gem in ${esc(cen.city)}.</div>
+           <div style="margin-top:${phone ? 6 : 10}px">${gx}</div>
+           <div style="margin-top:${phone ? 6 : 10}px;font:400 ${phone ? 15 : 19}px/1.3 var(--serif)" class="red">${esc(CEN.provider)}: ${two.hits} times out of ${two.of}<br>${esc(CEN.chatgpt_provider)}: ${cg.hits} of ${cg.of}</div>`
+        : `<div style="font:400 ${phone ? 17 : 26}px/1.2 var(--serif)">Ask ${esc(CEN.provider)} for a hidden gem in ${esc(cen.city)}.</div>
+           <div style="margin-top:${phone ? 6 : 10}px">${gx}</div>
+           <div style="margin-top:${phone ? 6 : 10}px;font:400 ${phone ? 15 : 19}px/1.3 var(--serif)"><span class="red">${cen.gem.hits} times out of ${cen.gem.of}</span>` +
+             (cen.gem.first != null ? `<span class="dim"> · named first in ${cen.gem.first}</span>` : '') + '</div>' +
+             (cg ? `<div class="dim" style="margin-top:8px;font:400 ${phone ? 12 : 14}px/1.4 var(--mono)">${esc(CEN.chatgpt_provider)}’s: ${esc(cg.name)}, ${cg.hits} of ${cg.of}</div>` : '');
+      const H = phone ? 230 : 430, mw = phone ? W : W * .56;
+      const holder = el(box, 'div', `position:relative;height:${H}px;width:${W}px`);
       if (!phone) { box.style.height = H + 'px'; holder.style.position = 'absolute'; holder.style.left = '0'; holder.style.top = '0'; } else box.style.height = 'auto';
       const ctx = UM.canvas(holder, mw, H);
-      // the frame takes in every card (the pool reaches past the city, e.g. North County); a dot is never moved
-      const cardsXY = [...st.cards.values()].filter(c => c.lat != null);
+      // the frame takes in every card (the pool reaches past the city, e.g. North County) and the gem; a dot is never moved
+      const cardsXY = [...st.cards.values()].filter(c => c.lat != null).concat(gemXY ? [gemXY] : []);
       const P = UM.projection(UM.frame(M, cardsXY), { x: mw * .22, y: 10, w: mw * .7, h: H - 20 });
-      const ai = M.ai, cmax = Math.max(...ai.map(a => a.count)), dmax = phone ? 22 : 28;
+      const ai = M.ai, cmax = Math.max(...ai.map(a => a.count)), dmax = phone ? 18 : 28;
       const dense = M.places.length > 3000;   // New York: ~20k dots, smaller and without the haze
-      UM.dots(ctx, M, P, dense ? { d: phone ? 1 : 1.3, alpha: .55 } : { d: phone ? 2.2 : 2.8, glow: phone ? 7 : 10 });
+      UM.dots(ctx, M, P, dense ? { d: phone ? 1 : 1.3, alpha: .55 } : { d: phone ? 2 : 2.8, glow: phone ? 6 : 10 });
       ai.slice().sort((a, b) => a.count - b.count).forEach(a => { const [x, y] = P(a.lon, a.lat); UM.disc(ctx, x, y, UM.discD(a.count, cmax, dmax, 3), st.done ? .55 : .85); });
-      const g = ai.find(a => a.name === cen.gem.name);
-      if (g) {
-        const [x, y] = P(g.lon, g.lat), r = UM.discD(g.count, cmax, dmax, 3) / 2;
+      if (gemXY) {
+        const [x, y] = P(gemXY.lon, gemXY.lat), r = UM.discD(gemXY.count || cmax, cmax, dmax, 3) / 2;
+        if (!ai.includes(gemXY)) UM.disc(ctx, x, y, r * 2, .85);
         UM.ring(ctx, x, y, r + 5, 1.4);
-        const lx = P.bounds.x0 - 14;
+        const lx = Math.min(P.bounds.x0, x - r - 30) - 14;
         UM.leader(ctx, x - r - 5, y, lx + 4, y, UM.C.red, .8);
-        el(holder, 'div', `top:${y - 9}px;right:${W - lx}px;font-size:${phone ? 14 : 16}px;text-align:right`, `<span class="n">${esc(cen.gem.name).replace("'", '’')}</span>`).className = 'lab red';
+        el(holder, 'div', `top:${y - 9}px;right:${W - lx}px;font-size:${phone ? 13 : 16}px;text-align:right`, `<span class="n">${esc(gem.name).replace("'", '’')}</span>`).className = 'lab red';
       }
       // the seven, as they land; struck or burned ones in red
       const ids = st.done ? st.slots : st.order.slice(0, 7);
@@ -647,6 +775,11 @@
         UM.seven(ctx, x, y, byYou ? .45 : 1, phone ? 7 : 9, 3, byAI ? UM.C.red : UM.C.white);
         el(holder, 'div', `top:${y - 5}px;left:${x + 9}px`, String(i + 1)).className = 'lab num' + (byAI ? ' x' : byYou ? ' xi' : '');
       });
+      // the legend, under the map
+      const lg = el(box, 'div', phone ? 'position:relative' : `position:absolute;left:0;top:${H + 4}px;width:${W}px`,
+        `<span><i class="k g"></i>places to eat and drink (OpenStreetMap)</span><span><i class="k r"></i>places the AIs named, by how often</span><span><i class="k w"></i>yours, numbered like the cards</span>`);
+      lg.className = 'maplegend';
+      if (!phone) box.style.height = (H + 30) + 'px';
     }
     draw();
     let raf = 0;

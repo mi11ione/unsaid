@@ -1,9 +1,13 @@
 {
- "_": "The grounding meter (UNSAID.md §4 gate D, k10_meter.py). null until the meter has run; the page shows a placeholder for each null.",
- "m_alone": null,
- "m_qloo": null,
+ "_": "The grounding meter (UNSAID.md §4 gate D, engine/k10_meter.py), as measured 28 Oct and printed whatever it said: README.md gate table (D · meter) and LOG.md. Medians of 12 picks on the other AIs' everyone-list.",
+ "m_alone": 5,
+ "m_qloo": 4,
  "of": 12,
  "sets": 10,
- "assistants": 3,
+ "assistants": 2,
+ "city": "St. Louis",
+ "gate": "FAIL",
+ "bar": "at least 4 fewer picks on it in 7 of 10 sets",
+ "below4_sets": 2,
  "featured": false
 }

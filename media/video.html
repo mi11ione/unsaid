@@ -117,13 +117,12 @@
   const AIS = Object.keys(PV).filter(k => CD.asks_by[k]).map(k => PV[k]);
   const AIS_TXT = AIS.length > 1 ? AIS.slice(0, -1).join(', ') + ' and ' + AIS[AIS.length - 1] : AIS.join('');
   const nb = s => String(s).replace(/ (\S+)$/, '&nbsp;$1');            // no lone last word on a caption line
-  // PENDING (orchestrator, 28 Oct): the ranking is being changed (fit to you minus fit to everyone in the city); these
-  // four lines wait for its one-line wording. Everything else in the video is final copy.
+  // the ranking's wording (orchestrator, 28 Oct, after D's 93987d4: lift = fit for you − max(popularity, fit for everyone))
   const COPY = {
-    rankCap: 'What’s left, Qloo ranks for him.',
-    cardsCap: n => `${n} for you. Ranked by Qloo.`,
-    detailOf: U => `The same ${U} places, ranked by Qloo:<br>for his taste, then by popularity.`,
-    funnel3: (S_, nres) => `for him, ranked by Qloo<br>from the ${S_} left` + (nres ? `<br>(+${nres} in reserve)` : ''),
+    rankCap: 'What’s left, ranked by Qloo for what fits him, not everyone.',
+    cardsCap: n => `${n} for you.`,
+    detailOf: U => `Out of the same ${U} places. “For anyone” is popularity alone.`,
+    funnel3: (S_, nres) => `for him, from the ${S_} left:<br>what fits him, not everyone` + (nres ? `<br>(+${nres} in reserve)` : ''),
   };
   // scene lengths (s); the agent scene exists only when a live transcript was found
   const DUR = [['s1', 13.4], ['s2', 8.6], ['s3', 15.4], ['s4', 7.6], ['s5', AG ? 7.4 : 0], ['s6', 7.1]];
@@ -278,7 +277,7 @@
   const P1 = CD.picks[0];
   const D1 = mkRowC(s3, [P1]);
   const det = el(s3, 'div', '', `<div class="h">#${P1.fit_rank} for you. <span>#${P1.any_rank} for anyone.</span></div>
-    <div class="of">${COPY.detailOf(P1.U)}</div>
+    <div class="of">${COPY.detailOf(P1.U)}</div>${P1.why ? `<div class="of" style="color:var(--ink)">${esc(P1.why.charAt(0).toUpperCase() + P1.why.slice(1))}.</div>` : ''}
     <div class="k"><div class="t">NEVER SAID</div><div class="b">Named 0 times in ${P1.never_said} asks.</div></div>
     <div class="k"><div class="t">BECAUSE</div><div class="b">You love ${esc(UM.typedName({ loves: loves.map(l => ({ label: l.qloo, text: l.label })) }, P1.because))}.</div></div>`);
   det.className = 'det';

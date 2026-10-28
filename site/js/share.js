@@ -1,6 +1,6 @@
 /* UNSAID · the share image, 1080×1350, dark, drawn client-side on a canvas (UNSAID.md §2.1).
-   "The AIs told everyone these ⟦WALL⟧. Not one said these 7."; the loves at 32 px; the struck wall as texture on the
-   left, the seven with what each is on the right; footer "ranked by Qloo · ⟦date⟧ · UNSAID". Solid red strikes only.
+   "The AIs told everyone these WALL places. Not one said these 7."; the loves at 32 px; the struck wall as texture on
+   the left, the seven with what each is on the right; footer "ranked by Qloo for what fits you · date" and the site's address.
    data: a result (CONTRACT.md) plus optional wallNames (struck names) and picks override. */
 (function () {
   const C = { bg: '#0b0b0b', ink: '#ecebe5', white: '#f2efe6', dim: '#8e8c85', faint: '#55534e', red: '#ff2d3d', amber: '#e2a336', rule: '#34332e' };
@@ -45,8 +45,8 @@
     // headline
     let y = 210;
     ctx.font = `400 58px ${SERIF}`;
-    // "The AIs told everyone these ⟦WALL⟧ places." (counts.wall of this result)
-    const a = 'The AIs told everyone these ', wtxt = WALL == null ? '⟦WALL⟧' : String(WALL);
+    // "The AIs told everyone these WALL places." (counts.wall of this result)
+    const a = 'The AIs told everyone these ', wtxt = WALL == null ? '' : String(WALL);
     const l1 = wrap(ctx, a + wtxt + ' places.', W - 2 * pad);
     // draw line 1 with the number in red (the number is at the end of the sentence)
     l1.forEach((line, i) => {
@@ -98,9 +98,9 @@
       ctx.font = `14px ${MONO}`; ctx.fillStyle = C.faint; ctx.fillText(String(i + 1).padStart(2, '0'), rx, yy);
       ctx.font = `400 30px ${SERIF}`;
       if (c.name) { ctx.fillStyle = C.white; ctx.fillText(wrap(ctx, c.name, rw - 40)[0], rx + 36, yy + 4); }
-      else { ctx.fillStyle = C.amber; ctx.fillText(`⟦${c._ph || 'place ' + (i + 1)}⟧`, rx + 36, yy + 4); }
+      else { ctx.fillStyle = C.faint; ctx.fillText('–', rx + 36, yy + 4); }
       ctx.font = `16px ${MONO}`; ctx.fillStyle = C.dim;
-      const what = c.what == null ? '⟦what it is⟧' : c.what;
+      const what = c.what == null ? '' : c.what;
       ctx.fillText(wrap(ctx, what + (c.neighbourhood ? ' · ' + c.neighbourhood : ''), rw - 36)[0], rx + 36, yy + 34);
     });
 
@@ -108,7 +108,9 @@
     ctx.fillStyle = C.rule; ctx.fillRect(pad, H - 112, W - 2 * pad, 1);
     ctx.font = `18px ${MONO}`; ctx.fillStyle = C.dim;
     const d = dateOf(R.diag && R.diag.as_of);
-    ctx.fillText(`ranked by Qloo · ${d || '⟦date⟧'} · UNSAID`, pad, H - 70);
+    ctx.fillText(['ranked by Qloo for what fits you', d].filter(Boolean).join(' · '), pad, H - 70);
+    // the site's address, so a shared image leads back (R.site: the host the page runs on, else config.site)
+    if (R.site) { ctx.font = `600 22px ${MONO}`; ctx.fillStyle = C.ink; const t = String(R.site); ctx.fillText(t, W - pad - ctx.measureText(t).width, H - 70); }
     return cv;
   }
 

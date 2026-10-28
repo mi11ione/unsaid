@@ -56,7 +56,7 @@ prov_asks = collections.Counter(p for p, _, _ in {(w["provider"], w["phrasing_id
 C = R["counts"]
 assert C["U"] - C["struck_in_U"] == C["S"], C                                      # 52 - 9 = 43
 
-keep = ("name", "neighbourhood", "what", "fit_rank", "any_rank", "U", "rating", "open", "because", "holds", "n_loves", "lat", "lon")
+keep = ("name", "neighbourhood", "what", "fit_rank", "any_rank", "U", "rating", "open", "because", "because_detail", "why", "holds", "n_loves", "lat", "lon")
 card = lambda c: {k: c.get(k) for k in keep} | {"never_said": c["never_said"]["asks"]}
 typed = {l["label"]: l.get("text") or l["label"] for l in LIVE["loves"]}
 loves = [{"label": typed.get(l["label"], l["label"]), "qloo": l["label"], "type": l.get("type_label"), "dead": l.get("dead", False)} for l in R["loves"]]
