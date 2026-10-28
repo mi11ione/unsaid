@@ -611,6 +611,33 @@ class TestCardLines(unittest.TestCase):
         self.assertEqual(line, "only 12 of 97 sample tastes on Qloo put it in their top 30%")
         self.assertLessEqual(len(line), 60)
 
+    def test_card_quality_judge3(self):
+        self.assertEqual(E.card_name("september"), "September")
+        self.assertEqual(E.card_name("Marshas Ltd"), "Marshas")
+        self.assertEqual(E.card_name("Guys With The Fries Ride LLC"), "Guys With The Fries Ride")
+        self.assertEqual(E.card_name("Bar Laika by e-flux"), "Bar Laika by e-flux")     # mixed case stays
+        tag = lambda tid, name: {"id": tid, "name": name}  # noqa: E731
+        bar = [tag("urn:tag:category:place:bar", "Bar"), tag("urn:tag:category:place:restaurant", "Restaurant")]
+        kitchen = {"tags": bar + [tag("urn:tag:category:place:shared_use_commercial_kitchen", "Shared use commercial kitchen")]}
+        self.assertIsNotNone(E.excluded_kind(kitchen))
+        deliv = [tag("urn:tag:category:place:delivery_restaurant", "Delivery restaurant")]
+        self.assertIsNotNone(E.excluded_kind({"tags": bar + deliv}))                          # delivery only
+        dine = [tag("urn:tag:service_options:place:dine_in", "Dine in")]
+        self.assertIsNone(E.excluded_kind({"tags": bar + deliv + dine}))                     # The Flower Shop stays
+        what = E.what_line({"tags": bar + deliv + dine + [tag("urn:tag:cuisine:qloo:seafood", "Seafood"),
+                                                          tag("urn:tag:offerings:place:happy_hour", "Happy hour"),
+                                                          tag("urn:tag:cuisine:qloo:burgers", "Burgers")]})
+        self.assertNotIn("delivery", what)
+        self.assertNotIn("happy hour", what)
+        r = api.run_unsaid("St. Louis", CEDRIC, mode="fake", qloo=QL.Qloo(fake=True, cache_dir=tempfile.mkdtemp()),
+                           gemini=False, street_check=False)
+        for c in r["picks"] + r["reserves"]:
+            self.assertTrue(c["because_detail"], c["name"])                               # never without a reason
+            self.assertIsNotNone(c["distance_mi"])
+        details = [c["because_detail"] for c in r["picks"] if not c["because_detail"].startswith(("on Qloo", "Qloo ranks"))]
+        self.assertEqual(len(details), len(set(details)))                               # no tag twice in the seven
+        self.assertLessEqual(r["counts"]["named_food_count"], r["counts"]["wall"])
+
     def test_chain_rule_reads_the_places_own_website(self):
         mk = lambda i, n, w: {"entity_id": i, "name": n, "properties": {"website": w}}  # noqa: E731
         pool = [mk("fw1", "First Watch", "https://www.firstwatch.com/locations/saint-ann/"),

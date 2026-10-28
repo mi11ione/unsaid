@@ -91,6 +91,9 @@ CFG = {
                             "rehearsal_studio", "puppet_theater", "cruise_agency", "casino",
                             # judge 2 (28 Oct): stores and banquet/event businesses. event_venue and wedding_venue
                             # stay: every pool place carrying them is also a bar or restaurant (92 and 15 of 1,178)
+                            # judge 3 (29 Oct): kitchens you can't sit in
+                            "shared_use_commercial_kitchen", "commercial_kitchen", "ghost_kitchen", "cloud_kitchen",
+                            "virtual_restaurant", "virtual_kitchen",
                             "liquor_store", "wine_store", "beer_store", "banquet_hall", "event_planner",
                             "party_planner", "wedding_planner", "event_management_company",
                             "hookah_bar", "hookah_lounge", "hookah_store"],
@@ -708,6 +711,15 @@ def _tag_facts(t):
     return f
 
 
+# Delivery- or catering-only (29 Oct): one of these kinds and no sign you can eat there (dine in, table or bar
+# service). The Flower Shop (NYC) is tagged delivery_restaurant AND dine in: it stays.
+SERVICE_ONLY_KINDS = ("delivery_restaurant", "meal_delivery", "food_delivery", "delivery_service", "caterer",
+                      "catering", "catering_service", "catering_food_and_drink_supplier", "meal_takeaway")
+DINE_IN_TAGS = ("urn:tag:service_options:place:dine_in", "urn:tag:service_type:qloo:dine_in",
+                "urn:tag:dining_options:place:table_service", "urn:tag:service_type:qloo:bar_service",
+                "urn:tag:dining_options:place:counter_service")
+
+
 def excluded_kind(e):
     tags = [t for t in (e.get("tags") or []) if isinstance(t, dict)]
     facts = [_tag_facts(t) for t in tags]
@@ -715,6 +727,11 @@ def excluded_kind(e):
     for t, f in zip(tags, facts):
         if f[5]:
             return t.get("id") or t.get("name")      # not a place to eat or drink, whatever else it is
+    tids = [(t.get("id") or "").lower() for t in tags]
+    svc = next((x for x in tids if x.startswith(("urn:tag:category:place:", "urn:tag:genre:place:restaurant:"))
+                and x.rsplit(":", 1)[-1] in SERVICE_ONLY_KINDS), None)
+    if svc and not any(x in DINE_IN_TAGS for x in tids):
+        return svc                                    # delivery or catering only
     for t, (_, kind_tag, fast, hit, music, _n) in zip(tags, facts):
         # §3.1 hard-excludes food courts, hotels, malls, groceries, butchers and gyms outright; only a music
         # venue that is also tagged a restaurant or bar (a jazz bar with a kitchen) is kept
@@ -1307,8 +1324,16 @@ def last_seen_local(e, hours_known):
 WHAT_BLAND = {"restaurant", "bar", "place", "american", "bar food", "food", "casual", "casual dining",
               "comfort food", "new american", "pub food", "dining drinking"}
 WHAT_KEEP_B = ("live music", "jazz", "blues", "r&b", "soul music", "hip hop", "karaoke", "comedy", "open mic",
-               "live performances", "dj", "drag", "line dancing", "dancing", "dance floor", "trivia", "happy hour",
+               "live performances", "dj", "drag", "line dancing", "dancing", "dance floor", "trivia",
                "sports viewing", "billiards", "pool table", "darts")       # (b), in this order of preference
+# How you get served, not what the place is (judge 3, 29 Oct): never on a card's what line or because line
+WHAT_SERVICE = {"delivery", "delivery restaurant", "delivery service", "food delivery", "meal delivery",
+                "no contact delivery", "takeout", "take out", "takeaway", "meal takeaway", "takeout service",
+                "curbside pickup", "drive thru", "drive through", "dine in", "catering", "caterer",
+                "catering service", "reservations", "walk ins", "happy hour", "happy hour drinks",
+                "happy hour food", "onsite services", "online ordering", "order online", "table service",
+                "bar service", "counter service", "outdoor seating", "shared use commercial kitchen",
+                "ok to order just drinks", "food at bar", "late night food", "quick bite"}
 WHAT_CUISINE_FIRST = ("soul food", "barbecue", "bbq", "cajun", "creole", "caribbean", "jamaican", "ethiopian",
                       "vietnamese", "thai", "mexican", "italian", "chinese", "korean", "japanese", "indian",
                       "mediterranean", "middle eastern", "seafood", "southern", "steakhouse", "wings")
@@ -1350,6 +1375,8 @@ def what_line(e, n=2):
         tid = (t.get("id") or "").lower()
         raw = (t.get("name") or "").strip().lower()
         lab = _what_label(t)
+        if lab in WHAT_SERVICE or raw in WHAT_SERVICE:
+            continue
         if tid.startswith(("urn:tag:cuisine:", "urn:tag:category:place:", "urn:tag:genre:place:restaurant:")):
             (a2 if lab in WHAT_BLAND else a1).append((lab, not tid.startswith("urn:tag:cuisine:")))
         elif tid.startswith(WHAT_B_PREFIX) and any(raw == k or raw.startswith(k + " ") or raw.endswith(" " + k)
@@ -1477,6 +1504,21 @@ def display_name(name):
     return out
 
 
+CENTER_LABEL = {"stl": "downtown", "nyc": "Central Park", "la": "downtown"}   # cities.py centers, in words
+_CORP_TAIL = re.compile(r"(?:,?\s+(?:ltd|llc|inc)\.?)+$", re.I)
+
+
+def card_name(name):
+    """The card's display name (29 Oct): display_name, a trailing Ltd / LLC / Inc dropped ("Marshas Ltd" ->
+    "Marshas"), and an all-lowercase name title-cased ("september" -> "September"). Display only: matching and the
+    reverse check read Qloo's own name."""
+    out = display_name(name) or ""
+    out = _CORP_TAIL.sub("", out).strip() or out
+    if out and out == out.lower() and any(c.isalpha() for c in out):
+        out = " ".join(w[:1].upper() + w[1:] for w in out.split(" "))
+    return out or name
+
+
 def why_line(i, fit, pop_ord, ids, everyone, counts, flat, tastes="other tastes"):
     """Why this card won, in <= 60 chars, from the score's own numbers (the card already shows "#f for you" and
     "#p for anyone"). lift = fit for you - max(popularity, fit for everyone); the larger of the two is the bar it
@@ -1518,20 +1560,25 @@ def _tags_of(e):
     for t in e.get("tags") or []:
         if isinstance(t, dict) and (t.get("id") or "").startswith(WHAT_TAG_PREFIX) and t.get("name"):
             lab = _what_label(t)
-            if lab and lab not in WHAT_BLAND:
+            if lab and lab not in WHAT_BLAND and lab not in WHAT_SERVICE and \
+                    (t.get("name") or "").strip().lower() not in WHAT_SERVICE:
                 out[t["id"]] = lab
     return out
 
 
-def because_detail(i, love, byid, ids, orders, tied, dish_tags, dish_tagged):
-    """The one or two Qloo tags that tie the card to the love it credits. A dish love: the dish tag itself. Any other
-    love: the card's tags that are most over-represented among that love's top quarter of this pool (Qloo's own
-    per-love ranking and Qloo's own tags; 0 extra calls)."""
+def because_detail(i, love, byid, ids, orders, tied, dish_tags, dish_tagged, used=None):
+    """The reason line under "because you love X" (never empty for a credited card). A dish love: the dish tag
+    itself. Any other love: the card's tag that is most over-represented among that love's top quarter of this pool
+    (Qloo's own per-love ranking and Qloo's own tags; 0 extra calls), preferring one no other card in the same seven
+    already shows (used: labels taken so far, updated); else Qloo's own rank of the place for that love."""
     if not love:
         return None
     txt = love["text"]
-    if txt in dish_tags:
-        return ("on Qloo's %s list" % (love.get("name") or txt).lower()) if i in dish_tagged.get(txt, ()) else None
+    lname = love.get("name") or txt
+    if txt in dish_tags and i in dish_tagged.get(txt, ()):
+        return "on Qloo's %s list" % lname.lower()
+    if txt not in orders:
+        return None
     key = txt
     if _DETAIL.get("orders") is not orders or key not in _DETAIL:    # one run's orders (held: an id can be reused)
         if _DETAIL.get("orders") is not orders:
@@ -1549,16 +1596,23 @@ def because_detail(i, love, byid, ids, orders, tied, dish_tags, dish_tagged):
                 cnt_top[tid] = cnt_top.get(tid, 0) + 1
         lift = {}
         for tid, n in cnt_top.items():
-            if n >= 3 and n / float(len(top)) >= 0.2:
+            if n >= 2 and n / float(len(top)) >= 0.1:
                 lift[tid] = (n / float(len(top))) / (cnt_all[tid] / float(len(ids)))
         _DETAIL[key] = lift
     lift = _DETAIL[key]
+    used = used if used is not None else set()
     mine = _tags_of(byid[i])
-    best = sorted(((lift[t], mine[t]) for t in mine if lift.get(t, 0) >= 1.5), reverse=True)
-    labs = list(dict.fromkeys(l for _, l in best))[:2]
-    if not labs:
+    ranked = sorted(((lift[t], mine[t]) for t in mine if lift.get(t, 0) >= 1.2), key=lambda x: (-x[0], x[1]))
+    labs = list(dict.fromkeys(l for _, l in ranked))
+    strong = [l for l in labs if l not in used and any(v >= 1.5 for v, ll in ranked if ll == l)]
+    fresh = strong or [l for l in labs if l not in used]
+    if fresh:
+        pick = fresh[:1]
+        used.update(pick)
+        return "%s, like the places %s fans rank highest here" % (pick[0], lname)
+    if i in tied[txt]:
         return None
-    return "%s, like the places %s fans rank highest here" % (" and ".join(labs), love.get("name") or txt)
+    return "Qloo ranks it #%d of %d here for %s fans" % (orders[txt][i], len(ids), lname)
 
 
 # ---------------------------------------------------------------- the "everyone's taste" prior
@@ -2104,6 +2158,14 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
         return best[1] if best else None
 
     asked_hoods, street_answers = {}, []
+    details = {}
+
+    def assign_details():
+        """Each card's reason line, the seven in for-you order then the reserves, so no two show the same tag."""
+        details.clear()
+        used = set()
+        for i in sorted(picks, key=lambda x: (fit[x], x)) + list(reserves):
+            details[i] = because_detail(i, because(i), byid, ids, orders, tied, dish_tags, dish_tagged, used)
 
     # ---- cards (never_said reads the street asks and the live answer as they accumulate)
     def card(i):
@@ -2115,10 +2177,15 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
         n_street = len(asked_hoods.get(hood, []))
         is_tied = bool(live) and all(i in tied[l["text"]] for l in live)     # never true for a card
         ll = latlon(e) or (None, None)
-        return {"id": i, "name": display_name(e.get("name")), "what": what_line(e), "score": score[i],
+        return {"id": i, "name": card_name(e.get("name")), "name_qloo": e.get("name"), "what": what_line(e),
+                "score": score[i],
                 "why": why_line(i, fit, pop_ord, ids, everyone, ev_counts, flat,
                                 "sample tastes on Qloo" if prior_diag.get("method") == "anchors" else "other tastes"),
-                "because_detail": because_detail(i, b, byid, ids, orders, tied, dish_tags, dish_tagged), "neighbourhood_src": hood_src,
+                "because_detail": details[i] if i in details else because_detail(i, b, byid, ids, orders, tied,
+                                                                                  dish_tags, dish_tagged),
+                "neighbourhood_src": hood_src, "area": hood or None,
+                "distance_mi": round(C.haversine_mi((ll[0], ll[1]), city["center_latlon"]), 1)
+                if ll[0] is not None else None, "distance_from": CENTER_LABEL.get(city.get("key")),
                 "last_seen": seen_info.get(i),
                 "because": b["text"] if b else None, "because_label": (b.get("name") or b["text"]) if b else None,
                 "fit_rank": fit[i], "any_rank": None if flat else pop_ord[i], "U": N,
@@ -2130,6 +2197,7 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
                 "never_said": {"asks": n_city + len(street_answers), "city_asks": n_city, "street_asks": n_street,
                                "as_of": as_of}}
 
+    assign_details()
     for i in sorted(picks, key=lambda i: (fit[i], i)):     # candidates light, in for-you order
         emit("card", dict(card(i), provisional=bool(street_check)))
 
@@ -2223,6 +2291,7 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
     picks = sorted(picks, key=lambda i: (fit[i], i))           # displayed in for-you order
     reserves = sorted(reserves, key=lambda i: (-score[i], fit[i], i))  # reserves: the selection order, after the last card
 
+    assign_details()
     res["picks"] = [card(i) for i in picks]
     res["diag"]["credits"] = dict(collections.Counter(c["because"] for c in res["picks"]))
     res["reserves"] = [card(i) for i in reserves]
@@ -2269,6 +2338,10 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
     for w in wall_items:
         w["place"] = place_of.get(w["name"])
     n_places = len(set(place_of.values()))
+    # "the AIs named N places", honestly (29 Oct): a name Qloo resolved to something that is not a place to eat or
+    # drink (Green-Wood Cemetery, The Cloisters) is on the wall but not in this count; names with no Qloo ID stay
+    nonfood = {w["place"] for w in wall_items if w.get("reason") == "not a restaurant or bar"}
+    n_food = len({w["place"] for w in wall_items} - nonfood)
 
     # ---- status and flags
     n = len(res["picks"])
@@ -2290,7 +2363,7 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
     res["flags"] = flags
     n_city = len(all_answers)
     as_of = max([a.get("asked_at") or "" for a in all_answers] or [""]) or None
-    res["counts"].update({"wall": n_places, "asks": n_city + len(street_answers), "S": len(S),
+    res["counts"].update({"wall": n_places, "named_food_count": n_food, "asks": n_city + len(street_answers), "S": len(S),
                           "struck_in_U": len(struck_u)})
     res["diag"].update({
         "N": N, "S": len(S), "kept": len(eligible), "flat": flat, "all_dead": all_dead, "thin_taste": thin,

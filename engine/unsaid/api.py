@@ -497,6 +497,7 @@ def to_contract(res, trace, c, ls, fake):
     cn = res.get("counts") or {}
     out["counts"].update({k: cn.get(k, out["counts"].get(k)) for k in ("wall", "asks", "P", "U", "S", "R_mi")})
     out["counts"]["struck_in_U"] = cn.get("struck_in_U")
+    out["counts"]["named_food_count"] = cn.get("named_food_count")   # the "AIs named N places" number (29 Oct)
     if cn.get("floor"):
         out["counts"]["floor"] = cn["floor"]
     if res.get("fallback_ids"):
