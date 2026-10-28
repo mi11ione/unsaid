@@ -310,6 +310,8 @@ def excluded_kind(e):
         # place's kind, so only category/genre tags, plus fast-food cuisine tags, can exclude it
         kind_tag = tid.startswith(("urn:tag:category:place:", "urn:tag:genre:place:"))
         fast = "fast_food" in tid and (kind_tag or tid.startswith(("urn:tag:cuisine:", "urn:tag:culinary_style:")))
+        if not (fast or kind_tag):
+            continue                     # such a tag can never exclude (speed only: same outcome)
         hit = any(p in tid for p in pats) or (t.get("name") or "").strip().lower() in names
         music = any(m in tid for m in ("music_venue", "concert_venue", "concert_hall"))
         # §3.1 hard-excludes food courts, hotels, malls, groceries, butchers and gyms outright; only a music
@@ -463,8 +465,9 @@ class CitySearch:
         self.nonvenue = set()   # resolved entities that are not a restaurant or bar (tags known, no category tag)
 
     def shares_token(self, raw):
-        d = M.distinctive(raw)
-        return any(t in self.u_tokens or any(M.tok_eq(t, u) for u in self.u_tokens) for t in d)
+        if not hasattr(self, "_ti"):
+            self._ti = M.TokenIndex(self.u_tokens)      # same test, compared only within tok_eq's length bound
+        return any(self._ti.any_eq(t) for t in M.distinctive(raw))
 
     def __call__(self, raw):
         if self.q is None or not self.shares_token(raw):
@@ -495,8 +498,21 @@ def strike(q, city, U, wall_names, use_search=True):
     return struck, per, cs
 
 
+_NRB = {}
+
+
 def not_restaurant_or_bar(e):
-    """Tags known and either no restaurant/bar category tag, or an allowlist hard-exclude."""
+    """Tags known and either no restaurant/bar category tag, or an allowlist hard-exclude. Memoised per entity and
+    tag count (a /search result's tags don't change within the cache TTL)."""
+    k = (e.get("entity_id"), len(e.get("tags") or ()), tuple(CFG["EXCLUDE_TAG_PATTERNS"]))
+    if k not in _NRB:
+        if len(_NRB) > 50000:
+            _NRB.clear()
+        _NRB[k] = _not_restaurant_or_bar(e)
+    return _NRB[k]
+
+
+def _not_restaurant_or_bar(e):
     tags = [t for t in e.get("tags") or [] if isinstance(t, dict)]
     if not tags:
         return False          # unknown: never guess
@@ -537,8 +553,53 @@ def answer_text(a):
     return " | ".join(parts)
 
 
+class _Toks(set):
+    """An answer's token set, plus its tokens by length (built once) for the +-3 letters fuzzy test."""
+
+    def by_len(self):
+        b = getattr(self, "_b", None)
+        if b is None:
+            b = self._b = {}
+            for x in self:
+                b.setdefault(len(x), []).append(x)
+        return b
+
+
+class _RIndex(list):
+    """[(i, tokens)] plus a token -> answers index, so each distinct answer token is compared once, not per answer."""
+
+    def answers_for(self, t):
+        memo = self.__dict__.setdefault("_memo", {})
+        if t not in memo:
+            if "_vocab" not in self.__dict__:
+                v = {}
+                for i, toks in self:
+                    for x in toks:
+                        v.setdefault(x, set()).add(i)
+                self._vocab = v
+                self._vlen = {}
+                for x in v:
+                    self._vlen.setdefault(len(x), []).append(x)
+            hit = set(self._vocab.get(t, ()))
+            for n in range(len(t) - 3, len(t) + 4):
+                for x in self._vlen.get(n, ()):
+                    if x != t and M.tok_eq(t, x):
+                        hit |= self._vocab[x]
+            memo[t] = hit
+        return memo[t]
+
+
 def reverse_index(answers):
-    return [(i, set(M.tokens(answer_text(a)))) for i, a in enumerate(answers)]
+    return _RIndex((i, _Toks(M.tokens(answer_text(a)))) for i, a in enumerate(answers))
+
+
+def _tok_in(t, toks):
+    if t in toks:
+        return True
+    if isinstance(toks, _Toks):
+        b = toks.by_len()
+        return any(M.tok_eq(t, x) for n in range(len(t) - 3, len(t) + 4) for x in b.get(n, ()))
+    return any(M.tok_eq(t, x) for x in toks if abs(len(x) - len(t)) <= 3)
 
 
 def reverse_hit(name, rindex):
@@ -546,8 +607,17 @@ def reverse_hit(name, rindex):
     d = M.distinctive(name or "")
     if not d:
         return None
+    if isinstance(rindex, _RIndex):              # same answer as the scan below: the first answer holding them all
+        common = None
+        for t in d:
+            a = rindex.answers_for(t)
+            common = set(a) if common is None else common & a
+            if not common:
+                return None
+        order = {i: k for k, (i, _) in enumerate(rindex)}
+        return min(common, key=order.get)
     for i, toks in rindex:
-        if all(t in toks or any(M.tok_eq(t, x) for x in toks if abs(len(x) - len(t)) <= 3) for t in d):
+        if all(_tok_in(t, toks) for t in d):
             return i
     return None
 
@@ -865,19 +935,9 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
             if rho_res != rho_res:
                 rho_res, rho_res_note = None, "RHO_RES undefined (degenerate ranks)"
 
-    # ---- the live lane (Gemini taste ask), joined now that U exists
+    # the live lane (Gemini taste ask) is joined only after the cards are out (§3.4: it never gates them)
     live_ans = []
-    if live_answers is not None:
-        try:
-            live_ans = list(live_answers() or [])
-        except Exception as e:  # a lane fails: partial
-            lanes_failed.append("live lane: %s" % type(e).__name__)
-            res["diag"]["live_error"] = str(e)[:200]
-        for a in live_ans:
-            for n in a.get("names") or []:
-                emit("wall_name", wall_item(a, n["name"] if isinstance(n, dict) else n))
-        strike_answers(live_ans, struck, per, css)
-    all_answers = answers + live_ans
+    all_answers = list(answers)
     struck_u = set(struck) & set(ids)
 
     # ---- S, holds, eligibility
@@ -970,11 +1030,11 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
         return best[1] if best else None
 
     asked_hoods, street_answers = {}, []
-    # ---- cards (never_said reads the street asks as they accumulate)
-    as_of = max([a.get("asked_at") or "" for a in all_answers] or [""]) or None
-    n_city = len(all_answers)
 
+    # ---- cards (never_said reads the street asks and the live answer as they accumulate)
     def card(i):
+        n_city = len(all_answers)
+        as_of = max([a.get("asked_at") or "" for a in all_answers] or [""]) or None
         e = byid[i]
         b = because(i)
         hood, hood_src = hoods[i]
@@ -996,8 +1056,24 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
     for i in sorted(picks, key=lambda i: (fit[i], i)):     # candidates light, in for-you order
         emit("card", dict(card(i), provisional=bool(street_check)))
 
-    # ---- the street check (L2): a name hit burns the card; the next reserve rises
-    if street_check is not None and picks:
+    def burn(x, by, at, hood):
+        """Take card x off the board; the first reserve rises into the picks."""
+        b = {"card_id": x, "name": byid[x].get("name"), "by": by, "at": at, "neighbourhood": hood, "risen": None}
+        if x in picks:
+            picks.remove(x)
+            if reserves:
+                up = reserves.pop(0)
+                picks.append(up)
+                b["risen"] = card(up)
+        elif x in reserves:
+            reserves.remove(x)
+        res["burn"]["burned"].append({k: v for k, v in b.items() if k != "risen"})
+        emit("burn", b)
+
+    def street_pass():
+        # ---- the street check (L2): a name hit burns the card; the next reserve rises
+        if street_check is None or not picks:
+            return
         k = 0
         while k < len(picks):
             i = picks[k]
@@ -1009,7 +1085,7 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
                     got = []
                     lanes_failed.append("street check: %s" % type(e).__name__)
                 asked_hoods[hood] = got
-                street_answers += got
+                street_answers.extend(got)
                 for a in got:
                     rec = {"neighbourhood": hood, "lane": a.get("lane", "live"), "asked_at": a.get("asked_at"),
                            "provider": a.get("provider"), "named": [n["name"] if isinstance(n, dict) else n
@@ -1029,21 +1105,37 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
                         hit.add((x, got[j].get("provider"), got[j].get("asked_at")))
                 for x, by, at in sorted(hit, key=lambda t: t[0]):
                     if x in picks or x in reserves:
-                        b = {"card_id": x, "name": byid[x].get("name"), "by": by, "at": at, "neighbourhood": hood,
-                             "risen": None}
-                        if x in picks:
-                            picks.remove(x)
-                            if reserves:
-                                up = reserves.pop(0)
-                                picks.append(up)
-                                b["risen"] = card(up)
-                        else:
-                            reserves.remove(x)
-                        res["burn"]["burned"].append({k: v for k, v in b.items() if k != "risen"})
-                        emit("burn", b)
+                        burn(x, by, at, hood)
                 k = 0          # re-walk: a risen reserve's street gets asked too
                 continue
             k += 1
+
+    street_pass()
+
+    # ---- the live lane (Gemini taste ask), joined after the cards are out (§3.4). Its names join the wall; a card
+    # they name (the matcher, then the reverse check on its raw text) burns "by gemini (live)", and a reserve rises.
+    if live_answers is not None:
+        try:
+            live_ans = list(live_answers() or [])
+        except Exception as e:  # the lane failed or ran out of time: the dated cards stand
+            lanes_failed.append("live lane: %s" % type(e).__name__)
+            res["diag"]["live_error"] = str(e)[:200]
+        if live_ans:
+            for a in live_ans:
+                for n in a.get("names") or []:
+                    emit("wall_name", wall_item(a, n["name"] if isinstance(n, dict) else n))
+            before = set(struck)
+            strike_answers(live_ans, struck, per, css)
+            all_answers.extend(live_ans)
+            live_struck = (set(struck) - before) & set(ids)
+            struck_u |= live_struck
+            rix = reverse_index(live_ans)
+            at = max(a.get("asked_at") or "" for a in live_ans) or None
+            hits = [x for x in picks + reserves if x in live_struck or reverse_hit(byid[x].get("name"), rix) is not None]
+            for x in [h for h in hits if h in reserves] + [h for h in hits if h in picks]:
+                burn(x, "gemini (live)", at, hoods[x][0])
+            res["diag"]["live_burned"] = [byid[x].get("name") for x in hits]
+            street_pass()                  # a risen card's street is asked too
     picks = sorted(picks, key=lambda i: (fit[i], i))           # displayed in for-you order
     reserves = sorted(reserves, key=lambda i: (fit[i], i))
 
@@ -1108,6 +1200,8 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
         if l.get("dead"):
             flags.append("dead_love:%s" % (l.get("name") or l["text"]))
     res["flags"] = flags
+    n_city = len(all_answers)
+    as_of = max([a.get("asked_at") or "" for a in all_answers] or [""]) or None
     res["counts"].update({"wall": n_places, "asks": n_city + len(street_answers), "S": len(S),
                           "struck_in_U": len(struck_u)})
     res["diag"].update({

@@ -381,6 +381,57 @@ class TestCallsAgree(Tmp):
         self.assertEqual(r["chip"]["c2_calls"], 1)
 
 
+class TestLiveLaneNeverGatesCards(Tmp):
+    def test_cards_emit_before_a_slow_live_answer_then_the_named_card_burns(self):
+        import time as _t
+        base = api.run_unsaid("St. Louis", CEDRIC, mode="fake", qloo=self.q(), gemini=False, street_check=False)
+        victim = base["picks"][2]
+        marks = {}
+
+        def slow_gemini(prompt):
+            _t.sleep(0.5)
+            marks["answered"] = _t.monotonic()
+            return {"provider": "gemini", "model": "fake-slow", "asked_at": "2026-10-28T12:00:00Z",
+                    "names": [{"name": victim["name"]}], "raw": "Try %s." % victim["name"]}
+        events = []
+
+        def on(e):
+            events.append((e["type"], _t.monotonic(), e))
+        r = api.run_unsaid("St. Louis", CEDRIC, mode="fake", qloo=self.q(), gemini=slow_gemini, street_check=False,
+                           on_event=on)
+        cards = [t for k, t, e in events if k == "card"]
+        self.assertEqual(len(cards), 7)
+        self.assertLess(max(cards), marks["answered"], "every card is out before the live answer arrives")
+        burns = [e for k, t, e in events if k == "burn"]
+        self.assertEqual([b["card_id"] for b in burns], [victim["id"]])
+        self.assertEqual(burns[0]["by"], "gemini (live)")
+        self.assertIsNotNone(burns[0]["risen"])
+        types = [k for k, t, e in events]
+        self.assertLess(types.index("card"), types.index("burn"))
+        self.assertNotIn(victim["id"], [c["id"] for c in r["picks"] + r["reserves"]])
+        self.assertEqual(len(r["picks"]), 7)
+        self.assertEqual(r["burn"]["burned"][0]["by"], "gemini (live)")
+        self.assertIn(victim["name"], [w["name"] for w in r["wall"] if w["lane"] == "live"])
+        self.assertEqual([c["id"] for c in r["picks"]],
+                         sorted([c["id"] for c in r["picks"]], key=lambda i: next(c["fit_rank"] for c in r["picks"]
+                                                                                  if c["id"] == i)))
+
+    def test_a_live_answer_past_the_budget_leaves_the_dated_cards(self):
+        import time as _t
+        old = api.LIVE_BUDGET_S
+        api.LIVE_BUDGET_S = 0.2
+        try:
+            def too_slow(prompt):
+                _t.sleep(1.0)
+                return {"names": [{"name": "Anything"}]}
+            r = api.run_unsaid("St. Louis", CEDRIC, mode="fake", qloo=self.q(), gemini=too_slow, street_check=False)
+        finally:
+            api.LIVE_BUDGET_S = old
+        self.assertEqual(len(r["picks"]), 7)
+        self.assertEqual(r["burn"]["burned"], [])
+        self.assertIn("live lane: TimeoutError", r["diag"]["lanes_failed"])
+
+
 class TestDeadline(Tmp):
     def test_hard_cap_degrades(self):
         events = []

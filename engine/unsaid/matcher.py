@@ -17,8 +17,14 @@ Pipeline for each raw AI-named string r, against the fixed pool U (Qloo places) 
 Unresolved names that strike nothing stay on the wall greyed out ("not found in Qloo").
 """
 import difflib
+import math
 import re
 import unicodedata
+from functools import lru_cache
+
+# Speed (28 Oct, gate F): every string function below is pure, so it is memoised; tok_eq skips difflib when an exact
+# upper bound already rules the pair out; PoolIndex looks candidates up in key and token indexes instead of scanning
+# U. The rules R1-R5 decide exactly as before (tests/test_matcher.py and the frozen 20 sets are byte-identical).
 
 GENERIC = set("""
 the a an and of at on in by for with to n
@@ -46,12 +52,14 @@ COMPOUNDS = [
 ]
 
 
+@lru_cache(maxsize=1 << 16)
 def fold(s):
     s = unicodedata.normalize("NFKD", s)
     s = "".join(c for c in s if not unicodedata.combining(c))
     return s.lower().replace("’", "'").replace("‘", "'").replace("`", "'")
 
 
+@lru_cache(maxsize=1 << 16)
 def norm(s):
     """Lower-case, accents folded, &/+ -> and, possessive 's and apostrophes dropped,
     punctuation to spaces, compounds joined, leading 'the' dropped."""
@@ -72,17 +80,24 @@ def tokens(s):
 
 
 def distinctive(s):
+    return list(_distinctive(s))
+
+
+@lru_cache(maxsize=1 << 16)
+def _distinctive(s):
     t = [x for x in tokens(s) if x not in STOP]
     if not t:  # all generic or location words: fall back to non-generic tokens, keep city words
         t = [x for x in tokens(s) if x not in GENERIC]
-    return t
+    return tuple(t)
 
 
+@lru_cache(maxsize=1 << 16)
 def acronym(s):
     t = [x for x in tokens(s) if x not in ("and", "of", "the", "a")]
     return "".join(x[0] for x in t) if len(t) >= 3 else None
 
 
+@lru_cache(maxsize=1 << 16)
 def split_parts(raw):
     """'Lobby Bar at Hotel Chelsea' -> head 'Lobby Bar', host 'Hotel Chelsea'. 'Charlie Gitto's on the Hill' -> head."""
     f = fold(raw)
@@ -94,7 +109,18 @@ def split_parts(raw):
 
 
 def keys(name, akas=()):
-    """Exact-match keys for one name."""
+    """Exact-match keys for one name (a frozenset; memoised when there are no akas)."""
+    if not akas:
+        return _keys1(name)
+    return _keys(name, tuple(akas))
+
+
+@lru_cache(maxsize=1 << 16)
+def _keys1(name):
+    return _keys(name, ())
+
+
+def _keys(name, akas):
     out = set()
     for n in [name] + list(akas):
         full = norm(n)
@@ -115,7 +141,7 @@ def keys(name, akas=()):
                 dh = distinctive(h)
                 if dh:
                     out.add(("core", " ".join(sorted(dh))))
-    return out
+    return frozenset(out)
 
 
 def _key_match(rk, pk):
@@ -132,7 +158,57 @@ def _key_match(rk, pk):
 def tok_eq(a, b):
     if a == b:
         return True
-    return len(a) >= 5 and len(b) >= 5 and difflib.SequenceMatcher(None, a, b).ratio() >= 0.85
+    la, lb = len(a), len(b)
+    if la < 5 or lb < 5:
+        return False
+    if 2.0 * min(la, lb) / (la + lb) < 0.85:   # ratio() can't exceed this bound (real_quick_ratio)
+        return False
+    return _fuzzy(a, b)
+
+
+@lru_cache(maxsize=1 << 18)
+def _fuzzy(a, b):
+    """The same test as before, in the same argument order (ratio() is not symmetric). quick_ratio() is an exact
+    upper bound on ratio(), so a pair it rules out could never pass."""
+    m = difflib.SequenceMatcher(None, a, b)
+    return m.quick_ratio() >= 0.85 and m.ratio() >= 0.85
+
+
+class TokenIndex:
+    """The distinct tokens of a set of names, bucketed by length, so a token is compared only with tokens that
+    could pass tok_eq at all (equal, or both >= 5 letters within the length bound)."""
+
+    def __init__(self, toks):
+        self.exact = set(toks)
+        self.by_len = {}
+        for t in self.exact:
+            if len(t) >= 5:
+                self.by_len.setdefault(len(t), []).append(t)
+        self._rel, self._fwd = {}, {}
+
+    def _window(self, t):
+        la = len(t)
+        if la < 5:
+            return []
+        lo, hi = max(5, int(math.floor(la * 0.85 / 1.15)) - 1), int(math.ceil(la * 1.15 / 0.85)) + 1
+        return [u for n in range(lo, hi + 1) for u in self.by_len.get(n, ())]
+
+    def related(self, t):
+        """Every indexed u with tok_eq(t, u) or tok_eq(u, t) (both orders: R2 and R3 call it each way)."""
+        r = self._rel.get(t)
+        if r is None:
+            r = {t} & self.exact
+            r |= {u for u in self._window(t) if tok_eq(t, u) or tok_eq(u, t)}
+            self._rel[t] = r
+        return r
+
+    def any_eq(self, t):
+        """Is there an indexed u with tok_eq(t, u)?"""
+        r = self._fwd.get(t)
+        if r is None:
+            r = t in self.exact or any(tok_eq(t, u) for u in self._window(t))
+            self._fwd[t] = r
+        return r
 
 
 def contained(small, big):
@@ -151,14 +227,59 @@ class PoolIndex:
         self.k = {}
         self.d = {}
         self.t = {}     # R5: the pool name's normalised tokens, in order
-        for p in pool:
+        self.key_idx, self.acro_idx, self.compact_idx, tok_pos = {}, {}, {}, {}
+        for pos, p in enumerate(pool):
             ak = list(p.get("akas") or [])
             self.k[p["entity_id"]] = keys(p["name"], ak)
             self.d[p["entity_id"]] = distinctive(split_parts(p["name"])[0]) or distinctive(p["name"])
             self.d[p["entity_id"] + "#full"] = distinctive(p["name"])
             self.t[p["entity_id"]] = tokens(p["name"])
+            for kind, v in self.k[p["entity_id"]]:
+                if kind == "acro":
+                    self.acro_idx.setdefault(v, []).append(pos)
+                else:
+                    self.key_idx.setdefault((kind, v), []).append(pos)
+                    if kind == "compact":
+                        self.compact_idx.setdefault(v, []).append(pos)
+            for tok in self.d[p["entity_id"] + "#full"]:
+                tok_pos.setdefault(tok, set()).add(pos)
+        self.tok_pos = tok_pos
+        self.toks = TokenIndex(tok_pos)
+        self.r5_idx = {}                   # R5: (pool token at a brand start) -> [(pos, start)]
+        for pos, p in enumerate(pool):
+            t = self.t[p["entity_id"]]
+            for st in [0] + [k + 1 for k, w in enumerate(t) if w == "at"]:
+                if st < len(t):
+                    self.r5_idx.setdefault(t[st], []).append((pos, st))
+        self.memo = {}                     # (rule, raw) -> result; the index is reused across requests
+
+    def _candidates(self, raw_tokens):
+        """Pool positions holding a token tok_eq-related to one of raw_tokens: every R2/R3/R4 hit is among them."""
+        out = set()
+        for t in set(raw_tokens):
+            for u in self.toks.related(t):
+                out |= self.tok_pos[u]
+        return sorted(out)
+
+    def _memo(self, rule, raw, fn):
+        k = (rule, raw)
+        if k not in self.memo:
+            self.memo[k] = fn(raw)
+        return list(self.memo[k])
 
     def r1(self, raw):
+        return self._memo("r1", raw, self._r1)
+
+    def containment(self, raw):
+        return self._memo("c", raw, self._containment)
+
+    def r5(self, raw):
+        return self._memo("r5", raw, self._r5)
+
+    def guard(self, raw, thr=0.6):
+        return self._memo(("g", thr), raw, lambda r: self._guard(r, thr))
+
+    def _r1(self, raw):
         names = [raw]
         al = self.aliases.get(norm(raw))
         if al:
@@ -166,15 +287,24 @@ class PoolIndex:
         rk = set()
         for n in names:
             rk |= keys(n)
-        return [p["entity_id"] for p in self.pool if _key_match(rk, self.k[p["entity_id"]])]
+        hits = set()                       # _key_match through the indexes: a shared non-acronym key, or an
+        for k in rk:                       # acronym on one side equal to the compact name on the other
+            if k[0] == "acro":
+                hits.update(self.compact_idx.get(k[1], ()))
+            else:
+                hits.update(self.key_idx.get(k, ()))
+                if k[0] == "compact":
+                    hits.update(self.acro_idx.get(k[1], ()))
+        return [self.pool[i]["entity_id"] for i in sorted(hits)]
 
-    def containment(self, raw):
+    def _containment(self, raw):
         dr = distinctive(split_parts(raw)[0]) or distinctive(raw)
         drf = distinctive(raw)
         hits = []
         if not dr:
             return hits
-        for p in self.pool:
+        for i in self._candidates(list(dr) + list(drf)):
+            p = self.pool[i]
             dp = self.d[p["entity_id"] + "#full"]
             if not dp:
                 continue
@@ -184,28 +314,48 @@ class PoolIndex:
                 hits.append((p["entity_id"], "R3"))
         return hits
 
-    def r5(self, raw):
+    def _r5(self, raw):
         seq = brand_seq(raw)
         if not seq:
             return []
         n = len(seq)
-        hits = []
-        for p in self.pool:
-            t = self.t[p["entity_id"]]
-            starts = [0] + [k + 1 for k, w in enumerate(t) if w == "at"]
-            if any(t[s:s + n] == seq for s in starts):
-                hits.append(p["entity_id"])
-        return hits
+        pos = sorted({i for i, st in self.r5_idx.get(seq[0], ())
+                      if self.t[self.pool[i]["entity_id"]][st:st + n] == seq})
+        return [self.pool[i]["entity_id"] for i in pos]
 
-    def guard(self, raw, thr=0.6):
+    def _guard(self, raw, thr=0.6):
         dr = distinctive(raw)
         if len(dr) < 2:  # a single distinctive token is fully handled by R2
             return []
-        return [p["entity_id"] for p in self.pool
-                if overlap(dr, self.d[p["entity_id"] + "#full"]) / len(dr) >= thr]
+        cand = self._candidates(dr) if thr > 0 else range(len(self.pool))   # thr > 0 needs >= 1 overlap
+        return [self.pool[i]["entity_id"] for i in cand
+                if overlap(dr, self.d[self.pool[i]["entity_id"] + "#full"]) / len(dr) >= thr]
+
+
+_POOL_CACHE = {}
+
+
+def pool_index(pool, aliases=None):
+    """PoolIndex for this exact pool (ids, names, akas) and aliases, reused across requests (a small LRU)."""
+    sig = (tuple((p["entity_id"], p["name"], tuple(p.get("akas") or ())) for p in pool),
+           repr(sorted((aliases or {}).items())))
+    idx = _POOL_CACHE.pop(sig, None) or PoolIndex(pool, aliases)
+    _POOL_CACHE[sig] = idx
+    while len(_POOL_CACHE) > 16:
+        _POOL_CACHE.pop(next(iter(_POOL_CACHE)))
+    return idx
+
+
+@lru_cache(maxsize=1 << 16)
+def brand_seq_t(raw):
+    return tuple(_brand_seq(raw))
 
 
 def brand_seq(raw):
+    return list(brand_seq_t(raw))
+
+
+def _brand_seq(raw):
     """R5's brand: the head of r ('X at Y' / 'X (…)' / 'X - Y' -> X), tokens normalised, city and borough words and
     trailing generic suffixes dropped. Empty when it is too weak to strike on its own."""
     head = split_parts(raw)[0]
@@ -235,7 +385,7 @@ def match_wall(raw_names, pool, search_fn=None, aliases=None, guard_thr=0.6):
     pool: list of {entity_id, name, akas?} = the fixed set U.
     search_fn(raw) -> list of {entity_id, name} from /search scoped to the city (or None to skip stage S).
     Returns (struck: {entity_id: [(raw, rule)]}, per_name: {raw: {status, ids, resolved}})."""
-    idx = PoolIndex(pool, aliases)
+    idx = pool_index(pool, aliases)
     in_pool = {p["entity_id"] for p in pool}
     struck, per = {}, {}
 

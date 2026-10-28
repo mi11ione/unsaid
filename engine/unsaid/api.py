@@ -32,6 +32,7 @@ from unsaid import walls as W
 from unsaid.qloo import HARD_CAP_S, Qloo, QlooError, quota_state, redact
 
 RANKING_AFTER_S = 20.0
+LIVE_BUDGET_S = 15.0       # the server's budget for the live Gemini taste ask, counted from when it starts
 NUM = {1: "one", 2: "two", 3: "three"}
 
 
@@ -268,12 +269,16 @@ def run_unsaid(city, loves, *, walls_path=None, mode="fake", on_event=None, qloo
             except Exception as e:
                 live_box["error"] = e
         live_thread = threading.Thread(target=ask, daemon=True)
+        live_box["started"] = time.monotonic()
         live_thread.start()
 
     def live_answers():
         if live_thread is None:
             return []
-        live_thread.join(timeout=max(0.1, min(20.0, (q.deadline or time.monotonic() + 20) - time.monotonic())))
+        left = LIVE_BUDGET_S - (time.monotonic() - live_box["started"])      # the cards are already out
+        if q.deadline is not None:
+            left = min(left, q.deadline - time.monotonic())
+        live_thread.join(timeout=max(0.0, left))
         if live_thread.is_alive():
             raise TimeoutError("live lane timed out")
         if live_box["error"] is not None:
@@ -366,7 +371,12 @@ def request_urls(card, trace):
     """Every request this card's ranks came from, key-redacted: the C4 pool call(s) it came back in and the C6'
     rescoring chunks that carried its ID (for RAW LOG)."""
     urls = list(card.get("_pool_urls") or [])
-    urls += [r["url"] for r in trace if r["label"].startswith(("C6'", "C5")) and card["id"] in r["url"]]
+
+    def chunk_key(r):            # parallel calls finish in any order: list them by love, then chunk number
+        head, _, tail = r["label"].rpartition(" c")
+        return (head, int(tail) if tail.isdigit() else 0, r["url"])
+    urls += [r["url"] for r in sorted((r for r in trace if r["label"].startswith(("C6'", "C5"))
+                                        and card["id"] in r["url"]), key=chunk_key)]
     return [redact(u) for u in dict.fromkeys(urls)]
 
 
