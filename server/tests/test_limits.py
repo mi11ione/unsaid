@@ -271,7 +271,9 @@ class Gemini(unittest.TestCase):
         H.clear_results()
         _, r = H.run(H.CEDRIC, ip="192.0.2.81")
         t = r["diag"]["timing"]
-        self.assertEqual(set(t), {"pool", "rescore", "strike", "ids", "cap", "gemini", "total", "resolve", "queue"})
+        self.assertTrue({"pool", "rescore", "strike", "ids", "cap", "gemini", "total", "resolve", "queue",
+                         "cpu_calls", "cpu_window", "cpu_total"} <= set(t), sorted(t))
+        self.assertGreater(t["cpu_total"], 0)
         for k in ("pool", "rescore", "total"):
             self.assertIsInstance(t[k], float, k)
         _, c = H.run(H.CEDRIC, ip="192.0.2.82")                  # cached: this request's time + the run's

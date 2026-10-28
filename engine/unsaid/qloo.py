@@ -14,11 +14,14 @@
   the module flag `quota_state()["limited"]` turns on and fresh runs return `limited`.
 - Fake mode swaps the transport for unsaid.fake.FakeQloo; its cache directory is separate (.cache/fake).
 """
+import gzip
 import hashlib
+import http.client
 import json
 import os
 import random
 import re
+import ssl
 import sys
 import threading
 import time
@@ -203,19 +206,100 @@ def quota_state():
 
 
 # ---- transport --------------------------------------------------------------------------------------------------
+# Render free is ~0.1 CPU, so the HTTP layer is built to spend as little CPU per call as possible (measured 28 Oct):
+# - one SSLContext for the process (building one per call reloads the CA bundle: ~4.5 ms CPU each on the Mac);
+# - keep-alive connections, pooled per host (a fresh TLS handshake per call: ~11 ms CPU vs ~2 ms reused);
+# - gzip: an insights page is ~1.4 MB of JSON; gzipped it is ~220 KB on the wire, and reading it costs ~3 ms CPU
+#   (+1.6 ms gunzip) instead of ~22 ms through the SSL socket.
+# QLOO_GZIP=0 turns gzip off; QLOO_POOL sets how many idle connections are kept (default 8). Busy calls never wait for
+# a pooled connection: when all are in use a new one is opened, and kept afterwards only if the pool has room.
+POOL_IDLE = int(os.environ.get("QLOO_POOL", "8"))
+GZIP_ON = os.environ.get("QLOO_GZIP", "1") != "0"
+_SSL = {"ctx": None}
+_POOLS = {}
+_PLOCK = threading.Lock()
+
+
+def _ssl_ctx():
+    with _PLOCK:
+        if _SSL["ctx"] is None:
+            _SSL["ctx"] = ssl.create_default_context()
+        return _SSL["ctx"]
+
+
+class _Pool:
+    def __init__(self, host, port):
+        self.host, self.port = host, port
+        self.idle = []
+        self.lock = threading.Lock()
+
+    def take(self, timeout):
+        with self.lock:
+            while self.idle:
+                c = self.idle.pop()
+                if c.sock is not None:
+                    c.sock.settimeout(timeout)
+                    return c, True
+        return http.client.HTTPSConnection(self.host, self.port, timeout=timeout, context=_ssl_ctx()), False
+
+    def give(self, c):
+        with self.lock:
+            if len(self.idle) < POOL_IDLE and c.sock is not None:
+                self.idle.append(c)
+                return
+        c.close()
+
+
+def _pool(host, port):
+    with _PLOCK:
+        k = (host, port)
+        if k not in _POOLS:
+            _POOLS[k] = _Pool(host, port)
+        return _POOLS[k]
+
+
 class HttpTransport:
+    """GET over pooled keep-alive HTTPS with gzip. Returns (status, body text, headers) like urllib did; per-instance
+    counters in `stats` (one client per run) feed the server's diag.timing."""
+
     def __init__(self, key):
         self.key = key
+        self.stats = {"calls": 0, "new_conns": 0, "reused": 0, "stale_retries": 0, "wire_bytes": 0, "body_bytes": 0}
 
     def get(self, url, timeout=TIMEOUT_DEFAULT):
-        req = urllib.request.Request(url, headers={"X-Api-Key": self.key, "Accept": "application/json",
-                                                   "User-Agent": USER_AGENT})
-        try:
-            with urllib.request.urlopen(req, timeout=timeout) as r:
-                return r.status, r.read().decode("utf-8"), dict(r.headers)
-        except urllib.error.HTTPError as e:
-            body = e.read().decode("utf-8", "replace") if e.fp else ""
-            return e.code, body, dict(e.headers or {})
+        u = urllib.parse.urlsplit(url)
+        pool = _pool(u.hostname, u.port or 443)
+        path = u.path + ("?" + u.query if u.query else "")
+        hdrs = {"X-Api-Key": self.key, "Accept": "application/json", "User-Agent": USER_AGENT,
+                "Accept-Encoding": "gzip" if GZIP_ON else "identity"}
+        for attempt in (0, 1):
+            conn, reused = pool.take(timeout)
+            try:
+                conn.request("GET", path, headers=hdrs)
+                r = conn.getresponse()
+                raw = r.read()
+            except (http.client.RemoteDisconnected, http.client.BadStatusLine, ConnectionResetError,
+                    BrokenPipeError) as e:
+                conn.close()
+                if reused and attempt == 0:      # the server closed an idle keep-alive connection: one fresh retry
+                    self.stats["stale_retries"] += 1
+                    continue
+                raise e
+            except Exception:
+                conn.close()
+                raise
+            break
+        self.stats["calls"] += 1
+        self.stats["reused" if reused else "new_conns"] += 1
+        self.stats["wire_bytes"] += len(raw)
+        if r.will_close:
+            conn.close()
+        else:
+            pool.give(conn)
+        if (r.getheader("Content-Encoding") or "").lower() == "gzip":
+            raw = gzip.decompress(raw)
+        self.stats["body_bytes"] += len(raw)
+        return r.status, raw.decode("utf-8", "replace"), dict(r.headers)
 
 
 def redact(s):
@@ -357,7 +441,7 @@ class Qloo:
             os.makedirs(os.path.dirname(fpath), exist_ok=True)
             tmp = "%s.%d.%d.tmp" % (fpath, os.getpid(), threading.get_ident())
             with open(tmp, "w") as f:
-                json.dump(data, f)
+                f.write(body)          # the body is already JSON: writing it as is saves a full re-serialisation
             os.replace(tmp, fpath)
         self._log(label, url, status, t0, False, data, key)
         return data
