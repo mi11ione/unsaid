@@ -3,7 +3,7 @@
 //   node cdp.mjs shot  <url> <out.png> <w> <h> [dpr] [js to await before the capture]   (h=0: the page's own height)
 //   node cdp.mjs frames <url> <outdir> <w> <h> <fps> <seconds>    (page must expose window.seek(t) → Promise|void)
 import { spawn } from 'node:child_process';
-import { writeFileSync, mkdirSync, mkdtempSync } from 'node:fs';
+import { writeFileSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -14,6 +14,12 @@ const port = 9300 + Math.floor(Math.random() * 500);
 const prof = mkdtempSync(join(tmpdir(), 'cdp-'));
 const ch = spawn(CHROME, ['--headless=new', '--disable-gpu', '--hide-scrollbars', '--allow-file-access-from-files',
   `--remote-debugging-port=${port}`, `--user-data-dir=${prof}`, '--window-size=2000,2000', 'about:blank'], { stdio: 'ignore' });
+// Always kill Chrome and delete its throwaway profile, on success, error or signal. Leaked profiles once filled the disk.
+const cleanup = () => { try { ch.kill('SIGKILL'); } catch {} try { rmSync(prof, { recursive: true, force: true }); } catch {} };
+process.on('exit', cleanup);
+for (const s of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(s, () => process.exit(130));
+process.on('uncaughtException', e => { console.error(e?.stack || e); process.exit(1); });
+process.on('unhandledRejection', e => { console.error(e?.stack || e); process.exit(1); });
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 async function target() {
