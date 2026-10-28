@@ -50,7 +50,8 @@ wall = sorted(({"name": b["names"].most_common(1)[0][0], "asks": len(b["asks"]),
               key=lambda x: (-x["asks"], x["name"]))
 n_asks = len({(w["provider"], w["phrasing_id"], w["asked_at"]) for w in R["wall"]})
 assert len(wall) == R["counts"]["wall"], (len(wall), R["counts"]["wall"])      # 418 places
-assert n_asks == R["counts"]["asks"], (n_asks, R["counts"]["asks"])               # 179 asks
+# counts.asks also counts answers that named nothing (an unparsed street answer, an empty taste list): no wall rows
+assert n_asks <= R["counts"]["asks"], (n_asks, R["counts"]["asks"])               # 805 of 813 asks named a place
 prov_asks = collections.Counter(p for p, _, _ in {(w["provider"], w["phrasing_id"], w["asked_at"]) for w in R["wall"]})
 
 C = R["counts"]

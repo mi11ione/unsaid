@@ -244,6 +244,7 @@ jdump(SITE / 'config.json', {
     'cities': {'st-louis': {'name': 'St. Louis', 'map': 'data/map/stl.json', 'wall': 'data/walls/stl.json', 'census': 'stl'},
                'new-york': {'name': 'New York', 'map': 'data/map/nyc.json' if NYC_MAP else None, 'wall': 'data/walls/nyc.json', 'census': 'nyc'}},
     'floor': {'rating': 4.3},
+    'site': 'unsaid-ang.pages.dev',   # the share image's address line and deploy-site.sh's OG card (C, 28 Oct)
 }, 1)
 SETS = json.load(open(UNSAID / 'data' / 'sets.json'))['sets']
 MOCK_SRC = {'stl-cedric': 'data/mock/stl-cedric.ndjson', 'nyc-khruangbin': 'data/mock/nyc-khruangbin.ndjson' if NYC_MAP else None}
