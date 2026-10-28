@@ -93,9 +93,12 @@ def agent_beat(path):
         print("note: %s absent: the video has no agent scene" % os.path.relpath(path, ROOT)); return None
     rows = [json.loads(l) for l in open(path) if l.strip()]
     call = res = reply = None; client = model = None; when = None
-    if rows and "dir" in rows[0]:                                           # MCP JSON-RPC
+    sess = next((r for r in rows if r.get("kind") == "session"), {})       # Agent E's recorder adds a session line
+    if any("dir" in r for r in rows):                                       # MCP JSON-RPC
         pend = {}
         for r in rows:
+            if "dir" not in r:
+                continue
             m = r["msg"]
             if r["dir"] == ">>" and m.get("method") == "initialize":
                 client = (m.get("params", {}).get("clientInfo") or {}).get("name")
@@ -125,7 +128,9 @@ def agent_beat(path):
     mode = (st or {}).get("mode")
     fake = mode == "fake" or "FAKE MODE" in (summary or "") or "FAKE MODE" in json.dumps(res)
     assert ALLOW_FAKE or not fake, "the transcript is fake mode: not shown (" + path + ")"
-    when = (st or {}).get("as_of")
+    when = (st or {}).get("as_of") or sess.get("recorded_at")
+    if not mode and (sess.get("env") or {}).get("UNSAID_MODE"):
+        mode = sess["env"]["UNSAID_MODE"] + " (hosted API)" if sess["env"]["UNSAID_MODE"] == "remote" else sess["env"]["UNSAID_MODE"]
     lines = [l for l in (summary or "").splitlines() if l.strip()]
     if not lines and st and st.get("picks"):                                 # no text summary: the result's own fields
         lines = ["%d. %s (%s) · #%s for you · #%s for anyone" % (i + 1, p.get("name"), p.get("neighbourhood"), p.get("fit_rank") or p.get("rank_for_you"),
@@ -133,7 +138,7 @@ def agent_beat(path):
     para = None
     if reply:
         para = next((x.strip() for x in reply.split("\n\n") if x.strip()), None)
-    return {"client": who, "model": model, "as_of": when, "mode": "fake (TEST)" if fake else (mode or "live"), "file": os.path.relpath(path, ROOT),
+    return {"client": who, "model": model, "as_of": when, "mode": "fake (TEST)" if fake else {"remote": "live, hosted API", "live": "live"}.get(mode, mode or "live"), "file": os.path.relpath(path, ROOT),
             "tool_use": call, "result_lines": lines[:5], "result_more": max(0, len(lines) - 5), "reply": para}
 
 

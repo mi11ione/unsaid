@@ -54,7 +54,7 @@ of ranking copy sit in one `COPY` block, marked PENDING until the orchestrator s
 Words, not numbers, with sources:
 - Card neighbourhoods, "what" lines, "because you love …": picks[] / reserves[] (loves shown as typed: `loves[].text`).
 - "Rib tips: Qloo scores every place here the same, so the other two ranked.": result.flags `dead_love:Rib Tips`; the site's own dead-tag line (`UM.deadLine`), shortened.
-- The agent scene: the `unsaid_places` call and its result from ONE transcript (`AGENT_TRANSCRIPT`, default `agent/demo/live_transcript.jsonl`), MCP JSON-RPC or Claude stream-json; the build refuses `mode: fake` / "FAKE MODE". The earlier mix (a fake-mode `tool_use` beside a reply from another run) is gone.
+- The agent scene: the `unsaid_places` call and its result from ONE transcript (`AGENT_TRANSCRIPT`, default `agent/demo/live_transcript.jsonl`), MCP JSON-RPC or Claude stream-json; the build refuses `mode: fake` / "FAKE MODE". The earlier mix (a fake-mode `tool_use` beside a reply from another run) is gone. Agent E's recorder (28 Oct 11:58 CET, `unsaid-demo-agent`, a scripted MCP host, server in remote mode against the hosted API) has no model reply, so none is shown; its result header reads 678 places / 275 answers (the hosted wall), not the site set's 418 / 179.
 - Census footer: Claude Sonnet 5.5 and ChatGPT gpt-5.6-terra, no web search, 27 Oct 2026, pre-registered (census.json; codex answers' `model`).
 
 Not on screen, on purpose: ⟦ASKS⟧-style placeholders other than ⟦LIVE_URL⟧, the meter (gate D failed, not featured), any latency, any NYC figure.
