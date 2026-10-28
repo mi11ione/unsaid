@@ -64,6 +64,7 @@ CARD:
 
 - CARD gains `holds_without` (love label or null) and `request_urls` (key-redacted, for RAW LOG).
 - `diag` gains `obscure_names`, `known_names` (lists for S4) and `calls: {pool, rescore, ids, cap, total}`.
+- CARD `last_seen: {checked_at, how}` (how = "hours only" | "hours + site HTTP <code>" | FAKE note) and `neighbourhood_src: qloo|osm|pool|null`. Strike event reason `"last seen: failed"`.
 - `diag.struck_fit_ranks`: fit ranks in U of struck members (for "Your #1–#3 were on the AIs' lists.").
 - The UI renders these when present and degrades gracefully when absent.
 

@@ -13,7 +13,8 @@ Pluggable lanes (the server supplies them; the subscriptions never touch the ser
   gemini(prompt) or gemini.ask(prompt) -> answer dict {"names": [{"name", "neighbourhood"}], "raw", "provider",
       "model", "asked_at"}   (the one live taste ask)
   street_check(neighbourhood, city_name) -> [answer, ...]   (L2: dated answers for known neighbourhoods, <= 3 live)
-  last_seen(entity) -> bool   (site reachable; the engine checks hours and "CLOSED" itself)
+  last_seen(entity) -> bool or (bool, {"checked_at", "how"})   default: unsaid.lastseen.check in live mode (hours,
+      address, the venue's site HTTP 2xx/3xx in 5 s, cached 24 h); fake mode checks hours and address only
 Use one Qloo client per run (pass none, or a fresh one): the deadline and the calls callback live on the client; the
 token bucket is global and the cache is on disk, so nothing is lost by not sharing it.
 In fake mode, results carry the "fake" flag, and the live lane and the street check are fake stand-ins unless the
@@ -268,6 +269,9 @@ def run_unsaid(city, loves, *, walls_path=None, mode="fake", on_event=None, qloo
 
     if street_check is None and fake:
         street_check = fake_street_check(q)
+    if last_seen is None:                 # §3.1 last-seen: hours + address + the venue's own site (live); the server
+        from unsaid import lastseen      # may pass its own; last_seen=False switches it off
+        last_seen = lastseen.fake_check if fake else lastseen.check
 
     # ---- calls / ranking events from the client
     n_ent = sum(1 for l in ls if l.get("kind") == "entity")
@@ -296,7 +300,7 @@ def run_unsaid(city, loves, *, walls_path=None, mode="fake", on_event=None, qloo
         send(dict(payload, type=kind))
 
     try:
-        res = E.run(q, c, ls, wall, street_check=street_check or None, last_seen=last_seen,
+        res = E.run(q, c, ls, wall, street_check=street_check or None, last_seen=last_seen or None,
                     live_answers=live_answers if gemini else None, emit=emit, strict=True)
     except QlooError as e:
         send({"type": "status", "state": "degraded", "text": "Qloo isn't answering right now."})

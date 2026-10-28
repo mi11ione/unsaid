@@ -563,6 +563,129 @@ def last_seen_local(e, hours_known):
     return True, None
 
 
+# ---------------------------------------------------------------- what the place IS (card front, §2.1)
+WHAT_BLAND = {"restaurant", "bar", "place", "american", "bar food", "food", "casual", "casual dining",
+              "comfort food", "new american", "pub food", "dining drinking"}
+WHAT_KEEP_B = ("live music", "jazz", "blues", "r&b", "soul music", "hip hop", "karaoke", "comedy", "open mic",
+               "live performances", "dj", "drag", "line dancing", "dancing", "dance floor", "trivia", "happy hour",
+               "sports viewing", "billiards", "pool table", "darts")       # (b), in this order of preference
+WHAT_CUISINE_FIRST = ("soul food", "barbecue", "bbq", "cajun", "creole", "caribbean", "jamaican", "ethiopian",
+                      "vietnamese", "thai", "mexican", "italian", "chinese", "korean", "japanese", "indian",
+                      "mediterranean", "middle eastern", "seafood", "southern", "steakhouse", "wings")
+WHAT_RENAME = {"happy hour drinks": "happy hour", "happy hour food": "happy hour", "blues music": "blues",
+               "jazz music": "jazz", "live performances": "live shows", "dance floor": "dancing"}
+WHAT_B_PREFIX = ("urn:tag:interests:", "urn:tag:activity_type:", "urn:tag:offerings:", "urn:tag:amenity:qloo:",
+                 "urn:tag:entertainment", "urn:tag:music")
+
+
+def _what_label(t):
+    n = (t.get("name") or "").strip().lower()
+    n = re.sub(r"\s+us$", "", n)                                   # "southern restaurant us" -> "southern restaurant"
+    n = re.sub(r"\s+restaurant$", "", n) if n != "restaurant" else n  # "southern restaurant" -> "southern"
+    return WHAT_RENAME.get(n, n)
+
+
+def _b_rank(lab):
+    for k, w in enumerate(WHAT_KEEP_B):
+        if lab == w or lab.startswith(w + " ") or lab.endswith(" " + w):
+            return k
+    return len(WHAT_KEEP_B)
+
+
+def _a_rank(item):
+    lab, is_kind = item
+    pref = next((k for k, w in enumerate(WHAT_CUISINE_FIRST) if w == lab), len(WHAT_CUISINE_FIRST))
+    return (0 if is_kind else 1, pref)
+
+
+def what_line(e, n=2):
+    """Two tags that say what the place IS: (a) cuisine / genre:place:restaurant:<x> / category:place:<x> kinds,
+    specific before bland ("soul food" before "american", "sports bar" before "bar"); then (b) music, entertainment
+    or offering tags (live music, jazz, karaoke, comedy, happy hour, dancing). Never amenity, payment, accessibility,
+    demographic, time-of-day, price or "place" tags. When the place has any kind tag, one is always shown, first."""
+    a1, a2, b = [], [], []
+    for t in e.get("tags") or []:
+        if not isinstance(t, dict) or not t.get("name"):
+            continue
+        tid = (t.get("id") or "").lower()
+        raw = (t.get("name") or "").strip().lower()
+        lab = _what_label(t)
+        if tid.startswith(("urn:tag:cuisine:", "urn:tag:category:place:", "urn:tag:genre:place:restaurant:")):
+            (a2 if lab in WHAT_BLAND else a1).append((lab, not tid.startswith("urn:tag:cuisine:")))
+        elif tid.startswith(WHAT_B_PREFIX) and any(raw == k or raw.startswith(k + " ") or raw.endswith(" " + k)
+                                                   for k in WHAT_KEEP_B):
+            b.append(lab)
+    a1 = [lab for lab, _ in sorted(a1, key=_a_rank)]            # kinds ("cocktail bar") first, then cuisines
+    a2 = [lab for lab, _ in a2]
+    b = sorted(b, key=_b_rank)
+    seen, a1u, bu, a2u = set(), [], [], []
+    for src, dst in ((a1, a1u), (b, bu), (a2, a2u)):
+        for x in src:
+            k = re.sub(r"[^a-z0-9]+", "", x.replace("&", "").replace("+", "").replace(" and ", ""))
+            if k not in seen:            # "bar + grill" == "bar & grill" == "bar grill"
+                seen.add(k)
+                dst.append(x.replace(" + ", " & "))
+    a2u = [x for x in a2u if not any(x in y.split(" ") for y in a1u)]     # "bar" never beside "sports bar"
+    pick = (a1u + bu + a2u)[:n]
+    if (a1u or a2u) and not any(x in a1u + a2u for x in pick):            # say what it is first
+        pick = [(a1u or a2u)[0]] + pick[:n - 1]
+    kinds = [x for x in pick if x in a1u + a2u]
+    return " · ".join(kinds + [x for x in pick if x not in kinds])
+
+
+# ---------------------------------------------------------------- the neighbourhood fallback
+_HOODS = {}
+
+
+def osm_hoods(city_key):
+    """fixtures/hood_centroids.json (OSM, written by hood_centroids.py) -> [(name, lat, lon)], or []."""
+    if city_key not in _HOODS:
+        fp = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "fixtures",
+                          "hood_centroids.json")
+        rows = []
+        try:
+            with open(fp) as f:
+                rows = [(r["name"], r["lat"], r["lon"]) for r in json.load(f)["cities"].get(city_key, [])]
+        except (OSError, ValueError, KeyError):
+            pass
+        _HOODS[city_key] = rows
+    return _HOODS[city_key]
+
+
+def pool_hoods(pool):
+    """Centroids of the neighbourhoods Qloo names on the pool's own places (0 calls): the stand-in when the OSM file
+    has nothing near."""
+    acc = {}
+    for e in pool:
+        h, ll = prop(e, "neighborhood"), latlon(e)
+        if h and ll:
+            a = acc.setdefault(h, [0.0, 0.0, 0])
+            a[0] += ll[0]
+            a[1] += ll[1]
+            a[2] += 1
+    return [(h, a[0] / a[2], a[1] / a[2]) for h, a in acc.items()]
+
+
+def hood_of(e, centroids, max_mi=1.5):
+    """-> (neighbourhood, src): Qloo's own field (qloo), else the nearest centroid within 1.5 mi (osm, then pool),
+    else ("", None)."""
+    h = prop(e, "neighborhood")
+    if h:
+        return h, "qloo"
+    ll = latlon(e)
+    if not ll:
+        return "", None
+    for src, rows in centroids:
+        best = None
+        for name, la, lo in rows:
+            d = C.haversine_mi(ll, (la, lo))
+            if d <= max_mi and (best is None or d < best[0]):
+                best = (d, name)
+        if best:
+            return best[1], src
+    return "", None
+
+
 # ---------------------------------------------------------------- CAP and the popularity proofs
 def popularity_cap(q, city, loves, U, struck_u, pop, pop_rank):
     k = len(struck_u)
@@ -790,8 +913,14 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
     rindex = reverse_index(all_answers)
     hours_cov = sum(1 for e in U if prop(e, "hours")) / float(N)
     hours_known = hours_cov >= CFG["HOURS_COVERAGE_MIN"]
-    selected, rev_struck, unseen = [], [], []
+    selected, rev_struck, unseen, seen_info = [], [], [], {}
     want = CFG["N_CARDS"] + CFG["N_RESERVES"]
+    if last_seen is not None and hasattr(last_seen, "prefetch"):     # venue sites in parallel, not one by one
+        try:
+            last_seen.prefetch([byid[i] for i in order[:want + 8]
+                                if reverse_hit(byid[i].get("name"), rindex) is None])
+        except Exception:
+            pass
     for i in order:
         if len(selected) >= want:
             break
@@ -804,16 +933,29 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
                             "reason": "reverse check", "qloo_id": i})
             continue
         ok, why = last_seen_local(e, hours_known)
+        info = {"checked_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+                "how": "hours (Qloo)" if ok else "failed: %s" % why}
         if ok and last_seen is not None:
             try:
-                ok = bool(last_seen(e))
-                why = None if ok else "last-seen hook"
+                got = last_seen(e)
+                ok, extra = got if isinstance(got, tuple) else (bool(got), None)
+                ok = bool(ok)
+                if extra:
+                    info = extra
+                elif not ok:
+                    info = dict(info, how="failed: last-seen hook")
+                why = None if ok else info["how"]
             except Exception:
-                ok, why = True, None
-        if not ok:
-            unseen.append({"id": i, "name": e.get("name"), "why": why})
+                ok = True
+        if not ok:                       # struck as "last seen: failed"; the next candidate rises
+            unseen.append({"id": i, "name": e.get("name"), "why": why, "last_seen": info})
+            emit("strike", {"name": e.get("name"), "norm": M.norm(e.get("name") or ""), "outcome": "struck",
+                            "reason": "last seen: failed", "qloo_id": i, "how": info.get("how")})
             continue
+        seen_info[i] = info
         selected.append(i)
+    centroids = [("osm", osm_hoods(city.get("key"))), ("pool", pool_hoods(pool))]
+    hoods = {i: hood_of(byid[i], centroids) for i in selected}
     picks, reserves = selected[:CFG["N_CARDS"]], selected[CFG["N_CARDS"]:]
 
     # ---- because-line: the live love whose order ranks x best (a tied order never explains)
@@ -835,13 +977,12 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
     def card(i):
         e = byid[i]
         b = because(i)
-        hood = prop(e, "neighborhood") or ""
+        hood, hood_src = hoods[i]
         n_street = len(asked_hoods.get(hood, []))
         is_tied = any(i in tied[l["text"]] for l in live)
         ll = latlon(e) or (None, None)
-        what = [t.get("name") for t in (e.get("tags") or []) if isinstance(t, dict)
-                and (t.get("id") or "") not in GENERIC_WHAT and t.get("name")]
-        return {"id": i, "name": e.get("name"), "what": " · ".join(x.lower() for x in what[:2]),
+        return {"id": i, "name": e.get("name"), "what": what_line(e), "neighbourhood_src": hood_src,
+                "last_seen": seen_info.get(i),
                 "because": b["text"] if b else None, "because_label": (b.get("name") or b["text"]) if b else None,
                 "fit_rank": fit[i], "any_rank": None if flat else pop_ord[i], "U": N,
                 "rating": prop(e, "business_rating"), "open": prop(e, "is_closed") is not True,
@@ -860,7 +1001,7 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
         k = 0
         while k < len(picks):
             i = picks[k]
-            hood = prop(byid[i], "neighborhood") or ""
+            hood = hoods[i][0]
             if hood and hood not in asked_hoods:
                 try:
                     got = list(street_check(hood, city["name"]) or [])

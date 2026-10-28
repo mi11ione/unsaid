@@ -285,6 +285,85 @@ class TestAllTiedLoveIsDead(Tmp):
         self.assertEqual(set(r["diag"]["tie_by_love"]), {l["label"] for l in r["loves"]})
 
 
+class TestCardFront(Tmp):
+    def test_what_line_says_what_the_place_is(self):
+        t = lambda i, n: {"id": i, "name": n}  # noqa: E731
+        e = {"tags": [t("urn:tag:amenities:place:restroom", "Restroom"), t("urn:tag:genre:place", "Place"),
+                      t("urn:tag:payments:place:credit_cards", "Credit cards"),
+                      t("urn:tag:accessibility:place:wheelchair_accessible_entrance", "Wheelchair accessible entrance"),
+                      t("urn:tag:customer_identity:qloo:lgbtq_friendly", "Lgbtq+ friendly"),
+                      t("urn:tag:time_of_day_fit:qloo:late_night", "Late night"),
+                      t("urn:tag:cost_description:place:10_to_20", "$10 to $20"),
+                      t("urn:tag:cuisine:qloo:american", "American"), t("urn:tag:cuisine:qloo:soul_food", "Soul food"),
+                      t("urn:tag:category:place:bar", "Bar"), t("urn:tag:offerings:place:dancing", "Dancing"),
+                      t("urn:tag:interests:qloo:live_music", "Live music")]}
+        self.assertEqual(E.what_line(e), "soul food · live music")
+        e2 = {"tags": [t("urn:tag:category:place:bar", "Bar"), t("urn:tag:interests:qloo:blues_music", "Blues music"),
+                       t("urn:tag:amenities:place:restroom", "Restroom")]}
+        self.assertEqual(E.what_line(e2), "bar · blues")
+        e3 = {"tags": [t("urn:tag:category:place:southern_restaurant_us", "Southern restaurant us"),
+                       t("urn:tag:cuisine:qloo:southern", "Southern"), t("urn:tag:category:place:sports_bar", "Sports bar"),
+                       t("urn:tag:category:place:bar", "Bar")]}
+        self.assertEqual(E.what_line(e3), "southern · sports bar")   # deduped: "southern restaurant us" == "southern"
+        self.assertEqual(E.what_line({"tags": [t("urn:tag:amenities:place:restroom", "Restroom")]}), "")
+
+    def test_neighbourhood_falls_back_to_the_nearest_centroid_within_1_5_mi(self):
+        e = {"properties": {}, "location": {"lat": 38.7400, "lon": -90.2700}}
+        near = [("Jennings", 38.7450, -90.2650), ("Far", 38.90, -90.20)]
+        self.assertEqual(E.hood_of(e, [("osm", near)]), ("Jennings", "osm"))
+        self.assertEqual(E.hood_of(e, [("osm", [("Far", 38.90, -90.20)])]), ("", None))
+        self.assertEqual(E.hood_of(dict(e, properties={"neighborhood": "The Ville"}), [("osm", near)]), ("The Ville", "qloo"))
+        self.assertEqual(E.hood_of(e, [("osm", []), ("pool", near)]), ("Jennings", "pool"))
+        r = api.run_unsaid("St. Louis", CEDRIC, mode="fake", qloo=self.q())
+        self.assertTrue(all(c["neighbourhood_src"] in ("qloo", "osm", "pool", None) for c in r["picks"]))
+
+    def test_last_seen_check(self):
+        from unsaid import lastseen as LS
+        LS.DIR = os.path.join(self.dir, "lastseen")
+        calls = []
+
+        def fake_urllib(url, method):
+            calls.append((url, method))
+            return (200, None) if "ok.example" in url else (404, None)
+        real, LS._urllib = LS._urllib, fake_urllib
+        try:
+            P = lambda **kw: {"properties": dict({"hours": {"Mon": "9-5"}, "address": "1 Main St"}, **kw)}  # noqa
+            self.assertEqual(LS.check(P())[0], True)
+            self.assertEqual(LS.check(P())[1]["how"], "hours only")
+            ok, info = LS.check(P(website="https://ok.example/"))
+            self.assertTrue(ok and info["how"] == "hours + site HTTP 200")
+            ok, info = LS.check(P(website="https://gone.example/"))
+            self.assertFalse(ok)
+            self.assertIn("404", info["how"])
+            self.assertEqual([m for u, m in calls if "gone" in u], ["HEAD", "GET"])     # HEAD, then GET
+            n = len(calls)
+            LS.check(P(website="https://ok.example/"))
+            self.assertEqual(len(calls), n, "cached 24 h")
+            self.assertFalse(LS.check(P(hours=None))[0])
+            self.assertFalse(LS.check(P(address="12 Elm St (CLOSED)"))[0])
+        finally:
+            LS._urllib = real
+
+    def test_a_card_failing_last_seen_is_struck_and_the_next_rises(self):
+        first = api.run_unsaid("St. Louis", CEDRIC, mode="fake", qloo=self.q(), gemini=False, street_check=False)
+        victim = first["picks"][0]["id"]
+        events = []
+
+        def hook(e):
+            if e["entity_id"] == victim:
+                return False, {"checked_at": "t", "how": "failed: site HTTP 404"}
+            return True, {"checked_at": "t", "how": "hours only"}
+        r = api.run_unsaid("St. Louis", CEDRIC, mode="fake", qloo=self.q(), gemini=False, street_check=False,
+                           last_seen=hook, on_event=events.append)
+        self.assertNotIn(victim, [c["id"] for c in r["picks"] + r["reserves"]])
+        self.assertEqual(len(r["picks"]), 7)
+        self.assertEqual(r["picks"][-1]["id"] if False else len(r["reserves"]), 3)
+        self.assertTrue(all(c["last_seen"] == {"checked_at": "t", "how": "hours only"} for c in r["picks"]))
+        self.assertTrue(any(e["type"] == "strike" and e.get("reason") == "last seen: failed" and e["qloo_id"] == victim
+                            for e in events))
+        self.assertEqual(r["diag"]["last_seen_dropped"][0]["id"], victim)
+
+
 class TestDeadline(Tmp):
     def test_hard_cap_degrades(self):
         events = []
