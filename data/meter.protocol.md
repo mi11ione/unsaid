@@ -1,4 +1,4 @@
-# Grounding meter: protocol (frozen 27 Oct 2026, 20:30 ET, before any meter ask)
+# Grounding meter: protocol (frozen 27 Oct 2026, 19:46 ET, before any meter ask)
 
 UNSAID.md §4 gate D. Frozen into the public SHA-256 bundle before any meter ask.
 
