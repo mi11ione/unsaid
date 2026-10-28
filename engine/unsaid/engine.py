@@ -88,8 +88,10 @@ CFG = {
                             "hookah_bar", "hookah_lounge", "hookah_store"],
     # Diversity (28 Oct): "everyone's taste" prior per city, data/priors/<city>.json (build_priors.py). A place's
     # prior is its mean fit percentile over the preset sets that share no love with this query (>= PRIOR_MIN_SETS).
-    "PRIORS_DIR": os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-                               "data", "priors"),
+    # UNSAID_PRIORS_DIR overrides it (Render Secret Files: /etc/secrets holding nyc.json / stl.json or
+    # priors-nyc.json / priors-stl.json)
+    "PRIORS_DIR": os.environ.get("UNSAID_PRIORS_DIR") or os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "priors"),
     "PRIOR_MIN_SETS": 1, "PRIOR_ENABLED": True,   # 1: with 10 sets a city, one other taste is evidence
     # how a place's fits for other tastes become "fits everyone": "top" = share of other tastes that put it in their
     # top PRIOR_TOP (a place many tastes rank high); "mean" = its mean fit percentile
@@ -1279,6 +1281,8 @@ _PRIORS = {}
 
 def load_prior(city_key):
     fp = os.path.join(CFG["PRIORS_DIR"], "%s.json" % city_key)
+    if not os.path.exists(fp):
+        fp = os.path.join(CFG["PRIORS_DIR"], "priors-%s.json" % city_key)
     try:
         mt = os.path.getmtime(fp)
     except OSError:
