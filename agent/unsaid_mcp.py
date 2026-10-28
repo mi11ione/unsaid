@@ -124,6 +124,10 @@ PICK_SCHEMA = {
         "ranks": {"type": "string"}, "lift_pts": {"type": ["integer", "null"]},
         "address": {"type": ["string", "null"]}, "url": {"type": ["string", "null"]},
         "why": {"type": ["string", "null"]},
+        "blurb": {"type": ["string", "null"]}, "order": {"type": "array", "items": {"type": "string"}},
+        "price": {"type": ["string", "null"]}, "image": {"type": ["string", "null"]},
+        "hours": {"type": ["object", "null"]}, "tz": {"type": ["string", "null"]},
+        "distance_mi": {"type": ["number", "null"]}, "distance_from": {"type": ["string", "null"]},
         "holds": {"type": "string"},
         "because": {"type": "object", "properties": {"love": {"type": ["string", "null"]},
                                                      "share": {"type": ["number", "null"]},
@@ -283,6 +287,10 @@ def _pick(c):
                     "detail": c.get("because_detail"),
                     "line": ("because you love %s" % c["because"]) if c.get("because") else None},
         "why": c.get("why"),
+        # what Qloo knows about the place itself (the same insights responses; 0 extra calls)
+        "blurb": c.get("blurb"), "order": list(c.get("order") or []), "price": c.get("price"),
+        "image": c.get("image"), "hours": c.get("hours"), "tz": c.get("tz"),
+        "distance_mi": c.get("distance_mi"), "distance_from": c.get("distance_from"),
         "ai_named": 0, "ai_asked": (c.get("never_said") or {}).get("asks") or 0}
 
 
@@ -594,6 +602,10 @@ def summary(r):
             i, p["name"], p["neighbourhood"] or "-", " · ".join(p["what"]) or "-", p["ranks"], p["holds"],
             p["because"].get("line"), (" · " + p["why"]) if p.get("why") else "", p["ai_named"], p["ai_asked"],
             p["qloo_id"]))
+        extra = [x for x in (p.get("price"), p.get("blurb"),
+                             ("people order " + ", ".join(p["order"])) if p.get("order") else None) if x]
+        if extra:
+            lines.append("   " + " · ".join(extra))
     if w["top_names"]:
         lines.append("Everyone else gets: " + ", ".join(w["top_names"]))
     if r.get("message"):

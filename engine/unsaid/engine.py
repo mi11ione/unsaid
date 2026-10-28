@@ -1505,6 +1505,95 @@ def display_name(name):
 
 
 CENTER_LABEL = {"stl": "downtown", "nyc": "Central Park", "la": "downtown"}   # cities.py centers, in words
+CITY_TZ = {"stl": "America/Chicago", "nyc": "America/New_York", "la": "America/Los_Angeles"}
+
+# ---- rich card fields (29 Oct): straight from the insights responses the engine already holds, 0 extra calls
+ORDER_STOP = set("""atmosphere crowd security party night owner owners home feel prices price seating patio dining food
+friendly staff service vibe vibes music dj drinks drink bar bartender bartenders place spot location parking wait
+line lines music dancing dance karaoke tv tvs game games sports event events experience people family friends area
+neighborhood wall walls decor ambiance ambience view views time times hour hours happy hour menu portions portion
+value quality customer customers environment energy fun good great nice clean cozy space room inside outside
+outdoor indoor table tables booth booths floor stage band bands live entertainment respect cowboys birthday weekend
+weekends lunch dinner breakfast brunch late night specials special deals deal cash card owner's server servers
+manager pool billiards darts trivia jukebox smoke smoking cigar cigars hookah""".split())
+ORDER_VENUE = set("""bar bars pub pubs lounge lounges tavern taverns restaurant restaurants cafe cafes grill grille diner
+club clubs brewery breweries taproom saloon bistro eatery joint spot spots shop shops house hall garden rooftop""".split())
+_ABBREV = set("st dr ave mt mr mrs ms jr sr blvd rd ln hwy ft no vs etc inc ltd co corp n s e w".split())
+_ORDER_KINDS = ("urn:tag:menu_highlight:", "urn:tag:specialty_dish:", "urn:tag:cuisine:", "urn:tag:beverage_offering:",
+                "urn:tag:offerings:")
+
+
+def _sing_word(w):
+    return w[:-1] if len(w) > 3 and w.endswith("s") and not w.endswith("ss") else w
+
+
+def dish_vocab(U):
+    """The city pool's own dish and drink words: names of its menu_highlight / specialty_dish / cuisine / beverage
+    tags (and their singular forms), so a keyword counts as something to order only when Qloo knows it as food."""
+    v = set()
+    for e in U:
+        for t in e.get("tags") or []:
+            if isinstance(t, dict) and (t.get("id") or "").startswith(_ORDER_KINDS) and t.get("name"):
+                n = t["name"].strip().lower()
+                if n in WHAT_SERVICE or n in WHAT_BLAND:
+                    continue
+                v.add(n)
+                v.add(" ".join(_sing_word(w) for w in n.split()))
+    return v
+
+
+def order_line(e, vocab, n=3):
+    """Up to n things people order: Qloo's specialty_dishes; else its review keywords that are food or drink (in the
+    pool's dish vocabulary, never a stoplist word). [] when nothing real is left."""
+    out = []
+    for d in prop(e, "specialty_dishes") or []:
+        nm = (d.get("name") if isinstance(d, dict) else str(d) if d else "") or ""
+        nm = nm.strip().lower()
+        if nm and nm not in out:
+            out.append(nm)
+    if not out:
+        for k in prop(e, "keywords") or []:
+            nm = ((k.get("name") if isinstance(k, dict) else str(k)) or "").strip().lower()
+            words = nm.split()
+            if not words or nm in ORDER_STOP or all(w in ORDER_STOP for w in words):
+                continue
+            if words[-1] in ORDER_VENUE:
+                continue                  # "dive bar", "cocktail bar": what the place is, not what you order
+            if nm in vocab or " ".join(_sing_word(w) for w in words) in vocab:
+                if nm not in out:
+                    out.append(nm)
+    return out[:n]
+
+
+def blurb_line(e, limit=110):
+    """Qloo's short_description, first sentence, <= limit chars at a word boundary."""
+    d = (prop(e, "short_description") or "").strip()
+    if not d:
+        return None
+    for m in re.finditer(r"[.!?](?=\s|$)", d):      # the first full stop that is not "St." / "Dr." / "N."
+        word = re.findall(r"[A-Za-z]+$", d[:m.start()])
+        if word and (word[0].lower() in _ABBREV or len(word[0]) == 1):
+            continue
+        d = d[:m.end()]
+        break
+    if len(d) > limit:
+        d = d[:limit + 1].rsplit(" ", 1)[0].rstrip(",;:-") + "…"
+    return d
+
+
+def image_url(e):
+    im = prop(e, "image")
+    if isinstance(im, dict) and im.get("url"):
+        return im["url"]
+    for x in prop(e, "images") or []:
+        if isinstance(x, dict) and x.get("url"):
+            return x["url"]
+    return None
+
+
+def price_line(e):
+    p = prop(e, "price_level")
+    return "$" * int(p) if isinstance(p, (int, float)) and 1 <= p <= 4 else None
 _CORP_TAIL = re.compile(r"(?:,?\s+(?:ltd|llc|inc)\.?)+$", re.I)
 
 
@@ -2159,6 +2248,7 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
 
     asked_hoods, street_answers = {}, []
     details = {}
+    vocab = dish_vocab(U)
 
     def assign_details():
         """Each card's reason line, the seven in for-you order then the reserves, so no two show the same tag."""
@@ -2186,6 +2276,8 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
                 "neighbourhood_src": hood_src, "area": hood or None,
                 "distance_mi": round(C.haversine_mi((ll[0], ll[1]), city["center_latlon"]), 1)
                 if ll[0] is not None else None, "distance_from": CENTER_LABEL.get(city.get("key")),
+                "image": image_url(e), "blurb": blurb_line(e), "order": order_line(e, vocab), "price": price_line(e),
+                "hours": prop(e, "hours") or None, "tz": CITY_TZ.get(city.get("key")),
                 "last_seen": seen_info.get(i),
                 "because": b["text"] if b else None, "because_label": (b.get("name") or b["text"]) if b else None,
                 "fit_rank": fit[i], "any_rank": None if flat else pop_ord[i], "U": N,

@@ -638,6 +638,23 @@ class TestCardLines(unittest.TestCase):
         self.assertEqual(len(details), len(set(details)))                               # no tag twice in the seven
         self.assertLessEqual(r["counts"]["named_food_count"], r["counts"]["wall"])
 
+    def test_rich_card_fields(self):
+        e = {"properties": {
+            "short_description": "Casual bar on Dr. Martin Luther King Dr. in North St. Louis. Dancing on Fridays.",
+            "price_level": 2, "image": {"url": "https://images.qloo.com/i/x.jpg"},
+            "keywords": [{"name": "atmosphere"}, {"name": "dive bar"}, {"name": "rib tips"}, {"name": "security"},
+                         {"name": "peach cobbler"}, {"name": "party"}]}}
+        self.assertEqual(E.blurb_line(e), "Casual bar on Dr. Martin Luther King Dr. in North St. Louis.")
+        self.assertEqual(E.price_line(e), "$$")
+        self.assertEqual(E.image_url(e), "https://images.qloo.com/i/x.jpg")
+        vocab = {"rib tips", "peach cobbler", "dive bar"}
+        self.assertEqual(E.order_line(e, vocab), ["rib tips", "peach cobbler"])     # no venue kind, no stoplist word
+        e["properties"]["specialty_dishes"] = [{"name": "Peach Cobbler"}]
+        self.assertEqual(E.order_line(e, vocab), ["peach cobbler"])                 # specialty dishes first
+        self.assertEqual(E.order_line({"properties": {"keywords": [{"name": "crowd"}]}}, vocab), [])
+        long = {"properties": {"short_description": "word " * 40}}
+        self.assertLessEqual(len(E.blurb_line(long)), 111)
+
     def test_chain_rule_reads_the_places_own_website(self):
         mk = lambda i, n, w: {"entity_id": i, "name": n, "properties": {"website": w}}  # noqa: E731
         pool = [mk("fw1", "First Watch", "https://www.firstwatch.com/locations/saint-ann/"),
