@@ -35,7 +35,7 @@
     let x = pad; const my = 96;
     'UNSAID'.split('').forEach(ch => { ctx.fillText(ch, x, my); x += ctx.measureText(ch).width + 7; });
     const unW = ctx.measureText('UN').width + 7;
-    ctx.fillStyle = C.red; ctx.fillRect(pad - 1, my - 9, unW, 3);
+    ctx.fillStyle = C.ink; ctx.fillRect(pad - 1, my - 9, unW, 3);   // the logo's strike is ours: ink
     if (fake) {
       ctx.font = `14px ${MONO}`; const t = 'MOCK DATA · NOT REAL CARDS', tw = ctx.measureText(t).width;
       ctx.strokeStyle = C.amber; ctx.setLineDash([4, 3]); ctx.strokeRect(W - pad - tw - 24, my - 22, tw + 24, 30); ctx.setLineDash([]);

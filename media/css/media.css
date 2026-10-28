@@ -11,7 +11,7 @@ body { font: 11px/1.4 var(--mono); -webkit-font-smoothing: antialiased; }
 .abs { position: absolute; }
 .mark { font: 700 13px/1 var(--mono); letter-spacing: .32em; color: var(--ink); }
 .mark s { text-decoration: none; position: relative; }
-.mark s::after { content: ''; position: absolute; left: -1px; right: .25em; top: 52%; height: 2px; background: var(--red); }
+.mark s::after { content: ''; position: absolute; left: -1px; right: .25em; top: 52%; height: 2px; background: var(--ink); }
 .slug { color: var(--dim); letter-spacing: .14em; text-transform: uppercase; font-size: 10px; }
 .mock { display: inline-flex; align-items: center; gap: 6px; height: 18px; padding: 0 7px; border: 1px dashed var(--amber); color: var(--amber);
   font-size: 9px; letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; }

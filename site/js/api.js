@@ -67,6 +67,7 @@
       fetch(file).then(r => r.json()).then(j => {
         if (stopped) return;
         const R = j.result || j;
+        if (Array.isArray(j.loves)) R.typed = j.loves.map(l => l.text || null);   // the loves as typed for this set
         (R.wall || []).forEach(w => onEvent({ type: 'wall_name', ...w }));
         onEvent({ type: 'done', result: R });
         onEnd && onEnd();

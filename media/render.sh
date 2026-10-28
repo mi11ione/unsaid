@@ -25,11 +25,12 @@ if [[ $what == all || $what == data ]]; then
   (cd .. && python3 -I media/tools/build_data.py && node media/tools/test_matcher.mjs)
 fi
 
+# image 1 is the Mai Lee hero (round 2); hero.html (Gioia's, "Ask Claude…") is retired and no longer rendered
 if [[ $what == all || $what == hero || $what == images ]]; then
-  shot "$U/hero.html?v=devpost&$q" $S/1-hero-1600x1000.png 1600 1000 1
+  shot "$U/hero-mailee.html?v=devpost&$q" $S/1-hero-1600x1000.png 1600 1000 1
   small $S/1-hero-1600x1000.png $S/1-hero-600-check.png 600
-  shot "$U/hero.html?v=phone&$q" $S/1-hero-phone-390.png 390 0 2
-  shot "$U/hero.html?v=tv&$q" $S/1-hero-tv-1920x1080.png 1920 1080 1
+  shot "$U/hero-mailee.html?v=phone&$q" $S/1-hero-phone-390.png 390 0 2
+  shot "$U/hero-mailee.html?v=tv&$q" $S/1-hero-tv-1920x1080.png 1920 1080 1
 fi
 
 if [[ $what == all || $what == images ]]; then
@@ -64,7 +65,3 @@ if [[ $what == all || $what == site ]]; then
   zsh tools/shoot-site.sh
 fi
 
-if [[ $what == all || $what == hero || $what == images ]]; then
-  shot "$U/hero-mailee.html?v=devpost&$q" $S/1b-hero-mailee-1600x1000.png 1600 1000 1
-  small $S/1b-hero-mailee-1600x1000.png $S/1b-hero-mailee-600-check.png 600
-fi

@@ -10,7 +10,7 @@
   .top { height: 56px; min-height: 0; padding: 0; }
   h1.hl { font: 400 54px/1.05 var(--serif); letter-spacing: -.012em; margin: 34px 0 26px; }
   h1.hl s { text-decoration: none; position: relative; }
-  h1.hl s::after { content: ''; position: absolute; left: -.03em; right: -.03em; top: 56%; height: .065em; background: var(--red); box-shadow: 0 0 0 .02em var(--bg); }
+  h1.hl s::after { content: ''; position: absolute; left: -.03em; right: -.03em; top: 56%; height: .065em; background: var(--ink); box-shadow: 0 0 0 .02em var(--bg); }   /* our strike: ink */
   .cols3 { display: grid; grid-template-columns: 700px 1fr; gap: 44px; }
   .chat { border: 1px solid var(--rule2); background: #0f0f0e; height: 640px; overflow: hidden; position: relative; font: 15px/1.5 -apple-system, 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #d9d7d0; }
   .chat .who { padding: 12px 18px; border-bottom: 1px solid var(--rule2); font-weight: 600; font-size: 14px; display: flex; justify-content: space-between; }
@@ -52,6 +52,7 @@
   const { el, esc, ph } = UM;
   const SRC = (UM.param('src', null) || await UM.firstOf(['data/live/query_stl-cedric.json', '../site/data/mock/stl-cedric.ndjson']));
   const [R, A, MT] = await Promise.all([UM.result(SRC), UM.json('data/assistant.json'), UM.json('../site/data/meter.json')]);
+  const TY = ((await UM.json('../site/data/try.json')).sets.find(x => x.id === 'stl-cedric') || {}).loves;   // loves as typed
   const fake = (R.flags || []).includes('fake'), flat = (R.flags || []).includes('flat');
   const city = (R.city && R.city.name) || 'St. Louis';
   const S = document.getElementById('stage');
@@ -80,7 +81,7 @@
   const left = el(g, 'div', '');
   left.innerHTML = `<div class="chat"><div class="who">assistant<span>${A.model ? esc(A.model) + ' · ' : ''}no tools</span></div>
       <div class="u">${esc(A.prompt)}</div><div class="a">${html}</div></div>
-    <div class="cap3">Asked to avoid what every AI says. <span class="red">Struck</span>: names that match ${esc(city)}’s everyone-list exactly.</div>`;
+    <div class="cap3">Asked to avoid what every AI says. <span class="red">Struck</span>: places to eat and drink on ${esc(city)}’s everyone-list.</div>`;
 
   // ---- right: the seven
   const right = el(g, 'div', ''); right.className = 'seven';
@@ -88,13 +89,17 @@
     <div class="row7"><span class="i">${String(i + 1).padStart(2, '0')}</span>
       <span class="nm7">${c.name ? esc(c.name) : ph(null, `place ${i + 1}`)}</span>
       <span class="pr">${c.tied || c.fit_rank == null ? '' : `<b>#${c.fit_rank}</b> for you`}${flat ? '' : `<br>#${ph(c.any_rank, 'ANY')} for anyone`}</span>
-      <span class="b">because you love <b>${ph(c.because, 'love')}</b> · ${ph(c.neighbourhood, 'neighbourhood')}</span></div>`).join('');
+      <span class="b">because you love <b>${c.because == null ? ph(null, 'love') : esc(UM.typedName(R, c.because, TY))}</b> · ${ph(c.neighbourhood, 'neighbourhood')}</span></div>`).join('');
 
   // ---- the trace: "⟦QLOO_CALLS⟧ Qloo calls · your pool ×⟦6⟧ → same places, each love alone ×⟦15⟧ → names → IDs ×⟦5⟧ → popularity cap ×1"
   const D = R.diag || {}, CL = D.calls || {};
-  const loves = (R.loves || []).filter(l => !l.dead).map(l => JSON.stringify(l.label)).join(', ');
+  const loves = UM.typedLoves(R, TY).filter(l => !l.dead).map(l => JSON.stringify(l.label)).join(', ');
   const tr = el(S, 'div', ''); tr.className = 'trace';
-  tr.innerHTML = `<div class="t"><b>${ph(CL.total ?? D.qloo_calls, 'QLOO_CALLS')} Qloo calls</b> · your pool ×${ph(CL.pool, '6')} → same places, each love alone ×${ph(CL.rescore, '15')} → names → IDs ×${ph(CL.ids, '5')} → popularity cap ×${ph(CL.cap, '1')}</div>
+  // the trace sums to its total, from the same run: any calls the parts don't name are shown as "other"
+  const parts = [['your pool', CL.pool, '6'], ['same places, each love alone', CL.rescore, '15'], ['names → IDs', CL.ids, '5'], ['popularity cap', CL.cap, '1']];
+  const total = CL.total ?? D.qloo_calls, known = parts.every(p => p[1] != null) ? parts.reduce((t, p) => t + p[1], 0) : null;
+  if (total != null && known != null && total > known) parts.push(['other', total - known, 'n']);
+  tr.innerHTML = `<div class="t"><b>${ph(total, 'QLOO_CALLS')} Qloo calls</b> · ${parts.map(p => `${p[0]} ×${ph(p[1], p[2])}`).join(' → ')}</div>
     <div class="tool"><div class="c">Other agents call this.</div>tool_use · unsaid_places({ loves: [${esc(loves)}], city: "${esc(city)}" })</div>`;
   if (MT.featured) el(S, 'div', '', `alone ${ph(MT.m_alone, 'M_ALONE')} of ${MT.of} on the everyone-list · with Qloo ${ph(MT.m_qloo, 'M_QLOO')}`).className = 'meter';
   window.__ready = true;

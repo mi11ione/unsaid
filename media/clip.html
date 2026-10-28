@@ -45,18 +45,21 @@
   const S = CEN.stl;
   // G: the shape clip5 used. hits/of: census_stats.txt:58 · plain: :46 + :52 · allAsks: :3
   const G = { asks: S.gem_asks, hits: S.gem.hits, of: S.gem.of, plainHits: S.plain.hits, plainAsks: S.plain.of, allAsks: S.asks.n };
-  const R = { places: M.places, ai: M.ai.slice().sort((a, b) => b.count - a.count), lat0: M.lat0, latMax: M.latMax };
+  const R = { places: M.places, frame: M.frame, ai: M.ai.slice().sort((a, b) => b.count - a.count), lat0: M.lat0, latMax: M.latMax };
   const fake = (RES.flags || []).includes('fake');
   const PICKS = RES.picks || [];
   const TITLE = new Set(['movie', 'tv_show', 'book', 'podcast', 'videogame', 'film', 'show']);
   const tl = c => c && (c.type_label || (c.type ? String(c.type).split(':').pop() : null));
-  const LV = (RES.loves || []).filter(l => !l.dead).slice().sort((a, b) => TITLE.has(tl(a)) - TITLE.has(tl(b)));
+  const TY = ((await UM.json('../site/data/try.json')).sets.find(x => x.id === 'stl-cedric') || {}).loves;   // loves as typed
+  const LV = UM.typedLoves(RES, TY).filter(l => !l.dead).slice().sort((a, b) => TITLE.has(tl(a)) - TITLE.has(tl(b)));
   const ITAL = LV.filter(l => TITLE.has(tl(l))).map(l => l.label);
   const stage = document.getElementById('stage');
   const W = 1920, H = 1080;
   const ctx = UM.canvas(stage, W, H);
   const P = UM.projection(UM.frame(R, PICKS), { x: 960, y: 70, w: 640, h: 930 });   // the frame holds the seven
   const b = P.bounds;
+  const CLIP = { x: 860, y: 50, w: 1060, h: 970 };
+  const DRAWN = R.places.filter(([lo, la]) => { const [x, y] = P(lo, la); return x >= CLIP.x && x <= CLIP.x + CLIP.w && y >= CLIP.y && y <= CLIP.y + CLIP.h; }).length;
   const cmax = R.ai[0].count;
   const gioia = R.ai.find(a => a.name === S.gem.name), [gx, gy] = P(gioia.lon, gioia.lat), gr = UM.discD(gioia.count, cmax, 40, 5) / 2;
 
@@ -94,7 +97,7 @@
   const LOVES = 'ranked by Qloo for\n|' + (LV.length > 1 ? LV.slice(0, -1).map(l => l.label).join(', ') + '\nand ' : '') + (LV.length ? LV[LV.length - 1].label : '');
   const loves = el(stage, 'div', ''); loves.className = 'loves';
   el(stage, 'div', 'position:absolute;left:72px;top:1012px;font-size:12.5px;line-height:1.6;color:var(--dim)',
-    `red: places the AI named, sized by mentions · census of ${esc(CEN.model)}, no web search, ${G.allAsks} ${esc(S.city)} asks incl. the ${G.of} hidden-gem phrasings shown and ${G.plainAsks} plain “where to eat” ones, ${esc(CEN.date)}, pre-registered<br>${esc(M.credit)} · white: ${fake ? 'placeholders, no Qloo ranking yet' : `the ${PICKS.length}, ranked by Qloo for these loves`}`).className = 'attr';
+    `red: places ${esc(CEN.provider)} named, sized by mentions · census of ${esc(CEN.model)} (map: ${esc(CEN.provider)}’s census), no web search, ${G.allAsks} ${esc(S.city)} asks incl. the ${G.of} hidden-gem phrasings shown and ${G.plainAsks} plain “where to eat” ones, ${esc(CEN.date)}, pre-registered<br>${esc(M.credit).replace('{n}', DRAWN.toLocaleString('en-US'))} · white: ${fake ? 'placeholders, no Qloo ranking yet' : `the ${PICKS.length}, ranked by Qloo for these loves`}`).className = 'attr';
 
   // the seven: labels on the map's sides
   const mid = (b.x0 + b.x1) / 2;
@@ -113,8 +116,9 @@
     const dimK = ease((t - T.strike[0] - .2) / .8);
     const slideK = easeIO((t - T.slide[0]) / (T.slide[1] - T.slide[0]));
     // city and the AI's places
+    ctx.save(); ctx.beginPath(); ctx.rect(CLIP.x, CLIP.y, CLIP.w, CLIP.h); ctx.clip();   // the 15 mi of dots stay on the map's side
     UM.dots(ctx, R, P, { d: 4.4, alpha: .95, color: '#6a6a6a', glow: 19, reveal: i => ease((t - delay[i]) / 0.35) });
-    if (t > T.ignite - .4) UM.cityLine(ctx, R, P, PICKS);   // the city's edge, once the seven (some beyond it) arrive
+    ctx.restore();
     const discK = ease((t - .6) / .6);
     if (discK > 0) R.ai.slice().reverse().forEach(a => { const [x, y] = P(a.lon, a.lat); UM.disc(ctx, x, y, UM.discD(a.count, cmax, 40, 5) * (.6 + .4 * discK), .88 * discK * (1 - .68 * dimK)); });
     eye.style.opacity = ease((t - .2) / .5);

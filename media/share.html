@@ -14,7 +14,8 @@
 (async function () {
   const R = await UM.result((UM.param('src', null) || await UM.firstOf(['data/live/query_stl-cedric.json', '../site/data/mock/stl-cedric.ndjson'])));
   await document.fonts.ready;
-  Share.draw(document.getElementById('cv'), R);
+  const TY = ((await UM.json('../site/data/try.json')).sets.find(x => x.id === 'stl-cedric') || {}).loves;   // loves as typed
+  Share.draw(document.getElementById('cv'), { ...R, loves: UM.typedLoves(R, TY) });
   window.__ready = true;
 })().catch(e => { window.__error = String(e && e.stack || e); window.__ready = true; });
 </script>

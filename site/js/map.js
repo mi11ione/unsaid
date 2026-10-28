@@ -143,7 +143,7 @@
   function frame(M, extra) {
     const ex = (extra || []).filter(p => p && p.lat != null && p.lon != null);
     const top = Math.max(M.latMax || -99, ...ex.map(p => p.lat + 0.004));
-    return { ...M, places: M.places.concat(ex.map(p => [p.lon, p.lat])), latMax: M.latMax ? top : undefined };
+    return { ...M, places: (M.frame || M.places).concat(ex.map(p => [p.lon, p.lat])), latMax: M.latMax ? top : undefined };
   }
   // convex hull of the city's places (monotone chain), drawn as a thin line so a dot outside it reads as outside the city
   function hull(points) {
@@ -184,9 +184,41 @@
     if (m && m[1].split(' ').length <= 5 && !/^(jazz|lounge) at/i.test(s)) s = m[1];
     return s;
   }
+  // loves AS TYPED ("Frankie Beverly & Maze"), never Qloo's entity name ("Maze Featuring Frankie Beverly"), which
+  // belongs in the raw log only. Sources, in order: the love's own `text`, R.typed (a stored set), the caller's list.
+  function typedLoves(R, fallback) {
+    const t = (R && R.typed) || [];
+    return ((R && R.loves) || []).map((l, i) => ({ ...l, qloo_label: l.label, label: l.text || t[i] || (fallback && fallback[i]) || l.label }));
+  }
+  function typedName(R, label, fallback) {
+    const x = typedLoves(R, fallback).find(l => l.qloo_label === label);
+    return x ? x.label : label;
+  }
+  const WORDS = ['no', 'one', 'two', 'three', 'four', 'five'];
+  // the dead-love line: a tag love tied at Qloo's default reads as a tie; a love that only follows popularity, §2.2
+  function deadLine(l, city, nLive) {
+    const w = WORDS[nLive] || nLive, T = l.label.charAt(0).toUpperCase() + l.label.slice(1);
+    const tie = l.kind === 'tag' && /^ties/.test(l.dead_reason || '');
+    return tie ? `${T}: Qloo scores every place here the same on it, so your other ${w} did the ranking.`
+      : `${l.label} doesn’t change ${city} restaurants much; ranked on the other ${w}.`;
+  }
+  // a day, never a run time: "27 Oct"; a span of days: "27–28 Oct"
+  function day(iso) {
+    if (!iso) return null;
+    return new Intl.DateTimeFormat('en-GB', { timeZone: 'America/New_York', day: 'numeric', month: 'short' }).format(new Date(iso));
+  }
+  function days(isos) {
+    const d = (isos || []).filter(Boolean).sort();
+    if (!d.length) return null;
+    const a = day(d[0]), b = day(d[d.length - 1]);
+    if (a === b) return a;
+    const [da, ma] = a.split(' '), [db, mb] = b.split(' ');
+    return ma === mb ? `${da}–${db} ${mb}` : `${a} – ${b}`;
+  }
+
   // provider codes in the data -> the assistant's name on screen
   const PROVIDERS = { anthropic: 'Claude', claude: 'Claude', openai: 'ChatGPT', codex: 'ChatGPT', chatgpt: 'ChatGPT', google: 'Gemini', gemini: 'Gemini' };
   const provider = p => p == null ? p : (PROVIDERS[String(p).toLowerCase()] || p);
 
-  window.UM = { cleanName, frame, hull, inHull, cityLine, firstOf, provider, C, canvas, projection, discD, dots, disc, seven, ring, stack, leader, el, esc, fmt, ph, param, et, hhmm, json, result };
+  window.UM = { typedLoves, typedName, deadLine, day, days, cleanName, frame, hull, inHull, cityLine, firstOf, provider, C, canvas, projection, discD, dots, disc, seven, ring, stack, leader, el, esc, fmt, ph, param, et, hhmm, json, result };
 })();

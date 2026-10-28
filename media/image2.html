@@ -43,7 +43,9 @@
   const c = R.picks[K], fake = (R.flags || []).includes('fake'), flat = (R.flags || []).includes('flat');
   const U = c.U ?? (R.counts && R.counts.U), Rmi = R.counts && R.counts.R_mi, ns = c.never_said || {};
   const city = (R.city && R.city.name) || 'St. Louis';
-  const loves = (R.loves || []).filter(l => !l.dead).map(l => esc(l.label));
+  const TY = ((await UM.json('../site/data/try.json')).sets.find(x => x.id === 'stl-cedric') || {}).loves;   // loves as typed
+  const TL = UM.typedLoves(R, TY), loves = TL.filter(l => !l.dead).map(l => esc(l.label));
+  const tName = label => UM.typedName(R, label, TY);
   const name = c.name ? esc(c.name) : ph(null, `place ${K + 1}`);
   const S = document.getElementById('stage');
   el(S, 'div', '', `<span class="mark"><s>UN</s>SAID</span><span class="slug">${esc(city)} · card ${K + 1} of ${R.picks.length} · for ${loves.join(', ')}</span><span class="grow"></span>` +
@@ -60,31 +62,34 @@
       <div class="name">${name}</div>
       <div class="what">${ph(c.what, 'what it is')}</div>
       <div class="rk"><b>#${ph(fit, 'FIT')}</b>for you${flat ? '' : `<span class="any">#${ph(c.any_rank, 'ANY')} for anyone</span>`}</div>
-      <div class="because">because you love<b>${ph(c.because, 'love')}</b></div></div>
-    <div class="go2">${c.url ? '<span class="btn solid">Go ↗</span>' : ''}<p>${c.last_seen ? `Last seen: ${esc(c.last_seen.how || '')}. ` : ''}No place can pay to be picked.</p></div>`;
+      <div class="because">because you love<b>${c.because == null ? ph(null, 'love') : esc(tName(c.because))}</b></div></div>
+    <div class="go2">${c.url ? '<span class="btn solid">Go ↗</span>' : c.address ? '<span class="btn solid">Directions ↗</span>' : ''}<p>${c.last_seen ? `Hours and address listed in Qloo · checked ${ph(UM.day(c.last_seen.checked_at), 'date')}.<br>` : ''}No place can pay to be picked.</p></div>`;
   const pct = r => Math.max(0, Math.min(100, ((r - 1) / Math.max(1, (U || 1) - 1)) * 100));
   const lab = r => pct(r) < 12 ? `left:${pct(r)}%;transform:none` : pct(r) > 88 ? `right:${100 - pct(r)}%;transform:none` : `left:${pct(r)}%`;
-  const holds = c.holds != null && c.holds >= c.n_loves ? 'holds even if you drop any one love' : `holds without ${c.holds_without ? c.holds_without.map(esc).join(' or ') : ph(null, 'love')}`;
+  const holds = c.holds != null && c.holds >= c.n_loves ? 'holds even if you drop any one love' : `holds without ${c.holds_without ? [].concat(c.holds_without).map(x => esc(tName(x))).join(' or ') : ph(null, 'love')}`;
   const B = el(g, 'div', ''); B.className = 'back';
   B.innerHTML = `<div class="sh"><h2>Never said</h2></div>
-      <p>Named 0 times in ${ph(R.counts && R.counts.asks, 'n')} asks (${esc(city)} lists + census + street) · ${ph(et(R.diag && R.diag.as_of), 'date')}.</p>
+      <p>Named 0 times in ${ph(R.counts && R.counts.asks, 'n')} asks (${esc(city)} lists + census + street) · ${ph(UM.day(R.diag && R.diag.as_of), 'date')}.</p>
     <div class="two"><div><div class="sh"><h2>Fits you</h2></div>
       <div class="slider"><div class="track"></div>
         ${fit != null ? `<div class="tick" style="left:${pct(fit)}%"></div><div class="tl" style="${lab(fit)}">#${fit} for you</div>` : ''}
         ${!flat && c.any_rank != null ? `<div class="tick any" style="left:${pct(c.any_rank)}%"></div><div class="tl any" style="${lab(c.any_rank)}">#${c.any_rank} for anyone</div>` : ''}
         <div class="end" style="left:0">#1</div><div class="end" style="right:0">#${ph(U, 'U')}</div></div>
       <p class="dim" style="font-size:12.5px">of the same places within ${ph(Rmi, 'R')} mi, rated ${CFG.floor.rating}+, open. ‘Anyone’ is Qloo’s popularity order of the same places.</p></div>
-    <div><div class="sh"><h2>Because</h2></div><div class="big1">${ph(c.because, 'love')}</div><p class="dim">${holds}</p></div></div>`;
+    <div><div class="sh"><h2>Because</h2></div><div class="big1">${c.because == null ? ph(null, 'love') : esc(tName(c.because))}</div><p class="dim">${holds}</p></div></div>`;
   // the raw-log strip: three real asks behind the wall, then this card's line (U appears here, its third time)
   // three real asks behind the wall: the first from each provider in the data, then the next ones
   const asks = [], seen = new Set(), W = (R.wall || []).filter(w => w.provider);
   for (const p of [...new Set(W.map(w => w.provider))]) { const w = W.find(x => x.provider === p); seen.add(p + w.phrasing_id); asks.push(w); }
   for (const w of W) { if (asks.length >= 3) break; const k = w.provider + w.phrasing_id; if (!seen.has(k)) { seen.add(k); asks.push(w); } }
   asks.splice(3);
-  const lines = asks.map(a => `${ph(et(a.asked_at), 'time')} · <span class="v">${esc(UM.provider(a.provider))}</span> ${esc(a.model || '')} · ${a.lane === 'live' ? 'live' : 'dated'} · “${esc(a.phrasing)}” → named ${R.wall.filter(w => w.phrasing_id === a.phrasing_id && w.provider === a.provider).length} new names`);
+  const lines = asks.map(a => `${ph(et(a.asked_at), 'time')} · <span class="v">${esc(UM.provider(a.provider))}</span> ${esc(a.model || '')} · ${a.lane === 'live' ? 'live' : 'dated'} · “${esc(a.phrasing)}” → ${R.wall.filter(w => w.phrasing_id === a.phrasing_id && w.provider === a.provider && w.asked_at === a.asked_at).length} names, none of these ${R.picks.length}`);
   lines.push(`card · qloo id <span class="v">${esc(c.id)}</span> · for you #${ph(fit, 'FIT')} of ${ph(U, 'U')} · popularity #${ph(c.any_rank, 'ANY')} · named in 0 of ${ph(R.counts && R.counts.asks, 'n')} asks`);
   // the strip sits right under the card (no dead space): it is placed in the flow, after the two columns
   el(S, 'div', '', `<div class="h">RAW LOG</div>` + lines.map(l => `<div>${l}</div>`).join('')).className = 'logs';
+  // no dead space: the spare height is shared out above the card and above the log
+  const logs = S.querySelector('.logs'), spare = 1000 - 34 - (logs.offsetTop + logs.offsetHeight);
+  if (spare > 0) { g.style.marginTop = (34 + spare * .5) + 'px'; logs.style.marginTop = (40 + spare * .5) + 'px'; }
   window.__ready = true;
 })().catch(e => { window.__error = String(e && e.stack || e); window.__ready = true; document.body.insertAdjacentHTML('beforeend', `<pre style="color:#ff2d3d">${e}</pre>`); });
 </script>

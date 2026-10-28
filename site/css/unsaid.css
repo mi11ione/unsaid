@@ -25,7 +25,7 @@ a { color: inherit; }
 .top { display: flex; align-items: center; gap: 16px; min-height: 52px; border-bottom: 1px solid var(--rule2); flex-wrap: wrap; padding: 8px 0; }
 .mark { font: 700 13px/1 var(--mono); letter-spacing: .32em; text-decoration: none; white-space: nowrap; }
 .mark s { text-decoration: none; position: relative; }
-.mark s::after { content: ''; position: absolute; left: -1px; right: .25em; top: 52%; height: 2px; background: var(--red); }
+.mark s::after { content: ''; position: absolute; left: -1px; right: .25em; top: 52%; height: 2px; background: var(--ink); }
 .slug { color: var(--dim); letter-spacing: .14em; text-transform: uppercase; font-size: 10px; white-space: nowrap; }
 .grow { flex: 1; }
 .mock { display: inline-flex; align-items: center; gap: 7px; height: 20px; padding: 0 8px; border: 1px dashed var(--amber); color: var(--amber);
@@ -54,7 +54,7 @@ a { color: inherit; }
 .s1 { padding: 56px 0 24px; max-width: 760px; }
 .s1 h1 { font: 400 44px/1.1 var(--serif); margin: 0 0 6px; letter-spacing: -.01em; }
 .s1 h1 s { text-decoration: none; position: relative; color: var(--dim); }
-.s1 h1 s::after { content: ''; position: absolute; left: -.03em; right: -.03em; top: 55%; height: .07em; background: var(--red); }
+.s1 h1 s::after { content: ''; position: absolute; left: -.03em; right: -.03em; top: 55%; height: .07em; background: var(--ink); }
 .fields { margin-top: 36px; display: grid; gap: 0; }
 .fld { border-bottom: 1px solid var(--rule2); padding: 10px 0 8px; display: grid; grid-template-columns: 28px 1fr; align-items: start; gap: 0 10px; }
 .fld .n { color: var(--faint); padding-top: 8px; }

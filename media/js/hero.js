@@ -9,7 +9,9 @@
   const { C, el, esc, fmt } = UM;
   const v = UM.param('v', 'devpost');
   const SRC = (UM.param('src', null) || await UM.firstOf(['data/live/query_stl-cedric.json', '../site/data/mock/stl-cedric.ndjson']));
-  const [CEN, M, RES] = await Promise.all([UM.json('../site/data/census.json'), UM.json('../site/data/map/stl.json'), UM.result(SRC)]);
+  const [CEN, M, RES, TRY] = await Promise.all([UM.json('../site/data/census.json'), UM.json('../site/data/map/stl.json'), UM.result(SRC),
+    UM.json('../site/data/try.json')]);
+  const TYPED = ((TRY.sets || []).find(x => x.id === 'stl-cedric') || {}).loves;   // the loves as typed (data/sets.json)
   const S = CEN.stl;
   // census_stats.txt:58  "Gioia's Deli  13/16"                     -> S.gem.hits / S.gem.of
   // census_stats.txt:46  "Gioia's Deli 11/13/1/5/7" (generic first) -> S.plain.hits = 11
@@ -21,7 +23,7 @@
   const N = picks.length;
   const TITLE = new Set(['movie', 'tv_show', 'book', 'podcast', 'videogame', 'film', 'show']);
   const tl = c => c && (c.type_label || (c.type ? String(c.type).split(':').pop() : null));
-  const loves = (RES.loves || []).filter(l => !l.dead).slice().sort((a, b) => TITLE.has(tl(a)) - TITLE.has(tl(b)));
+  const loves = UM.typedLoves(RES, TYPED).filter(l => !l.dead).slice().sort((a, b) => TITLE.has(tl(a)) - TITLE.has(tl(b)));
   const lv = l => `<span style="white-space:nowrap">${TITLE.has(tl(l)) ? `<i>${esc(l.label)}</i>` : esc(l.label)}</span>`;
   const LOVES = loves.length ? loves.slice(0, -1).map(lv).join(', ') + (loves.length > 1 ? ' and ' : '') + lv(loves[loves.length - 1]) : UM.ph(null, 'loves');
   const PLACE = (c, i) => c.name ? esc(c.name) : UM.ph(null, `place ${i + 1}`);
@@ -35,13 +37,18 @@
   const CG = S.chatgpt && S.chatgpt.gem;                 // harness/census_stats_codex.txt:59 (9/16), :48 (first in 4)
   const MAI = S.mailee_claude;                            // harness/census_stats_claude.txt:59 (13/16)
   const OUT = (M.outside || []).find(o => o.name === 'Mai Lee');   // real OSM coordinates (media/data/geo.json), or absent
-  const callouts = VAR === 'mailee' ? (OUT ? [OUT] : []) : M.callouts.map(n => ai.find(a => a.name === n)).filter(Boolean);
+  // mailee: Mai Lee labelled beside its disc, Gioia's with a small strike-label and no number (one number per section)
+  const callouts = VAR === 'mailee' ? [OUT, ai.find(a => a.name === S.gem.name)].filter(Boolean) : M.callouts.map(n => ai.find(a => a.name === n)).filter(Boolean);
   // the projection takes in Mai Lee (Brentwood, just west of the city) so it sits in a thin gutter at its real place
-  const PM = VAR === 'mailee' && OUT ? { ...M, places: M.places.concat([[OUT.lon, OUT.lat]]) } : M;
+  const PM = VAR === 'mailee' && OUT ? { ...M, frame: (M.frame || M.places).concat([[OUT.lon, OUT.lat]]) } : M;
   const gemDisc = callouts[0];
   const short = n => n.replace(/ On The Hill$/i, '');
   const MOCK = fake ? 'mock · white: not real cards yet' : null;
-  const WHITE = fake ? 'placeholders, no Qloo ranking yet' : `the ${N}, ranked by Qloo for these loves · ${esc(UM.et(RES.diag && RES.diag.as_of) || '')}`;
+  const WHITE = fake ? 'placeholders, no Qloo ranking yet' : `the ${N}, ranked by Qloo for these loves · ${esc(UM.day(RES.diag && RES.diag.as_of) || '')}`;
+  let DRAWN = null;   // grey dots actually inside the drawn map: the footer's count
+  const credit = () => esc(M.credit).replace('{n}', DRAWN == null ? (M.places || []).length.toLocaleString('en-US') : DRAWN.toLocaleString('en-US'));
+  // the red discs are Claude's census only (sized by Claude's mentions), so the footer says exactly that
+  const RED = `<span style="color:var(--red)">red</span>: places ${esc(CEN.provider)} named, sized by mentions (map: ${esc(CEN.provider)}’s census)`;
 
   function topbar(s, pad) {
     el(stage, 'div', `left:${pad}px;top:${26 * s}px;display:flex;gap:${22 * s}px;align-items:baseline;position:absolute`,
@@ -53,15 +60,23 @@
     const ctx = UM.canvas(stage, o.W, o.H);
     const P = UM.projection(UM.frame(PM, picks), o.box);   // the seven at their real lat/lon; the frame grows to hold them
     const b = P.bounds;
+    // every mapped place within 15 mi, so the seven sit among dots; drawn only inside the map's own area
+    const K = o.clip || { x: 0, y: 0, w: o.W, h: o.H };
+    ctx.save(); ctx.beginPath(); ctx.rect(K.x, K.y, K.w, K.h); ctx.clip();
     UM.dots(ctx, M, P, { d: o.dotD, alpha: .95, glow: o.glow });
-    UM.cityLine(ctx, M, P, picks);                           // the city's edge, when one of the seven sits beyond it
+    // soft edges: the 15 mi of dots fade out at the area's sides instead of stopping at a hard line
+    const fade = (x0, y0, x1, y1, rx, ry, rw, rh) => { const g = ctx.createLinearGradient(x0, y0, x1, y1);
+      g.addColorStop(0, 'rgba(11,11,11,0)'); g.addColorStop(1, 'rgba(11,11,11,1)'); ctx.fillStyle = g; ctx.fillRect(rx, ry, rw, rh); };
+    const F = 70 * (o.dotD / 4.2);
+    fade(K.x + K.w - F, 0, K.x + K.w, 0, K.x + K.w - F, K.y, F, K.h);
+    fade(K.x + F, 0, K.x, 0, K.x, K.y, F, K.h);
+    fade(0, K.y + F * .6, 0, K.y, K.x, K.y, K.w, F * .6);
+    fade(0, K.y + K.h - F * .6, 0, K.y + K.h, K.x, K.y + K.h - F * .6, K.w, F * .6);
+    ctx.restore();
+    DRAWN = M.places.filter(([lo, la]) => { const [x, y] = P(lo, la); return x >= K.x && x <= K.x + K.w && y >= K.y && y <= K.y + K.h; }).length;
     ai.slice().reverse().forEach(a => { const [x, y] = P(a.lon, a.lat); UM.disc(ctx, x, y, UM.discD(a.count, cmax, o.dmax, 5)); });
     if (VAR === 'mailee' && OUT) {
-      // the gutter: a thin grey line at the city's west edge; Mai Lee's disc sits beyond it, at its real coordinates
-      const west = Math.min(...M.places.filter(([, la]) => la <= (M.latMax || 99)).map(([lo]) => lo));
-      const lats = M.places.map(([, la]) => la).filter(la => la <= (M.latMax || 99));
-      const gx0 = P(west, 0)[0] - 6, [, gy0] = P(west, Math.max(...lats)), [, gy1] = P(west, Math.min(...lats));
-      ctx.strokeStyle = '#3a3935'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(gx0, gy0); ctx.lineTo(gx0, gy1); ctx.stroke();
+      // Mai Lee (Brentwood) at its real coordinates, among the grey dots of the 15 mi map
       const [mx, my] = P(OUT.lon, OUT.lat); UM.disc(ctx, mx, my, UM.discD(OUT.count, cmax, o.dmax, 5));
     }
     if (gemDisc) { const [gx, gy] = P(gemDisc.lon, gemDisc.lat), gr = UM.discD(gemDisc.count, cmax, o.dmax, 5) / 2; UM.ring(ctx, gx, gy, gr + 7 * (o.dotD / 4.2), 1.5 * (o.dotD / 4.2)); }
@@ -112,7 +127,7 @@
       el(box, 'div', `font-size:${BIG}px;margin-top:${26 * s}px`, esc(MAI.name)).className = 'gem';
       // census_stats_claude.txt:59 (13/16) · census_stats_codex.txt:59 (9/16)
       el(box, 'div', `font-size:${(o.tal || 36) * s * .9}px;margin-top:${20 * s}px`,
-        `<span class="r">${esc(CEN.provider)}: ${MAI.hits} times out of ${MAI.of} ·<br>${esc(CEN.chatgpt_provider)}: ${CG.hits} of ${CG.of}</span>`).className = 'tally';
+        `<span class="r">${esc(CEN.provider)}: ${MAI.hits} times out of ${MAI.of}<br>${esc(CEN.chatgpt_provider)}: ${CG.hits} of ${CG.of}</span>`).className = 'tally';
     } else {
       el(box, 'div', `font-size:${(o.eye || 40) * s}px`, `Ask ${esc(CEN.provider)} for a hidden gem in ${esc(S.city).replace(' ', '&nbsp;')}.`).className = 'eyebrow';
       el(box, 'div', `font-size:${BIG}px;margin-top:${26 * s}px`, esc(S.gem.name).replace("'", '’')).className = 'gem';
@@ -131,8 +146,8 @@
   function footer(x, y, s, w) {
     // census_stats.txt:3 (64 asks), :51 (16 hidden-gem), :52 (14 plain); OSM 818 (:81) is the map's own count
     el(stage, 'div', `position:absolute;left:${x}px;top:${y}px;width:${w}px;font-size:${12 * s}px;white-space:normal;line-height:1.55;color:var(--dim)`,
-      `<span style="color:var(--red)">red</span>: places ${esc(CEN.provider)} named, sized by mentions · census of ${esc(CEN.model)} (pre-registered) and ${esc(CEN.chatgpt_provider)} ${esc(CEN.chatgpt_model)}, no web search, ${S.asks.n} ${esc(S.city)} asks each incl. ${S.gem.of} hidden-gem and ${S.plain.of} plain “where to eat” phrasings, ${esc(CEN.date)}<br>` +
-      `${esc(M.credit)} · <span style="color:var(--white)">white</span>: ${WHITE}`).className = 'attr';
+      `${RED} · census of ${esc(CEN.model)} (pre-registered) and ${esc(CEN.chatgpt_provider)} ${esc(CEN.chatgpt_model)}, no web search, ${S.asks.n} ${esc(S.city)} asks each incl. ${S.gem.of} hidden-gem and ${S.plain.of} plain “where to eat” phrasings, ${esc(CEN.date)}<br>` +
+      `${credit()} · <span style="color:var(--white)">white</span>: ${WHITE}`).className = 'attr';
   }
 
   if (v === 'devpost' || v === 'tv') {
@@ -144,7 +159,8 @@
     el(stage, 'div', `left:${pad}px;right:${pad}px;top:${54 * s}px`).className = 'rl';
     map({ W, H, box: { x: pad + 190 * s, y: 76 * s, w: split - pad - 380 * s, h: H - 76 * s - 104 * s },
       labelTop: 76 * s, labelBottom: H - 100 * s, redPx: 19 * s, gemPx: 26 * s, whitePx: 24 * s, hoodPx: 13 * s, rankPx: 15 * s, dmax: 38 * s,
-      dotD: 4.2 * s, glow: 18 * s, sevenD: 13 * s, halo: 4 * s, colGap: -20 * s, colGapR: 14 * s, gap: 10 * s });
+      dotD: 4.2 * s, glow: 18 * s, sevenD: 13 * s, halo: 4 * s, colGap: -20 * s, colGapR: 14 * s, gap: 10 * s,
+      clip: { x: pad, y: 64 * s, w: split - pad - 20 * s, h: H - 64 * s - 96 * s } });
     const colX = split + 44 * s, colW = W - colX - pad;
     const holder = el(stage, 'div', `position:absolute;left:${colX}px;top:0`);
     const box = story(holder, colW, s);
@@ -160,17 +176,24 @@
     el(top, 'div', 'display:flex;justify-content:space-between;align-items:center',
       `<span class="mark" style="font-size:12px"><s>UN</s>SAID</span>` + (MOCK ? `<span class="mock" style="font-size:8px;height:16px">${MOCK}</span>` : ''));
     const st = el(top, 'div', 'margin-top:22px');
+    if (VAR === 'mailee') {
+      el(st, 'div', 'font-size:24px', `Ask an AI for a hidden gem in ${esc(S.city).replace(' ', '&nbsp;')}.`).className = 'eyebrow';
+      el(st, 'div', 'font-size:58px;margin-top:14px', esc(MAI.name)).className = 'gem';
+      el(st, 'div', 'font-size:20px;margin-top:12px', `<span class="r">${esc(CEN.provider)}: ${MAI.hits} times out of ${MAI.of}<br>${esc(CEN.chatgpt_provider)}: ${CG.hits} of ${CG.of}</span>`).className = 'tally';
+    } else {
     el(st, 'div', 'font-size:24px', `Ask ${esc(CEN.provider)} for a hidden gem in ${esc(S.city).replace(' ', '&nbsp;')}.`).className = 'eyebrow';
     el(st, 'div', 'font-size:58px;margin-top:14px', esc(S.gem.name).replace("'", '’')).className = 'gem';
     el(st, 'div', 'font-size:18px;margin-top:12px', `<span class="r">${S.gem.hits} times out of ${S.gem.of}</span><br><span class="d">also on ${S.plain.hits} of its ${S.plain.of} plain lists</span>`).className = 'tally';
-    if (CG) el(st, 'div', 'font-size:12px;margin-top:10px', `${esc(CEN.chatgpt_provider)}’s: ${esc(CG.name)}, ${CG.hits} of ${CG.of}` + (MAI && MAI.name === CG.name ? ` · ${esc(CEN.provider)} says it ${MAI.hits} times too` : '')).className = 'loves';
-    const P = UM.projection(UM.frame(M, picks), { x: 108, y: 12, w: 172, h: 2000 });
+    }
+    if (CG && VAR !== 'mailee') el(st, 'div', 'font-size:12px;margin-top:10px', `${esc(CEN.chatgpt_provider)}’s: ${esc(CG.name)}, ${CG.hits} of ${CG.of}` + (MAI && MAI.name === CG.name ? ` · ${esc(CEN.provider)} says it ${MAI.hits} times too` : '')).className = 'loves';
+    const P = UM.projection(UM.frame(PM, picks), { x: 108, y: 12, w: 172, h: 2000 });
     const shift = 12 - P.bounds.y0, mh = Math.round(P.bounds.y1 - P.bounds.y0 + 24);
     const Q = (lon, lat) => { const [x, y] = P(lon, lat); return [x, y + shift]; };
     const mapWrap = el(stage, 'div', `position:relative;height:${mh}px;overflow:hidden;margin-top:8px`);
     const ctx = UM.canvas(mapWrap, W, mh);
     UM.dots(ctx, M, Q, { d: 2.3, alpha: .95, glow: 7 });
-    UM.cityLine(ctx, M, Q, picks);
+    DRAWN = M.places.filter(([lo, la]) => { const [x, y] = Q(lo, la); return x >= 0 && x <= W && y >= 0 && y <= mh; }).length;
+    if (VAR === 'mailee' && OUT) { const [mx, my] = Q(OUT.lon, OUT.lat); UM.disc(ctx, mx, my, UM.discD(OUT.count, cmax, 20, 3)); }
     ai.slice().reverse().forEach(a => { const [x, y] = Q(a.lon, a.lat); UM.disc(ctx, x, y, UM.discD(a.count, cmax, 20, 3)); });
     const [gx, gy] = Q(gemDisc.lon, gemDisc.lat), gr = UM.discD(gemDisc.count, cmax, 20, 3) / 2;
     UM.ring(ctx, gx, gy, gr + 4, 1.2);
@@ -186,7 +209,7 @@
       const L = it.side === 'L', lx = L ? LX : RX;
       if (it.gem) {
         UM.leader(ctx, gx - gr - 5, gy, lx + 4, it.ly + 9, C.red, .8);
-        el(mapWrap, 'div', `top:${it.ly}px;right:${W - lx + 2}px;text-align:right;font-size:14.5px;line-height:18px`, `<span class="n">${esc(S.gem.name).replace("'", '’')}</span>`).className = 'lab red big';
+        el(mapWrap, 'div', `top:${it.ly}px;right:${W - lx + 2}px;text-align:right;font-size:14.5px;line-height:18px`, `<span class="n">${esc(gemDisc.name).replace("'", '’')}</span>`).className = 'lab red big';
         return;
       }
       UM.leader(ctx, it.x + (L ? -7 : 7), it.y, lx + (L ? 4 : -4), it.ly + 8, C.white, .5);
@@ -205,7 +228,7 @@
     el(bot, 'div', 'border-top:1px solid var(--rule2);border-bottom:1px solid var(--rule2);padding:13px 0;margin-top:18px;display:flex;justify-content:space-between;font-size:12px',
       `<span>everything the AI named, <span style="color:var(--red)">crossed out</span></span><span style="color:var(--dim)">show ›</span>`);
     const f = el(bot, 'div', 'font-size:9.5px;margin-top:12px;white-space:normal;line-height:1.5',
-      `red: ${esc(CEN.provider)}’s places · census of ${esc(CEN.model)} and ${esc(CEN.chatgpt_provider)} ${esc(CEN.chatgpt_model)}, no web search, ${S.asks.n} asks each · ${esc(M.credit)} · white: ${WHITE}`);
+      `red: ${esc(CEN.provider)}’s places (map: ${esc(CEN.provider)}’s census) · census of ${esc(CEN.model)} and ${esc(CEN.chatgpt_provider)} ${esc(CEN.chatgpt_model)}, no web search, ${S.asks.n} asks each · ${credit()} · white: ${WHITE}`);
     f.className = 'attr';
     stage.style.height = (top.offsetHeight + mh + 8 + bot.offsetHeight) + 'px';
   }

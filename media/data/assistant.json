@@ -2,30 +2,10 @@
  "prompt": "plan my Friday in St. Louis, I love Frankie Beverly & Maze, Kings of Comedy and rib tips, but nothing every AI would tell me",
  "prompt_src": "research/round4/agentic.md (the user line of the demo runs)",
  "model": null,
- "answer": "# Your Friday in St. Louis (Oct 30)\n\nIt's Halloween eve, so the city will be lively.\n\n**Late morning: The Griot Museum of Black History** (Old North St. Louis)\nA small, deeply personal museum with life-size figures of Black Missourians most people never learned about. It's a real local gem. Check the hours, since they're limited.\n\n**Lunch: Smoki O's** (North Broadway)\nGet the rib tips and a **snoot**, crispy fried pig snout, a true St. Louis soul food staple most visitors never hear of. It runs on lunch hours, so go early.\n\n**Afternoon: A slow drive through The Ville**\nPass **Sumner High School**, the first Black high school west of the Mississippi. Tina Turner, Chuck Berry, Arthur Ashe and **Dick Gregory**, the original king of comedy, all went there. Annie Malone's Poro College empire was also in this neighborhood.\n\n**Evening: Comedy**\nCheck **Helium** or **The Funny Bone** for Halloween-weekend headliners. It's a big weekend for touring Black comics. Cedric the Entertainer came up in north county, and this city takes its comedy seriously.\n\n**Late night: Find a steppers set**\nSt. Louis has a real steppin' scene. Search for a grown-folks R&B or steppers night this Friday. If they don't close with \"Before I Let Go,\" you're in the wrong room.\n\n**Last stop: A St. Paul sandwich**\nAn egg foo young patty on white bread with pickles and mayo, from any corner Chinese takeout. It's peak St. Louis, and outsiders have never heard of it.\n\n*Double-check hours before heading out, since small spots change often.*\n\nWant me to tune this for a budget, a date, or a group?",
+ "answer": "# Your Friday in St. Louis (Oct 30)\n\nIt's Halloween eve, so the city will be lively.\n\n**Late morning: The Griot Museum of Black History** (Old North St. Louis)\nA small, deeply personal museum with life-size figures of Black Missourians most people never learned about. It's a real local gem. Check the hours, since they're limited.\n\n**Lunch: Smoki O's** (North Broadway)\nGet the rib tips and a **snoot**, crispy fried pig snout, a true St. Louis soul food staple most visitors never hear of. It runs on lunch hours, so go early.\n\n**Afternoon: A slow drive through The Ville**\nPass **Sumner High School**, the first Black high school west of the Mississippi. Tina Turner, Chuck Berry, Arthur Ashe and **Dick Gregory**, the original king of comedy, all went there. Annie Malone's Poro College empire was also in this neighborhood.\n\n**Evening: Comedy**\nCheck **Helium** or **The Funny Bone** for Halloween-weekend headliners. It's a big weekend for touring Black comics.",
  "src": "unsaid/agent/demo/claude_without.jsonl",
  "asked_at": null,
  "strikes": [
-  {
-   "text": "The Griot Museum of Black History",
-   "start": 102,
-   "end": 135,
-   "struck": true,
-   "matches": [
-    {
-     "wall": "The Griot Museum of Black History",
-     "rule": "R1"
-    },
-    {
-     "wall": "The Griot Museum of Black History",
-     "rule": "R5"
-    },
-    {
-     "wall": "The Griot Museum of Black History",
-     "rule": "R2"
-    }
-   ]
-  },
   {
    "text": "Smoki O's",
    "start": 342,
@@ -69,63 +49,8 @@
      "rule": "R2"
     }
    ]
-  },
-  {
-   "text": "Comedy",
-   "start": 841,
-   "end": 847,
-   "struck": false,
-   "matches": [
-    {
-     "wall": "Funny Bone Comedy Club",
-     "rule": "R2"
-    },
-    {
-     "wall": "Helium Comedy Club",
-     "rule": "R2"
-    }
-   ]
-  },
-  {
-   "text": "Helium",
-   "start": 858,
-   "end": 864,
-   "struck": false,
-   "matches": [
-    {
-     "wall": "Helium Comedy Club",
-     "rule": "R5"
-    },
-    {
-     "wall": "Helium Comedy Club",
-     "rule": "R2"
-    }
-   ]
-  },
-  {
-   "text": "The Funny Bone",
-   "start": 872,
-   "end": 886,
-   "struck": true,
-   "matches": [
-    {
-     "wall": "Funny Bone Comedy Club",
-     "rule": "R5"
-    },
-    {
-     "wall": "Funny Bone Comedy Club",
-     "rule": "R2"
-    },
-    {
-     "wall": "St. Louis Funny Bone",
-     "rule": "R1"
-    },
-    {
-     "wall": "St. Louis Funny Bone",
-     "rule": "R2"
-    }
-   ]
   }
  ],
- "strikes_src": "engine/unsaid/matcher.py match_wall vs site/data/walls/stl.json; drawn only where R1 fired"
+ "strikes_src": "engine/unsaid/matcher.py match_wall vs media/data/live/query_stl-cedric.json wall, minus non-venues (Qloo \"not a restaurant or bar\" + the census non-venue lists, widened by R1); drawn only where R1 fired",
+ "cropped_at": "before the sentence naming Cedric the Entertainer"
 }

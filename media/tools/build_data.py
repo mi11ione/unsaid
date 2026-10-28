@@ -33,7 +33,7 @@ PROTO = QLOO / 'research' / 'round4' / 'proto' / 'data'
 SITE = UNSAID / 'site' / 'data'
 MEDIA = UNSAID / 'media' / 'data'
 sys.path.insert(0, str(UNSAID / 'engine'))
-from unsaid.matcher import norm  # noqa: E402  the engine's own normalisation, so the wall's norm keys match it
+from unsaid.matcher import norm, match_wall  # noqa: E402  the engine's own normalisation and matcher
 
 HARNESS = UNSAID / 'harness'
 # the Claude census (same text and line numbers as research/round4/exp/census_stats.txt) and the ChatGPT one
@@ -142,15 +142,24 @@ roster = json.loads(src[src.index('{'):src.rstrip().rstrip(';').rindex('}') + 1]
 assert len(roster['places']) == census['stl']['osm']['n']
 gioia = roster['ai'][0]
 assert gioia['name'] == census['stl']['gem']['name']
+R15 = MEDIA / 'osm-stl-r15.json'
+R15_PLACES, R15_BASE = None, None
+if R15.exists():
+    _r15 = json.load(open(R15))
+    R15_PLACES = [[round(f['lon'], 5), round(f['lat'], 5)] for f in _r15['features']]
+    R15_BASE = _r15.get('osm_base')
 stl_map = {
     'city': 'St. Louis', 'lat0': 38.63, 'latMax': 38.70,
-    'places': roster['places'],
+    # grey dots: every OSM eat-and-drink place within the pool's 15 mi (one Overpass query, media/tools/osm_stl_r15.py),
+    # so the seven, some of them in North County, always sit among dots; `frame` (the city's own 818) sets the view.
+    'places': R15_PLACES or roster['places'],
+    'frame': roster['places'],
     'ai': [{'name': a['name'], 'count': a['count'], 'lat': a['lat'], 'lon': a['lon']} for a in roster['ai']],
     'callouts': [census['stl']['gem']['name'], census['stl']['second']['name']],
     'outside': [{'name': 'Mai Lee', 'count': next(int(r['mentions']) for r in csv.DictReader(open(HARNESS / 'claude_named_stl.csv')) if r['display'] == 'Mai Lee'),
                  **{k: v for k, v in json.load(open(MEDIA / 'geo.json'))['Mai Lee'].items() if k in ('lat', 'lon', 'osm')}}],
-    'credit': 'grey: {n} mapped places to eat and drink, © OpenStreetMap contributors, ODbL'.format(n=f"{len(roster['places']):,}"),
-    'osm_as_of': roster['meta']['osm'],
+    'credit': 'grey: {n} mapped places to eat and drink, © OpenStreetMap contributors, ODbL',   # {n}: counted from what is drawn
+    'osm_as_of': R15_BASE or roster['meta']['osm'],
 }
 jdump(SITE / 'map' / 'stl.json', stl_map)
 
@@ -448,8 +457,31 @@ for line in open(UNSAID / 'agent' / 'demo' / 'claude_without.jsonl'):
 # image 3's strikes, decided by the engine's own matcher (engine/unsaid/matcher.py match_wall) against the St. Louis
 # census wall: candidates are the answer's bold spans (after a "Label:" prefix); a span is struck when a rule hits.
 # Only R1 (exact keys: full / core / compact / head) strikes in the image; other rules are recorded, not drawn.
-from unsaid.matcher import match_wall  # noqa: E402
-wall_names = sorted({n for a in answers for n in a['names']})
+LIVE_Q = MEDIA / 'live' / 'query_stl-cedric.json'
+# non-venues: the census's own list (museums, parks, comedy and music clubs, casinos), widened through the matcher's
+# R1 to every other spelling of the same place ("St. Louis Funny Bone" = "Funny Bone Comedy Club")
+nonvenue = set()
+for f in ('claude', 'codex'):
+    for t in STATS_TXT[f]:
+        if 'non-restaurant venues' in t:
+            nonvenue |= {x.strip() for x in t.split(':', 2)[-1].split(',') if x.strip()}
+if LIVE_Q.exists():
+    _lw = json.load(open(LIVE_Q))
+    _lw = _lw.get('result', _lw)['wall']
+    pool_names = {w['name'] for w in _lw if w.get('name')}
+    nonvenue |= {w['name'] for w in _lw if w.get('reason') == 'not a restaurant or bar'}
+    POOL_SRC = 'media/data/live/query_stl-cedric.json wall'
+else:
+    pool_names = {n for a in answers for n in a['names']}
+    POOL_SRC = 'census walls'
+_pl = sorted(pool_names)
+_nh, _ = match_wall(sorted(nonvenue), [{'entity_id': str(i), 'name': n} for i, n in enumerate(_pl)])
+nonvenue |= {_pl[int(e)] for e, v in _nh.items() if any(r == 'R1' for _, r in v)}
+wall_names = sorted(pool_names - nonvenue)
+POOL_SRC += ', minus non-venues (Qloo "not a restaurant or bar" + the census non-venue lists, widened by R1)'
+CUT = txt.find('Cedric the Entertainer') if txt else -1
+if CUT > 0:   # crop at the start of that sentence
+    txt = txt[:txt.rfind('. ', 0, CUT) + 1]
 cands = []
 for m in re.finditer(r'\*\*(.+?)\*\*', txt or ''):
     t, s0 = m.group(1), m.start(1)
@@ -472,7 +504,8 @@ jdump(MEDIA / 'assistant.json', {
     'prompt': 'plan my Friday in St. Louis, I love Frankie Beverly & Maze, Kings of Comedy and rib tips, but nothing every AI would tell me',
     'prompt_src': 'research/round4/agentic.md (the user line of the demo runs)',
     'model': model, 'answer': txt, 'src': 'unsaid/agent/demo/claude_without.jsonl', 'asked_at': None,
-    'strikes': strikes, 'strikes_src': 'engine/unsaid/matcher.py match_wall vs site/data/walls/stl.json; drawn only where R1 fired'}, 1)
+    'strikes': strikes, 'strikes_src': 'engine/unsaid/matcher.py match_wall vs ' + POOL_SRC + '; drawn only where R1 fired',
+    'cropped_at': 'before the sentence naming Cedric the Entertainer' if CUT > 0 else None}, 1)
 
 print(f"census ok: gem {census['stl']['gem']['hits']}/{census['stl']['gem']['of']}, plain {plain_hits}/{len(plain)}, "
       f"asks {len(stl)}; map {len(roster['places'])} dots, {len(roster['ai'])} discs; wall {len(wall_items)} distinct names "
