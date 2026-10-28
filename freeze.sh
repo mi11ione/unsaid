@@ -8,11 +8,14 @@
 #   ./freeze.sh --from 5            resume at step 5 (each step re-runs from scratch: all steps are idempotent)
 #   ./freeze.sh --only 4            one step
 #   flags: --skip-f  --render-if-unchanged  --skip-render  --skip-media  --skip-site  --allow-dirty  --to N
+#          --no-street-catchup  --skip-agent
 #
 #   1 preflight   disk >= 10 GB; harness/runs/done has gem-30 + wall-3 (warn); git on main, clean but for harness output
 #                 and walls, pulled; leak audit 0 unresolved; walls rebuilt from harness/runs (unless saturation or a
 #                 wall ask is running: then the committed walls), committed and pushed (regen reads origin/main)
-#   2 regen       engine/regen_try.sh: the 20 sets -> $FRESH and site/data/live, gates A and B --frozen
+#   2 regen       engine/regen_try.sh: the 20 sets -> $FRESH and site/data/live, gates A and B --frozen; then the
+#                 street catch-up: harness/street_catchup.sh $FRESH (B) asks the unasked card/reserve neighbourhoods; walls
+#                 are committed, regen again; until nothing is unasked (max 3 passes; soft-fails if the script is absent)
 #   3 numbers     k12, gate E (hashed 28 Oct cards + today's), run_query Cedric + README call trace, the no-street
 #                 ablation, census gems, saturation coverage -> out/freeze/numbers.json; commits the regenerated
 #                 counts-only files (engine/k12_wall_effect.md, site/data/wall_effect.json, README call trace)
@@ -21,7 +24,9 @@
 #                 refuse unless the live commit contains 547ab11 (the new priors format); push the priors; redeploy so
 #                 the engine reads them; wait for live + health (priors stl/nyc true)
 #   6 gate F      k11_latency.py against the live site, 10 runs (~400-500 Qloo calls)
-#   7 media       media/render.sh all (video with URL=$LIVE); agent shot vs Cedric's current cards; commits the
+#   7 media       tools/agent_rerecord.py (the MCP session for the video + the Claude run for the site, against the
+#                 deployed engine; loud warning if The Spot Sports Bar left Cedric's run: ⟦AGENT_QUOTE⟧ is deleted);
+#                 media/render.sh all (video with URL=$LIVE); agent shot vs Cedric's current cards; commits the
 #                 tracked site data build_data.py rewrites
 #   8 site        media/tools/deploy-site.sh (the ⟦ check, then Pages)
 #   9 report      numbers + fill again (picks up gate F and the share image), out/freeze/report.txt
@@ -41,19 +46,21 @@ SEED_FRESH=$QLOO_DIR/private/fresh20-28oct       # the 28 Oct regeneration: the 
 WT="$REGEN_WT"; FRESH="$REGEN_FRESH"
 CO="Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
-FROM=1; TO=9; SKIP_F=0; DRY=0; ALLOW_DIRTY=0; RENDER=deploy; SKIP_MEDIA=0; SKIP_SITE=0
+FROM=1; TO=9; SKIP_F=0; DRY=0; ALLOW_DIRTY=0; STREET_CATCHUP=1; SKIP_AGENT=0; RENDER=deploy; SKIP_MEDIA=0; SKIP_SITE=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --from) FROM=$2; shift;;
     --to) TO=$2; shift;;
     --only) FROM=$2; TO=$2; shift;;
-    --dry-run) DRY=1; SKIP_F=1; RENDER=skip;;
+    --dry-run) DRY=1; SKIP_F=1; RENDER=skip; SKIP_AGENT=1;;
     --skip-f) SKIP_F=1;;
     --render-if-unchanged) RENDER=if-unchanged;;
     --skip-render) RENDER=skip;;
     --skip-media) SKIP_MEDIA=1;;
     --skip-site) SKIP_SITE=1;;
     --allow-dirty) ALLOW_DIRTY=1;;
+    --no-street-catchup) STREET_CATCHUP=0;;
+    --skip-agent) SKIP_AGENT=1;;
     -h|--help) sed -n '2,32p' "$0"; exit 0;;
     *) echo "unknown flag $1" >&2; exit 2;;
   esac
@@ -137,16 +144,56 @@ step1() {
     $(cd "$MAIN" && ls harness/*_answers.jsonl))
 }
 
-step2() {
-  say "2 regen (engine/regen_try.sh; precompute budget $B_PRE, gates $B_GATE each)"
-  python3 -I "$MAIN/tools/freeze_numbers.py" snapshot-cedric "$MAIN/site/data/live/stl_stl-cedric.json" "$LOGS/cedric.before.json"
-  if [ ! -d "$FRESH" ] && [ -d "$SEED_FRESH" ]; then cp -Rp "$SEED_FRESH" "$FRESH"; echo "seeded $FRESH from $SEED_FRESH"; fi
+regen_once() {   # one engine/regen_try.sh pass; the gate logs are copied for numbers.json
   # a rerun keeps the earlier attempt's log (02-regen.prev-*.log): its Qloo calls still count toward this freeze
   [ -f "$LOGS/02-regen.log" ] && mv "$LOGS/02-regen.log" "$LOGS/02-regen.prev-$(date +%H%M%S).log"
   REGEN_BUDGET=$B_PRE REGEN_GATE_BUDGET=$B_GATE bash "$MAIN/engine/regen_try.sh" 2>&1 | tee "$LOGS/02-regen.log"
   [ "${PIPESTATUS[0]}" = 0 ] || die "regen_try.sh"
   cp "$WT/engine/out/regen_gateA.log" "$LOGS/02-gateA.txt"
   cp "$WT/engine/out/regen_gateB.log" "$LOGS/02-gateB.txt"
+}
+
+unasked_count() {   # neighbourhoods of the regenerated cards + reserves no street answer was asked about
+  python3 -I "$MAIN/tools/freeze_numbers.py" unasked --fresh "$FRESH" --write "$LOGS/street_unasked.json" \
+    | tee -a "$LOGS/02-street.txt" | sed -n 's/^UNASKED=//p'
+}
+
+step2() {
+  say "2 regen (engine/regen_try.sh; precompute budget $B_PRE, gates $B_GATE each) + street catch-up"
+  python3 -I "$MAIN/tools/freeze_numbers.py" snapshot-cedric "$MAIN/site/data/live/stl_stl-cedric.json" "$LOGS/cedric.before.json"
+  if [ ! -d "$FRESH" ] && [ -d "$SEED_FRESH" ]; then cp -Rp "$SEED_FRESH" "$FRESH"; echo "seeded $FRESH from $SEED_FRESH"; fi
+  : > "$LOGS/02-street.txt"
+  regen_once
+  # Street catch-up (orchestrator, 28 Oct): the cards' own neighbourhoods must all have been asked, or ⟦STREET_*⟧
+  # stays unfilled. harness/street_catchup.sh (B) asks only the unasked card and reserve neighbourhoods, rebuilds the
+  # walls and audits; the walls are committed and the sets regenerated. Repeat until nothing is unasked, max 3 passes.
+  local pass n
+  for pass in 1 2 3; do
+    n=$(unasked_count); n=${n:-?}
+    [ "$n" = 0 ] && { echo "street: every card and reserve neighbourhood has been asked"; return 0; }
+    if [ $STREET_CATCHUP = 0 ]; then warn "street catch-up off (--no-street-catchup): $n neighbourhoods unasked"; return 0; fi
+    if [ ! -x "$MAIN/harness/street_catchup.sh" ] && [ ! -f "$MAIN/harness/street_catchup.sh" ]; then
+      warn "harness/street_catchup.sh is not there yet: $n neighbourhoods unasked ($LOGS/street_unasked.json); ⟦STREET_*⟧ stay unfilled"
+      return 0
+    fi
+    echo "street catch-up pass $pass: $n unasked neighbourhoods"
+    if ! bash "$MAIN/harness/street_catchup.sh" "$FRESH" > "$LOGS/02-street-catchup-$pass.txt" 2>&1; then
+      tail -5 "$LOGS/02-street-catchup-$pass.txt"
+      warn "street catch-up pass $pass failed: keeping the walls as they are; ⟦STREET_*⟧ may stay unfilled"
+      return 0
+    fi
+    tail -3 "$LOGS/02-street-catchup-$pass.txt"
+    if grep -q "nothing new to ask" "$LOGS/02-street-catchup-$pass.txt"; then   # B's matcher saw no gap: stop, say ours
+      warn "street_catchup.sh asked nothing, but $n neighbourhoods look unasked here (name variants?): see $LOGS/street_unasked.json"
+      return 0
+    fi
+    (cd "$MAIN" && commit_paths "Freeze: street catch-up pass $pass (unasked card and reserve neighbourhoods), walls rebuilt" \
+      data/walls $(cd "$MAIN" && ls harness/runs/wall-*.jsonl | grep -v smoke))
+    regen_once
+  done
+  n=$(unasked_count)
+  [ "$n" = 0 ] && echo "street: every card and reserve neighbourhood has been asked" \
+    || warn "street: $n neighbourhoods still unasked after 3 catch-up passes; ⟦STREET_*⟧ stay unfilled"
 }
 
 step3() {
@@ -239,7 +286,15 @@ step6() {
 }
 
 step7() {
-  say "7 media (render.sh all, video URL=$LIVE_URL)"
+  say "7 agent re-record, then media (render.sh all, video URL=$LIVE_URL)"
+  if [ $SKIP_AGENT = 1 ]; then
+    warn "agent re-record skipped (--skip-agent): the video and the site show the earlier recording"
+  else
+    # E's scripted MCP session (the video's agent shot) and the Claude run (the site's agent block), against the engine
+    # step 5 deployed. A failed recording is loud, not fatal: the old files stay and agentcheck/numbers say so.
+    python3 -I "$MAIN/tools/agent_rerecord.py" 2>&1 | tee "$LOGS/07-agent.txt" \
+      || warn "agent re-record failed: see $LOGS/07-agent.txt"
+  fi
   if [ $SKIP_MEDIA = 1 ]; then echo "media: SKIPPED (--skip-media)" | tee "$LOGS/07-media.log"; return 0; fi
   (cd "$MAIN/media" && URL=$LIVE_URL zsh render.sh all) > "$LOGS/07-media.log" 2>&1 || { tail -8 "$LOGS/07-media.log"; die "render.sh"; }
   grep -E "\.png$|\.mp4$|video\.json|note:" "$LOGS/07-media.log" | tail -25 || true

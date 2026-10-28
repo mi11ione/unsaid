@@ -31,6 +31,9 @@ TRANSCRIPT = os.path.join(ROOT, "agent", "demo", "live_transcript.jsonl")
 # Sports Bar at #13 for you and #78 of 78 for anyone; it is used only while all three still hold for Cedric's card.
 QUOTE = ("Generic rankings put it dead last of 78, but for your taste it's #13, so it's the hidden gem on this list.")
 QUOTE_CARD, QUOTE_FIT, QUOTE_ANY, QUOTE_U = "The Spot Sports Bar", 13, 78, 78
+# The recording that holds the approved quote, kept before the freeze re-records agent_demo.json (tools/agent_rerecord.py
+# archives it here; a re-recorded answer words things differently, so the quote is checked against this one)
+QUOTE_SRC = os.path.join(os.path.dirname(ROOT), "private", "agent_quote_source.json")
 ET = dt.timezone(dt.timedelta(hours=-4))   # EDT until 1 Nov 2026
 
 
@@ -159,12 +162,7 @@ def street_stats(fresh, nostreet):
     """Cards the street answers struck: the no-street run's cards that the full run's wall strikes by a street:*
     answer. Denominator: those cards whose neighbourhood a street answer was asked about."""
     full, ns = load_sets(fresh), load_sets(nostreet)
-    hoods = collections.defaultdict(set)
-    for p in glob.glob(os.path.join(WALLS, "*.json")):
-        for e in json.load(open(p))["walls"]:
-            for a in e["answers"]:
-                if a.get("kind") == "street" and a.get("hood"):
-                    hoods[e.get("city")].add(hood_norm(a["hood"]))
+    hoods = street_hoods()
     if len(ns) != len(full) or not full:
         return {"ok": False, "why": "no-street ablation incomplete (%d of %d sets)" % (len(ns), len(full))}
     cards = asked = named = named_asked = 0
@@ -187,6 +185,40 @@ def street_stats(fresh, nostreet):
                 hits.append("%s: %s (%s)" % (sid, p["name"], p.get("neighbourhood")))
     return {"ok": True, "cards": cards, "cards_hood_asked": asked, "named": named, "named_hood_asked": named_asked,
             "unasked": unasked, "hits": hits, "hoods_asked": {c: len(v) for c, v in hoods.items()}}
+
+
+def street_hoods():
+    hoods = collections.defaultdict(set)
+    for p in glob.glob(os.path.join(WALLS, "*.json")):
+        for e in json.load(open(p))["walls"]:
+            for a in e["answers"]:
+                if a.get("kind") == "street" and a.get("hood"):
+                    hoods[e.get("city")].add(hood_norm(a["hood"]))
+    return hoods
+
+
+def unasked(a):
+    """Neighbourhoods of the regenerated cards and reserves that no street answer in data/walls was asked about.
+    Writes {"cities": {city: [neighbourhood, ...]}} (the --hoods-file format of walls_cli.py ask --kind street)."""
+    asked, out, n_cards, none = street_hoods(), collections.defaultdict(set), 0, []
+    for sid, d in load_sets(a.fresh).items():
+        for p in d["result"]["picks"] + d["result"].get("reserves", []):
+            n_cards += 1
+            h = (p.get("neighbourhood") or "").strip()
+            if not h:
+                none.append("%s: %s" % (sid, p["name"]))
+            elif hood_norm(h) not in asked[d["city"]]:
+                out[d["city"]].add(h)
+    doc = {"source": "neighbourhood fields of %s picks and reserves not yet asked (tools/freeze_numbers.py unasked)" % a.fresh,
+           "cities": {c: sorted(v) for c, v in sorted(out.items())}}
+    if a.write:
+        json.dump(doc, open(a.write, "w"), indent=1, ensure_ascii=False)
+    n = sum(len(v) for v in out.values())
+    print("street: %d unasked neighbourhoods (%s) over %d cards + reserves%s%s" % (
+        n, ", ".join("%s %d" % (c, len(v)) for c, v in sorted(out.items())) or "none", n_cards,
+        "; %d without a neighbourhood: %s" % (len(none), "; ".join(none[:5])) if none else "",
+        "; -> %s" % a.write if a.write else ""))
+    print("UNASKED=%d" % n)
 
 
 def numbers(a):
@@ -335,23 +367,40 @@ def numbers(a):
         put("GEM_GEM", None, "harness/census_stats.py --gems",
             "only %s of 16 Gemini gem asks stored: delete the clause (legend rule)" % (m.group(2) if m else "?"))
 
-    # ---- AGENT_QUOTE
+    # ---- AGENT_QUOTE: usable only while The Spot is still Cedric's card at the quoted ranks, the quote is verbatim
+    # in its recording, and (when the agent run was re-recorded after this regeneration) the new run still lists it.
+    # Otherwise the note starts with DELETE: fill_devpost.py drops the line, and Roman decides.
     note, val = "", None
     spot = next((p for p in (ced or {}).get("result", {}).get("picks", []) if p["name"] == QUOTE_CARD), None) if ced else None
-    demo = json.load(open(AGENT_DEMO)) if os.path.exists(AGENT_DEMO) else {}
+    src_path = QUOTE_SRC if os.path.exists(QUOTE_SRC) else AGENT_DEMO
+    demo = json.load(open(src_path)) if os.path.exists(src_path) else {}
+    tp, t_when = transcript_picks(TRANSCRIPT) if os.path.exists(TRANSCRIPT) else ([], None)
+    rerecorded = bool(ced and t_when and t_when >= (ced.get("ran_at") or ""))
     if not spot:
-        note = "%s is no longer a Cedric card: re-record the agent run" % QUOTE_CARD
+        note = "DELETE: %s is no longer a Cedric card" % QUOTE_CARD
     elif (spot.get("fit_rank"), spot.get("any_rank"), ced["result"]["counts"].get("U")) != (QUOTE_FIT, QUOTE_ANY, QUOTE_U):
-        note = "%s is a card but now #%s for you, #%s of %s for anyone (quote says 13 / 78 of 78): re-record" % (
+        note = "DELETE: %s is a card but now #%s for you, #%s of %s for anyone (the quote says 13, 78 of 78)" % (
             QUOTE_CARD, spot.get("fit_rank"), spot.get("any_rank"), ced["result"]["counts"].get("U"))
     elif QUOTE not in (demo.get("answer") or ""):
-        note = "the quote is not verbatim in site/data/live/agent_demo.json"
+        note = "DELETE: the quote is not verbatim in %s" % src_path
+    elif rerecorded and QUOTE_CARD not in tp:
+        note = "DELETE: the re-recorded agent run (%s) no longer lists %s" % (t_when, QUOTE_CARD)
     else:
         val = ("> \"%s\"\n>\n> Claude (%s, Claude Code) with `unsaid_places` as its only tool, asked \"%s\", on %s "
                "(recorded %s)." % (QUOTE, demo.get("model", "?"), demo.get("question", "?"), QUOTE_CARD,
                                    (demo.get("recorded_at") or "?")[:10]))
-    put("AGENT_QUOTE", val, "site/data/live/agent_demo.json (approved candidate, LOG 28 Oct) + Cedric's regenerated card",
-        note)
+        note = "" if rerecorded else "the agent run was not re-recorded after this regeneration (step 7)"
+    put("AGENT_QUOTE", val, "%s (approved candidate, LOG 28 Oct) + Cedric's regenerated card + the live transcript" %
+        os.path.relpath(src_path, os.path.dirname(ROOT)), note)
+
+    # ---- k12 lines of the draft (no literals: the medians and pooled counts come from here)
+    k = G.get("k12") or {}
+    for key, kk in (("K12_ON", "on_median"), ("K12_OFF", "off_median"), ("K12_PLAIN", "plain_median"),
+                    ("K12_ON_POOLED", "on_pooled"), ("K12_OFF_POOLED", "off_pooled"), ("K12_PLAIN_POOLED", "plain_pooled"),
+                    ("K12_ON_FRESH", "on_fresh_median"), ("K12_OFF_FRESH", "off_fresh_median"),
+                    ("K12_PLAIN_FRESH", "plain_fresh_median")):
+        put(key, num(k.get(kk)), "out/freeze/k12_wall_effect.json (engine/k12_wall_effect.py --frozen)",
+            "" if k else "k12 did not run")
 
     # ---- Qloo calls spent by this freeze run (every QLOO_NETWORK_CALLS line in out/freeze logs)
     qc = {}
@@ -473,6 +522,10 @@ def report(a):
     else:
         w("  (no previous snapshot)")
     q = N["placeholders"].get("AGENT_QUOTE", {})
+    if not q.get("value"):
+        w("!" * 100)
+        w("!!! ⟦AGENT_QUOTE⟧ NOT USABLE: %s. The quote line is DELETED from devpost.final.md; Roman decides." % q.get("note"))
+        w("!" * 100)
     w("⟦AGENT_QUOTE⟧ (The Spot Sports Bar): %s" % ("still a Cedric card at #13 / #78 of 78: usable" if q.get("value")
                                                    else "NOT usable: " + q.get("note", "")))
     ac = log("07-agentcheck.log").strip()
@@ -498,6 +551,9 @@ def main():
     n.add_argument("--fresh", required=True)
     n.add_argument("--nostreet")
     n.add_argument("--dry-run", action="store_true")
+    u = sp.add_parser("unasked")
+    u.add_argument("--fresh", required=True)
+    u.add_argument("--write")
     c = sp.add_parser("agentcheck")
     c.add_argument("--fresh", required=True)
     sp.add_parser("report")
@@ -509,6 +565,8 @@ def main():
         snapshot_cedric(a.src, a.out)
     elif a.cmd == "numbers":
         numbers(a)
+    elif a.cmd == "unasked":
+        unasked(a)
     elif a.cmd == "agentcheck":
         agentcheck(a)
     else:

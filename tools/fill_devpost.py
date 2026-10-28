@@ -46,15 +46,7 @@ CLAIMS = [
      ["B.nyc_pass", "B.stl_pass"]),
     ("gate E bullet", r"named \*\*(\d+) of the (\d+) cards\*\* \(median (\d+) of 7\)", ["E.hits", "E.cards", "E.median"]),
     ("gate E table", r"\*\*PASS\*\*: (\d+) of 140, median (\d+)", ["E.hits", "E.median"]),
-    ("k12 medians", r"\*\*(\d+(?:\.\d)?) with the list crossed out, (\d+(?:\.\d)?) without it, (\d+(?:\.\d)?) in Qloo's plain top 7",
-     ["k12.on_median", "k12.off_median", "k12.plain_median"]),
-    ("k12 pooled", r"Pooled: (\d+), (\d+) and (\d+) of 140", ["k12.on_pooled", "k12.off_pooled", "k12.plain_pooled"]),
-    ("k12 fresh medians", r"On the held-out fresh questions alone: (\d+(?:\.\d)?), (\d+(?:\.\d)?) and (\d+(?:\.\d)?)\.",
-     ["k12.on_fresh_median", "k12.off_fresh_median", "k12.plain_fresh_median"]),
-    ("k12 FAQ", r"without it, (\d+(?:\.\d)?) of 7 cards are AI-named; with it, (\d+(?:\.\d)?) \(k12\)",
-     ["k12.off_median", "k12.on_median"]),
-    ("k12 FAQ fresh", r"Qloo's plain top 7 has (\d+(?:\.\d)?) AI-named places \(median\); UNSAID's has (\d+(?:\.\d)?)",
-     ["k12.plain_fresh_median", "k12.on_fresh_median"]),
+    # the k12 lines are placeholders now (⟦K12_*⟧, from numbers.json), so they cannot drift
     ("gate F bullet", r"cards in ([\d.]+) s median, ([\d.]+) s p90; the first crossed-out name on screen in ([\d.]+) s",
      ["F.p50", "F.p90", "F.first_name_p50"]),
     ("gate F table", r"\*\*PASS\*\*: p50 ([\d.]+) s, p90 ([\d.]+) s, first name ([\d.]+) s",
@@ -124,6 +116,17 @@ def main():
         filled.setdefault(k, {"value": v, "source": src, "count": 0})["count"] += 1
         return v
 
+    # a value numbers.json marks "DELETE: ..." (⟦AGENT_QUOTE⟧ when its card moved) takes its whole line out; Roman decides
+    deleted = {}
+    for k, (v, src, note) in vals.items():
+        if v is None and str(note).startswith("DELETE"):
+            lines = []
+            for line in text.split("\n"):
+                if "⟦%s⟧" % k in line:
+                    deleted[k] = note
+                    line = "<!-- %s: line deleted by the freeze (%s); Roman decides -->" % (k, note.replace("--", "-"))
+                lines.append(line)
+            text = "\n".join(lines)
     out = PH.sub(sub, text)
     drift = []
     for label, rx, paths in CLAIMS:
@@ -152,7 +155,7 @@ def main():
                                    "fill.json" if os.path.basename(a.src) == "devpost.md" else
                                    "fill.%s.json" % os.path.splitext(os.path.basename(a.src))[0])
     json.dump({"at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "in": a.src, "out": a.out, "filled": filled,
-               "unfilled": unfilled, "drift": drift}, open(rep, "w"), indent=1, ensure_ascii=False)
+               "unfilled": unfilled, "deleted": deleted, "drift": drift}, open(rep, "w"), indent=1, ensure_ascii=False)
 
     print("wrote %s (%d placeholders filled, %d kinds unfilled)" % (a.out, sum(v["count"] for v in filled.values()),
                                                                      len(unfilled)))
@@ -160,6 +163,10 @@ def main():
         print("  filled   ⟦%s⟧ x%d = %s   [%s]" % (k, v["count"], v["value"][:90].replace("\n", " "), v["source"]))
     for k, v in sorted(unfilled.items()):
         print("  UNFILLED ⟦%s⟧ x%d: %s   [%s]" % (k, v["count"], v["why"], v["source"]))
+    for k, note in sorted(deleted.items()):
+        print("!" * 100)
+        print("!!! ⟦%s⟧ DELETED from %s: %s. Roman decides." % (k, a.out, note))
+        print("!" * 100)
     for d in drift:
         if d["status"] == "DRIFT":
             print("  DRIFT    %s: text says %s, the freeze measured %s" % (d["claim"], d["text"], d["freeze"]))
