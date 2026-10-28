@@ -448,7 +448,7 @@
       // shown only when the data says so: every fit rank above card 1 was struck by the wall
       const k = R.picks && R.picks[0] && R.picks[0].fit_rank, SR = new Set((R.diag && R.diag.struck_fit_ranks) || []);
       const above = k > 1 && [...Array(k - 1)].every((_, j) => SR.has(j + 1))
-        ? `<p class="above">${k === 2 ? 'Your #1 was' : `Your #1–#${k - 1} were`} on the AIs’ lists.</p>` : '';
+        ? `<p class="above">${k === 2 ? 'Qloo’s top match for your taste was' : `Qloo’s top ${k - 1} for your taste were`} on the AIs’ lists, so ${k === 2 ? 'it is' : 'they are'} crossed out.</p>` : '';
       const top = [...st.wall.values()].filter(w => w.name).sort((a, b) => b.hits.size - a.hits.size).slice(0, 40);
       const W = (R.counts && R.counts.wall) ?? st.wall.size;
       const strip = top.length ? `<div class="xstrip"><div class="xnames">${top.map(w => `<span class="xn">${esc(UM.cleanName(w.name))}</span>`).join(' ')}</div>
