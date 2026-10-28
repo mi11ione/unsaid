@@ -60,8 +60,8 @@ else:
         status = None
 
 INSTRUCTIONS = (
-    "UNSAID returns places to eat and drink that fit a person's taste and that no major AI assistant names for "
-    "that city. Call unsaid_places when a user wants recommendations that are personal and not the usual list. "
+    "UNSAID returns places to eat and drink that fit a person's taste and that the dated Claude and GPT answers "
+    "for that city don't name. Call unsaid_places when a user wants recommendations that are personal and not the usual list. "
     "Every pick is a Qloo entity ranked by Qloo; do not suggest other places to eat or drink. You may name "
     "places from `wall.top_names` as what every assistant tells everyone. qloo_places returns Qloo's own taste "
     "ranking for the same loves and city with nothing crossed out.")
@@ -70,15 +70,16 @@ TYPES = ["artist", "movie", "tv_show", "book", "podcast", "videogame", "brand", 
 
 TOOL = {
     "name": "unsaid_places",
-    "title": "UNSAID: places no AI names, ranked for your taste",
+    "title": "UNSAID: places the AI answers didn't name, ranked for your loves",
     "description": (
-        "Given three things a person loves (any mix of music, film, TV, books, brands, a place, or a dish/cuisine/"
-        "vibe) and a city, UNSAID asks ChatGPT, Claude and Gemini where to eat and drink there, crosses out every "
-        "place they name (matched to Qloo IDs), and has Qloo rank what is left for those loves. Returns up to 7 "
-        "picks, each with its Qloo id, '#k for you' (rank among the same N places with the person's taste) and "
+        "Crosses out places named in dated Claude and GPT answers (plus a live Gemini ask where available) and "
+        "ranks the rest by how much better each fits your loves, per Qloo's rank for each love, than its "
+        "popularity or its fit for most tastes. Input: up to three things a person loves (any mix of music, film, "
+        "TV, books, brands, a place, or a dish/cuisine/vibe) and a city (the hosted API serves St. Louis and New "
+        "York City). Returns up to 7 picks, each with its Qloo id, '#k for you' (rank among the same N places with the person's taste) and "
         "'#j for anyone' (rank among the same N with no taste signal), whether it holds if any one love is "
-        "dropped, the love that drives it, and how many AI answers named it (always 0). Also returns the wall: "
-        "how many distinct places the AIs named and the most-named ones. Use it for 'not the usual list' asks. "
+        "dropped, the love that drives it, and how many of the AI answers on file named it (0: those were crossed "
+        "out). Also returns the wall: how many distinct places those answers named and the most-named ones. Use it for 'not the usual list' asks. "
         "For where to eat and drink, use only these picks, in the order given; keep your own non-venue color "
         "(neighbourhoods, history, music, what to order). Say once that the usual places (wall.top_names) are "
         "great but everyone gets them. If status is needs_input, fix the input it names (e.g. a full title or a "
