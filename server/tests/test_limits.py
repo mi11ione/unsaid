@@ -53,6 +53,29 @@ class Http(unittest.TestCase):
         self.assertEqual(lines[-1]["type"], "done")
         return lines
 
+    def test_bench_header_skips_the_ip_limit(self):
+        H.reset_limits()
+        H.clear_results()
+        app.PROXY_SECRET = "bench-s3cret"
+        try:
+            def go(loves, bench=None):
+                h = {"Authorization": "Bearer t0ken"}
+                if bench:
+                    h["X-Unsaid-Bench"] = bench
+                req = urllib.request.Request(self.base + "/api/unsaid?city=st-louis&loves=" + loves_q(loves), headers=h)
+                with urllib.request.urlopen(req, timeout=60) as r:
+                    return json.loads(r.read().decode().splitlines()[-1])["result"]["status"]
+            got = [go(s, "bench-s3cret") for s in (H.CEDRIC, H.JASON, H.AL_GREEN, H.SOUL)]
+            self.assertNotIn("limited", got)
+            H.clear_results()
+            for _ in range(3):
+                app.FRESH_IPS.record("127.0.0.1")
+            self.assertEqual(go(H.CEDRIC, "wrong"), "limited")
+            self.assertEqual(go(H.CEDRIC), "limited")
+            self.assertNotEqual(go(H.CEDRIC, "bench-s3cret"), "limited")
+        finally:
+            app.PROXY_SECRET = ""
+
     def test_token(self):
         self.assertEqual(self.get("/api/health", token=None)[0], 200)
         for p in ("/api/resolve?kind=city&q=nyc", "/api/unsaid?city=nyc&loves=x", "/api/result/" + "a" * 64):
@@ -208,6 +231,58 @@ class Gemini(unittest.TestCase):
         self.assertNotIn("dated_only", r["flags"])
         self.assertFalse([b for b in r["burn"]["asked"] if b.get("lane") == "live"])
         self.assertTrue(again["cached"])
+
+    def test_slow_gemini_never_delays_cards(self):
+        """Gemini answering after the budget (15 s live; 0.5 s here): cards on time, dated_only + its note, and
+        the late answer never joins the run or its cached result."""
+        H.reset_limits()
+        H.clear_results()
+        calls, released = [], threading.Event()
+
+        def slow(prompt):
+            calls.append(prompt)
+            released.wait(3)
+            return self.ok_transport([])(prompt)
+        old = app.GEMINI
+        app.GEMINI = self.lane(slow, GEMINI_LIVE_TIMEOUT_S="0.5")
+        try:
+            t0 = time.monotonic()
+            ev, r = H.run(H.CEDRIC, ip="192.0.2.80", country="US")
+            took = time.monotonic() - t0
+        finally:
+            app.GEMINI = old
+        self.assertLess(took, 2.5, "the run waited for Gemini")
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(len(r["picks"]), 7)
+        self.assertIn("dated_only", r["flags"])
+        self.assertNotIn("partial", r["flags"])
+        self.assertTrue([e for e in ev if e.get("state") == "dated_only" and e["text"].endswith(
+            " · no live ask right now")])
+        self.assertTrue(r["lanes"]["gemini"]["reason"].startswith("no answer in 0.5"), r["lanes"])
+        live = lambda items: [i for i in items if i.get("lane") == "live"]  # noqa: E731
+        self.assertEqual(live([e for e in ev if e["type"] == "wall_name"]) + live(r["wall"]), [])
+        released.set()
+        time.sleep(0.3)                                           # the late answer lands now
+        self.assertEqual(live(app.RESULTS.get(r["key"])["result"]["wall"]), [])
+        self.assertLess(r["diag"]["timing"]["gemini"], 1.0)
+
+    def test_diag_timing_on_every_result(self):
+        H.reset_limits()
+        H.clear_results()
+        _, r = H.run(H.CEDRIC, ip="192.0.2.81")
+        t = r["diag"]["timing"]
+        self.assertEqual(set(t), {"pool", "rescore", "strike", "ids", "cap", "gemini", "total", "resolve", "queue"})
+        for k in ("pool", "rescore", "total"):
+            self.assertIsInstance(t[k], float, k)
+        _, c = H.run(H.CEDRIC, ip="192.0.2.82")                  # cached: this request's time + the run's
+        self.assertTrue(c["cached"])
+        self.assertIsNone(c["diag"]["timing"]["pool"])
+        self.assertEqual(c["diag"]["timing_stored"]["pool"], t["pool"])
+        for _ in range(3):
+            app.FRESH_IPS.record("192.0.2.83")
+        _, lim = H.run(H.JASON, ip="192.0.2.83")
+        self.assertEqual(lim["status"], "limited")
+        self.assertIsInstance(lim["diag"]["timing"]["total"], float)
 
     def test_street_check_is_dated_only(self):
         wall = {"answers": [

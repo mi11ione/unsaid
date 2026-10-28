@@ -6,7 +6,8 @@
 // - A cold or slow engine (Render free spins down after 15 min) gets the `waking` state, never someone else's cards.
 
 const UPSTREAM_MS = { stream: 12000, other: 8000 };
-const PASS_REQ = ["authorization", "x-unsaid-token", "accept"];
+// x-unsaid-bench: k11's per-IP-limit bypass; passed through blindly, validated only by the engine.
+const PASS_REQ = ["authorization", "x-unsaid-token", "accept", "x-unsaid-bench"];
 const PASS_RES = ["content-type", "cache-control", "retry-after", "www-authenticate", "x-unsaid-state"];
 const WAKING_TEXT = "waking the ranker · about a minute";
 

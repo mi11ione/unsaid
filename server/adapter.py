@@ -309,7 +309,7 @@ def wall_items(answers, per=None):
 GEMINI_LANES = ("live lane", "street check")   # engine lanes_failed prefixes that are the Gemini lane
 
 
-def run(prep, wall, q, mode, gemini, emit, deadline_s=90.0):
+def run(prep, wall, q, mode, gemini, emit, deadline_s=90.0, timing=None):
     """One fresh run. `emit(evt)` streams CONTRACT events. Returns the CONTRACT result (no `key`; the server adds it).
     Raises QlooError when Qloo fails; the server turns that into `degraded`."""
     if API:
@@ -322,27 +322,29 @@ def run(prep, wall, q, mode, gemini, emit, deadline_s=90.0):
         live = gemini is not None and gemini.live
         if not live and gemini is not None:
             gemini.reasons.append(gemini.reason)
-        lane = _ApiTaste(gemini, prep) if live else False         # False: no engine stand-in, never a fake live answer
+        lane = _ApiTaste(gemini, prep, timing) if live else False  # False: no engine stand-in, never a fake live answer
         street = dated_street(wall)                                # dated answers only, never a live street ask
         return API.run_unsaid(prep["city_text"], prep["loves"], walls_path=wall["path"],
                               mode=mode, qloo=q, gemini=lane, street_check=street, on_event=forward,
                               deadline_s=max(1.0, min(90.0, float(deadline_s))))
-    return _run_fallback(prep, wall, q, mode, gemini, emit)
+    return _run_fallback(prep, wall, q, mode, gemini, emit, timing)
 
 
 class _ApiTaste:
-    """The engine calls gemini.ask(prompt) once; the lane session keeps the guards, the cache and asked_at."""
+    """The engine calls gemini.ask(prompt) once, on its own thread beside the Qloo path. The answer must arrive
+    within the lane's budget counted from the start of the run (15 s), or the run goes on dated_only."""
 
-    def __init__(self, session, prep):
-        self.s, self.prep = session, prep
+    def __init__(self, session, prep, timing=None):
+        self.s, self.prep, self.timing = session, prep, timing
+        self.deadline = time.monotonic() + session.lane.live_timeout
 
     def ask(self, prompt):
         if self.s.taste_used >= 1:
             raise RuntimeError("one taste ask per run")
-        self.s.taste_used += 1
-        a = self.s._ask("taste-all", prompt, self.prep["city"]["id"], [c["id"] for c in self.prep["loves"]])
+        a = self.s.ask_taste_prompt(prompt, self.prep["city"]["id"], [c["id"] for c in self.prep["loves"]],
+                                    deadline=self.deadline, timing=self.timing)
         if a is None:
-            raise RuntimeError("gemini lane: %s" % (self.s.reasons[-1] if self.s.reasons else "unavailable"))
+            raise TimeoutError("gemini lane: %s" % (self.s.reasons[-1] if self.s.reasons else "unavailable"))
         return a
 
 
@@ -366,12 +368,12 @@ def _int(s, i=0):
         return None
 
 
-def _run_fallback(prep, wall, q, mode, gemini, emit):
+def _run_fallback(prep, wall, q, mode, gemini, emit, timing=None):
     city, chips = prep["city"], prep["loves"]
     labels = [c["label"] for c in chips]
     answers = list(wall["answers"])
     if gemini is not None:
-        a = gemini.ask_taste(city["name"], labels, city["id"], [c["id"] for c in chips])
+        a = gemini.ask_taste(city["name"], labels, city["id"], [c["id"] for c in chips], timing=timing)
         if a:
             answers.append(a)
             for it in wall_items([a]):

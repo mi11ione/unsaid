@@ -30,6 +30,7 @@ if HERE not in sys.path:
 import adapter  # noqa: E402
 import cache as C  # noqa: E402
 import limits as L  # noqa: E402
+from timing import Timing  # noqa: E402
 from gemini_live import GeminiLane  # noqa: E402
 
 try:
@@ -182,9 +183,11 @@ def lane_flags(result, session, wall):
     return notes
 
 
-def stream_unsaid(city_text, loves, ip, country, emit):
-    """Runs one /api/unsaid request. Calls emit(evt) for every NDJSON line, the done line last."""
-    t0 = time.monotonic()
+def stream_unsaid(city_text, loves, ip, country, emit, bench=False):
+    """Runs one /api/unsaid request. Calls emit(evt) for every NDJSON line, the done line last.
+    bench=True (a verified X-Unsaid-Bench header) skips the per-IP fresh-run limit, never the quota guard."""
+    timing = Timing()
+    t0 = timing.t0
     deadline = t0 + HARD_CAP_S
 
     def done(result, cached=False, stored_at=None):
@@ -202,6 +205,10 @@ def stream_unsaid(city_text, loves, ip, country, emit):
         result["cached"] = cached
         if stored_at:
             result["stored_at"] = et(stored_at)
+        result["diag"] = dict(result.get("diag") or {})
+        if cached and result["diag"].get("timing"):
+            result["diag"]["timing_stored"] = result["diag"]["timing"]   # the run that made it; timing = this request
+        result["diag"]["timing"] = timing.result()
         emit({"type": "done", "result": result})
         return result
 
@@ -210,7 +217,7 @@ def stream_unsaid(city_text, loves, ip, country, emit):
 
     session = GEMINI.for_country(country)
     prep, wall = None, None
-    q = adapter.make_qloo(MODE, CACHE_DIR, BUCKET, QUOTA, FAKE_PACE)
+    q = timing.instrument(adapter.make_qloo(MODE, CACHE_DIR, BUCKET, QUOTA, FAKE_PACE))
     try:
         prep = adapter.prepare(city_text, loves, q, MODE)
     except Exception as e:
@@ -251,7 +258,7 @@ def stream_unsaid(city_text, loves, ip, country, emit):
         return done(r)
 
     # ---- limits: a fresh run is admitted only below both guards
-    if (MODE == "live" and QUOTA.fired()) or not FRESH_IPS.allowed(ip):
+    if (MODE == "live" and QUOTA.fired()) or (not bench and not FRESH_IPS.allowed(ip)):
         if rec:
             return from_stale("limited")
         status("limited", COPY["limited"])
@@ -279,6 +286,7 @@ def stream_unsaid(city_text, loves, ip, country, emit):
     lock = threading.Lock()
 
     def worker_emit(evt):
+        timing.event(evt.get("type"))
         if evt.get("type") == "pool":
             box["pool_U"] = evt.get("U")
         with lock:
@@ -289,10 +297,11 @@ def stream_unsaid(city_text, loves, ip, country, emit):
         started = time.monotonic()
         try:
             r = adapter.run(prep, wall, q, MODE, session, worker_emit,
-                            deadline_s=max(1.0, deadline - time.monotonic()))
+                            deadline_s=max(1.0, deadline - time.monotonic()), timing=timing)
             r["key"] = key
             notes = lane_flags(r, session, wall)
             r["notes"] = [{"state": s, "text": t} for s, t in notes]
+            r["diag"] = dict(r.get("diag") or {}, timing=timing.result())   # the run's own stages, kept in the cache
             if r.get("status") in ("ok", "empty_few", "empty_none", "partial", "dated_only"):
                 RESULTS.put(key, public(r))
             box["result"] = r
@@ -307,7 +316,9 @@ def stream_unsaid(city_text, loves, ip, country, emit):
                 INFLIGHT.pop(key, None)
 
     try:
-        FRESH_IPS.record(ip)
+        if not bench:
+            FRESH_IPS.record(ip)
+        q_start = time.monotonic()
         admitted = ADMIT.acquire(
             on_wait=lambda ahead, eta: status("queued", COPY["queued"] % (WORDS.get(ahead, "%d runs" % ahead), eta),
                                               ahead=ahead, eta_s=eta),
@@ -317,6 +328,7 @@ def stream_unsaid(city_text, loves, ip, country, emit):
         with INFLIGHT_LOCK:
             INFLIGHT.pop(key, None)
         raise
+    timing.span("queue", q_start, time.monotonic())
     if not admitted:
         fl["event"].set()
         with INFLIGHT_LOCK:
@@ -429,6 +441,11 @@ class Handler(BaseHTTPRequestHandler):
             return ""
         return self.headers.get("CF-IPCountry") or ""
 
+    def bench(self):
+        """X-Unsaid-Bench: <proxy secret>, checked here against UNSAID_PROXY_SECRET; it never reaches a browser."""
+        got = self.headers.get("X-Unsaid-Bench", "")
+        return bool(PROXY_SECRET) and bool(got) and hmac.compare_digest(got.encode(), PROXY_SECRET.encode())
+
     def authorized(self, qs):
         if not TOKEN:
             return True
@@ -533,7 +550,7 @@ class Handler(BaseHTTPRequestHandler):
             except (BrokenPipeError, ConnectionResetError, OSError):
                 gone["v"] = True      # the visitor left; the run still finishes and is cached under its key
 
-        stream_unsaid(city, loves, self.client_ip(), self.country(), emit)
+        stream_unsaid(city, loves, self.client_ip(), self.country(), emit, bench=self.bench())
         self._log(200)
 
 

@@ -7,6 +7,9 @@
   20 RPD / 5 RPM per model, so the street check uses dated answers only.
 - Geo-gate on the visitor's country (CF-IPCountry via the Pages proxy): EEA, UK or CH -> dated_only.
   An unknown country is gated too: only paid services may serve those regions, so we don't guess.
+- The taste ask never delays cards: it runs beside the Qloo path with a hard 15 s budget from the start of the run
+  (env GEMINI_LIVE_TIMEOUT_S). Past it the run is dated_only and a late answer is dropped from that run (it still
+  lands in the answer cache with its own asked_at, so the spent request isn't wasted).
 - Guard at 80% of env GEMINI_RPD (20 -> 16 asks a day, reset at midnight Pacific), then dated_only until the reset.
   A 429 -> dated_only for 1 h.
 - No GEMINI_API_KEY (or no model / no RPD) -> dated_only. A live answer is never faked.
@@ -73,7 +76,8 @@ class GeminiLane:
         except ValueError:
             self.rpd = 0
         self.guard = float(os.environ.get("GEMINI_GUARD", "0.80"))
-        self.timeout = float(os.environ.get("GEMINI_TIMEOUT_S", "20"))
+        self.timeout = float(os.environ.get("GEMINI_TIMEOUT_S", "20"))          # socket timeout per request
+        self.live_timeout = float(os.environ.get("GEMINI_LIVE_TIMEOUT_S", "15"))  # hard budget per run
         self.dir = os.path.join(cache_dir, "ai")
         self.usage_path = os.path.join(cache_dir, "gemini_usage.json")
         self.transport = transport or self._http
@@ -251,11 +255,38 @@ class LaneSession:
             self.answers.append(a)
         return a
 
-    def ask_taste(self, city_name, love_labels, locality, love_ids):
+    def ask_taste(self, city_name, love_labels, locality, love_ids, deadline=None, timing=None):
+        return self.ask_taste_prompt(taste_phrasing(love_labels, city_name), locality, love_ids, deadline, timing)
+
+    def ask_taste_prompt(self, prompt, locality, love_ids, deadline=None, timing=None):
+        """The one taste ask of a run, cut at `deadline` (monotonic; default now + live_timeout). Returns the
+        answer, or None with the reason recorded (the run is then dated_only)."""
         if self.taste_used >= 1:
             return None
         self.taste_used += 1
-        return self._ask("taste-all", taste_phrasing(love_labels, city_name), locality, love_ids)
+        if self.reason in ("country unknown", "EEA/UK/CH"):
+            self.reasons.append(self.reason)
+            return None
+        start = time.monotonic()
+        deadline = deadline if deadline is not None else start + self.lane.live_timeout
+        box = {}
+
+        def go():
+            box["r"] = self.lane.ask("taste-all", prompt, locality, love_ids)
+        th = threading.Thread(target=go, name="gemini-taste", daemon=True)
+        th.start()
+        th.join(max(0.0, deadline - time.monotonic()))
+        if timing is not None:
+            timing.span("gemini", start, time.monotonic())
+        if th.is_alive() or "r" not in box:
+            self.reasons.append("no answer in %gs" % round(deadline - start, 1))
+            return None                     # late: whatever arrives afterwards is never part of this run
+        a, why = box["r"]
+        if a is None:
+            self.reasons.append(why)
+        else:
+            self.answers.append(a)
+        return a
 
     def ask_street(self, neighbourhood, city_name, locality):
         if self.street_used >= STREET_MAX or not neighbourhood:
