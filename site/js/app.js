@@ -505,6 +505,9 @@
       const d = c.distance_mi == null ? null : `${+c.distance_mi < 1 ? (+c.distance_mi).toFixed(1) : Math.round(+c.distance_mi)} mi`;
       return [c.neighbourhood || c.area, d, price(c), c.open === false ? 'Closed' : openState(c)].filter(Boolean).map(esc).join(' · ');
     }
+    // one casing for what to order: lower case, except a word that is all caps or has a capital after its first
+    // letter ("BBQ", "McDonald's"): "Traditional Wings And Fries" -> "traditional wings and fries"
+    const dish = d => String(d).split(/(\s+)/).map(w => /\p{Lu}/u.test(w.slice(1)) || (w.length > 1 && w === w.toUpperCase() && /\p{L}/u.test(w)) ? w : w.toLowerCase()).join('');
     function cardHTML(c, i, known, prov) {
       const tag = st.struck.get(c.id), rose = st.risen.get(c.id);
       const x = known || tag || prov ? '' : `<button class="xbtn" data-x="1" aria-label="strike ${esc(c.name || 'this card')}" title="I know it: strike it">✕</button>`;
@@ -516,7 +519,7 @@
           <div class="name">${known ? (c.name ? esc(c.name) : '') : placeName(c, c.id)}</div>
           <div class="meta">${metaLine(c)}</div>
           ${blurb ? `<p class="blurb">${esc(blurb)}</p>` : ''}
-          ${order.length ? `<div class="order">Order: ${order.map(esc).join(', ')}</div>` : ''}
+          ${order.length ? `<div class="order">Order: ${order.map(dish).map(esc).join(', ')}</div>` : ''}
           ${known || c.because == null ? '' : `<div class="because">Because you love <b>${esc(tName(c.because))}</b></div>`}
           ${tag || rose ? `<div class="tag${rose && !tag ? ' rose' : ''}">${tag ? esc(tag.text) : esc(rose)}</div>` : ''}
         </div>
@@ -742,9 +745,9 @@
         <div class="cap">${esc(cityName)} · card ${cardNo(id)}</div>
         <h1>${head}</h1>
         <p class="sheetsub">${metaLine(c)}</p>
-        ${c.blurb ? `<p class="lede">${esc(c.blurb)}</p>` : ''}
+        ${c.blurb_long || c.description || c.blurb ? `<p class="lede">${esc(c.blurb_long || c.description || c.blurb)}</p>` : ''}
         ${c.what ? `<p class="dim">${esc(c.what)}</p>` : ''}
-        ${order.length ? `<p>Order: ${order.map(esc).join(', ')}</p>` : ''}
+        ${order.length ? `<p>Order: ${order.map(dish).map(esc).join(', ')}</p>` : ''}
         ${st3 ? `<div class="red">${esc(st3.text)}</div>` : ''}
         <div class="blk"><div class="sh"><h2>Because</h2></div>
           <div class="big1">${c.because == null ? '' : 'You love ' + esc(tName(c.because)) + '.'}</div>${c.because_detail ? `<p>${esc(cap1(typedText(c.because_detail)))}.</p>` : ''}${holds ? `<p class="dim">${holds}</p>` : ''}</div>
