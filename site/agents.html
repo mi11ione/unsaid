@@ -12,80 +12,26 @@
   <header class="top"><a class="mark" href="./"><s>UN</s>SAID</a><span class="slug">for agents</span></header>
   <main class="doc">
     <h1>Call it from your agent.</h1>
-    <p>One tool, <code>unsaid_places(loves, city)</code>. It crosses out every place the AIs in its data name for that city (each answer is stamped with its provider and model), and returns up to seven that Qloo ranks for those loves, each with its Qloo ID, “#k for you · #j for anyone”, the love behind it and how many AI answers named it.</p>
-
-    <h2>curl</h2>
-    <pre id="curl"></pre>
-    <p class="dim"><code>loves</code> is a JSON array of up to three <code>[text, type]</code> pairs, the form above. Give a type for a dish (<code>"tag"</code>) and for a place (<code>"place"</code>): untyped, <code>"rib tips"</code> can resolve to a restaurant. Types: artist, movie, tv_show, book, podcast, videogame, brand, place, tag. Plain text, <code>{"text": "...", "type": "movie"}</code> and chips from <code>/api/resolve</code> also work. The reply is NDJSON; the last line is <code>{"type":"done","result":{...}}</code>. <code>GET /api/health</code> never needs the token.</p>
-
-    <h2>Token</h2>
-    <p><b>After 30 Oct 23:45 ET the bare URL works, with no token:</b> fresh runs share a per-address limit. A token still works and gives you its own bucket. Before then the API needs the token from the Devpost testing instructions. Repeat queries are cached and free.</p>
-    <p class="dim">Send it as <code>Authorization: Bearer …</code>, as <code>X-Unsaid-Token: …</code>, or as <code>&amp;token=…</code>. In a browser, add <code>?token=…</code> to this site’s address and the page passes it on.</p>
-
-    <h2>MCP</h2>
-    <div id="mcp-hosted"><p><b>One paste.</b> Add <code>https://unsaid-ang.pages.dev/mcp?token=&lt;token&gt;</code> as a custom connector in Claude (Settings → Connectors), or run <code>claude mcp add --transport http unsaid "https://unsaid-ang.pages.dev/mcp?token=&lt;token&gt;"</code>. Leave out <code>?token=…</code> once the token comes off (see Token above).</p></div>
-    <p>The MCP server is one Python file, standard library only. By default it calls this site’s API, so your agent gets the same live Qloo ranks and the same dated AI answers as this page. You don’t need a Qloo key.</p>
-    <p class="dim">Claude Code:</p>
-    <pre>claude mcp add unsaid -e UNSAID_MODE=remote -e UNSAID_TOKEN=&lt;token&gt; -- python3 -I /path/to/unsaid/agent/unsaid_mcp.py</pre>
-    <p class="dim">Claude Desktop (<code>claude_desktop_config.json</code>):</p>
-    <pre>{
-  "mcpServers": {
-    "unsaid": {
-      "command": "python3",
-      "args": ["-I", "/path/to/unsaid/agent/unsaid_mcp.py"],
-      "env": { "UNSAID_MODE": "remote", "UNSAID_TOKEN": "&lt;token&gt;" }
-    }
-  }
-}</pre>
-    <p class="dim"><code>UNSAID_TOKEN</code> is optional once the token comes off (see Token above). In remote mode the server lists one tool, <code>unsaid_places(loves, city)</code>. Pass loves as <code>[text, type]</code> pairs. It covers St. Louis and New York, the cities where we collected what the AIs say. With your own <code>QLOO_API_KEY</code>, <code>UNSAID_MODE=live</code> runs the engine locally and also lists <code>qloo_places(loves, city)</code>: Qloo’s top 50 for the same loves, with nothing crossed out. That tool is the meter’s “with” arm.</p>
+    <p><b>One paste.</b> Add <code>https://unsaid-ang.pages.dev/mcp</code> as a custom connector in Claude (Settings → Connectors), or run <code>claude mcp add --transport http unsaid https://unsaid-ang.pages.dev/mcp</code>. Until 30 Oct 23:45 ET, add <code>?token=…</code> from the Devpost testing instructions.</p>
 
     <h2>One real run</h2>
-    <pre>claude -p "I love Frankie Beverly &amp; Maze, The Original Kings of Comedy and rib tips. Where should I go in St. Louis tonight?" \
-  --mcp-config agent/mcp.json --allowedTools mcp__unsaid__unsaid_places</pre>
-    <p class="dim"><code>agent/mcp.json</code> sets <code>UNSAID_MODE=remote</code> and reads <code>UNSAID_TOKEN</code> from your shell. Replace <code>/path/to/unsaid</code> in it with the path to your clone first.</p>
     <div id="run"></div>
-
-    <h2>Meter</h2>
-    <p id="meter"></p>
   </main>
-  <footer class="foot"><span>© OpenStreetMap contributors, ODbL (map)</span><span>ranks by Qloo</span><a class="link" href="./">UNSAID</a></footer>
+  <footer class="foot"><a class="link" href="./">UNSAID</a><a class="link" href="how">How it works</a><span>ranks by Qloo</span></footer>
 </div>
 <script src="js/map.js"></script>
 <script>
 (async function () {
-  const o = location.origin.startsWith('http') ? location.origin : 'https://unsaid-ang.pages.dev';
-  const loves = JSON.stringify([['Frankie Beverly & Maze', 'artist'], ['The Original Kings of Comedy', 'movie'],
-                                ['rib tips', 'tag']]);
-  document.getElementById('curl').textContent =
-    `curl -N -H "Authorization: Bearer $UNSAID_TOKEN" \\\n  "${o}/api/unsaid?city=st-louis&loves=${encodeURIComponent(loves)}"`;
-  const m = await UM.json('data/meter.json');
-  const cap = x => String(x).charAt(0).toUpperCase() + String(x).slice(1);
-  // the meter as measured (data/meter.json, from k10_meter.py), printed whatever it said; the line is dropped if unmeasured
-  const me = document.getElementById('meter');
-  if (m.m_alone != null && m.m_qloo != null) {
-    me.textContent = `We asked ${m.assistants === 2 ? 'two' : m.assistants} AI assistants to plan a night in ${m.city || 'the city'} “but nothing every AI would tell me”, then graded their picks against the other AIs’ everyone-list. ` +
-      `Alone, a median ${m.m_alone} of ${m.of} picks were on it. With Qloo as their only tool and nothing crossed out, ${m.m_qloo} of ${m.of} (${m.sets} sets). ` +
-      (m.gate === 'FAIL' ? `That missed the bar we set in advance (${m.bar}; it was ${m.below4_sets} of ${m.sets}): FAIL.` : '');
-    const P = m.posthoc;
-    if (P) {
-      const e = document.createElement('p'); e.className = 'dim';
-      e.textContent = `Afterwards (${P.label}), we ran a third arm with UNSAID as the only tool. ${cap(P.stat)}: alone ${P.alone} · with Qloo ${P.qloo} · with UNSAID ${P.unsaid}. ` +
-        `Claude’s UNSAID runs put ${P.claude_unsaid} picks on the list in every run; ChatGPT skipped the tool in ${P.chatgpt_skipped} of its ${P.chatgpt_runs} runs, and those runs count as they came out.`;
-      me.after(e);
-    }
-  } else me.parentNode.removeChild(me.previousElementSibling), me.remove();
+  // one recorded run (data/live/agent_demo.json): the question, the call it made, and its answer, unedited
   const d = await UM.json('data/live/agent_demo.json').catch(() => null);
-  // the answer is shown only when the run is newer than the stored set it is about (an older run names older cards)
-  const set = await UM.json('data/live/stl_stl-cedric.json').catch(() => null);
-  const fresh = d && set && set.ran_at && new Date(d.recorded_at) >= new Date(set.ran_at);
-  if (d && d.input) {
-    const run = document.getElementById('run');
+  const run = document.getElementById('run');
+  if (d && d.input && d.answer) {
     const p = (cls, text) => { const e = document.createElement(cls === 'pre' ? 'pre' : 'p'); if (cls !== 'pre') e.className = cls; e.textContent = text; run.appendChild(e); return e; };
-    p('dim', `Recorded ${String(d.recorded_at).slice(0, 10)} with Claude Code ${d.claude_code} (${d.model}), against this site’s API. The call it made:`);
-    p('pre', `${d.tool}(${JSON.stringify(d.input, null, 1).replace(/\n\s*/g, ' ')})`);
-    if (fresh && d.answer) { p('dim', 'Its answer, unedited:'); p('pre', d.answer).style.whiteSpace = 'pre-wrap'; }
-    else p('dim', 'Its answer will be shown here once it is re-recorded on today’s cards.');
-  }
+    p('dim', `Recorded ${String(d.recorded_at).slice(0, 10)} with Claude Code (${d.model}), UNSAID as its only tool. Asked:`);
+    p('q', `“${d.question}”`);
+    p('dim', 'Its answer, unedited:');
+    p('pre', d.answer).style.whiteSpace = 'pre-wrap';
+  } else run.previousElementSibling.remove(), run.remove();
   window.__ready = true;
 })();
 </script>

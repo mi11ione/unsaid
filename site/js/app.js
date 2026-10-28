@@ -35,12 +35,10 @@
       `<span class="grow"></span>` + (mock ? `<span class="mock">${esc(mock)}</span>` : '');
   }
 
-  // the presets as compact chips ("Or open one:"): five, alternating cities, from data/try.json
+  // the presets as two chips ("Or open one:"): each city's first set in data/try.json (Cedric, Khruangbin)
   function presetChips(head = 'Or open one:') {
     const ok = TRY.sets.filter(s => s.src && !s.mock);
-    const by = c => ok.filter(s => s.city === c), cs = [...new Set(ok.map(s => s.city))];
-    const pick = [];
-    for (let i = 0; pick.length < 5 && i < ok.length; i++) cs.forEach(c => { const x = by(c)[i]; if (x && pick.length < 5) pick.push(x); });
+    const pick = [...new Set(ok.map(s => s.city))].map(c => ok.find(s => s.city === c));
     return `<div class="try"><span class="dim">${esc(head)}</span> ${pick.map(x => `<a class="pchip" href="#/r?set=${encodeURIComponent(x.id)}">${esc(x.label)}</a>`).join('')}</div>`;
   }
   const tryList = (head = 'Or open one:') => presetChips(head || 'Or open one:');
@@ -74,7 +72,7 @@
       </div>
       <div class="fields"><div class="fld"><span class="n">in</span><div class="cityopts" role="radiogroup" aria-label="city">${CITIES.map(c => `<button role="radio" aria-checked="false" data-c="${esc(c.slug)}">${esc(c.name)}</button>`).join('')}</div></div></div>
       <div class="go"><button class="btn solid" id="cross" disabled>Find my seven</button></div>
-      <div class="legal">Your three loves go to Qloo, and to Gemini for one live AI check. Don’t type anything personal.</div>
+      <div class="tagline">Tell it three things you love. Get seven places no AI is sending everyone to.</div>
       ${presetChips()}
       <div class="thumbs" id="thumbs"></div>
     </section></div>`;
@@ -102,7 +100,7 @@
       const ph = (R.picks || []).filter(c => httpUrl(c.image));
       if (ph.length < 4) return;
       $('#thumbs').innerHTML = `<a class="thead" href="#/r?set=stl-cedric"><span>${esc(set.label)} <span class="dim">· his seven →</span></span></a>
-        <a class="trow" href="#/r?set=stl-cedric" aria-label="Open ${esc(set.label)}">${ph.map(c => `<figure><img src="${esc(c.image)}" alt="" loading="lazy" onerror="this.parentNode.remove()"><figcaption>${esc(c.name)}</figcaption></figure>`).join('')}</a>`;
+        <a class="trow" href="#/r?set=stl-cedric" aria-label="Open ${esc(set.label)}">${ph.map(c => `<figure><img src="${esc(c.image)}" alt="" loading="eager" onerror="this.parentNode.remove()"><figcaption>${esc(c.name)}</figcaption></figure>`).join('')}</a>`;
     } catch (e) { /* the landing works without it */ }
   }
   // a link we share or copy never carries the API token (it lives only in the visitor's own address bar)
@@ -133,7 +131,9 @@
     else if (L.pending) box.innerHTML = '<span class="faint">looking up…</span>';
     else if (L.chip) {
       const alts = (L.r.alternatives || []);
-      box.innerHTML = `<span class="chip">${esc(L.chip.label)}${tl(L.chip) ? ` · <i>${esc(tl(L.chip))}</i>` : ' · <i>as typed</i>'}${L.chip.disamb ? ` <span class="dim">${esc(L.chip.disamb)}</span>` : ''}</span>` +
+      // "Sade · artist · Chillout, Soul": the type once, then what tells it apart (the disamb without its type)
+      const ty = tl(L.chip), rest = String(L.chip.disamb || '').split(/,\s*/).filter(x => x && (!ty || x.toLowerCase() !== String(ty).toLowerCase())).join(', ');
+      box.innerHTML = `<span class="chip lovechip">${esc(L.chip.label)} · ${ty ? esc(ty) : 'as typed'}${rest ? ` · <span class="dim">${esc(rest)}</span>` : ''}</span>` +
         (alts.length ? `<button data-a="toggle">other matches</button>` : '') + (L.r.mock ? '<span class="mock">mock</span>' : '') +
         (L.open ? `<span class="alts">${alts.map((a, k) => `<button data-a="${k}">${esc(a.label)} (${kindOf(a)})</button>`).join('')}</span>` : '');
     } else if (L.r.status === 'needs_input') {
@@ -199,7 +199,7 @@
     topbar({ city: cityName, loves: loves.map((l, i) => ({ ...l, label: TYPED[i] || l.label })) });
     view.innerHTML = `<div class="res" id="res">
       <div class="maphead" id="maphead"></div>
-      <div class="xstrip" id="xstrip"><div class="xnames" id="xnames"></div><button class="link" id="xall"></button></div>
+      <div class="xstrip" id="xstrip"><button class="link" id="xall"></button></div>
       <div class="status" id="status"><span class="live"></span><span id="stxt"></span></div>
       <div class="note" id="notes"></div>
       <section class="sec" id="s-left" hidden>
@@ -267,16 +267,12 @@
     const liveIds = () => st.slots.filter(id => !st.struck.has(id));
     // the strip under the hero: one line of struck names, most-named first, and the final count (held until the result:
     // the streamed names are spellings the result merges into places, so a running count would go down)
+    // the link to every place the AIs named (the final count only: held until the result). Phone: one sentence.
     function counter() {
       const W = st.result ? Share.wallCount(st.result) : null;
-      // the hero's struck gem is already on screen: the strip starts with the next name
-      const heroGem = cen && ((cen.mailee_claude && cen.chatgpt && cen.chatgpt.gem && cen.chatgpt.gem.name === cen.mailee_claude.name ? cen.mailee_claude : cen.gem) || {}).name;
-      const names = (st.result ? Share.wallNames(st.result) : [...st.wall.values()].filter(w => w.name).sort((a, b) => b.hits.size - a.hits.size).map(w => UM.cleanName(w.name)))
-        .filter(n => !heroGem || Matcher.norm(n) !== Matcher.norm(heroGem));
-      const xn = $('#xnames'); if (!xn) return;
-      const top = names.slice(0, 30).join('|');
-      if (xn.dataset.k !== top) { xn.dataset.k = top; xn.innerHTML = names.slice(0, 30).map(n => `<span class="xn">${esc(n)}</span>`).join(' '); }
-      $('#xall').textContent = W != null ? `all ${W}, crossed out →` : (names.length ? 'counting…' : '');
+      const a = $('#xall'); if (!a) return;
+      a.innerHTML = W == null ? (st.wall.size ? 'counting the places the AIs named…' : '')
+        : `<span class="ph-only">The AIs named ${W} places in ${esc(cityName)}. All crossed out →</span><span class="dt-only">all ${W}, crossed out →</span>`;
     }
     // the full list, in a sheet: every place the AIs named, crossed out
     function wallSheet() {
@@ -461,11 +457,13 @@
       const lead = R.status === 'empty_few'
         ? `<p class="empty">Only ${n} places in ${esc(cityName)} fit you that no AI names. Here they are.</p>`
         : `<h2 class="lead2"><span class="n">${n}</span> for you</h2><p class="leadsub">No AI named any of these in ${askLine(true)}.</p>`;
-      body.innerHTML = lead + `<div class="cards" id="cards"></div>
+      // desktop: "7 for you" sits beside the map, so the cards start above the fold; phone: above the cards
+      st.lead = R.status === 'empty_few' ? null : lead; mapDraw();
+      body.innerHTML = `<div class="leadhere">${lead}</div>` + `<div class="cards" id="cards"></div>
         <details class="dare" id="darebox"><summary>Ask your AI. Paste its answer here →</summary>
           <div class="copyrow"><button class="link" id="copyask">copy an ask</button><span class="dim" id="askq">“hidden gems to eat and drink in ${esc(cityName)}”</span></div>
           <textarea id="dare" placeholder="paste an answer here" spellcheck="false" aria-label="${esc(dareLabel())}"></textarea><div class="out" id="dareout"></div></details>
-        <div class="links"><button class="link" id="lnk-share">Share</button><a class="link" href="how">How it works</a></div>`;
+        <div class="links"><button class="btn" id="lnk-share">Share</button></div>`;
       drawCards();
       $('#cards').after($('#burn'));          // the burn line sits after the seven, never before cards not yet seen
       $('#copyask').addEventListener('click', () => {
@@ -476,15 +474,6 @@
       $('#lnk-share').addEventListener('click', shareSheet);
       let t = null;
       $('#dare').addEventListener('input', e => { clearTimeout(t); t = setTimeout(() => dare(e.target.value), 250); });
-      toast();
-    }
-    // strike is the ✕ on each card; said once, as a toast that fades
-    function toast() {
-      let seen = false; try { seen = localStorage.getItem('unsaid.hint') === '1'; } catch (e) { /* private mode */ }
-      if (seen || st.toasted) return; st.toasted = true;
-      const t = el(document.body, 'div', null, 'Know one already? Tap ✕ to strike it. A place no AI named takes its spot.'); t.className = 'toast';
-      try { localStorage.setItem('unsaid.hint', '1'); } catch (e) { /* */ }
-      setTimeout(() => t.classList.add('out'), 5200); setTimeout(() => t.remove(), 6000);
     }
 
     const cap1 = x => String(x).charAt(0).toUpperCase() + String(x).slice(1);
@@ -502,25 +491,25 @@
         `<span class="no">${String(i + 1).padStart(2, '0')}</span>${x || ''}</div>`;
     }
     function metaLine(c) {
-      const d = c.distance_mi == null ? null : `${+c.distance_mi < 1 ? (+c.distance_mi).toFixed(1) : Math.round(+c.distance_mi)} mi`;
-      return [c.neighbourhood || c.area, d, price(c), c.open === false ? 'Closed' : openState(c)].filter(Boolean).map(esc).join(' · ');
+      // no distance: there is no visitor location, so "6 mi" would only read as far
+      return [c.neighbourhood || c.area, price(c), c.open === false ? 'Closed' : openState(c)].filter(Boolean).map(esc).join(' · ');
     }
     // one casing for what to order: lower case, except a word that is all caps or has a capital after its first
     // letter ("BBQ", "McDonald's"): "Traditional Wings And Fries" -> "traditional wings and fries"
     const dish = d => String(d).split(/(\s+)/).map(w => /\p{Lu}/u.test(w.slice(1)) || (w.length > 1 && w === w.toUpperCase() && /\p{L}/u.test(w)) ? w : w.toLowerCase()).join('');
     function cardHTML(c, i, known, prov) {
       const tag = st.struck.get(c.id), rose = st.risen.get(c.id);
-      const x = known || tag || prov ? '' : `<button class="xbtn" data-x="1" aria-label="strike ${esc(c.name || 'this card')}" title="I know it: strike it">✕</button>`;
+      const x = known || tag || prov ? '' : `<button class="xbtn" data-x="1" aria-label="Know it? Strike ${esc(c.name || 'it')}" title="Know it? Strike it">✕</button>`;
       const blurb = c.line || c.blurb || (c.what ? cap1(c.what) : '');
       const order = Array.isArray(c.order) ? c.order.filter(Boolean) : c.order ? [c.order] : [];
       return `<div class="card${tag ? ' struck' : ''}${tag && tag.human ? ' byyou' : ''}${rose ? ' risen' : ''}" data-id="${esc(c.id)}">
         ${photo(c, i, x)}
         <div class="body">
           <div class="name">${known ? (c.name ? esc(c.name) : '') : placeName(c, c.id)}</div>
+          ${known || c.because == null ? '' : `<div class="because">Because you love ${esc(tName(c.because))}</div>`}
           <div class="meta">${metaLine(c)}</div>
           ${blurb ? `<p class="blurb">${esc(blurb)}</p>` : ''}
           ${order.length ? `<div class="order">Order: ${order.map(dish).map(esc).join(', ')}</div>` : ''}
-          ${known || c.because == null ? '' : `<div class="because">Because you love <b>${esc(tName(c.because))}</b></div>`}
           ${tag || rose ? `<div class="tag${rose && !tag ? ' rose' : ''}">${tag ? esc(tag.text) : esc(rose)}</div>` : ''}
         </div>
       </div>`;
@@ -855,62 +844,59 @@
     function draw() {
       box.innerHTML = '';
       const W = box.clientWidth, phone = W < 600;
-      const cg0 = cen.chatgpt && cen.chatgpt.gem;
+      const resEl = document.getElementById('res');
       if (phone) {
-        // phone: the struck gem in one block, no map (the strip of struck names follows; then the cards)
-        box.style.height = 'auto';
-        const g = two || cen.gem, other = two ? `${esc(CEN.chatgpt_provider)}: ${cg0.hits} of ${cg0.of}` : cg0 ? `${esc(CEN.chatgpt_provider)}’s: ${esc(cg0.name)}, ${cg0.hits} of ${cg0.of}` : '';
-        el(box, 'div', null, `<div class="hq">Ask ${esc(CEN.provider)} for a hidden gem in ${esc(cen.city)}:</div><div class="hg"><span class="gx">${esc(gem.name).replace("'", '’')}</span><span class="red">${g.hits} times in ${g.of}</span></div>` +
-          (other ? `<div class="ho${two ? ' red' : ' dim'}">${other}</div>` : '')).className = 'herom';
+        // phone: no map and no hero; the link to everything the AIs named, then "7 for you"
+        box.style.height = '0'; if (resEl) resEl.classList.remove('leadmap');
         return;
       }
-      const story = el(box, 'div', phone ? 'position:relative;margin:6px 0 4px' : `position:absolute;left:${Math.round(W * .56)}px;top:50%;transform:translateY(-50%);width:${Math.round(W * .44)}px`);
-      const cg = cen.chatgpt && cen.chatgpt.gem;
-      const gx = `<span class="gx" style="font:400 ${phone ? 30 : 54}px/1 var(--serif)">${esc(gem.name).replace("'", '’')}</span>`;
-      story.innerHTML = two
-        // census_stats_claude.txt:59 (13 of 16) and census_stats_codex.txt:60 (10 of 16), via census.json
-        ? `<div style="font:400 ${phone ? 17 : 26}px/1.2 var(--serif)">Ask ${esc(CEN.provider)} for a hidden gem in ${esc(cen.city)}.</div>
-           <div style="margin-top:${phone ? 6 : 10}px">${gx}</div>
-           <div style="margin-top:${phone ? 6 : 10}px;font:400 ${phone ? 15 : 19}px/1.3 var(--serif)" class="red">${two.hits} times in ${two.of}<br>${esc(CEN.chatgpt_provider)}: ${cg.hits} of ${cg.of}</div>`
-        : `<div style="font:400 ${phone ? 17 : 26}px/1.2 var(--serif)">Ask ${esc(CEN.provider)} for a hidden gem in ${esc(cen.city)}.</div>
-           <div style="margin-top:${phone ? 6 : 10}px">${gx}</div>
-           <div style="margin-top:${phone ? 6 : 10}px;font:400 ${phone ? 15 : 19}px/1.3 var(--serif)"><span class="red">${cen.gem.hits} times in ${cen.gem.of}</span>` +
-             (cen.gem.first != null ? `<span class="dim"> · named first in ${cen.gem.first}</span>` : '') + '</div>' +
-             (cg ? `<div class="dim" style="margin-top:8px;font:400 ${phone ? 12 : 14}px/1.4 var(--mono)">${esc(CEN.chatgpt_provider)}’s: ${esc(cg.name)}, ${cg.hits} of ${cg.of}</div>` : '');
+      // desktop: "7 for you" and its one line sit beside the map, so the cards start above the fold
+      const story = el(box, 'div', `position:absolute;left:${Math.round(W * .58)}px;top:50%;transform:translateY(-50%);width:${Math.round(W * .42)}px`);
+      story.className = 'maplead';
+      story.innerHTML = st.lead || '';
+      if (resEl) resEl.classList.toggle('leadmap', !!st.lead);
       const H = 380, mw = W * .56;
-      const holder = el(box, 'div', `position:relative;height:${H}px;width:${W}px`);
-      if (!phone) { box.style.height = H + 'px'; holder.style.position = 'absolute'; holder.style.left = '0'; holder.style.top = '0'; } else box.style.height = 'auto';
+      const holder = el(box, 'div', `position:absolute;left:0;top:0;height:${H}px;width:${Math.round(mw)}px`);
+      holder.className = 'mapfade';      // the dots fade out at the edges instead of stopping at a hard line
+      box.style.height = H + 'px';
       const ctx = UM.canvas(holder, mw, H);
       // the frame takes in every card (the pool reaches past the city, e.g. North County) and the gem; a dot is never moved
       const cardsXY = [...st.cards.values()].filter(c => c.lat != null).concat(gemXY ? [gemXY] : []);
       const P = UM.projection(UM.frame(M, cardsXY), { x: mw * .22, y: 10, w: mw * .7, h: H - 20 });
-      const ai = M.ai, cmax = Math.max(...ai.map(a => a.count)), dmax = phone ? 18 : 28;
+      const ai = M.ai, cmax = Math.max(...ai.map(a => a.count)), dmax = 28;
       const dense = M.places.length > 3000;   // New York: ~20k dots, smaller and without the haze
-      UM.dots(ctx, M, P, dense ? { d: phone ? 1 : 1.3, alpha: .55 } : { d: phone ? 2 : 2.8, glow: phone ? 6 : 10 });
+      UM.dots(ctx, M, P, dense ? { d: 1.3, alpha: .55 } : { d: 2.8, glow: 10 });
       ai.slice().sort((a, b) => a.count - b.count).forEach(a => { const [x, y] = P(a.lon, a.lat); UM.disc(ctx, x, y, UM.discD(a.count, cmax, dmax, 3), st.done ? .55 : .85); });
+      // the seven's pins and number labels; a label that would sit on another pin or label moves round its pin
+      const boxes = [], hit = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+      const ids = st.done ? st.slots : st.order.slice(0, 7);
+      const pins = ids.map((id, i) => { const c = st.cards.get(id); if (!c || c.lat == null) return null; const [x, y] = P(c.lon, c.lat); boxes.push({ x: x - 6, y: y - 6, w: 12, h: 12 }); return { id, i, x, y }; }).filter(Boolean);
+      pins.forEach(({ id, i, x, y }) => {
+        const k = st.struck.get(id), byAI = (k && !k.human) || st.burned.some(b => b.card_id === id), byYou = k && k.human;
+        UM.seven(ctx, x, y, byYou ? .45 : 1, 9, 3, byAI ? UM.C.red : UM.C.white);
+        const t = String(i + 1), w = 7 * t.length + 2, h = 11;
+        const at = [[x + 9, y - 5], [x - 9 - w, y - 5], [x - w / 2, y - 19], [x - w / 2, y + 8]].map(([lx, ly]) => ({ x: lx, y: ly, w, h }))
+          .find(b => !boxes.some(o => hit(b, o) && !(o.x === x - 6 && o.y === y - 6))) || { x: x + 9, y: y - 5, w, h };
+        boxes.push(at);
+        el(holder, 'div', `top:${at.y}px;left:${at.x}px`, t).className = 'lab num' + (byAI ? ' x' : byYou ? ' xi' : '');
+      });
+      // the AIs' gem: its ring always; its name on a leader only where it collides with nothing
       if (gemXY) {
         const [x, y] = P(gemXY.lon, gemXY.lat), r = UM.discD(gemXY.count || cmax, cmax, dmax, 3) / 2;
         if (!ai.includes(gemXY)) UM.disc(ctx, x, y, r * 2, .85);
         UM.ring(ctx, x, y, r + 5, 1.4);
-        const lx = Math.min(P.bounds.x0, x - r - 30) - 14;
-        UM.leader(ctx, x - r - 5, y, lx + 4, y, UM.C.red, .8);
-        el(holder, 'div', `top:${y - 9}px;right:${W - lx}px;font-size:${phone ? 13 : 16}px;text-align:right`, `<span class="n">${esc(gem.name).replace("'", '’')}</span>`).className = 'lab red';
+        const lx = Math.min(P.bounds.x0, x - r - 30) - 14, tw = 8.2 * gem.name.length;
+        const lb = { x: lx - tw, y: y - 10, w: tw + (x - r - 5 - lx), h: 20 };
+        if (lx - tw > 0 && !boxes.some(o => hit(lb, o))) {
+          UM.leader(ctx, x - r - 5, y, lx + 4, y, UM.C.red, .8);
+          el(holder, 'div', `top:${y - 9}px;right:${Math.round(mw) - lx}px;font-size:16px;text-align:right`, `<span class="n">${esc(gem.name).replace("'", '’')}</span>`).className = 'lab red';
+        }
       }
-      // the seven, as they land; struck or burned ones in red
-      const ids = st.done ? st.slots : st.order.slice(0, 7);
-      ids.forEach((id, i) => {
-        const c = st.cards.get(id); if (!c || c.lat == null) return;
-        const [x, y] = P(c.lon, c.lat);
-        // an AI naming it (burn, paste) is red; your own strike is ink
-        const k = st.struck.get(id), byAI = (k && !k.human) || st.burned.some(b => b.card_id === id), byYou = k && k.human;
-        UM.seven(ctx, x, y, byYou ? .45 : 1, phone ? 7 : 9, 3, byAI ? UM.C.red : UM.C.white);
-        el(holder, 'div', `top:${y - 5}px;left:${x + 9}px`, String(i + 1)).className = 'lab num' + (byAI ? ' x' : byYou ? ' xi' : '');
-      });
       // the legend, under the map
-      const lg = el(box, 'div', phone ? 'position:relative' : `position:absolute;left:0;top:${H + 4}px;width:${W}px`,
+      const lg = el(box, 'div', `position:absolute;left:0;top:${H + 4}px;width:${W}px`,
         `<span><i class="k g"></i>places to eat and drink (OpenStreetMap)</span><span><i class="k r"></i>places the AIs named, by how often</span><span><i class="k w"></i>yours, numbered like the cards</span>`);
       lg.className = 'maplegend';
-      if (!phone) box.style.height = (H + 30) + 'px';
+      box.style.height = (H + 30) + 'px';
     }
     draw();
     let raf = 0;

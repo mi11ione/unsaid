@@ -1,5 +1,5 @@
 {
- "_": "built from data/try_these.json + data/sets.json; src is null until a stored result exists",
+ "_": "built from data/try_these.json + data/sets.json; src is the live result (site/data/live), null until one exists",
  "sets": [
   {
    "id": "stl-cedric",
@@ -10,9 +10,9 @@
     "The Original Kings of Comedy",
     "rib tips"
    ],
-   "ran": null,
-   "src": "data/mock/stl-cedric.ndjson",
-   "mock": true
+   "ran": "2026-10-28T20:20:08+0100",
+   "src": "data/live/stl_stl-cedric.json",
+   "mock": false
   },
   {
    "id": "stl-jason",
@@ -23,8 +23,8 @@
     "Rounders",
     "Carbone"
    ],
-   "ran": null,
-   "src": null,
+   "ran": "2026-10-28T20:20:09+0100",
+   "src": "data/live/stl_stl-jason.json",
    "mock": false
   },
   {
@@ -36,8 +36,8 @@
     "Back to the Future",
     "Ted Drewes Frozen Custard"
    ],
-   "ran": null,
-   "src": null,
+   "ran": "2026-10-28T20:20:11+0100",
+   "src": "data/live/stl_stl-chuckberry.json",
    "mock": false
   },
   {
@@ -49,8 +49,8 @@
     "Twin Peaks",
     "pho"
    ],
-   "ran": null,
-   "src": null,
+   "ran": "2026-10-28T20:20:16+0100",
+   "src": "data/live/stl_stl-bigthief.json",
    "mock": false
   },
   {
@@ -62,8 +62,8 @@
     "Yellowstone",
     "pork steak"
    ],
-   "ran": null,
-   "src": null,
+   "ran": "2026-10-28T20:20:17+0100",
+   "src": "data/live/stl_stl-morganwallen.json",
    "mock": false
   },
   {
@@ -75,9 +75,9 @@
     "The Grand Budapest Hotel",
     "Ten Bells"
    ],
-   "ran": null,
-   "src": "data/mock/nyc-khruangbin.ndjson",
-   "mock": true
+   "ran": "2026-10-28T20:20:19+0100",
+   "src": "data/live/nyc_nyc-khruangbin.json",
+   "mock": false
   },
   {
    "id": "nyc-taylorswift",
@@ -88,8 +88,8 @@
     "Gilmore Girls",
     "matcha latte"
    ],
-   "ran": null,
-   "src": null,
+   "ran": "2026-10-28T20:20:21+0100",
+   "src": "data/live/nyc_nyc-taylorswift.json",
    "mock": false
   },
   {
@@ -101,8 +101,8 @@
     "The Sopranos",
     "chopped cheese"
    ],
-   "ran": null,
-   "src": null,
+   "ran": "2026-10-28T20:20:23+0100",
+   "src": "data/live/nyc_nyc-wutang.json",
    "mock": false
   },
   {
@@ -114,8 +114,8 @@
     "Past Lives",
     "Korean fried chicken"
    ],
-   "ran": null,
-   "src": null,
+   "ran": "2026-10-28T20:20:25+0100",
+   "src": "data/live/nyc_nyc-newjeans.json",
    "mock": false
   },
   {
@@ -127,8 +127,8 @@
     "Narcos",
     "tacos al pastor"
    ],
-   "ran": null,
-   "src": null,
+   "ran": "2026-10-28T20:20:27+0100",
+   "src": "data/live/nyc_nyc-badbunny.json",
    "mock": false
   }
  ]

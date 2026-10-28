@@ -247,7 +247,10 @@ jdump(SITE / 'config.json', {
     'site': 'unsaid-ang.pages.dev',   # the share image's address line and deploy-site.sh's OG card (C, 28 Oct)
 }, 1)
 SETS = json.load(open(UNSAID / 'data' / 'sets.json'))['sets']
-MOCK_SRC = {'stl-cedric': 'data/mock/stl-cedric.ndjson', 'nyc-khruangbin': 'data/mock/nyc-khruangbin.ndjson' if NYC_MAP else None}
+# live sources only: a preset points at its regenerated result in site/data/live (uploaded with the deploy), else null;
+# mock streams are reached only through ?mock=<name>, never from try.json
+LIVE_IDX = SITE / 'live' / 'index.json'
+LIVE = {l['id']: l for l in json.load(open(LIVE_IDX)).get('sets', []) if l.get('file') and not l.get('fake')} if LIVE_IDX.exists() else {}
 CITY_SLUG = {'stl': 'st-louis', 'nyc': 'new-york'}
 try_sets = []
 TT_FILE = UNSAID / 'data' / 'try_these.json'   # the presets (data/sets.json keeps its pre-registered bytes)
@@ -256,12 +259,12 @@ BY_ID = {x['id']: x for x in SETS}
 for x in ([BY_ID[i] for i in TT] if TT is not None else SETS):
     if TT is None and not x.get('try_these'):
         continue
-    stored = SITE / 'sets' / f"{x['id']}.ndjson"   # a precomputed real result, when one exists
-    src = f"data/sets/{x['id']}.ndjson" if stored.exists() else MOCK_SRC.get(x['id'])
+    lv = LIVE.get(x['id'])
+    src = f"data/live/{lv['file']}" if lv else None
     try_sets.append({'id': x['id'], 'label': x['label'], 'city': x.get('city_slug') or CITY_SLUG.get(x['city'], x['city']),
                      'loves': [l[0] if isinstance(l, list) else l for l in x['loves']],
-                     'ran': None, 'src': src, 'mock': bool(src) and not stored.exists()})
-jdump(SITE / 'try.json', {'_': 'built from data/try_these.json + data/sets.json; src is null until a stored result exists', 'sets': try_sets}, 1)
+                     'ran': (lv or {}).get('ran_at'), 'src': src, 'mock': False})
+jdump(SITE / 'try.json', {'_': 'built from data/try_these.json + data/sets.json; src is the live result (site/data/live), null until one exists', 'sets': try_sets}, 1)
 
 # ---------------------------------------------------------------- MOCK streams -------------------------
 hoods = json.load(open(PROTO / 'hoods-stl.json'))['elements']

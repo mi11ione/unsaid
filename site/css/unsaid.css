@@ -419,3 +419,29 @@ details.dare .out { margin-bottom: 14px; }
 .sheet .close { background: rgba(11, 11, 11, .8); padding: 6px 8px; z-index: 2; }
 .herom .ho { font-size: 11px; margin-top: 4px; }
 .card .blurb { -webkit-line-clamp: 3; }   /* a condensed line (<= 9 words) always shows whole, on one or two lines */
+
+/* ---------- round 6 (judge cuts) ---------- */
+/* Cedric's seven: whole tiles only, one row (rows that don't fit collapse to nothing) */
+.thumbs .trow { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); grid-auto-rows: 0; grid-template-rows: auto; row-gap: 0; column-gap: 8px; overflow: hidden; }
+.thumbs figure { flex: none; min-width: 0; overflow: hidden; }
+.thumbs img { width: 100%; }
+.tagline { font: 400 16px/1.4 var(--serif); color: #cfccc3; margin-top: 14px; max-width: 560px; }
+.lovechip { font-size: 11px; }
+/* the card: name, then the love (the payoff), then where and when */
+.card .because { font: 400 17px/1.3 var(--serif); color: var(--white); padding-top: 0; margin-top: -2px; }
+.card.struck .because { color: var(--faint); }
+/* results header: desktop puts "7 for you" beside the map; phone has one line linking to the list */
+.maplead .lead2 { margin-top: 0; font-size: 48px; } .maplead .lead2 .n { font-size: 48px; }
+.maplead .leadsub { font-size: 13px; margin-top: 10px; }
+.res.leadmap .leadhere { display: none; }
+.mapfade { -webkit-mask-image: linear-gradient(to right, transparent 0, #000 6%, #000 88%, transparent 100%); mask-image: linear-gradient(to right, transparent 0, #000 6%, #000 88%, transparent 100%); }
+.res .xstrip { margin: 6px 0 0; justify-content: flex-end; }
+.ph-only { display: none; } .dt-only { display: inline; }
+.res .links .btn { font-size: 11px; }
+@media (max-width: 720px) {
+  .ph-only { display: inline; } .dt-only { display: none; }
+  .res .xstrip { justify-content: flex-start; margin-top: 14px; }
+  .res .xstrip .link { white-space: normal; font-size: 12px; flex: 1 1 auto; text-align: left; }
+  .maphead { margin-top: 0; }
+}
+.doc .q { font: 400 19px/1.4 var(--serif); color: var(--white); }
