@@ -303,6 +303,10 @@ def qloo_counts(payloads):
             except Exception:
                 continue
         q = _find_obj(p, "qloo_calls")
+        host = _find_obj(p, "host")
+        if isinstance(q, dict) and isinstance(host, dict) and host.get("cached"):
+            n += 1  # a host cache hit echoes the original run's counts; it made no new Qloo call
+            continue
         if isinstance(q, dict):
             n += 1
             tot += int(q.get("total") or 0)

@@ -57,4 +57,10 @@ The prediction is that *with UNSAID* < *with Qloo* < *alone*, with the UNSAID ar
 
 ## Change log (after the first ask)
 
-(none yet)
+- **28 Oct 2026, 07:28 ET · Qloo cap 370 → 900 hosted calls** (Agent B, approved by the orchestrator).
+  - Real spend is about 40 to 90 calls per set. Claude's first call per set is fresh, and ChatGPT calls the tool up to 5 times with different love variants, each a new host cache key. At 370, about 4 to 7 of the 10 sets would complete.
+  - Nothing else changed: sets, phrasings, instruments, grading.
+  - Two infrastructure faults before this, both fixed and logged:
+    - The bench proxy's first port was taken by another local process, so one ask's tool got HTTP 404. That record is in `runs/quarantine.jsonl` and was re-asked.
+    - A host cache hit was counted as new Qloo spend. Cache hits now count 0.
+  - The bench header is added by `harness/bench_proxy.py` (localhost), because `agent/unsaid_mcp.py` doesn't send it.

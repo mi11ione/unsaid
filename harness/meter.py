@@ -113,7 +113,7 @@ def opts_for(lane, arm, tool):
 OUT_UNSAID = os.path.join(L.RUNS, "meter_unsaid.jsonl")   # never the frozen runs/meter.jsonl
 CFG_UNSAID = os.path.join(L.RUNS, ".meter_unsaid.mcp.json")
 UNSAID_URL_DEFAULT = "https://unsaid-ang.pages.dev"
-QLOO_CAP_UNSAID = 370
+QLOO_CAP_UNSAID = 900  # raised from 370 by the orchestrator, 28 Oct (see meter_unsaid.md change log)
 FRESH_PER_HOUR = 3          # the host's per-address limit, unless the agent server sends the bench header
 DRIFT_SETS = ("stl-cedric", "stl-wilco")
 RETRY_STATUSES = ("limited", "degraded", "waking", "queued", "error")
@@ -122,7 +122,7 @@ RETRY_STATUSES = ("limited", "degraded", "waking", "queued", "error")
 def write_cfg_unsaid():
     os.makedirs(L.RUNS, exist_ok=True)
     env = {"UNSAID_MODE": "remote", "UNSAID_TOKEN": "${UNSAID_TOKEN:-}", "UNSAID_URL": "${UNSAID_URL:-}",
-           "UNSAID_BENCH": "${UNSAID_BENCH:-}"}  # used once agent/unsaid_mcp.py sends X-Unsaid-Bench; no Qloo key here
+           }  # no Qloo key and no bench secret here: bench_proxy.py adds the header in front of the host
     json.dump({"mcpServers": {"unsaid": {"type": "stdio", "command": SERVER[0], "args": SERVER[1:], "env": env}}},
               open(CFG_UNSAID, "w"), indent=1)
     return CFG_UNSAID
@@ -142,7 +142,18 @@ def unsaid_opts(lane):
     if lane.name == "claude":
         return {"meter": True, "mcp_config": write_cfg_unsaid(), "tool": "unsaid_places"}
     return {"mcp": {"command": SERVER[0], "args": SERVER[1:], "tool": "unsaid_places",
-                    "env_vars": ["UNSAID_MODE", "UNSAID_TOKEN", "UNSAID_URL", "UNSAID_BENCH"]}}
+                    "env_vars": ["UNSAID_MODE", "UNSAID_TOKEN", "UNSAID_URL"]}}
+
+
+def tool_network(r):
+    """Hosted Qloo network calls behind one run's tool results; a host cache hit costs 0."""
+    n = 0
+    for t in r.get("tool_results") or []:
+        if (t.get("host") or {}).get("cached"):
+            continue
+        q = t.get("qloo_calls") or {}
+        n += int(q.get("network") if q.get("network") is not None else (q.get("total") or 0))
+    return n
 
 
 def run_unsaid(a, lanes):
@@ -165,9 +176,9 @@ def run_unsaid(a, lanes):
                 asks.append(dict(x, id=x["id"].replace(":with:", ":unsaid:"), arm="unsaid", posthoc=True,
                                  prompt_v="meter-v1 (data/meter.protocol.md) + post-hoc unsaid arm (harness/meter_unsaid.md)"))
     done = L.done_ids(OUT_UNSAID)
-    spent = sum(((r.get("qloo") or {}).get("network") or 0) for r in L.load(OUT_UNSAID).values())
+    spent = sum(tool_network(r) for r in L.load(OUT_UNSAID).values())
     todo = [(lane, x) for x in asks for lane in lanes if "%s:%s" % (x["id"], lane.name) not in done]
-    bench = bool(os.environ.get("UNSAID_BENCH")) and "X-Unsaid-Bench" in open(SERVER[2]).read()  # only if the server sends it
+    bench = bool(os.environ.get("UNSAID_BENCH_VIA_PROXY"))  # bench_proxy.py adds X-Unsaid-Bench in front of the host
     print("[unsaid-arm] post-hoc: %d asks (%d unsaid + %d drift) x lanes, %d to ask; Qloo so far %d (cap %d); pacing %s%s" % (
         len(asks) * len(lanes), sum(1 for x in asks if x["arm"] == "unsaid") * len(lanes),
         sum(1 for x in asks if x.get("drift")) * len(lanes), len(todo), spent, QLOO_CAP_UNSAID,
@@ -190,6 +201,9 @@ def run_unsaid(a, lanes):
             starts.append(time.time())
         opts = unsaid_opts(lane) if x["arm"] == "unsaid" else opts_for(lane, "alone", None)
         ev = host_engine_v() if x["arm"] == "unsaid" else None
+        if ev and str(ev).startswith("unknown"):  # the proxy or the host is down: never store a tool-less answer
+            print("[unsaid-arm] stop: the host is unreachable (%s); nothing asked. Run again to resume." % ev, flush=True)
+            break
         for attempt in (1, 2):
             r = lane.ask(x["prompt"], **opts)
             st = [t.get("status") for t in (r.get("tool_results") or [])]
@@ -206,9 +220,9 @@ def run_unsaid(a, lanes):
         if ev and first_v and ev != first_v:
             rec["engine_v_differs"] = True
         L.append(OUT_UNSAID, rec)
-        spent += (r.get("qloo") or {}).get("network") or 0
-        print("[unsaid-arm] %s %s %ss tools %s qloo %s (total %d) engine %s%s" % (
-            rec["id"], rec["status"], rec["secs"], rec.get("tools_called"), (r.get("qloo") or {}).get("network"), spent, ev,
+        spent += tool_network(r)
+        print("[unsaid-arm] %s %s %ss tools %s x%s qloo %s (total %d) engine %s%s" % (
+            rec["id"], rec["status"], rec["secs"], rec.get("tools_called"), rec.get("tool_calls"), tool_network(rec), spent, ev,
             " TOOL_FAILED" if rec["tool_failed"] else ""), flush=True)
 
 
