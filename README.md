@@ -1,18 +1,18 @@
 # UNSAID
 
-**Everything the AIs said about your city, crossed out.**
+**Everything the AIs tell everyone, crossed out.**
 
-Ask an AI for a hidden gem in St. Louis and it says Mai Lee: on 13 of Claude's 16 lists and 10 of ChatGPT's (no web search). UNSAID crosses out every place Claude or ChatGPT named, even once, in ⟦ASKS_STL⟧ dated asks about St. Louis (⟦ASKS_NYC⟧ about New York), and shows you seven ranked on Qloo's taste signals for what fits you more than everyone.
+Ask Claude for a hidden gem in St. Louis and it says Mai Lee, on 13 of 16 tries; ChatGPT says it 10 times. Tell UNSAID three things you love. It crosses out every place Claude, ChatGPT and Gemini named in ⟦ASKS_STL⟧ dated asks about the city, and Qloo ranks what's left for your taste: seven places, each with Qloo's photo, what people order there, and why.
 
-On public questions the list never saw, the AIs named ⟦K12_PLAIN_FRESH_POOLED⟧ of the cards in Qloo's plain taste top 7s over 20 sets, ⟦K12_OFF_FRESH_POOLED⟧ in our score's sevens without the list, and ⟦K12_ON_FRESH_POOLED⟧ in UNSAID's (*k12*, under [Gates](#gates)): our ranking does most of the avoiding, and crossing out does the rest. Every gate, pass or fail, is in [Gates](#gates).
+On 40 public questions never used to build the list, the AIs named ⟦K12_PLAIN_FRESH_U⟧ of 140 cards from Qloo's plain taste order and ⟦K12_UNSAID_FRESH_U⟧ of UNSAID's; seven random leftovers are named about as rarely but fit far worse (⟦K12_RANDOM_FIT_MED⟧th vs ⟦K12_UNSAID_FIT_MED⟧th fit percentile). Method and every gate, pass or fail: [Gates](#gates).
 
-**Live demo:** ⟦LIVE_URL⟧ · **License:** MIT ([LICENSE](LICENSE)); map data © OpenStreetMap contributors, ODbL 1.0.
+**Live:** ⟦LIVE_URL⟧ · **Agents:** [MCP](#mcp) · **License:** MIT ([LICENSE](LICENSE)); map data © OpenStreetMap contributors, ODbL 1.0.
 
 <!-- ⟦X⟧ = a number the 30 Oct 12:00 ET freeze fills, from the script named beside it. None ships. -->
 
 ## Five minutes
 
-**1. The live demo.** Open ⟦LIVE_URL⟧ and tap **Cedric · St. Louis**. Tap a struck name to see which AI named it and when; tap a card for its two ranks; paste any AI's answer into the box under the seven and a card it names burns. Or type three things you love and pick St. Louis or New York: cards arrive in about ⟦P50⟧ seconds (about a minute more if the server is asleep).
+**1. The live demo.** Open ⟦LIVE_URL⟧ and tap **Cedric · St. Louis**. Tap a card for its detail; tap ✕ to strike one you know and a reserve takes its place; paste any AI's answer and anything it names is already crossed out. Or type three things you love: cards in about ⟦P50⟧ seconds.
 
 **2. From your agent, no Qloo key, one paste.** Add `https://unsaid-ang.pages.dev/mcp?token=<token>` as a custom connector in Claude (Settings → Connectors), or run the line below. The token is in the Devpost testing instructions (until 30 Oct 23:45 ET; after that, leave out `?token=…`).
 
