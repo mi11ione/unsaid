@@ -5,7 +5,9 @@
 - Generic User-Agent; no name or email in any request.
 - Cache: .cache/<mode>/ (gitignored). Key = sha256(path + "?" + canonical query). Exact keys only. TTL: /search and
   /v2/tags 30 d, insights 24 h; `frozen=True` (demo sets) ignores TTL.
-- Pacing: ONE global token bucket shared by every client and every run in the process: 3/s steady, bursts <= 5.
+- Pacing: ONE global token bucket shared by every client and every run in the process: 8/s steady, bursts of 10
+  (the live key's P9 headers: 10/s per key, 50k/month).
+- Transport: pooled keep-alive HTTPS, one SSLContext, gzip (see HttpTransport), sized for a 0.15-CPU host.
 - Retries: up to 2 on 429/5xx/network errors, honouring Retry-After. A 429 is never "not found in Qloo".
 - Timeouts: 12 s per pool call, 3 s per rescoring call (callers pass `timeout`); a per-run hard deadline (90 s).
 - The "never send" list is enforced here (NeverSend): signal.location*, filter.location.query, Tripadvisor/Resy

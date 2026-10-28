@@ -60,6 +60,8 @@ a { color: inherit; }
 .fld .n { color: var(--faint); padding-top: 8px; }
 .fld input { width: 100%; background: none; border: 0; outline: 0; font: 400 22px/1.4 var(--serif); padding: 2px 0; color: var(--ink); }
 .fld input::placeholder { color: var(--faint); }
+.fld select { width: 100%; background: none; border: 0; outline: 0; font: 400 22px/1.4 var(--serif); padding: 2px 0; color: var(--ink); appearance: none; -webkit-appearance: none; cursor: pointer; }
+.fld select option { color: #111; }
 .fld .res { grid-column: 2; min-height: 18px; margin-top: 2px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-size: 11px; }
 .fld .res .t { color: var(--dim); font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; }
 .fld .res button { color: var(--dim); border-bottom: 1px dotted var(--faint); }
@@ -218,7 +220,7 @@ details.log[open] summary::after { content: ' ⌄'; }
   :root { --pad: 16px; }
   .s1 { padding-top: 34px; }
   .s1 h1 { font-size: 32px; }
-  .fld input { font-size: 19px; }
+  .fld input, .fld select { font-size: 19px; }
   .counter { font-size: 24px; }
   .sh .tr { margin-left: 0; text-align: left; width: 100%; }
   .cards { grid-template-columns: 1fr; }

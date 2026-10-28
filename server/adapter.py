@@ -324,8 +324,9 @@ def run(prep, wall, q, mode, gemini, emit, deadline_s=90.0, timing=None):
             gemini.reasons.append(gemini.reason)
         lane = _ApiTaste(gemini, prep, timing) if live else False  # False: no engine stand-in, never a fake live answer
         street = dated_street(wall)                                # dated answers only, never a live street ask
+        seen = CappedLastSeen() if mode == "live" else None      # None: the engine's fake check in fake mode
         return API.run_unsaid(prep["city_text"], prep["loves"], walls_path=wall["path"],
-                              mode=mode, qloo=q, gemini=lane, street_check=street, on_event=forward,
+                              mode=mode, qloo=q, gemini=lane, street_check=street, on_event=forward, last_seen=seen,
                               deadline_s=max(1.0, min(90.0, float(deadline_s))))
     return _run_fallback(prep, wall, q, mode, gemini, emit, timing)
 
@@ -346,6 +347,72 @@ class _ApiTaste:
         if a is None:
             raise TimeoutError("gemini lane: %s" % (self.s.reasons[-1] if self.s.reasons else "unavailable"))
         return a
+
+
+class CappedLastSeen:
+    """The engine's last-seen hook (UNSAID.md §3.1), capped for a 0.15-CPU host. Every candidate's venue site is
+    checked at once (engine prefetch), and the whole check has ONE budget per run (default 3 s, env
+    UNSAID_LASTSEEN_S). A card whose site hasn't answered by then passes on hours alone, marked "hours only", as a
+    card without a website does; hours and the 'closed' address check still apply. Late checks finish in the
+    background and fill the 24 h site cache, so the next run has them."""
+
+    def __init__(self, budget_s=None):
+        from unsaid import lastseen
+        self.ls = lastseen
+        self.budget = float(budget_s if budget_s is not None else os.environ.get("UNSAID_LASTSEEN_S", "3"))
+        self.deadline = None
+        self.got, self.threads = {}, {}
+        self.lock = __import__("threading").Lock()
+
+    def _start(self, url):
+        import threading
+        with self.lock:
+            if url in self.threads:
+                return
+            if self.deadline is None:
+                self.deadline = time.monotonic() + self.budget
+
+            def go():
+                try:
+                    r = self.ls.site(url)
+                except Exception:
+                    r = None
+                with self.lock:
+                    self.got[url] = r
+            th = threading.Thread(target=go, name="lastseen", daemon=True)
+            self.threads[url] = th
+        th.start()
+
+    def _wait(self, urls):
+        for u in urls:
+            th = self.threads.get(u)
+            if th is not None:
+                th.join(max(0.0, self.deadline - time.monotonic()))
+
+    def prefetch(self, entities):
+        urls = [prop(e, "website") for e in entities if prop(e, "website") and prop(e, "hours")]
+        for u in dict.fromkeys(urls):
+            self._start(u)
+        self._wait(dict.fromkeys(urls))
+
+    def __call__(self, e):
+        now = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+        hours, addr, url = prop(e, "hours"), str(prop(e, "address") or ""), prop(e, "website")
+        if "closed" in addr.lower():
+            return False, {"checked_at": now, "how": "failed: address says closed"}
+        if not hours:
+            return False, {"checked_at": now, "how": "failed: no hours in Qloo"}
+        if not url:
+            return True, {"checked_at": now, "how": "hours only"}
+        self._start(url)
+        self._wait([url])
+        with self.lock:
+            s = self.got.get(url)
+        if s is None:                                      # no answer within the run's budget
+            return True, {"checked_at": now, "how": "hours only"}
+        if s.get("ok"):
+            return True, {"checked_at": s["checked_at"], "how": "hours + %s" % s["how"]}
+        return False, {"checked_at": s["checked_at"], "how": "failed: %s" % s["how"]}
 
 
 def dated_street(wall):

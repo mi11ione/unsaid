@@ -44,6 +44,7 @@
     { ph: 'something you’d order', hint: null },
   ];
   const s1 = { loves: [null, null, null], city: null };
+  const CITIES = ['St. Louis', 'New York'];
 
   function inputView() {
     if (ctl) { ctl.abort(); ctl = null; }
@@ -54,7 +55,7 @@
         ${FIELDS.map((f, i) => `<div class="fld"><span class="n">0${i + 1}</span><input data-i="${i}" placeholder="${esc(f.ph)}" autocomplete="off" spellcheck="false"><div class="res" id="res${i}"></div></div>`).join('')}
       </div>
       <div class="helper">or anything: a bar, a book, a team</div>
-      <div class="fields" style="margin-top:18px"><div class="fld"><span class="n">in</span><input id="city" placeholder="a city" autocomplete="off" spellcheck="false"><div class="res" id="resc"></div></div></div>
+      <div class="fields" style="margin-top:18px"><div class="fld"><span class="n">in</span><select id="city" aria-label="city"><option value="">a city</option>${CITIES.map(c => `<option>${esc(c)}</option>`).join('')}</select><div class="res" id="resc"></div></div></div>
       <div class="go"><button class="btn solid" id="cross" disabled>Cross out</button></div>
       ${tryList()}
       <div class="legal">Your three loves go to Qloo and to Gemini’s free tier (Google may use free-tier prompts to improve its products). Don’t type anything personal. 18+.</div>
@@ -67,8 +68,8 @@
     });
     const ci = $('#city');
     if (s1.city) { ci.value = s1.city.text; drawCity(); }
-    ci.addEventListener('blur', () => resolveCity(ci.value));
-    ci.addEventListener('input', () => { if (s1.city && s1.city.text !== ci.value) { s1.city = null; drawCity(); } });
+    // only the cities with collected AI answers (a city with none would have nothing to cross out)
+    ci.addEventListener('change', () => { if (s1.city && s1.city.text !== ci.value) s1.city = null; resolveCity(ci.value); });
     $('#cross').addEventListener('click', go);
     gate();
   }
@@ -112,6 +113,8 @@
     }));
     gate();
   }
+
+  function httpUrl(u) { return typeof u === 'string' && /^https?:\/\//i.test(u.trim()); }   // never javascript:, data:, …
 
   async function resolveCity(text) {
     text = text.trim();
@@ -529,7 +532,7 @@
           <p class="dim">of ${ph(U, 'U')} places within ${ph(Rmi, 'R')} mi, rated ${CFG.floor.rating}+, open. ‘Anyone’ is Qloo’s popularity order of the same places.</p></div>
         <div class="blk"><div class="sh"><h2>Because</h2></div>
           <div class="big1">${c.because == null ? ph(null, 'love') : esc(tName(c.because))}</div><p class="dim">${holds}</p></div>
-        <div class="blk">${c.url ? `<a class="btn solid" href="${esc(c.url)}" target="_blank" rel="noopener">Go ↗</a>`
+        <div class="blk">${httpUrl(c.url) ? `<a class="btn solid" href="${esc(c.url)}" target="_blank" rel="noopener">Go ↗</a>`
           : c.address ? `<a class="btn solid" href="https://www.openstreetmap.org/search?query=${encodeURIComponent(c.address)}" target="_blank" rel="noopener">Directions ↗</a>` : ''}
           ${c.last_seen ? `<p class="dim">Hours and address listed in Qloo · checked ${ph(UM.day(c.last_seen.checked_at), 'date')}</p>` : ''}
           <p class="dim">No place can pay to be picked.</p></div>

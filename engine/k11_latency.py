@@ -30,8 +30,8 @@ def run_http(city, spec):
         params.append(("token", tok))          # never printed: only args.url (without the query) is logged
     req = urllib.request.Request(args.url + ("&" if "?" in args.url else "?") + urllib.parse.urlencode(params),
                                  headers={"Accept": "application/x-ndjson", "User-Agent": "unsaid-k11/1.0"})   # Cloudflare 403s the default urllib agent
-    if os.environ.get("PROXY_SECRET"):         # skips the 3-fresh-runs/hour/IP limit; never printed
-        req.add_header("X-Unsaid-Bench", os.environ["PROXY_SECRET"])
+    if os.environ.get("UNSAID_BENCH_SECRET"):  # skips the 3-fresh-runs/hour/IP limit; never printed
+        req.add_header("X-Unsaid-Bench", os.environ["UNSAID_BENCH_SECRET"])
     t0 = time.monotonic()
     marks = {}
     with urllib.request.urlopen(req, timeout=120) as r:

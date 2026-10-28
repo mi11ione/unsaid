@@ -55,6 +55,7 @@ if MODE != "live":
     MODE = "fake"
 TOKEN = os.environ.get("UNSAID_TOKEN", "")
 PROXY_SECRET = os.environ.get("UNSAID_PROXY_SECRET", "")
+BENCH_SECRET = os.environ.get("UNSAID_BENCH_SECRET", "")   # its own secret: k11's bypass of the per-IP limit
 CACHE_DIR = C.CACHE_DIR
 HARD_CAP_S = float(os.environ.get("UNSAID_HARD_CAP_S", "90"))
 RANKING_AFTER_S = 20.0
@@ -103,6 +104,7 @@ COPY = {  # UNSAID.md §2.2, exact
     "limited": "Fresh runs are limited so everyone gets through. These open instantly:",
     "partial": "%d answers · %d of 3 AIs",
     "live": "Gemini (%s): asked %s",          # §2.1 status line, naming the live model id
+    "no_wall": "No AI answers collected for this city yet: these are Qloo's picks for you, with nothing crossed out.",
 }
 WORDS = {1: "One run", 2: "Two runs", 3: "Three runs", 4: "Four runs", 5: "Five runs"}
 PROVIDERS = {"openai": "ChatGPT", "chatgpt": "ChatGPT", "codex": "ChatGPT", "claude": "Claude",
@@ -148,6 +150,20 @@ def shell(status, prep=None, wall=None, note=None, flags=()):
     return r
 
 
+def round_card(c):
+    """Ratings to one decimal in API output (Qloo sends float32 noise like 4.1999998)."""
+    if isinstance(c, dict) and isinstance(c.get("rating"), float):
+        c = dict(c, rating=round(c["rating"], 1))
+    return c
+
+
+def round_cards(result):
+    for k in ("picks", "reserves"):
+        if isinstance(result.get(k), list):
+            result[k] = [round_card(c) for c in result[k]]
+    return result
+
+
 def has_live(result):
     return any((i or {}).get("lane") == "live" for i in (result or {}).get("wall") or [])
 
@@ -164,6 +180,10 @@ def lane_flags(result, session, wall):
             result["status"] = "partial"
         result["note"] = adapter.NO_WALL_NOTE
         notes.append(("partial", adapter.NO_WALL_NOTE))
+    elif not (wall or {}).get("answers"):      # a city nobody asked the AIs about: Qloo's picks, nothing crossed out
+        flags.add("no_wall")
+        result["note"] = COPY["no_wall"]
+        notes.append(("no_wall", COPY["no_wall"]))
     d = result.get("diag") or {}
     if d.get("live_error"):   # the Gemini lane failed in the engine: dated_only (CONTRACT), not partial
         failed = d.get("lanes_failed") or []
@@ -174,7 +194,8 @@ def lane_flags(result, session, wall):
     if (session is not None and session.state != "live") or d.get("live_error"):
         flags.add("dated_only")
         dated = [a.get("asked_at") for a in (wall or {}).get("answers", []) if a.get("asked_at")]
-        notes.append(("dated_only", COPY["dated_only"] % (et(max(dated)) if dated else "earlier")))
+        if dated:                              # no stored answers: nothing to call "dated", so no line
+            notes.append(("dated_only", COPY["dated_only"] % et(max(dated))))
     have = {PROVIDERS.get(str(i.get("provider") or "").lower()) for i in result.get("wall") or []} - {None}
     if have and len(have) < 3:
         flags.add("partial")
@@ -189,7 +210,8 @@ def lane_flags(result, session, wall):
     if state == "dated_only" and session is not None and "dated_only" not in flags:
         flags.add("dated_only")
         dated = [a.get("asked_at") for a in (wall or {}).get("answers", []) if a.get("asked_at")]
-        notes.append(("dated_only", COPY["dated_only"] % (et(max(dated)) if dated else "earlier")))
+        if dated:                              # no stored answers: nothing to call "dated", so no line
+            notes.append(("dated_only", COPY["dated_only"] % et(max(dated))))
         result["flags"] = sorted(flags)
     model = GEMINI.model
     result["lanes"] = {"gemini": {"state": state, "model": model,
@@ -210,7 +232,7 @@ def stream_unsaid(city_text, loves, ip, country, emit, bench=False):
     deadline = t0 + HARD_CAP_S
 
     def done(result, cached=False, stored_at=None):
-        result = public(result)
+        result = round_cards(public(result))
         if session.geo_gated and has_live(result):   # unreachable by key design; refuse rather than leak
             print("[unsaid] refused a lane=live result to a geo-gated visitor", file=sys.stderr)
             result = shell("degraded", prep, wall, COPY["degraded_none"], flags=["no_cache"])
@@ -259,7 +281,7 @@ def stream_unsaid(city_text, loves, ip, country, emit, bench=False):
     rec = RESULTS.get(key)
     if rec and rec["fresh"]:
         for p in rec["result"].get("picks") or []:
-            emit(dict(p, type="card"))
+            emit(dict(round_card(p), type="card"))
         return done(rec["result"], cached=True, stored_at=rec["stored_at"])
 
     def from_stale(why):
@@ -267,7 +289,7 @@ def stream_unsaid(city_text, loves, ip, country, emit, bench=False):
         r = dict(rec["result"], status="degraded", note=line, degraded_reason=why)
         status("degraded", line)
         for p in r.get("picks") or []:
-            emit(dict(p, type="card"))
+            emit(dict(round_card(p), type="card"))
         return done(r, cached=True, stored_at=rec["stored_at"])
 
     def no_cache(why):
@@ -297,7 +319,7 @@ def stream_unsaid(city_text, loves, ip, country, emit, bench=False):
                 return from_stale("hard cap") if rec else no_cache("hard cap")
         if fl["result"] is not None:
             for p in fl["result"].get("picks") or []:
-                emit(dict(p, type="card"))
+                emit(dict(round_card(p), type="card"))
             return done(fl["result"], cached=True)
         return from_stale("qloo") if rec else no_cache("qloo")
 
@@ -306,6 +328,10 @@ def stream_unsaid(city_text, loves, ip, country, emit, bench=False):
 
     def worker_emit(evt):
         timing.event(evt.get("type"))
+        if evt.get("type") == "card":
+            evt = round_card(evt)
+        elif evt.get("type") == "burn" and isinstance(evt.get("risen"), dict):
+            evt = dict(evt, risen=round_card(evt["risen"]))
         if evt.get("type") == "pool":
             box["pool_U"] = evt.get("U")
         with lock:
@@ -461,9 +487,9 @@ class Handler(BaseHTTPRequestHandler):
         return self.headers.get("CF-IPCountry") or ""
 
     def bench(self):
-        """X-Unsaid-Bench: <proxy secret>, checked here against UNSAID_PROXY_SECRET; it never reaches a browser."""
+        """X-Unsaid-Bench: <bench secret>, checked here against UNSAID_BENCH_SECRET; it never reaches a browser."""
         got = self.headers.get("X-Unsaid-Bench", "")
-        return bool(PROXY_SECRET) and bool(got) and hmac.compare_digest(got.encode(), PROXY_SECRET.encode())
+        return bool(BENCH_SECRET) and bool(got) and hmac.compare_digest(got.encode(), BENCH_SECRET.encode())
 
     def authorized(self, qs):
         if not TOKEN:

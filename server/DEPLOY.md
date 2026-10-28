@@ -1,6 +1,21 @@
 # Deploying UNSAID (for Roman)
 
-The engine runs on Render (free web service). The site and the `/api/*` proxy run on Cloudflare Pages, deployed by direct upload, never through git. Nothing here has been deployed yet, and no account has been created.
+**Deployed (28 Oct 2026).** Engine: Render free web service `unsaid-engine` (srv-dbgr3fuc6qcc73ce5p3g), https://unsaid-a1wy.onrender.com, Python 3.11, quota 0.15 CPU (read from its cgroup). Site and the `/api/*` proxy: Cloudflare Pages project `unsaid`, https://unsaid-ang.pages.dev, deployed by direct upload, never through git. Secrets live in `~/.config/unsaid/env` (never printed) and in each host's own settings.
+
+Redeploy the engine through the Render API (no dashboard needed):
+
+```bash
+set -a; . ~/.config/unsaid/env; set +a
+curl -s -X POST -H "Authorization: Bearer $RENDER_API_KEY" -H "Content-Type: application/json" \
+  -d '{"clearCache":"do_not_clear"}' https://api.render.com/v1/services/srv-dbgr3fuc6qcc73ce5p3g/deploys
+# one env var, without touching the others:
+curl -s -X PUT -H "Authorization: Bearer $RENDER_API_KEY" -H "Content-Type: application/json" \
+  -d '{"value":"3"}' https://api.render.com/v1/services/srv-dbgr3fuc6qcc73ce5p3g/env-vars/UNSAID_MAX_ACTIVE
+```
+
+Redeploy the site: `cd site && npx -y wrangler@3 pages deploy . --project-name unsaid --branch main --commit-dirty=true` (run from `site/` so Pages finds `functions/`).
+
+The setup steps below are how it was first set up; keep them for a rebuild.
 
 ## 0. Local check (no accounts)
 
@@ -26,11 +41,13 @@ Keep both in your password manager. The token goes in the Devpost testing instru
 3. Fill in the env values it asks for:
    - `UNSAID_MODE=fake` (switch to `live` once the Qloo key works)
    - `UNSAID_TOKEN`, and `UNSAID_PROXY_SECRET` = the PROXY_SECRET from step 1
+   - `UNSAID_BENCH_SECRET`: a third random secret, only for k11's `X-Unsaid-Bench` header (skips the per-IP limit)
+   - optional: `QLOO_GZIP` (1), `QLOO_POOL` (8), `UNSAID_LASTSEEN_S` (3), `UNSAID_MAX_ACTIVE` (2)
    - `QLOO_API_KEY` (when it arrives) · `QLOO_MONTHLY_QUOTA=10000` · `QLOO_QUOTA_HEADERS` after P9
    - `GEMINI_API_KEY` (AI Studio, a project with **no billing**), `GEMINI_LIVE_MODEL=gemini-3-flash-preview` (the live lane's own "Gemini 3 Flash" bucket, separate from the dated lane's 3.8 Flash), `GEMINI_RPD=20`
    - The free tier is 20 requests a day and 5 a minute per model. The server makes one live taste ask per fresh run and no live street asks (street checks use dated answers), stops at 16 a day, and is `dated_only` until midnight Pacific. The status line reads "Gemini (gemini-3-flash-preview): asked just now".
 4. Deploy (auto-deploy is off: **Manual Deploy → Deploy latest commit**). Check:
-   `curl -s https://unsaid-engine.onrender.com/api/health`
+   `curl -s https://unsaid-a1wy.onrender.com/api/health`
 
 The repo carries code only. Qloo responses and results live in `server/.cache/` on Render's ephemeral disk and are gitignored.
 
@@ -40,7 +57,7 @@ The repo carries code only. Qloo responses and results live in `server/.cache/` 
 cd ~/Desktop/qloo/unsaid
 npx wrangler login
 npx wrangler pages project create unsaid --production-branch main
-npx wrangler pages secret put ENGINE_URL   --project-name unsaid   # https://unsaid-engine.onrender.com
+npx wrangler pages secret put ENGINE_URL   --project-name unsaid   # https://unsaid-a1wy.onrender.com
 npx wrangler pages secret put PROXY_SECRET --project-name unsaid   # the PROXY_SECRET from step 1
 npx wrangler pages deploy . --cwd site --project-name unsaid --branch main --commit-dirty=true
 ```
@@ -50,19 +67,15 @@ npx wrangler pages deploy . --cwd site --project-name unsaid --branch main --com
 Check through the proxy:
 
 ```bash
-curl -s https://unsaid.pages.dev/api/health
-curl -sN "https://unsaid.pages.dev/api/unsaid?city=st-louis&loves=%5B%22Frankie%20Beverly%20%26%20Maze%22%5D&token=$UNSAID_TOKEN"
+curl -s https://unsaid-ang.pages.dev/api/health
+curl -sN "https://unsaid-ang.pages.dev/api/unsaid?city=st-louis&loves=%5B%22Frankie%20Beverly%20%26%20Maze%22%5D&token=$UNSAID_TOKEN"
 ```
 
 A cold engine answers `503` with `{"state":"waking"}` (or a `waking` NDJSON stream) for about a minute; that is expected.
 
-## 4. The pinger, from Fri 30 Oct 21:30 ET through 5 Nov
+## 4. Keeping it warm
 
-At https://cron-job.org (free account), create one job:
-- URL `https://unsaid.pages.dev/api/health`, GET, every 10 minutes
-- start 30 Oct 21:30 ET, end 5 Nov 23:59 ET
-
-It is ordinary inbound traffic and keeps Render from sleeping (it spins down after 15 min idle). One service around the clock uses about 744 of the 750 free instance-hours in October.
+`.github/workflows/keepwarm.yml` GETs `https://unsaid-a1wy.onrender.com/api/health` every 10 minutes (GitHub runs schedules best-effort, sometimes late). It is ordinary inbound traffic and keeps Render from sleeping (it spins down after 15 min idle). One service around the clock uses about 744 of the 750 free instance-hours a month. On a private repo each run bills at least one Actions minute: about 144 a day, so about 1,150 through 5 Nov, inside the free 2,000 if nothing else uses Actions. Stop it after 5 Nov by disabling the workflow.
 
 ## 5. After 23:45 ET on 30 Oct
 

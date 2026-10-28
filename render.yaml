@@ -17,6 +17,16 @@ services:
         sync: false
       - key: UNSAID_PROXY_SECRET    # same value as the Pages secret PROXY_SECRET
         sync: false
+      - key: UNSAID_BENCH_SECRET    # k11's X-Unsaid-Bench: skips the per-IP limit; never the proxy secret
+        sync: false
+      - key: QLOO_GZIP              # optional, default 1 (gzip responses; 0 = identity)
+        sync: false
+      - key: QLOO_POOL              # optional, default 8 idle keep-alive connections to Qloo
+        sync: false
+      - key: UNSAID_LASTSEEN_S      # optional, default 3: the per-run budget for the venue-site checks
+        sync: false
+      - key: UNSAID_MAX_ACTIVE      # optional, default 2 concurrent fresh runs
+        sync: false
       - key: QLOO_API_KEY
         sync: false
       - key: QLOO_QUOTA_HEADERS     # "<remaining header>,<limit header>" once probe P9 names them

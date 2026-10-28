@@ -56,7 +56,7 @@ class Http(unittest.TestCase):
     def test_bench_header_skips_the_ip_limit(self):
         H.reset_limits()
         H.clear_results()
-        app.PROXY_SECRET = "bench-s3cret"
+        app.BENCH_SECRET = "bench-s3cret"
         try:
             def go(loves, bench=None):
                 h = {"Authorization": "Bearer t0ken"}
@@ -74,7 +74,7 @@ class Http(unittest.TestCase):
             self.assertEqual(go(H.CEDRIC), "limited")
             self.assertNotEqual(go(H.CEDRIC, "bench-s3cret"), "limited")
         finally:
-            app.PROXY_SECRET = ""
+            app.BENCH_SECRET = ""
 
     def test_token(self):
         self.assertEqual(self.get("/api/health", token=None)[0], 200)
@@ -326,6 +326,50 @@ class Loves(unittest.TestCase):
                                 ("rib tips", "tag")])
         rib = next(l for l in r["loves"] if "rib" in (l.get("label") or "").lower())
         self.assertEqual(rib["kind"], "tag")
+
+
+class Output(unittest.TestCase):
+    def test_city_without_answers_is_no_wall_and_says_so(self):
+        H.reset_limits()
+        ev, r = H.run(H.JASON, city="nyc", ip="192.0.2.95")    # the test walls hold St. Louis only
+        self.assertIn("no_wall", r["flags"])
+        self.assertEqual(r["note"], "No AI answers collected for this city yet: these are Qloo's picks for you, "
+                                    "with nothing crossed out.")
+        texts = [e.get("text") or "" for e in ev if e["type"] == "status"]
+        self.assertFalse([t for t in texts if "dated" in t], texts)          # never "All answers dated earlier"
+        self.assertTrue([t for t in texts if t == r["note"]])
+
+    def test_ratings_have_one_decimal(self):
+        self.assertEqual(app.round_card({"rating": 4.1999998})["rating"], 4.2)
+        self.assertIsNone(app.round_card({"rating": None})["rating"])
+        H.reset_limits()
+        ev, r = H.run(H.CEDRIC, ip="192.0.2.96")
+        for c in r["picks"] + r["reserves"] + [e for e in ev if e["type"] == "card"]:
+            if c.get("rating") is not None:
+                self.assertEqual(c["rating"], round(c["rating"], 1))
+
+    def test_last_seen_capped_and_concurrent(self):
+        import types
+        hook = app.adapter.CappedLastSeen(budget_s=0.4)
+        slow = {"http://slow.example"}
+
+        def site(url):
+            time.sleep(2 if url in slow else 0.05)
+            return {"ok": url != "http://down.example", "status": 200, "checked_at": "t", "how": "site HTTP 200"}
+        hook.ls = types.SimpleNamespace(site=site)
+        ent = lambda url, **p: {"properties": dict({"hours": {"mon": "9-5"}, "address": "1 Main St",
+                                                   "website": url}, **p)}  # noqa: E731
+        es = [ent("http://slow.example"), ent("http://fast.example"), ent("http://down.example")] + \
+            [ent("http://s%d.example" % i) for i in range(10)]
+        t0 = time.monotonic()
+        hook.prefetch(es)
+        self.assertLess(time.monotonic() - t0, 0.8, "prefetch must be concurrent and capped")
+        self.assertEqual(hook(es[0]), (True, {"checked_at": hook(es[0])[1]["checked_at"], "how": "hours only"}))
+        self.assertTrue(hook(es[1])[0])
+        self.assertFalse(hook(es[2])[0])
+        self.assertFalse(hook(ent("http://x.example", address="CLOSED 1 Main St"))[0])
+        self.assertEqual(hook(ent(None))[1]["how"], "hours only")
+        self.assertLess(time.monotonic() - t0, 1.0, "no check waits past the run's budget")
 
 
 class Walls(unittest.TestCase):
