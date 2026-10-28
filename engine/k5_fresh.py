@@ -112,6 +112,7 @@ collide = [x["id"] for c in questions.values() for x in c if qhash(x.get("text",
 print("  questions: %s (%s); hash check vs walls: %d collisions%s" % (
     ", ".join("%s %d" % (c.upper(), len(v)) for c, v in sorted(questions.items())), qsrc, len(collide), T))
 
+_STOP = {}
 per_set, pooled_named, pooled_total, new_names, all_names = [], 0, 0, 0, 0
 for (city, sid), names in sorted(cards.items()):
     # the 20 city questions (set "-") are asked once per city and count for every set there (§4 K5′)
@@ -124,7 +125,9 @@ for (city, sid), names in sorted(cards.items()):
     for a in ans:
         st, _ = M.match_wall([n["name"] if isinstance(n, dict) else n for n in a.get("names") or []], pool, None)
         named |= set(st)
-    rix = E.reverse_index(ans)
+    if city not in _STOP:                    # the reverse check's stoplist comes from the city's walls, not the asks
+        _STOP[city] = E.derive_rev_stop(W.wall_for(city, None, args.walls)["answers"]) if args.walls else set()
+    rix = E.reverse_index(ans, stop=_STOP[city])
     for n in names:
         if E.reverse_hit(n, rix) is not None:
             named.add(n)

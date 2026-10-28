@@ -455,6 +455,31 @@ class TestDishLove(unittest.TestCase):
         self.assertLess(r["c"], r["a"])                                        # then what Qloo scored
 
 
+class TestReverseCheckEvidence(unittest.TestCase):
+    """Golden cases from E's held-out audit (30 Oct): prose words no longer strike a card; a real mention still does."""
+
+    def hit(self, card, raw, names=(), stop=()):
+        ri = E.reverse_index([{"raw": raw, "names": [{"name": n} for n in names]}], stop=set(stop))
+        return E.reverse_hit(card, ri) is not None
+
+    def test_prose_words_are_not_evidence(self):
+        self.assertFalse(self.hit("Bar:PM", "Happy hour runs from 5 to 6 pm on weekdays."))
+        self.assertFalse(self.hit("september", "Go in September, when the patio is open."))
+        self.assertFalse(self.hit("Harlem Breakfast Club", "In Harlem, get the breakfast sandwich at a bodega.",
+                                  stop={"harlem"}))
+        self.assertFalse(self.hit("Cardinals Nation", "Watch the Cardinals game anywhere; the whole nation does."))
+        self.assertFalse(self.hit("Flor de Mayo", "Cinco de Mayo specials, then a flor de sal tasting menu."))
+        self.assertFalse(self.hit("Creature's Rooftop", "Any rooftop bar works; creature comforts at a diner later."))
+
+    def test_real_mentions_still_strike(self):
+        self.assertTrue(self.hit("Bar:PM", "Try Bar:PM in the Grove for late cocktails."))
+        self.assertTrue(self.hit("Bar:PM", "[]", names=["Bar PM"]))
+        self.assertTrue(self.hit("Harlem Breakfast Club", "The Harlem Breakfast Club does a great brunch.", stop={"harlem"}))
+        self.assertTrue(self.hit("Cardinals Nation", "Before the game, Cardinals Nation at Ballpark Village is packed."))
+        self.assertTrue(self.hit("Freda", "Freda in Greenpoint has the best natural wine list."))
+        self.assertTrue(self.hit("The Spot Sports Bar", "The Spot sports bar on St Charles Rock Rd is a classic."))
+
+
 class TestDeadline(Tmp):
     def test_hard_cap_degrades(self):
         events = []

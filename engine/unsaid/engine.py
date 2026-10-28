@@ -998,8 +998,38 @@ class _Toks(set):
         return b
 
 
+# The reverse check's evidence rules (30 Oct, E's held-out audit: 7 of 8 "hits" were prose words: "pm", "September",
+# "Cardinals Nation", "Flor de Mayo", "rooftop", "Harlem" + "breakfast" apart).
+REV_FIXED_STOP = set("""
+january february march april may june july august september october november december jan feb mar apr jun jul aug
+sep sept oct nov dec monday tuesday wednesday thursday friday saturday sunday mon tue tues wed thu thur thurs fri sat
+sun am pm noon midnight morning mornings afternoon afternoons evening evenings night nights tonight today tomorrow
+weekend weekends weekday weekdays daily hour hours late early open opens closed minute minutes
+""".split())
+REV_WINDOW_EXTRA = 1          # the informative tokens may sit one word further apart than their own count
+REV_STOP_DF = 0.005           # a non-name token in >= 0.5% of the wall's answers is not evidence of a place
+
+
+def derive_rev_stop(answers):
+    """The walls' most frequent NON-name tokens (neighbourhoods, list keys, prose): each answer's text with every
+    place it names removed, counted once per answer."""
+    df, n = {}, 0
+    for a in answers:
+        text = M.fold(answer_text(a))
+        for nm in a.get("names") or a.get("places") or []:
+            nm = nm.get("name") if isinstance(nm, dict) else nm
+            if nm:
+                text = text.replace(M.fold(nm), " ")
+        n += 1
+        for t in set(M.tokens(text)):
+            df[t] = df.get(t, 0) + 1
+    cut = max(2, int(REV_STOP_DF * n))
+    return {t for t, c in df.items() if c >= cut}
+
+
 class _RIndex(list):
-    """[(i, tokens)] plus a token -> answers index, so each distinct answer token is compared once, not per answer."""
+    """[(i, tokens)] plus a token -> answers index, so each distinct answer token is compared once, not per answer.
+    Also each answer's token sequence (for the window rule) and the evidence stoplist."""
 
     def answers_for(self, t):
         memo = self.__dict__.setdefault("_memo", {})
@@ -1023,21 +1053,37 @@ class _RIndex(list):
 
 
 _RCACHE = []        # [(answers kept alive, its index)]: the dated wall's reverse index is built once per snapshot
+_REV_STOP = {"stop": set()}   # the latest wall-derived stoplist; small indexes (street, live) reuse it
 
 
 def reverse_index_cached(answers):
     ids = tuple(map(id, answers))
     for kept, ri in _RCACHE:
         if len(kept) == len(answers) and tuple(map(id, kept)) == ids:
+            _REV_STOP["stop"] = ri.stop
             return ri
-    ri = reverse_index(answers)
+    ri = reverse_index(answers, derive=True)
     _RCACHE.append((list(answers), ri))
     del _RCACHE[:-8]
     return ri
 
 
-def reverse_index(answers):
-    return _RIndex((i, _Toks(M.tokens(answer_text(a)))) for i, a in enumerate(answers))
+def reverse_index(answers, derive=False, stop=None):
+    """derive=True: the stoplist comes from these answers (a wall); else the given one or the latest wall's."""
+    ri = _RIndex((i, _Toks(M.tokens(answer_text(a)))) for i, a in enumerate(answers))
+    ri.seq = {i: M.tokens(answer_text(a)) for i, a in enumerate(answers)}
+    ri.raw = {i: answer_text(a) for i, a in enumerate(answers)}
+    ri.names = {i: [n.get("name") if isinstance(n, dict) else n for n in (a.get("names") or a.get("places") or [])]
+                for i, a in enumerate(answers)}
+    if stop is not None:
+        ri.stop = set(stop)
+    elif derive:
+        ri.stop = derive_rev_stop(answers)
+        _REV_STOP["stop"] = ri.stop
+    else:
+        ri.stop = set(_REV_STOP["stop"])
+    ri.stop |= REV_FIXED_STOP
+    return ri
 
 
 def _tok_in(t, toks):
@@ -1049,22 +1095,67 @@ def _tok_in(t, toks):
     return any(M.tok_eq(t, x) for x in toks if abs(len(x) - len(t)) <= 3)
 
 
+def _window_ok(seq, toks, extra=REV_WINDOW_EXTRA):
+    """Every token of `toks` (exact or tok_eq) inside one span of len(toks) + extra consecutive words of `seq`."""
+    pos = []
+    for t in toks:
+        p = [k for k, w in enumerate(seq) if w == t or (abs(len(w) - len(t)) <= 3 and M.tok_eq(t, w))]
+        if not p:
+            return False
+        pos.append(p)
+    span = len(toks) + extra
+    for start in pos[0]:
+        lo, hi = start - span + 1, start + span - 1
+        if all(any(lo <= q <= hi for q in p) for p in pos[1:]):
+            chosen = [start] + [min((q for q in p if lo <= q <= hi), key=lambda q: abs(q - start)) for p in pos[1:]]
+            if max(chosen) - min(chosen) < span:
+                return True
+    return False
+
+
+def _standalone(name, i, rindex):
+    """The place stands as a name in answer i: an entry of its list (R1 keys), its full multi-word name contiguous in
+    the text, or its exact display name (case and punctuation kept) as a whole word or phrase."""
+    keys = M.keys(name)
+    if any(n and M._key_match(keys, M.keys(n)) for n in rindex.names.get(i) or []):
+        return True
+    full = M.tokens(name)
+    seq = rindex.seq.get(i) or []
+    if len(full) >= 2 and any(seq[k:k + len(full)] == full for k in range(len(seq) - len(full) + 1)):
+        return True
+    disp = display_name(name).strip()
+    if disp and re.search(r"(?<![\w:])%s(?![\w:])" % re.escape(disp), rindex.raw.get(i) or ""):
+        return True
+    return False
+
+
 def reverse_hit(name, rindex):
-    """Fuzzy, local, 0 calls: every distinctive token of the card's name appears in one stored answer's raw text."""
+    """Fuzzy, local, 0 calls: a stored answer names the card although the strike missed it. Evidence: two or more
+    informative tokens of the name (not stoplisted) within a short window of one answer; a name with fewer must
+    stand as a name (see _standalone)."""
     d = M.distinctive(name or "")
     if not d:
         return None
-    if isinstance(rindex, _RIndex):              # same answer as the scan below: the first answer holding them all
+    if not isinstance(rindex, _RIndex):
+        rindex = reverse_index([{"raw": " ".join(sorted(toks))} for _, toks in rindex])
+    inf = [t for t in d if t not in rindex.stop]
+    order = {i: k for k, (i, _) in enumerate(rindex)}
+    if len(inf) >= 2:
         common = None
-        for t in d:
+        for t in inf:
             a = rindex.answers_for(t)
             common = set(a) if common is None else common & a
             if not common:
-                return None
-        order = {i: k for k, (i, _) in enumerate(rindex)}
-        return min(common, key=order.get)
-    for i, toks in rindex:
-        if all(_tok_in(t, toks) for t in d):
+                break
+        for i in sorted(common or (), key=order.get):
+            if _window_ok(rindex.seq[i], inf):
+                return i
+    probe = inf or d                              # candidate answers, then the standalone test
+    cands = None
+    for t in probe[:1]:
+        cands = rindex.answers_for(t)
+    for i in sorted(cands or (), key=order.get):
+        if _standalone(name, i, rindex):
             return i
     return None
 
