@@ -12,10 +12,11 @@ const [mode, url, out, W, H, a5, a6] = process.argv.slice(2);
 const w = +W; let h = +H;
 const port = 9300 + Math.floor(Math.random() * 500);
 const prof = mkdtempSync(join(tmpdir(), 'cdp-'));
-const ch = spawn(CHROME, ['--headless=new', '--disable-gpu', '--hide-scrollbars', '--allow-file-access-from-files',
+const ch = spawn(CHROME, ['--headless=new', '--disable-features=MacAppCodeSignClone', '--disable-gpu', '--hide-scrollbars', '--allow-file-access-from-files',
   `--remote-debugging-port=${port}`, `--user-data-dir=${prof}`, '--window-size=2000,2000', 'about:blank'], { stdio: 'ignore' });
 // Always kill Chrome and delete its throwaway profile, on success, error or signal. Leaked profiles once filled the disk.
-const cleanup = () => { try { ch.kill('SIGKILL'); } catch {} try { rmSync(prof, { recursive: true, force: true }); } catch {} };
+// SIGTERM lets Chrome remove its own code_sign_clone (SIGKILL leaked one per launch); profile removed after
+const cleanup = () => { try { ch.kill('SIGTERM'); } catch {} try { rmSync(prof, { recursive: true, force: true }); } catch {} };
 process.on('exit', cleanup);
 for (const s of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(s, () => process.exit(130));
 process.on('uncaughtException', e => { console.error(e?.stack || e); process.exit(1); });
@@ -77,5 +78,7 @@ if (mode === 'eval') {
   }
   console.log(`${n + 1} frames → ${out}`);
 }
-ws.close(); ch.kill();
+ws.close();
+// graceful quit: wait for Chrome to exit (it cleans its clone), then the exit handler removes the profile
+await new Promise(r => { ch.once('exit', r); ch.kill('SIGTERM'); setTimeout(() => { try { ch.kill('SIGKILL'); } catch {} r(); }, 5000); });
 process.exit(0);
