@@ -200,9 +200,147 @@ def _pre_resolved():
     return _PRE
 
 
+SCREEN_TYPES = ("urn:entity:movie", "urn:entity:tv_show")      # hint movie or tv_show searches both
+LOVE_TAG_PREF = {"urn:tag:specialty_dish:place": 0.03, "urn:tag:menu_highlight:qloo": 0.02,
+                 "urn:tag:cuisine:qloo": 0.01}                  # the dish and drink tags, most specific first
+VENUE_WORDS = {"bar", "pub", "tavern", "cafe", "kitchen", "smokehouse", "grill", "grille", "diner", "deli",
+               "delicatessen", "restaurant", "brewery", "brewing", "bakery", "lounge", "saloon", "taqueria", "pizzeria",
+               "trattoria", "osteria", "bistro", "brasserie", "cantina", "izakaya", "steakhouse", "chophouse", "inn",
+               "shack", "joint", "creamery", "roastery", "speakeasy"}
+
+
+def _sing(toks):
+    return [t[:-1] if len(t) > 3 and t.endswith("s") and not t.endswith("ss") else t for t in toks]
+
+
+def _name_match(text, name, akas=()):
+    """How well typed text names a candidate, 0..1: 1 the same name (matcher.norm), 0.97 the same up to spacing or a
+    plural, 0.95 an alias, 0.8 the text starts the name ('Anchorman'), 0.7 / 0.6 one's words inside the other's,
+    else at most 0.5 by word overlap."""
+    a, b = M.norm(text), M.norm(name or "")
+    if not a or not b:
+        return 0.0
+    if a == b:
+        return 1.0
+    ta, tb = a.split(), b.split()
+    if "".join(ta) == "".join(tb) or _sing(ta) == _sing(tb):
+        return 0.97
+    if any(M.norm(x) == a for x in akas if x):
+        return 0.95
+    if b.startswith(a + " "):
+        return 0.8
+    if len(ta) == len(tb) > 1 and all(y.startswith(x) for x, y in zip(ta, tb)):
+        return 0.8                              # "parks and rec", "earth wind and fir"
+    sa, sb = set(_sing(ta)), set(_sing(tb))
+    if sa <= sb:
+        return 0.7
+    if sb <= sa:
+        return 0.6
+    return 0.5 * len(sa & sb) / len(sa | sb)
+
+
+def _pop(r):
+    p = r.get("popularity")
+    return p if isinstance(p, (int, float)) else 0.0
+
+
+def _in_service(r):
+    """A place inside 1.5x the radius of a city UNSAID serves (cities.CITIES): a typed bar name means that one."""
+    ll = latlon(r)
+    return bool(ll) and any(C.haversine_mi(ll, c["center"]) <= 1.5 * c["radius_mi"] for c in C.CITIES.values())
+
+
+def _rank_entities(text, res, hint_types=(), free=False, venue=False, worded=False):
+    """[(score, match, result, type)], best first: name match + 0.5 x Qloo popularity (a popular show beats an obscure
+    film of the same name), +0.03 for the hinted type, +0.25 for a place in a served city. free (no hint, field 3):
+    +0.3 for a brand (a chain's name means the chain), except for a one-off venue ("Katz's Delicatessen": worded like a
+    venue, and not two same-named places in a served city); places outside the served cities only when the text reads
+    as a venue (venue); and only brands and places compete with a full name match."""
+    out = []
+    if free:
+        res = [r for r in res if venue or (r.get("subtype") or (r.get("types") or [""])[0]) != PLACE or _in_service(r)]
+        branches = sum(1 for r in res if (r.get("subtype") or (r.get("types") or [""])[0]) == PLACE and _in_service(r)
+                       and _name_match(text, r.get("name")) >= 0.95)
+        chain = not worded or branches >= 2
+    for r in res:
+        sub = r.get("subtype") or (r.get("types") or [""])[0]
+        akas = [x.get("value") for x in (prop(r, "akas") or []) if isinstance(x, dict)]
+        m = _name_match(text, r.get("name"), akas)
+        if sub == PLACE and m < 0.95:           # "Carbone New York" is what someone means by "Carbone"
+            base = _strip_city(r.get("name"))
+            m = max(m, 0.97) if base and _name_match(text, base) >= 0.97 else m
+        if free and sub not in (PLACE, "urn:entity:brand"):
+            m = min(m, 0.9)                     # a film or a game named like a dish is never the top answer here
+        s = m + 0.5 * _pop(r) + (0.03 if sub in hint_types else 0.0)
+        s += 0.25 if sub == PLACE and _in_service(r) else 0.0
+        s += 0.3 if free and chain and sub == "urn:entity:brand" else 0.0
+        out.append((s, m, r, sub))
+    out.sort(key=lambda x: -x[0])               # stable: Qloo's own order breaks ties
+    return out
+
+
+def _strip_city(name):
+    """'Carbone New York' -> 'carbone': a place name with a served city's name on the end, without it (else None)."""
+    n = M.norm(name or "")
+    for c in C.CITIES.values():
+        names = {M.norm(c["name"]), M.norm(c.get("query") or ""), M.norm(c.get("region") or "")}
+        names |= {x[:-5] for x in names if x.endswith(" city")}      # "New York City" -> "new york"
+        for cn in names - {""}:
+            if n.endswith(" " + cn):
+                return n[:-len(cn) - 1]
+    return None
+
+
+def _rank_tags(text, tags):
+    out = [(_name_match(text, t.get("name")) + LOVE_TAG_PREF.get(t.get("type"), 0.0) + 0.1 * _pop(t),
+            _name_match(text, t.get("name")), t) for t in tags or []]
+    out.sort(key=lambda x: -x[0])
+    return out
+
+
+def _venue_like(text):
+    """'Pappy's Smokehouse', 'Katz's Delicatessen', 'Sid's': a possessive or a venue word reads as a place name.
+    (Chains and landmarks are caught by Qloo's own nearby_attraction tag of the same name, in resolve_love.)"""
+    raw = (text or "").lower().replace("’", "'")
+    return bool(re.search(r"[a-z]'s\b", raw)) or bool(set(M.norm(text).split()) & VENUE_WORDS)
+
+
+def _collab(name, top):
+    """'Beyoncé & Nicki Minaj', 'Taylor Swift, Bon Iver': a credit that names the picked artist plus others."""
+    n, t = M.norm(name or ""), M.norm(top or "")
+    return bool(t) and n != t and (" %s " % t) in (" %s " % n) and bool(re.search(r"[&,]| x | feat| with | and ", (name or "").lower()))
+
+
+def _disamb(r):
+    d = r.get("disambiguation") or prop(r, "disambiguation") or prop(r, "address") or ""
+    return str(d)[:80] or None
+
+
+def _ent_alt(r, sub):
+    return {"id": r["entity_id"], "label": r.get("name"), "kind": "entity", "type": sub, "disamb": _disamb(r)}
+
+
+def _tag_alt(t):
+    return {"id": t.get("id") or t.get("tag_id"), "label": t.get("name"), "kind": "tag", "type": t.get("type")}
+
+
+def _love_alts(alts, top_id, top_name=None, n=3):
+    """Up to n alternatives: no repeat of the pick, one per (name, type)."""
+    seen, out = {(M.norm(top_name or ""), None)}, []
+    for a in alts:
+        k = (M.norm(a.get("label") or ""), a.get("type") if a.get("kind") == "entity" else None)
+        if a.get("id") == top_id or k in seen or not a.get("id"):
+            continue
+        seen.add(k)
+        out.append(a)
+    return out[:n]
+
+
 def resolve_love(q, text, hint=None):
-    """-> {text, status ok|needs_input|miss, kind entity|tag, id, name, type, is_place, alternatives, dead, dead_reason}.
-    needs_input still carries the top candidate, so scripts can proceed the way the kit's 'confirm' did."""
+    """-> {text, status ok|needs_input|miss, kind entity|tag, id, name, type, disamb, is_place, alternatives, dead,
+    dead_reason}. needs_input still carries the top candidate, so scripts can proceed the way the kit's 'confirm' did.
+    hint: one /search type ('movie' and 'tv_show' search both), 'tag' (tags only), or None (dish and drink tags first,
+    then a venue or brand; the site's field 3)."""
     text = (text or "").strip()
     out = {"text": text, "status": "miss", "kind": None, "id": None, "name": None, "type": None,
            "is_place": False, "alternatives": [], "dead": False, "dead_reason": None}
@@ -218,6 +356,27 @@ def resolve_love(q, text, hint=None):
             out.update({"dead": True, "dead_reason": "vibe"})
         return out
 
+    def as_entity(ranked, others=()):
+        s, m, r, sub = ranked[0]
+        rivals = [x for x in ranked[1:] if x[1] >= 0.95]
+        ok = m >= 0.95 and (not rivals or bool(hint) or s - rivals[0][0] >= 0.05)
+        rest = [x for x in ranked[1:] if not (x[3] == "urn:entity:artist" and _collab(x[2].get("name"), r.get("name")))]
+        out.update({"kind": "entity", "id": r["entity_id"], "name": r.get("name"), "type": sub,
+                    "disamb": _disamb(r), "status": "ok" if ok else "needs_input", "is_place": sub == PLACE,
+                    "alternatives": _love_alts([_ent_alt(x[2], x[3]) for x in rest] + list(others), r["entity_id"])})
+        return out
+
+    def as_food_tag(ranked, ok, others=()):
+        t = ranked[0][2]
+        tid = t.get("id") or t.get("tag_id")
+        out.update({"kind": "tag", "id": tid, "name": t.get("name"), "type": t.get("type") or "tag",
+                    "status": "ok" if ok else "needs_input",
+                    "alternatives": _love_alts([_tag_alt(x[2]) for x in ranked[1:]] + list(others), tid,
+                                               t.get("name"))})
+        if dead_tag(t):
+            out.update({"dead": True, "dead_reason": "vibe"})
+        return out
+
     pre = _pre_resolved().get(M.norm(text))
     if pre and (not hint or hint == "tag" and pre.get("kind") == "tag" or pre.get("type", "").endswith(":" + hint)):
         out.update({"kind": pre["kind"], "id": pre["id"], "name": pre["name"], "type": pre["type"], "status": "ok",
@@ -228,20 +387,49 @@ def resolve_love(q, text, hint=None):
     if hint == "tag":
         tags = q.tags(text, take=5, label="C2 love tag") or q.tags(text, take=5, semantic=True, label="C2 love tag~")
         return as_tag(tags, True) if tags else out
-    types = "urn:entity:%s" % hint if hint else None
-    res = q.search(text, types=types, take=5, label="C2 love")
-    if res:
-        exact = [r for r in res if M.norm(r.get("name", "")) == M.norm(text)]
-        r = (exact or res)[0]
-        sub = r.get("subtype") or (r.get("types") or [""])[0]
-        out.update({"kind": "entity", "id": r["entity_id"], "name": r.get("name"), "type": sub,
-                    "status": "ok" if exact and len(exact) == 1 or (exact and hint) else "needs_input",
-                    "is_place": sub == PLACE,
-                    "alternatives": [{"id": x["entity_id"], "label": x.get("name"), "kind": "entity",
-                                      "type": x.get("subtype") or (x.get("types") or [""])[0]}
-                                     for x in res if x is not r][:3]})
-        return out
-    tags = q.tags(text, take=5, label="C2 love tag") or q.tags(text, take=5, semantic=True, label="C2 love tag~")
+    if hint:
+        # A film-or-show hint searches films AND TV shows (the site's field 2 sends 'movie' for "a film or show you
+        # can quote"); the hinted type only breaks near-ties. Other hints keep their one type.
+        screen = "urn:entity:%s" % hint in SCREEN_TYPES
+        types = ",".join(SCREEN_TYPES) if screen else "urn:entity:%s" % hint
+        res = q.search(text, types=types, take=10 if screen else 5, label="C2 love")
+        ranked = _rank_entities(text, res, ("urn:entity:%s" % hint,))
+        if (not ranked or ranked[0][1] < 0.95) and not M.fold(text).startswith("the "):
+            ids = {r["entity_id"] for r in res}
+            more = q.search("The " + text, types=types, take=10 if screen else 5, label="C2 love")
+            ranked = _rank_entities(text, res + [r for r in more if r["entity_id"] not in ids], ("urn:entity:%s" % hint,))
+        if ranked:
+            return as_entity(ranked)
+        tags = q.tags(text, take=5, label="C2 love tag") or q.tags(text, take=5, semantic=True, label="C2 love tag~")
+        return as_tag(tags, True) if tags else out
+    # No hint: the site's field 3, "something you'd order". Dish and drink TAGS first; a restaurant is never offered
+    # for a dish, and a place only when the text reads as a venue name (no dish tag covers it, or it says so).
+    tags = _rank_tags(text, q.tags(text, take=10, label="C2 love tag"))
+    food = [x for x in tags if x[2].get("type") in LOVE_TAG_PREF]
+    strong = bool(food) and food[0][1] >= 0.95
+    worded = _venue_like(text)
+    # Qloo tags chains and landmarks ("Starbucks", "Shake Shack", "Katz's Delicatessen") as nearby_attraction
+    venue = worded or any(x[1] >= 0.95 and "nearby_attraction" in (x[2].get("type") or "") for x in tags)
+    if strong and not venue:
+        return as_food_tag(food, True)
+    res = q.search(text, take=10, label="C2 love")
+    dishy = bool(food) and food[0][1] >= 0.7 and not venue     # the text names a dish, maybe a less common one
+    ents = [x for x in _rank_entities(text, res, free=True, venue=venue, worded=worded) if x[3] != PLACE or not dishy]
+    tag_alts = [_tag_alt(x[2]) for x in (food or tags)[:3]]
+    if ents and ents[0][1] >= 0.95:
+        return as_entity(ents, tag_alts)
+    if strong:
+        return as_food_tag(food, True)
+    if dishy or food and not ents:
+        return as_food_tag(food, False)
+    named = [x for x in tags if x[1] >= 0.95 and "nearby_attraction" not in (x[2].get("type") or "")]
+    if named:                                   # "cozy": Qloo's own tag of that name (a vibe is flagged dead)
+        return as_food_tag(named, True)
+    if ents:
+        return as_entity(ents, tag_alts)
+    if tags:
+        return as_food_tag(tags, False)
+    tags = q.tags(text, take=5, semantic=True, label="C2 love tag~")
     if tags:
         return as_tag(tags, True)
     return out

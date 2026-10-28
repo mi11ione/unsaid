@@ -62,6 +62,23 @@ TYPE_LABELS = {"movie": "film", "tv_show": "TV show", "videogame": "video game",
                "menu_highlight": "menu item", "genre": "kind of place", "category": "kind of place"}
 
 
+DRINK_WORDS = {"martini", "negroni", "margarita", "mezcal", "tequila", "whiskey", "whisky", "bourbon", "wine", "beer",
+               "ale", "ipa", "lager", "stout", "cocktail", "cocktails", "latte", "coffee", "espresso", "tea", "matcha",
+               "sake", "soju", "spritz", "mojito", "gin", "rum", "vodka", "cider", "champagne", "prosecco", "boba",
+               "milkshake", "lemonade", "horchata", "mimosa", "sangria", "daiquiri", "paloma", "chai", "cortado",
+               "martinis", "margaritas", "beers", "wines", "lattes", "flight", "flights", "shot", "shots", "sour",
+               "fashioned", "punch", "soda", "juice", "smoothie", "shake", "highball", "spritzer", "americano"}
+
+
+def love_label(t, name=None):
+    """type_label, except that a menu tag whose name is a drink ('Negroni', 'Matcha Latte') says 'drink'."""
+    k = type_label(t)
+    words = M.norm(name or "").split()
+    if k in ("dish", "menu item") and words and words[-1] in DRINK_WORDS:      # the head noun: 'Martini Tiramisu' is food
+        return "drink"
+    return k
+
+
 def type_label(t):
     """What a chip says it matched, for people: 'urn:entity:tv_show' -> 'TV show', 'urn:entity:movie' -> 'film',
     'urn:tag:specialty_dish:place' -> 'dish', 'urn:tag:cuisine:qloo' -> 'cuisine', 'urn:entity:artist' -> 'artist'."""
@@ -73,7 +90,7 @@ def type_label(t):
 def _chip(l):
     t = l.get("type") or ""
     return {"id": l.get("id"), "label": l.get("name") or l.get("text"), "kind": l.get("kind"), "type": t,
-            "type_label": type_label(t), "disamb": l.get("disamb"), "dead": bool(l.get("dead"))}
+            "type_label": love_label(t, l.get("name")), "disamb": l.get("disamb"), "dead": bool(l.get("dead"))}
 
 
 def c2_count(trace):
@@ -95,7 +112,7 @@ def resolve_love(text, hint=None, *, mode="fake", qloo=None):
     except QlooError as e:
         return {"status": "degraded", "chip": None, "alternatives": [], "reason": "Qloo HTTP %s" % e.status}
     chip = dict(_chip(l), text=text, c2_calls=n) if l.get("id") else None
-    alts = [dict(a, type_label=type_label(a.get("type"))) for a in l.get("alternatives") or []]
+    alts = [dict(a, type_label=love_label(a.get("type"), a.get("label"))) for a in l.get("alternatives") or []]
     return {"status": l["status"], "chip": chip, "alternatives": alts, "text": text}
 
 
