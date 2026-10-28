@@ -139,10 +139,15 @@ Exact commands for each lane: `harness/README.md`.
 
 ## MCP
 
-`agent/unsaid_mcp.py` is a stdio MCP server, standard library only, with two tools:
+`agent/unsaid_mcp.py` is a stdio MCP server in one file, standard library only. By default (`UNSAID_MODE=remote`) it calls the hosted API at https://unsaid-ang.pages.dev, so an agent gets the same live Qloo ranks and the same dated AI answers as the site. You don't need a Qloo key or the engine. Until 30 Oct 23:45 ET the API needs the token from the Devpost testing instructions. After that, leave `UNSAID_TOKEN` out.
 
-- `unsaid_places(loves, city)` returns the product: Qloo's taste pool minus every place the AIs name, ranked by Qloo.
-- `qloo_places(loves, city)` returns the top 50 of the same pool with nothing crossed out. It is the meter's "with" arm.
+Claude Code:
+
+```bash
+claude mcp add unsaid -e UNSAID_MODE=remote -e UNSAID_TOKEN=<token> -- python3 -I /path/to/unsaid/agent/unsaid_mcp.py
+```
+
+Claude Desktop (`claude_desktop_config.json`; the same block is in `agent/claude_desktop_config.snippet.json`):
 
 ```json
 {
@@ -150,13 +155,24 @@ Exact commands for each lane: `harness/README.md`.
     "unsaid": {
       "command": "python3",
       "args": ["-I", "/path/to/unsaid/agent/unsaid_mcp.py"],
-      "env": { "UNSAID_MODE": "fake" }
+      "env": { "UNSAID_MODE": "remote", "UNSAID_TOKEN": "<token>" }
     }
   }
 }
 ```
 
-For live results, set `UNSAID_MODE=live`, `QLOO_API_KEY` and `UNSAID_WALLS=/path/to/unsaid/data/walls` in the environment. Claude Code: `claude mcp add unsaid -e UNSAID_MODE=fake -- python3 -I /path/to/unsaid/agent/unsaid_mcp.py`.
+`agent/mcp.json` is the same config for `claude --mcp-config`. It reads `${UNSAID_TOKEN}` from your shell, so the token never goes in a file. Replace `/path/to/unsaid` with the path to your clone first:
+
+```bash
+export UNSAID_TOKEN=<token>
+claude -p "I love Frankie Beverly & Maze, The Original Kings of Comedy and rib tips. Where should I go in St. Louis tonight?" \
+  --mcp-config agent/mcp.json --allowedTools mcp__unsaid__unsaid_places
+```
+
+- `unsaid_places(loves, city)` returns the product: Qloo's taste pool minus every place the AIs name, ranked by Qloo. Pass loves as `[text, type]` pairs. A city with no AI answers on file gets an empty wall and the `no_wall` flag.
+- `qloo_places(loves, city)` returns the top 50 of the same pool with nothing crossed out. It is the meter's "with" arm. Only the local modes list it.
+
+Other modes: `UNSAID_MODE=fake` runs the engine offline on a synthetic Qloo world, and every result is tagged FAKE. `UNSAID_MODE=live` with `QLOO_API_KEY` runs the engine locally, using the walls in `data/walls` (override with `UNSAID_WALLS`). Both local modes call `run_unsaid` in `engine/unsaid/api.py`, as the server does. `python3 -I agent/test_client.py` checks fake mode in both protocol eras, then runs a smoke test against the hosted API. The smoke test is skipped when `UNSAID_TOKEN` isn't set.
 
 ## Golden matcher set
 

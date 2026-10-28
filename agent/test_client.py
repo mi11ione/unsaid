@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 """Minimal MCP stdio client: spawns unsaid_mcp.py and drives it like a host would. Standard library only.
-  python3 -I test_client.py            -> prints the transcript, writes transcript.jsonl, exits 1 on any failed check
-Runs both eras: legacy (initialize -> notifications/initialized -> tools/list -> tools/call) and modern 2026-07-28
-(server/discover -> tools/list -> tools/call, per-request _meta), plus error paths. Validates structuredContent
-against the tool's outputSchema with a small JSON-Schema subset validator."""
+  python3 -I test_client.py            -> fake mode checks + a remote smoke test; wire log in out/transcript.jsonl;
+                                          exits 1 on any failed check
+  python3 -I test_client.py --record demo/live_transcript.jsonl
+                                       -> also records one live agent session against the hosted API (remote mode)
+Fake mode runs both eras: legacy (initialize -> notifications/initialized -> tools/list -> tools/call) and modern
+2026-07-28 (server/discover -> tools/list -> tools/call, per-request _meta), plus error paths. Validates
+structuredContent against the tool's outputSchema with a small JSON-Schema subset validator.
+The remote smoke test calls the hosted API (UNSAID_URL, default https://unsaid-ang.pages.dev) with UNSAID_TOKEN from
+the environment, and is skipped when there is no token (or with --no-remote). The token is never written anywhere."""
 import ast
 import json
 import os
@@ -13,19 +18,22 @@ import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SERVER = [sys.executable, "-I", os.path.join(HERE, "unsaid_mcp.py")]
+OUT = os.path.join(HERE, "out")       # gitignored
 LOG = []
 FAILS = []
 
 
 class Client:
-    def __init__(self):
+    def __init__(self, mode="fake", log=None):
+        env = dict(os.environ, UNSAID_MODE=mode)
         self.p = subprocess.Popen(SERVER, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                  universal_newlines=True, bufsize=1)
+                                  universal_newlines=True, bufsize=1, env=env)
         self.n = 0
+        self.log = LOG if log is None else log
 
     def _w(self, obj):
         line = json.dumps(obj)
-        LOG.append({"dir": ">>", "msg": obj})
+        self.log.append({"dir": ">>", "msg": obj})
         self.p.stdin.write(line + "\n")
         self.p.stdin.flush()
 
@@ -40,7 +48,7 @@ class Client:
         if not line:
             raise SystemExit("server closed stdout; stderr:\n" + self.p.stderr.read())
         msg = json.loads(line)  # also proves stdout carried a single valid JSON-RPC line
-        LOG.append({"dir": "<<", "msg": msg, "ms": int((time.monotonic() - t0) * 1000)})
+        self.log.append({"dir": "<<", "msg": msg, "ms": int((time.monotonic() - t0) * 1000)})
         assert msg.get("id") == self.n, "id mismatch"
         return msg
 
@@ -205,13 +213,93 @@ def run_modern():
     c.close()
 
 
+CEDRIC_PAIRS = {"loves": [["Frankie Beverly & Maze", "artist"], ["The Original Kings of Comedy", "movie"],
+                          ["rib tips", "tag"]], "city": "St. Louis, MO"}
+QUESTION = ("I love Frankie Beverly & Maze, The Original Kings of Comedy and rib tips. "
+            "Where should I go in St. Louis tonight?")
+
+
+def run_remote():
+    """Smoke test of remote mode: the hosted API, real Qloo. Skipped without UNSAID_TOKEN."""
+    print("\n== remote mode (the hosted API, %s)" % (os.environ.get("UNSAID_URL") or "https://unsaid-ang.pages.dev"))
+    if not os.environ.get("UNSAID_TOKEN"):
+        print("  [SKIP] UNSAID_TOKEN is not set (it is in the Devpost testing instructions)")
+        return
+    c = Client("remote", [])
+    r = c.req("initialize", {"protocolVersion": "2025-11-25", "capabilities": {},
+                             "clientInfo": {"name": "unsaid-test-client", "version": "0.2"}})
+    check(r["result"]["serverInfo"]["name"] == "unsaid", "remote: initialize")
+    c.notify("notifications/initialized")
+    r = c.req("tools/list")
+    tools = r["result"]["tools"]
+    check([t["name"] for t in tools] == ["unsaid_places"], "remote: tools/list lists unsaid_places only")
+    r = c.req("tools/call", {"name": "unsaid_places", "arguments": CEDRIC_PAIRS})
+    res = r["result"]
+    sc = res.get("structuredContent") or {}
+    if res.get("isError") or sc.get("status") in ("limited", "degraded", "queued", "waking"):
+        print("  [SKIP] the hosted API is busy or rate-limited: %s" % (sc.get("message") or res["content"][0]["text"])[:160])
+        c.close()
+        return
+    errs = validate(sc, tools[0]["outputSchema"])
+    check(not errs, "remote: structuredContent validates against outputSchema" + ("" if not errs else ": %s" % errs[:3]))
+    check(sc.get("mode") == "remote" and sc.get("host", {}).get("mode") == "live" and "fake" not in sc.get("flags", []),
+          "remote: live data from the hosted engine (no fake flag)")
+    check(sc.get("status") in ("ok", "partial", "empty_few") and 1 <= len(sc.get("picks", [])) <= 7,
+          "remote: %s, %d picks" % (sc.get("status"), len(sc.get("picks", []))))
+    check(all(p["ai_named"] == 0 for p in sc["picks"]) and sc["wall"]["answers"] > 0,
+          "remote: every pick named by 0 of %d AI answers" % sc["wall"]["answers"])
+    rib = next((l for l in sc.get("loves", []) if l["text"] == "rib tips"), {})
+    check(rib.get("kind") == "tag", "remote: [text, type] pairs reach the API ('rib tips' -> %s)" % rib.get("type"))
+    r = c.req("tools/call", {"name": "qloo_places", "arguments": CEDRIC_PAIRS})
+    check(r["result"].get("isError") is True, "remote: qloo_places -> isError (local modes only)")
+    show_call({"result": res}, "tools/call unsaid_places (remote) -> content[0]")
+    c.close()
+
+
+def record(path):
+    """One live agent session against the hosted API, as an MCP host would run it: the user's question, list the
+    tools, call unsaid_places with the loves as [text, type] pairs, show the answer. Token redacted on write."""
+    if not os.environ.get("UNSAID_TOKEN"):
+        raise SystemExit("--record needs UNSAID_TOKEN in the environment")
+    log = []
+    c = Client("remote", log)
+    c.req("initialize", {"protocolVersion": "2025-11-25", "capabilities": {},
+                         "clientInfo": {"name": "unsaid-demo-agent", "version": "0.2"}})
+    c.notify("notifications/initialized")
+    tools = c.req("tools/list")["result"]["tools"]
+    r = c.req("tools/call", {"name": "unsaid_places", "arguments": {
+        "loves": [["Frankie Beverly & Maze", "artist"], ["The Original Kings of Comedy", "movie"], ["rib tips", "tag"]],
+        "city": "St. Louis, Missouri"}})
+    rc, err = c.close()
+    res = r["result"]
+    head = {"kind": "session", "recorded_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "user": QUESTION,
+            "agent": "agent/test_client.py --record (a scripted MCP host: list tools, call unsaid_places, show)",
+            "server": "python3 -I agent/unsaid_mcp.py",
+            "env": {"UNSAID_MODE": "remote", "UNSAID_URL": os.environ.get("UNSAID_URL") or "https://unsaid-ang.pages.dev",
+                    "UNSAID_TOKEN": "<redacted>"},
+            "tools_listed": [t["name"] for t in tools], "server_exit": rc}
+    tail = {"kind": "agent_answer", "text": res["content"][0]["text"] if res.get("content") else json.dumps(res)}
+    tok = os.environ["UNSAID_TOKEN"]
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    with open(path, "w") as f:
+        for rec in [head] + log + [tail]:
+            f.write(json.dumps(rec, ensure_ascii=False).replace(tok, "<redacted>") + "\n")
+    print("\n== recorded %d lines to %s (token redacted)\n%s" % (len(log) + 2, path, tail["text"]))
+
+
 if __name__ == "__main__":
     t0 = time.time()
     err = run_legacy()
     run_modern()
-    with open(os.path.join(HERE, "transcript.jsonl"), "w") as f:
+    os.makedirs(OUT, exist_ok=True)
+    with open(os.path.join(OUT, "transcript.jsonl"), "w") as f:
         for rec in LOG:
             f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    if "--no-remote" not in sys.argv:
+        run_remote()
+    if "--record" in sys.argv:
+        record(sys.argv[sys.argv.index("--record") + 1])
     print("\nserver stderr (first lines): %s" % " | ".join(err.strip().splitlines()[:2]))
-    print("%d messages, %.1f s, %d failed checks; full wire log: transcript.jsonl" % (len(LOG), time.time() - t0, len(FAILS)))
+    print("%d fake-mode messages, %.1f s, %d failed checks; wire log: out/transcript.jsonl"
+          % (len(LOG), time.time() - t0, len(FAILS)))
     sys.exit(1 if FAILS else 0)

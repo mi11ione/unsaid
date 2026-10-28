@@ -22,3 +22,7 @@ __pycache__/
 site/data/live/
 media/data/live/
 media/shots/
+
+# MCP: test wire logs, and live agent transcripts (they carry Qloo results: local only, never committed)
+agent/out/
+agent/demo/*live*.jsonl

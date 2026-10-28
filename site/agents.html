@@ -23,17 +23,26 @@
     <p class="dim">Send it as <code>Authorization: Bearer …</code>, as <code>X-Unsaid-Token: …</code>, or as <code>&amp;token=…</code>. In a browser, add <code>?token=…</code> to this site’s address and the page passes it on.</p>
 
     <h2>MCP</h2>
-    <pre>claude mcp add unsaid -e UNSAID_MODE=fake -- python3 -I /path/to/unsaid/agent/unsaid_mcp.py</pre>
+    <p>The MCP server is one Python file, standard library only. By default it calls this site’s API, so your agent gets the same live Qloo ranks and the same dated AI answers as this page. You don’t need a Qloo key.</p>
+    <p class="dim">Claude Code:</p>
+    <pre>claude mcp add unsaid -e UNSAID_MODE=remote -e UNSAID_TOKEN=&lt;token&gt; -- python3 -I /path/to/unsaid/agent/unsaid_mcp.py</pre>
+    <p class="dim">Claude Desktop (<code>claude_desktop_config.json</code>):</p>
     <pre>{
   "mcpServers": {
     "unsaid": {
       "command": "python3",
       "args": ["-I", "/path/to/unsaid/agent/unsaid_mcp.py"],
-      "env": { "UNSAID_MODE": "fake" }
+      "env": { "UNSAID_MODE": "remote", "UNSAID_TOKEN": "&lt;token&gt;" }
     }
   }
 }</pre>
-    <p class="dim">The MCP server runs locally over stdio, so it needs no token. Two tools: <code>unsaid_places(loves, city)</code> returns the places no AI names, ranked by Qloo. <code>qloo_places(loves, city)</code> returns Qloo’s top 50 for the same loves with nothing crossed out; it is the meter’s “with” arm. A remote <code>/mcp</code> endpoint, if it ships, sits behind the same token.</p>
+    <p class="dim">The token is the one from the Devpost testing instructions. After 30 Oct 23:45 ET, leave it out. In remote mode the server lists one tool, <code>unsaid_places(loves, city)</code>. Pass loves as <code>[text, type]</code> pairs. A city with no AI answers on file comes back with the <code>no_wall</code> flag, and nothing is crossed out. <code>UNSAID_MODE=fake</code> runs offline on a synthetic Qloo world, tagged FAKE. With your own <code>QLOO_API_KEY</code>, <code>UNSAID_MODE=live</code> runs the engine locally and also lists <code>qloo_places(loves, city)</code>: Qloo’s top 50 for the same loves, with nothing crossed out. That tool is the meter’s “with” arm.</p>
+
+    <h2>One real run</h2>
+    <pre>claude -p "I love Frankie Beverly &amp; Maze, The Original Kings of Comedy and rib tips. Where should I go in St. Louis tonight?" \
+  --mcp-config agent/mcp.json --allowedTools mcp__unsaid__unsaid_places</pre>
+    <p class="dim"><code>agent/mcp.json</code> sets <code>UNSAID_MODE=remote</code> and reads <code>UNSAID_TOKEN</code> from your shell. Replace <code>/path/to/unsaid</code> in it with the path to your clone first.</p>
+    <div id="run"></div>
 
     <h2>Meter</h2>
     <p id="meter"></p>
@@ -53,6 +62,15 @@
   // TOKEN_NOTE.md: "The meter line: ⟦M_ALONE⟧ → ⟦M_QLOO⟧" (filled from k10_meter.py via data/meter.json)
   document.getElementById('meter').innerHTML =
     `Picks on the other AIs’ everyone-list, of ${m.of}: alone ${UM.ph(m.m_alone, 'M_ALONE')} → with Qloo ${UM.ph(m.m_qloo, 'M_QLOO')} (${m.sets} sets, ${m.assistants} assistants).`;
+  const d = await UM.json('data/live/agent_demo.json').catch(() => null);
+  if (d && d.answer) {
+    const run = document.getElementById('run');
+    const p = (cls, text) => { const e = document.createElement(cls === 'pre' ? 'pre' : 'p'); if (cls !== 'pre') e.className = cls; e.textContent = text; run.appendChild(e); return e; };
+    p('dim', `Recorded ${String(d.recorded_at).slice(0, 10)} with Claude Code ${d.claude_code} (${d.model}), against this site’s API. The call it made:`);
+    p('pre', `${d.tool}(${JSON.stringify(d.input, null, 1).replace(/\n\s*/g, ' ')})`);
+    p('dim', 'Its answer, unedited:');
+    p('pre', d.answer).style.whiteSpace = 'pre-wrap';
+  }
   window.__ready = true;
 })();
 </script>

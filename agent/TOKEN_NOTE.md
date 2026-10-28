@@ -13,12 +13,12 @@ curl -N -H "Authorization: Bearer $UNSAID_TOKEN" \
 
 `loves` is a JSON array of up to three `[text, type]` pairs. Give a type for a dish (`"tag"`) and for a place (`"place"`): untyped, `"rib tips"` can resolve to a restaurant. Types: artist, movie, tv_show, book, podcast, videogame, brand, place, tag. Plain text, `{"text": "...", "type": "movie"}` and chips from `/api/resolve` also work. The reply is NDJSON; the last line is `{"type":"done","result":{...}}`. `GET /api/health` never needs the token.
 
-**MCP.** The MCP server runs locally over stdio, so it needs no token:
+**MCP.** The MCP server calls this API by default (`UNSAID_MODE=remote`), so it takes the same token:
 
 ```bash
-claude mcp add unsaid -e UNSAID_MODE=fake -- python3 -I /path/to/unsaid/agent/unsaid_mcp.py
+claude mcp add unsaid -e UNSAID_MODE=remote -e UNSAID_TOKEN=<token> -- python3 -I /path/to/unsaid/agent/unsaid_mcp.py
 ```
 
-Loves take the same `[text, type]` pairs. Two tools: `unsaid_places(loves, city)` returns the places no AI names, ranked by Qloo. `qloo_places(loves, city)` returns Qloo's top 50 for the same loves with nothing crossed out; it is the meter's "with" arm. A remote `/mcp` endpoint, if it ships, sits behind the same token.
+Loves take the same `[text, type]` pairs. In remote mode the server lists `unsaid_places(loves, city)`: the places no AI names, ranked by Qloo. With `UNSAID_MODE=live` and a Qloo key it runs the engine locally and also lists `qloo_places(loves, city)`: Qloo's top 50 for the same loves, with nothing crossed out. That tool is the meter's "with" arm.
 
 The meter line: ⟦M_ALONE⟧ → ⟦M_QLOO⟧ (filled from `k10_meter.py`, or the sentence is deleted under the bracket rule).

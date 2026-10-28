@@ -3,8 +3,8 @@
     "unsaid": {
       "type": "stdio",
       "command": "python3",
-      "args": ["-I", "/Users/mi11ion/Desktop/qloo/unsaid/agent/unsaid_mcp.py"],
-      "env": { "UNSAID_MODE": "fake" }
+      "args": ["-I", "/path/to/unsaid/agent/unsaid_mcp.py"],
+      "env": { "UNSAID_MODE": "remote", "UNSAID_TOKEN": "${UNSAID_TOKEN}" }
     }
   }
 }

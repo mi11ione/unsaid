@@ -9,11 +9,17 @@ Dual-era per the MCP spec 2026-07-28 ("Versioning and Compatibility"):
 - modern clients: `server/discover` and per-request `_meta["io.modelcontextprotocol/protocolVersion"]`, stateless;
 - legacy clients (Claude Desktop / Claude Code / most SDKs on 2025-11-25 and earlier): `initialize` handshake.
 
-Backed by the engine kit in ../engine (override with UNSAID_KIT). Mode:
-- UNSAID_MODE=fake (default): the kit's FakeQloo world. Place names and numbers prove code paths, not Qloo.
-  The wall is real: the frontier-model answers saved in the consensus file.
-- UNSAID_MODE=live + QLOO_API_KEY: the same code path against hackathon.api.qloo.com (untested here: no key yet).
-  UNSAID_WALLS=<walls.json> points at the consensus harness output.
+Modes (UNSAID_MODE):
+- remote (the default): the hosted API at UNSAID_URL (default https://unsaid-ang.pages.dev), the same engine, walls
+  and live Qloo calls as the website. Needs no Qloo key and no engine kit. UNSAID_TOKEN is the bearer token from
+  the Devpost testing instructions (until 30 Oct 23:45 ET; after that the API is open, 3 fresh runs per hour per
+  address, cached repeats free). Only unsaid_places is listed: the hosted API has no qloo_places endpoint.
+- fake: the engine kit in ../engine (override with UNSAID_KIT) on its FakeQloo world, offline. Place names and
+  numbers prove code paths, not Qloo. The wall is real saved AI answers.
+- live + QLOO_API_KEY: the same local kit against hackathon.api.qloo.com.
+Local modes run engine/unsaid/api.py run_unsaid, as the server does (same lanes, floor, strike, reverse and
+last-seen checks), with the walls in UNSAID_WALLS (default ../data/walls). A city with no AI answers on file gets an
+empty wall and the `no_wall` flag, never another city's wall.
 
 stdout carries only JSON-RPC lines. Everything else (kit prints, logs) goes to stderr.
 """
@@ -24,21 +30,35 @@ import re
 import sys
 import time
 import traceback
+import urllib.error
+import urllib.parse
+import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 KIT = os.environ.get("UNSAID_KIT") or os.path.normpath(os.path.join(HERE, "..", "engine"))
-sys.path.insert(0, KIT)
 
-from unsaid import engine as E, seeds as SD, walls as W, matcher as M  # noqa: E402
-from unsaid.qloo import Qloo, QlooError, prop  # noqa: E402
-
-SERVER_INFO = {"name": "unsaid", "title": "UNSAID", "version": "0.5.0"}
+SERVER_INFO = {"name": "unsaid", "title": "UNSAID", "version": "0.6.0"}
 MODERN = ["2026-07-28"]
 LEGACY = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"]
-MODE = os.environ.get("UNSAID_MODE", "fake").lower()
-FAKE = MODE != "live"
+MODE = (os.environ.get("UNSAID_MODE") or "remote").strip().lower()
+if MODE not in ("remote", "fake", "live"):
+    MODE = "remote"
+REMOTE = MODE == "remote"
+FAKE = MODE == "fake"
+URL = (os.environ.get("UNSAID_URL") or "https://unsaid-ang.pages.dev").rstrip("/")
+TOKEN = (os.environ.get("UNSAID_TOKEN") or "").strip()
+UA = "unsaid-mcp/%s (+https://unsaid-ang.pages.dev/agents.html)" % SERVER_INFO["version"]
+REMOTE_TIMEOUT_S = float(os.environ.get("UNSAID_REMOTE_TIMEOUT_S", "150"))
 OUT = sys.stdout                      # the protocol channel; nothing else may write here
 sys.stdout = sys.stderr               # stray prints from the kit land on stderr
+
+if not REMOTE:                        # the local kit; remote mode needs none of it
+    sys.path.insert(0, KIT)
+    from unsaid import api as A, cities as CI, engine as E, seeds as SD  # noqa: E402
+    from unsaid.qloo import Qloo, QlooError, prop  # noqa: E402
+else:
+    class QlooError(Exception):
+        status = None
 
 INSTRUCTIONS = (
     "UNSAID returns places to eat and drink that fit a person's taste and that no major AI assistant names for "
@@ -64,7 +84,7 @@ TOOL = {
         "(neighbourhoods, history, music, what to order). Say once that the usual places (wall.top_names) are "
         "great but everyone gets them. If status is needs_input, fix the input it names (e.g. a full title or a "
         "type) and call again. Pass a type for dishes and places ('tag' for a dish like rib tips, 'place' for a "
-        "restaurant or bar): untyped, they can resolve to the wrong thing. Takes ~1-25 s live."),
+        "restaurant or bar): untyped, they can resolve to the wrong thing. A fresh run takes 20-90 s; repeats are cached and instant."),
     "inputSchema": {
         "type": "object",
         "properties": {
@@ -100,8 +120,9 @@ PICK_SCHEMA = {
         "qloo_id": {"type": "string"}, "name": {"type": "string"},
         "neighbourhood": {"type": ["string", "null"]}, "what": {"type": "array", "items": {"type": "string"}},
         "rating": {"type": ["number", "null"]}, "open": {"type": ["boolean", "null"]},
-        "for_you": {"type": "integer"}, "for_anyone": {"type": "integer"}, "of": {"type": "integer"},
-        "ranks": {"type": "string"}, "lift_pts": {"type": "integer"},
+        "for_you": {"type": "integer"}, "for_anyone": {"type": ["integer", "null"]}, "of": {"type": "integer"},
+        "ranks": {"type": "string"}, "lift_pts": {"type": ["integer", "null"]},
+        "address": {"type": ["string", "null"]}, "url": {"type": ["string", "null"]},
         "holds": {"type": "string"},
         "because": {"type": "object", "properties": {"love": {"type": ["string", "null"]},
                                                      "share": {"type": ["number", "null"]},
@@ -114,8 +135,9 @@ TOOL["outputSchema"] = {
     "type": "object",
     "required": ["status", "mode", "city", "loves", "picks", "wall", "flags", "qloo_calls", "as_of"],
     "properties": {
-        "status": {"type": "string", "enum": ["ok", "empty_few", "empty_none", "needs_input", "error"]},
-        "mode": {"type": "string", "enum": ["fake", "live"]},
+        "status": {"type": "string", "enum": ["ok", "empty_few", "empty_none", "needs_input", "partial", "degraded",
+                                             "limited", "queued", "waking", "error"]},
+        "mode": {"type": "string", "enum": ["fake", "live", "remote"]},
         "message": {"type": "string"},
         "city": {"type": ["object", "null"]},
         "loves": {"type": "array"},
@@ -128,6 +150,9 @@ TOOL["outputSchema"] = {
         "flags": {"type": "array", "items": {"type": "string"}},
         "qloo_calls": {"type": "object"},
         "fallback_known": {"type": "array", "items": {"type": "string"}},
+        "notes": {"type": "array", "items": {"type": "string"}},
+        "lanes": {"type": "object"},
+        "host": {"type": "object"},
         "as_of": {"type": "string"},
     },
 }
@@ -165,10 +190,21 @@ QLOO_TOOL["outputSchema"] = {
         "as_of": {"type": "string"},
     },
 }
-TOOLS = [TOOL, QLOO_TOOL]
+TOOLS = [TOOL] if REMOTE else [TOOL, QLOO_TOOL]
 QLOO_TOP = 50
 
-STATES = {"mo": "Missouri", "ny": "New York", "va": "Virginia", "il": "Illinois", "ca": "California"}
+STATES = {"al": "Alabama", "ak": "Alaska", "az": "Arizona", "ar": "Arkansas", "ca": "California", "co": "Colorado",
+          "ct": "Connecticut", "de": "Delaware", "dc": "District of Columbia", "fl": "Florida", "ga": "Georgia",
+          "hi": "Hawaii", "id": "Idaho", "il": "Illinois", "in": "Indiana", "ia": "Iowa", "ks": "Kansas",
+          "ky": "Kentucky", "la": "Louisiana", "me": "Maine", "md": "Maryland", "ma": "Massachusetts",
+          "mi": "Michigan", "mn": "Minnesota", "ms": "Mississippi", "mo": "Missouri", "mt": "Montana",
+          "ne": "Nebraska", "nv": "Nevada", "nh": "New Hampshire", "nj": "New Jersey", "nm": "New Mexico",
+          "ny": "New York", "nc": "North Carolina", "nd": "North Dakota", "oh": "Ohio", "ok": "Oklahoma",
+          "or": "Oregon", "pa": "Pennsylvania", "ri": "Rhode Island", "sc": "South Carolina", "sd": "South Dakota",
+          "tn": "Tennessee", "tx": "Texas", "ut": "Utah", "vt": "Vermont", "va": "Virginia", "wa": "Washington",
+          "wv": "West Virginia", "wi": "Wisconsin", "wy": "Wyoming"}
+NO_WALL = ("No AI answers are on file for %s, so nothing was crossed out: these are Qloo's taste picks with no "
+           "wall. UNSAID has dated AI answers for St. Louis and New York City.")
 _CACHE = {}
 
 
@@ -176,7 +212,11 @@ def log(*a):
     print("[unsaid]", *a, file=sys.stderr)
 
 
-# ---------------------------------------------------------------- the tool
+def now():
+    return time.strftime("%Y-%m-%dT%H:%M:%S%z")
+
+
+# ---------------------------------------------------------------- inputs
 def _norm(s):
     s = s.lower().replace("&", " and ")
     s = re.sub(r"[^a-z0-9 ]+", " ", s)
@@ -184,37 +224,12 @@ def _norm(s):
     return " ".join(s.split())
 
 
-def _seed_set(city_key, love_texts):
-    """Which pre-asked wall applies: a seed set whose loves match these (order-free, containment), else None."""
-    mine = [_norm(t) for t in love_texts]
-    for sid, loves in SD.SEED_SETS.get(city_key, []):
-        theirs = [_norm(t) for t, _ in loves]
-        if len(mine) == len(theirs) and all(any(a in b or b in a for b in theirs) for a in mine):
-            return sid, loves
-    return None, None
-
-
-def _city(q, text):
-    name, region = text, None
-    if "," in text:
-        name, region = [x.strip() for x in text.split(",", 1)]
-        region = STATES.get(region.lower().rstrip("."), region)
-    c = E.resolve_city(q, name, region)
-    if c.get("status") == "ok" and region is None:
-        dis = {x["disamb"] for x in c.get("candidates", [])}
-        if len(dis) > 1:
-            return {"status": "needs_input", "reason": "'%s' is ambiguous; add the region" % name,
-                    "candidates": c["candidates"]}
-    return c
-
-
-def _city_key(c):
-    from unsaid.fake import LOCALITY_IDS
-    for k, i in LOCALITY_IDS.items():
-        if c.get("id") == i:
-            return k
-    n = (c.get("name") or "").lower()
-    return "stl" if "louis" in n else ("nyc" if "new york" in n else None)
+def _city_text(text):
+    """'Austin, TX' -> 'Austin, Texas' (the engine checks the region against Qloo's locality name)."""
+    if "," not in text:
+        return text
+    name, region = [x.strip() for x in text.split(",", 1)]
+    return "%s, %s" % (name, STATES.get(region.lower().rstrip("."), region))
 
 
 def _parse_loves(raw):
@@ -230,8 +245,238 @@ def _parse_loves(raw):
     return out
 
 
+def _seed_set(city_key, love_texts):
+    """Which preset set these loves are (order-free, containment), else None. Local mode only: its type hints fill
+    untyped loves (live: /search decides the rest)."""
+    mine = [_norm(t) for t in love_texts]
+    for sid, loves in SD.SEED_SETS.get(city_key, []):
+        theirs = [_norm(t) for t, _ in loves]
+        if len(mine) == len(theirs) and all(any(a in b or b in a for b in theirs) for a in mine):
+            return sid, loves
+    return None, None
+
+
+def _fill_hints(spec, city_text):
+    ck, _ = CI.lookup(city_text)
+    _, seed = _seed_set(ck, [t for t, _ in spec]) if ck else (None, None)
+    if not seed:
+        return spec
+    return [(t, h or next((sh for st, sh in seed if _norm(st) in _norm(t) or _norm(t) in _norm(st)), None))
+            for t, h in spec]
+
+
+# ---------------------------------------------------------------- the CONTRACT result -> the tool's output
+def _pick(c):
+    fy, fa, n = c.get("fit_rank"), c.get("any_rank"), c.get("U")
+    holds, nl = c.get("holds"), c.get("n_loves") or 0
+    lift = c.get("lift")
+    return {
+        "qloo_id": c.get("id"), "name": c.get("name"), "neighbourhood": c.get("neighbourhood"),
+        "address": c.get("address") or None, "url": c.get("url") or None,
+        "what": [t for t in (c.get("what") or "").split(" · ") if t], "rating": c.get("rating"),
+        "open": c.get("open"), "for_you": fy, "for_anyone": fa, "of": n,
+        "ranks": ("#%d for you · #%d for anyone" % (fy, fa)) if fa is not None else "#%d for you" % fy,
+        "lift_pts": int(round(100 * lift)) if isinstance(lift, (int, float)) else None,
+        "holds": ("%d of %d" % (holds, nl)) if holds is not None else "n/a (1 love)",
+        "because": {"love": c.get("because"), "share": None, "source": "best per-love rank (C6')",
+                    "line": ("because you love %s" % c["because"]) if c.get("because") else None},
+        "ai_named": 0, "ai_asked": (c.get("never_said") or {}).get("asks") or 0}
+
+
+def _wall(r):
+    items = r.get("wall") or []
+    freq, shown = {}, {}
+    for it in items:
+        k = it.get("place") or it.get("norm") or it.get("name")
+        freq[k] = freq.get(k, 0) + 1
+        shown.setdefault(k, {})
+        shown[k][it.get("name")] = shown[k].get(it.get("name"), 0) + 1
+    top = sorted(freq, key=lambda k: (-freq[k], str(k)))[:8]
+    d, cn = r.get("diag") or {}, r.get("counts") or {}
+    asked = {(it.get("provider"), it.get("phrasing_id"), it.get("asked_at")) for it in items}
+    return {"distinct_names": d.get("wall_names") or len({it.get("norm") for it in items}),
+            "answers": cn.get("asks") or len(asked), "struck_in_pool": cn.get("struck_in_U") or 0,
+            "top_names": [max(shown[k], key=lambda n: (shown[k][n], -len(n or ""))) for k in top],
+            "source": d.get("wall_source") or ("no AI answers on file" if not items else "dated AI answers")}
+
+
+def _needs_message(r, city_res=None):
+    """needs_input -> one sentence an agent can act on (local: r["needs"]; hosted: r["resolutions"] + city)."""
+    parts = []
+    needs = list(r.get("needs") or [])
+    if not needs:
+        if not r.get("city"):
+            cr = city_res or {}
+            needs.append({"field": "city", "text": cr.get("text"), "reason": cr.get("reason") or "city not found",
+                          "alternatives": cr.get("alternatives") or []})
+        for x in r.get("resolutions") or []:
+            if x.get("status") != "ok":
+                needs.append({"field": "love", "text": x.get("text"), "status": x.get("status"),
+                              "alternatives": x.get("alternatives") or []})
+    for n in needs:
+        alts = n.get("alternatives") or []
+        if n.get("field") == "city":
+            cands = ["%s (%s)" % (a.get("name"), a.get("disamb")) for a in alts]
+            parts.append("city: %s%s" % (n.get("reason") or "not found", (": " + "; ".join(cands[:5])) if cands else ""))
+        else:
+            cands = ["%s (%s)" % (a.get("label"), str(a.get("type") or "").split(":")[-1]) for a in alts[:4]]
+            parts.append("love '%s' is %s%s" % (n.get("text"), "ambiguous" if n.get("status") == "needs_input"
+                                                  else "not found in Qloo",
+                                                  (": did you mean " + ", ".join(cands) + "?") if cands else ""))
+    head = "; ".join(parts) or "check the input"
+    return head + ("" if head.endswith("?") else ".") + (" Pass a love as [text, type] (artist, movie, tv_show, book, "
+                                                         "podcast, videogame, brand, place, or tag for a dish/cuisine) "
+                                                         "and a city with its region.")
+
+
+def from_contract(r, mode, spec, city_text, city_res=None, host=None):
+    """The engine/server result (CONTRACT.md) -> the tool's structuredContent. One shape for every mode."""
+    texts = [t for t, _ in spec]
+    loves = []
+    for i, ch in enumerate(r.get("loves") or []):
+        if not ch:
+            continue
+        loves.append({"text": ch.get("text") or (texts[i] if i < len(texts) else ch.get("label")), "status": "ok",
+                      "qloo_id": ch.get("id"), "resolved": ch.get("label"), "kind": ch.get("kind"),
+                      "type": ch.get("type"), "dead": bool(ch.get("dead")), "dead_line": ch.get("dead_line")})
+    city = r.get("city")
+    out = {"status": r.get("status") or "error", "mode": mode, "loves": loves, "picks": [], "flags": list(r.get("flags") or []),
+           "city": {"name": city.get("name"), "qloo_id": city.get("id"), "slug": city.get("slug")} if city else None,
+           "wall": _wall(r), "qloo_calls": {}, "as_of": now()}
+    if host:
+        out["host"] = host
+    d, cn = r.get("diag") or {}, r.get("counts") or {}
+    calls = d.get("calls") or {}
+    out["qloo_calls"] = dict(calls, network=d.get("qloo_network")) if calls else {"total": d.get("qloo_calls") or 0}
+    notes = [n.get("text") for n in r.get("notes") or [] if n.get("text")]
+    if r.get("note") and r["note"] not in notes:
+        notes.append(r["note"])
+    if out["status"] == "needs_input":
+        out["message"] = _needs_message(r, city_res)
+        return out
+    out["picks"] = [_pick(c) for c in sorted(r.get("picks") or [], key=lambda c: c.get("fit_rank") or 0)]
+    out["pool"] = {"P": cn.get("P"), "U": cn.get("U"), "after_strike": cn.get("S"), "held": d.get("kept"),
+                   "rho_taste_vs_anyone": d.get("rho_tp")}
+    if r.get("fallback"):
+        out["fallback_known"] = [x.get("name") for x in r["fallback"] if x.get("name")]
+    if r.get("lanes"):
+        out["lanes"] = r["lanes"]
+    if city and not r.get("wall") and out["status"] not in ("limited", "degraded", "queued", "waking", "error"):
+        out["flags"] = sorted(set(out["flags"]) | {"no_wall"})
+        notes.append(NO_WALL % city.get("name"))
+    for ch in loves:
+        if ch.get("dead_line"):
+            notes.append(ch["dead_line"])
+    if "fake" in out["flags"]:
+        notes.append("FAKE MODE: pick names and ranks come from the kit's synthetic Qloo world and prove the code "
+                     "path only. The wall is real saved AI answers (%s)." % out["wall"]["source"])
+    if notes:
+        out["notes"] = notes
+        out["message"] = " ".join(n if n.rstrip().endswith((".", "?", "!")) else n + "." for n in notes)
+    return out
+
+
+# ---------------------------------------------------------------- unsaid_places: local (fake | live)
+def _unsaid_local(loves, city):
+    spec = _fill_hints(_parse_loves(loves), city)
+    walls = os.environ.get("UNSAID_WALLS") or os.path.normpath(os.path.join(HERE, "..", "data", "walls"))
+    r = A.run_unsaid(_city_text(city), [list(x) for x in spec], walls_path=walls if os.path.exists(walls) else None,
+                     mode="fake" if FAKE else "live")
+    if r.get("status") == "degraded":
+        raise QlooErrorLike((r.get("diag") or {}).get("error") or "Qloo isn't answering")
+    return from_contract(r, MODE, spec, city)
+
+
+class QlooErrorLike(Exception):
+    pass
+
+
+# ---------------------------------------------------------------- unsaid_places: remote (the hosted API)
+class RemoteError(Exception):
+    pass
+
+
+def _get(path, params, accept="application/json"):
+    headers = {"User-Agent": UA, "Accept": accept}
+    if TOKEN:
+        headers["Authorization"] = "Bearer " + TOKEN
+    req = urllib.request.Request("%s%s?%s" % (URL, path, urllib.parse.urlencode(params)), headers=headers)
+    try:
+        return urllib.request.urlopen(req, timeout=REMOTE_TIMEOUT_S)
+    except urllib.error.HTTPError as e:
+        if e.code == 401:
+            raise RemoteError("the hosted API needs the UNSAID token: set UNSAID_TOKEN in this server's env (it is "
+                              "in the Devpost testing instructions)")
+        if e.code in (429, 503):
+            raise RemoteError("the hosted API is busy (HTTP %d); try again in %s s" % (e.code, e.headers.get("Retry-After") or "60"))
+        raise RemoteError("the hosted API returned HTTP %d" % e.code)
+    except (urllib.error.URLError, OSError) as e:
+        raise RemoteError("can't reach %s (%s)" % (URL, getattr(e, "reason", e)))
+
+
+def _remote_love(t, h):
+    return [t, h] if h else t
+
+
+def _unsaid_remote(loves, city):
+    spec = _parse_loves(loves)
+    ctext = _city_text(city)
+    params = {"city": ctext, "loves": json.dumps([_remote_love(t, h) for t, h in spec], ensure_ascii=False)}
+    result, events = None, 0
+    with _get("/api/unsaid", params, "application/x-ndjson") as resp:
+        for raw in resp:
+            line = raw.decode("utf-8", "replace").strip()
+            if not line:
+                continue
+            try:
+                evt = json.loads(line)
+            except ValueError:
+                continue
+            events += 1
+            if evt.get("type") == "done":
+                result = evt.get("result") or {}
+    if result is None:
+        raise RemoteError("the hosted API closed the stream before the result (%d events)" % events)
+    city_res = None
+    if result.get("status") == "needs_input" and not result.get("city"):
+        try:
+            with _get("/api/resolve", {"kind": "city", "q": ctext}) as resp:
+                city_res = json.loads(resp.read().decode("utf-8"))
+        except (RemoteError, ValueError):
+            city_res = None
+    host = {"url": URL, "mode": "fake" if "fake" in (result.get("flags") or []) else "live",
+            "cached": bool(result.get("cached")), "stored_at": result.get("stored_at"), "key": result.get("key"),
+            "events": events}
+    return from_contract(result, "remote", spec, city, city_res, host)
+
+
+def unsaid_places(loves, city):
+    key = json.dumps([loves, city], sort_keys=True)
+    if key in _CACHE:
+        return _CACHE[key]
+    out = _unsaid_remote(loves, city) if REMOTE else _unsaid_local(loves, city)
+    if out["status"] not in ("limited", "degraded", "queued", "waking", "error"):
+        _CACHE[key] = out
+    return out
+
+
+# ---------------------------------------------------------------- qloo_places (local modes only)
+def _city(q, text):
+    name, region = text, None
+    if "," in text:
+        name, region = [x.strip() for x in text.split(",", 1)]
+        region = STATES.get(region.lower().rstrip("."), region)
+    c = E.resolve_city(q, name, region)
+    if c.get("status") == "ok" and region is None:
+        dis = {x["disamb"] for x in c.get("candidates", [])}
+        if len(dis) > 1:
+            return {"status": "needs_input", "reason": "'%s' is ambiguous; add the region" % name,
+                    "candidates": c["candidates"]}
+    return c
+
+
 def _calls(trace):
-    """Calls per engine step (C1 city, C2 love, C4 pool, C5 baseline, C6 drop-one, C7 name match) + network/cache."""
+    """Calls per engine step (C1 city, C2 love, C4 pool, C6' rescoring) + network/cache."""
     names = {"C1": "city /search", "C2": "loves /search+/v2/tags", "C4": "taste pool /v2/insights",
              "C5": "same places, no taste /v2/insights", "C6": "same places, each love dropped /v2/insights",
              "C7": "AI names -> Qloo ids /search"}
@@ -242,71 +487,6 @@ def _calls(trace):
     c["total"] = len(trace)
     c["from_cache"] = sum(1 for r in trace if r.get("cache"))
     return c
-
-
-def unsaid_places(loves, city):
-    key = json.dumps([loves, city], sort_keys=True)
-    if key in _CACHE:
-        return _CACHE[key]
-    q = Qloo(fake=FAKE, cache_dir=os.path.join(HERE, ".cache"))
-    spec = _parse_loves(loves)
-    base = {"mode": "fake" if FAKE else "live", "loves": [], "picks": [], "flags": [], "city": None,
-            "wall": {}, "qloo_calls": {}, "as_of": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
-    c = _city(q, city)
-    if c.get("status") != "ok":
-        cands = ["%s (%s)" % (x["name"], x["disamb"]) for x in c.get("candidates", [])]
-        msg = c.get("reason", "city not found")
-        if FAKE and not cands:
-            msg += ". Fake mode knows St. Louis and New York City only"
-        return dict(base, status="needs_input", message=msg + (": " + "; ".join(cands) if cands else ""),
-                    qloo_calls=_calls(q.trace))
-    ck = _city_key(c)
-    sid, seed = _seed_set(ck, [t for t, _ in spec]) if ck else (None, None)
-    if seed:  # fill missing type hints from the matching seed set (live: /search decides)
-        spec = [(t, h or next((sh for st, sh in seed if _norm(st) in _norm(t) or _norm(t) in _norm(st)), None))
-                for t, h in spec]
-    walls_file = os.environ.get("UNSAID_WALLS")
-    wall = W.wall_for(ck or "stl", sid or "__generic__", walls_file)
-    res = E.run(q, c, spec, wall)
-    loves_out = [{"text": l.get("text"), "status": l.get("status"), "qloo_id": l.get("id"),
-                  "resolved": l.get("name"), "kind": l.get("kind"), "type": l.get("type"),
-                  "reason": l.get("reason")} for l in res.get("loves", [])]
-    city_out = {"name": c.get("name"), "qloo_id": c.get("id"), "disamb": c.get("disamb")}
-    if res["status"] == "needs_input":
-        bad = [l["text"] for l in loves_out if l["status"] == "needs_input"]
-        return dict(base, status="needs_input", city=city_out, loves=loves_out, qloo_calls=_calls(q.trace),
-                    message="Qloo found no entity or tag for: %s. Give the full official title, or a type "
-                            "(artist, movie, tv_show, book, brand, place, or tag for a dish/cuisine)." % ", ".join(bad))
-    d = res["diag"]
-    picks = []
-    for card in sorted(res["cards"], key=lambda x: int(x["fits"].split()[0][1:])):  # shown in for-you order (v3 #7)
-        fy, n = [int(v) for v in re.findall(r"\d+", card["fits"])]
-        fa = int(re.findall(r"\d+", card["city_order"])[0])
-        picks.append({
-            "qloo_id": card["qloo_id"], "name": card["name"], "neighbourhood": card["neighbourhood"],
-            "what": [t for t in card["tags"] if t], "rating": card["rating"],
-            "open": (not card["is_closed"]) if card["is_closed"] is not None else None,
-            "for_you": fy, "for_anyone": fa, "of": n, "ranks": "#%d for you · #%d for anyone" % (fy, fa),
-            "lift_pts": card["lift_pts"], "holds": card["holds"], "because": card["because"],
-            "ai_named": card["ai"]["named"], "ai_asked": card["ai"]["asked"]})
-    names = W.names(wall)
-    freq = {}
-    for nm in names:
-        freq[nm] = freq.get(nm, 0) + 1
-    top = sorted(freq, key=lambda k: (-freq[k], k))[:8]
-    out = dict(base, status=res["status"], city=city_out, loves=loves_out, picks=picks, flags=res.get("flags", []),
-               wall={"distinct_names": d["wall"]["names"], "answers": d["wall"]["answers"],
-                     "struck_in_pool": d["wall"]["struck"], "top_names": top, "source": d["wall"]["source"]},
-               pool={"P": d.get("P"), "U": d.get("U"), "after_strike": d.get("S"), "held": d.get("kept"),
-                     "rho_taste_vs_anyone": round(d["rho_taste_base"], 2) if d.get("rho_taste_base") == d.get("rho_taste_base") else None},
-               qloo_calls=_calls(q.trace))
-    if res.get("fallback"):
-        out["fallback_known"] = res["fallback"]
-    if FAKE:
-        out["message"] = ("FAKE MODE: pick names and ranks come from the kit's synthetic Qloo world and prove the "
-                          "code path only. The wall is real saved AI answers (%s)." % d["wall"]["source"])
-    _CACHE[key] = out
-    return out
 
 
 def qloo_places(loves, city):
@@ -327,11 +507,7 @@ def qloo_places(loves, city):
             msg += ". Fake mode knows St. Louis and New York City only"
         return dict(base, status="needs_input", message=msg + (": " + "; ".join(cands) if cands else ""),
                     qloo_calls=_calls(q.trace))
-    ck = _city_key(c)
-    _, seed = _seed_set(ck, [t for t, _ in spec]) if ck else (None, None)
-    if seed:  # type hints only; the seed set's wall is never read here
-        spec = [(t, h or next((sh for st, sh in seed if _norm(st) in _norm(t) or _norm(t) in _norm(st)), None))
-                for t, h in spec]
+    spec = _fill_hints(spec, city)  # type hints only; the preset set's wall is never read here
     resolved = [E.resolve_love(q, t, h) for t, h in spec]
     loves_out = [{"text": l.get("text"), "status": l.get("status"), "qloo_id": l.get("id"),
                   "resolved": l.get("name"), "kind": l.get("kind"), "type": l.get("type"),
@@ -393,16 +569,23 @@ def qloo_summary(r):
 def summary(r):
     if r["status"] == "needs_input":
         return "needs_input: " + r.get("message", "")
+    if not r["picks"] and r["status"] in ("limited", "degraded", "queued", "waking", "error"):
+        return "%s: %s" % (r["status"], r.get("message") or "no result; try again in a minute")
     w = r["wall"]
-    lines = ["%s · %s: AIs named %d distinct places in %d answers (%d were in this taste pool, all struck). "
-             "%d left for these loves, ranked by Qloo:" % (r["status"], r["city"]["name"], w["distinct_names"],
-                                                          w["answers"], w["struck_in_pool"], len(r["picks"]))]
+    if "no_wall" in r["flags"]:
+        lines = ["%s · %s: NO WALL (no AI answers on file for this city, nothing crossed out). %d places for these "
+                 "loves, ranked by Qloo:" % (r["status"], r["city"]["name"], len(r["picks"]))]
+    else:
+        lines = ["%s · %s: AIs named %d distinct places in %d answers (%d were in this taste pool, all struck). "
+                 "%d left for these loves, ranked by Qloo:" % (r["status"], r["city"]["name"], w["distinct_names"],
+                                                              w["answers"], w["struck_in_pool"], len(r["picks"]))]
     for i, p in enumerate(r["picks"], 1):
-        lines.append("%d. %s (%s) · %s · holds %s · %s · named by %d of %d AI answers · qloo:%s" % (
-            i, p["name"], p["neighbourhood"], p["ranks"], p["holds"], p["because"].get("line"), p["ai_named"],
-            p["ai_asked"], p["qloo_id"]))
-    lines.append("Everyone else gets: " + ", ".join(w["top_names"]))
-    if r["mode"] == "fake":
+        lines.append("%d. %s (%s) · %s · %s · holds %s · %s · named by %d of %d AI answers · qloo:%s" % (
+            i, p["name"], p["neighbourhood"], " · ".join(p["what"]) or "-", p["ranks"], p["holds"],
+            p["because"].get("line"), p["ai_named"], p["ai_asked"], p["qloo_id"]))
+    if w["top_names"]:
+        lines.append("Everyone else gets: " + ", ".join(w["top_names"]))
+    if r.get("message"):
         lines.append(r["message"])
     return "\n".join(lines)
 
@@ -448,11 +631,17 @@ def call_tool(params):
         loves, city = _check_args(params.get("arguments") or {})
     except ValueError as e:
         return {"content": [{"type": "text", "text": "Invalid input: %s" % e}], "isError": True}
+    if REMOTE and name == "qloo_places":
+        return {"content": [{"type": "text", "text": "qloo_places runs only locally (UNSAID_MODE=live with "
+                                                     "QLOO_API_KEY); the hosted API serves unsaid_places."}],
+                "isError": True}
     try:
         r = fn(loves, city)
     except QlooError as e:
         r = None
         err = "Qloo returned HTTP %s; try again in a minute" % e.status  # never echo the URL or body
+    except (RemoteError, QlooErrorLike) as e:
+        r, err = None, str(e)
     except Exception as e:  # never kill the server on a tool failure
         log(traceback.format_exc())
         r, err = None, "%s: %s" % (type(e).__name__, e)
@@ -502,7 +691,7 @@ def send(obj):
 
 def main():
     state = {}
-    log("ready (mode=%s, kit=%s)" % ("fake" if FAKE else "live", KIT))
+    log("ready (mode=%s, %s)" % (MODE, ("%s, token %s" % (URL, "set" if TOKEN else "not set")) if REMOTE else "kit=" + KIT))
     for line in sys.stdin:
         line = line.strip()
         if not line:
