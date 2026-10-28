@@ -29,6 +29,7 @@ ap.set_defaults(walls=os.path.join(ROOT, "data", "walls"), budget=40)
 ap.add_argument("--fresh-answers", default=os.path.join(ROOT, "harness", "runs", "fresh.jsonl"))
 ap.add_argument("--site-check", action="store_true", help="last-seen also checks venue sites (network, cached 24 h)")
 ap.add_argument("--md", default=os.path.join(cli.OUT, "k12_wall_effect.md"))
+ap.add_argument("--public-md", help="also write the counts-only table (no place names: Qloo output stays out of git)")
 args = ap.parse_args()
 T = cli.tag(args)
 EMPTY = {"answers": [], "source": "empty wall (k12 ablation)"}
@@ -157,8 +158,9 @@ summary = ("median over %d sets: %s of 7 cards differ; AI-named cards: with the 
                cli.f(med["plain_fresh"], 1)))
 print("  " + summary + T)
 
-os.makedirs(os.path.dirname(args.md), exist_ok=True)
-with open(args.md, "w") as f:
+
+
+def write_table(f, names):
     f.write("# K12 · what crossing out changes%s\n\n" % T)
     f.write("Engine `%s`. The same pipeline ran twice per set over the same U: with the real dated wall (`on`) and "
             "with an empty wall (`off`). `plain` is Qloo's top 7 by taste (fit order over U, floor applied, no strike, "
@@ -176,6 +178,18 @@ with open(args.md, "w") as f:
     f.write("| **median** | | | **%s** | **%s** | **%s** | **%s** | **%s** | **%s** | **%s** | **%s** | |\n\n" % tuple(
         cli.f(med[k], 1) for k in ("differ", "on_named", "off_named", "plain_named", "on_fresh", "off_fresh",
                                    "plain_fresh", "plain_struck")))
+    kinds = {"a": 0, "b": 0, "c": 0}
+    for r in rows:
+        for xs in r["on_explain"].values():
+            real = [x for x in xs if (x.get("strike") or {}).get("status") != "outside_pool"]
+            kinds["b" if any(x["src"] == "dated" for x in real) else "a" if real else "c"] += 1
+    f.write("Cards still matched with the wall ON, all sets: (a) only a held-out fresh ask matches it: %d · (b) a dated "
+            "wall answer the strike missed: %d · (c) a containment match the strike overruled because Qloo /search "
+            "resolved the AI name to another place (not counted): %d.\n\n" % (kinds["a"], kinds["b"], kinds["c"]))
+    if not names:
+        f.write("Place names are left out here: they are Qloo output, which stays out of git. The full table with "
+                "names is engine/out/k12_wall_effect.md (gitignored).\n")
+        return
     f.write("Named places (wall off · plain top 7):\n\n")
     for r in rows:
         f.write("- %s: off %s · plain %s\n" % (r["set"], ", ".join(r["off_names"]) or "none",
@@ -192,6 +206,14 @@ with open(args.md, "w") as f:
                 "%s %s %s%s" % (x["src"], x["how"], repr(x.get("ai_name") or x.get("answer")),
                                 (" -> strike %s" % json.dumps(x["strike"], ensure_ascii=False)) if x.get("strike") else "")
                 for x in xs)))
+
+
+os.makedirs(os.path.dirname(args.md), exist_ok=True)
+with open(args.md, "w") as f:
+    write_table(f, True)
+if args.public_md:
+    with open(args.public_md, "w") as f:
+        write_table(f, False)
 with open(args.md.replace(".md", ".json"), "w") as f:
     json.dump(rows, f, indent=1, ensure_ascii=False, default=str)
 print("  table: %s" % args.md)
