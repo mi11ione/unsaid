@@ -169,7 +169,7 @@ claude -p "I love Frankie Beverly & Maze, The Original Kings of Comedy and rib t
   --mcp-config agent/mcp.json --allowedTools mcp__unsaid__unsaid_places
 ```
 
-- `unsaid_places(loves, city)` returns the product: Qloo's taste pool minus every place the AIs name, ranked by Qloo. Pass loves as `[text, type]` pairs. A city with no AI answers on file gets an empty wall and the `no_wall` flag.
+- `unsaid_places(loves, city)` returns the product: Qloo's taste pool minus every place the AIs name, ranked by Qloo. Pass loves as `[text, type]` pairs. The hosted API serves St. Louis and New York City and refuses other cities with a note. Run locally, a city with no AI answers on file gets an empty wall and the `no_wall` flag.
 - `qloo_places(loves, city)` returns the top 50 of the same pool with nothing crossed out. It is the meter's "with" arm. Only the local modes list it.
 
 Other modes: `UNSAID_MODE=fake` runs the engine offline on a synthetic Qloo world, and every result is tagged FAKE. `UNSAID_MODE=live` with `QLOO_API_KEY` runs the engine locally, using the walls in `data/walls` (override with `UNSAID_WALLS`). Both local modes call `run_unsaid` in `engine/unsaid/api.py`, as the server does. `python3 -I agent/test_client.py` checks fake mode in both protocol eras, then runs a smoke test against the hosted API. The smoke test is skipped when `UNSAID_TOKEN` isn't set.
