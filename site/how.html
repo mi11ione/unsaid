@@ -46,8 +46,8 @@
   if (S && S.mailee_claude) {
     const M = S.mailee_claude, G = S.chatgpt && S.chatgpt.gem;
     document.getElementById('census').innerHTML =
-      `<p class="big">Ask an AI for a hidden gem in ${esc(S.city)}: <span class="gx">${esc(M.name)}</span>.</p>
-       <p>${esc(CEN.provider)} said it <span class="red">${M.hits} times out of ${M.of}</span>${G && G.name === M.name ? `; ${esc(CEN.chatgpt_provider)}, <span class="red">${G.hits} of ${G.of}</span>` : ''}. ` +
+      `<p class="big">Ask ${esc(CEN.provider)} for a hidden gem in ${esc(S.city)}: <span class="gx">${esc(M.name)}</span>, <span class="red">${M.hits} times in ${M.of}</span>.</p>
+       <p>${G && G.name === M.name ? `${esc(CEN.chatgpt_provider)} said it too, <span class="red">${G.hits} of ${G.of}</span>. ` : ''}` +
       (S.said && S.k50 && S.asks ? `Across ${S.asks.n} questions about ${esc(S.city)}, ${esc(CEN.provider)} named ${S.said.n} places, and half of its mentions went to just ${S.k50.n} of them.` : '') +
       ` Everyone who asks gets the same short list.</p>`;
   }

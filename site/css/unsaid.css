@@ -417,3 +417,5 @@ details.dare .out { margin-bottom: 14px; }
 .try .pchip { font-size: 13px; padding: 4px 9px; }
 @media (max-width: 720px) { .thumbs .thead { flex-direction: column; gap: 2px; } }
 .sheet .close { background: rgba(11, 11, 11, .8); padding: 6px 8px; z-index: 2; }
+.herom .ho { font-size: 11px; margin-top: 4px; }
+.card .blurb { -webkit-line-clamp: 3; }   /* a condensed line (<= 9 words) always shows whole, on one or two lines */

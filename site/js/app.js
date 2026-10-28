@@ -56,11 +56,11 @@
   // how the seven are chosen, in one line (D's selection score, 28 Oct): the card sheet and the popularity sheet carry it
   const EXPLAIN = 'Qloo scores every place for each of your loves. We keep the places that fit you much more than they fit most people’s taste, or than their popularity alone would say.';
   const CITIES = Object.entries(CFG.cities).map(([slug, c]) => ({ slug, name: c.name }));
-  // the census hook (UNSAID.md §0), from census.json only: "Ask an AI for a hidden gem in St. Louis: ~~Mai Lee~~, 13 times out of 16."
+  // the census hook (UNSAID.md §0), from census.json only: "Ask Claude for a hidden gem in St. Louis: ~~Mai Lee~~, 13 times in 16."
   function hookLine() {
     const S = CEN.stl, M = S && S.mailee_claude;
     if (!M) return '';
-    return `<p class="hook">Ask an AI for a hidden gem in ${esc(S.city)}: <span class="gx">${esc(M.name)}</span>, <span class="red">${M.hits} times out of ${M.of}</span>.</p>`;
+    return `<p class="hook">Ask ${esc(CEN.provider)} for a hidden gem in ${esc(S.city)}: <span class="gx">${esc(M.name)}</span>, <span class="red">${M.hits} times in ${M.of}</span>.</p>`;
   }
 
   function inputView() {
@@ -269,7 +269,10 @@
     // the streamed names are spellings the result merges into places, so a running count would go down)
     function counter() {
       const W = st.result ? Share.wallCount(st.result) : null;
-      const names = st.result ? Share.wallNames(st.result) : [...st.wall.values()].filter(w => w.name).sort((a, b) => b.hits.size - a.hits.size).map(w => UM.cleanName(w.name));
+      // the hero's struck gem is already on screen: the strip starts with the next name
+      const heroGem = cen && ((cen.mailee_claude && cen.chatgpt && cen.chatgpt.gem && cen.chatgpt.gem.name === cen.mailee_claude.name ? cen.mailee_claude : cen.gem) || {}).name;
+      const names = (st.result ? Share.wallNames(st.result) : [...st.wall.values()].filter(w => w.name).sort((a, b) => b.hits.size - a.hits.size).map(w => UM.cleanName(w.name)))
+        .filter(n => !heroGem || Matcher.norm(n) !== Matcher.norm(heroGem));
       const xn = $('#xnames'); if (!xn) return;
       const top = names.slice(0, 30).join('|');
       if (xn.dataset.k !== top) { xn.dataset.k = top; xn.innerHTML = names.slice(0, 30).map(n => `<span class="xn">${esc(n)}</span>`).join(' '); }
@@ -505,7 +508,7 @@
     function cardHTML(c, i, known, prov) {
       const tag = st.struck.get(c.id), rose = st.risen.get(c.id);
       const x = known || tag || prov ? '' : `<button class="xbtn" data-x="1" aria-label="strike ${esc(c.name || 'this card')}" title="I know it: strike it">✕</button>`;
-      const blurb = c.blurb || (c.what ? cap1(c.what) : '');
+      const blurb = c.line || c.blurb || (c.what ? cap1(c.what) : '');
       const order = Array.isArray(c.order) ? c.order.filter(Boolean) : c.order ? [c.order] : [];
       return `<div class="card${tag ? ' struck' : ''}${tag && tag.human ? ' byyou' : ''}${rose ? ' risen' : ''}" data-id="${esc(c.id)}">
         ${photo(c, i, x)}
@@ -853,8 +856,9 @@
       if (phone) {
         // phone: the struck gem in one block, no map (the strip of struck names follows; then the cards)
         box.style.height = 'auto';
-        const who = two ? `${esc(CEN.provider)} ${two.hits} of ${two.of} · ${esc(CEN.chatgpt_provider)} ${cg0.hits} of ${cg0.of}` : `${esc(CEN.provider)} ${cen.gem.hits} of ${cen.gem.of}`;
-        el(box, 'div', null, `<div class="hq">Ask an AI for a hidden gem in ${esc(cen.city)}:</div><div class="hg"><span class="gx">${esc(gem.name).replace("'", '’')}</span><span class="red">${who}</span></div>`).className = 'herom';
+        const g = two || cen.gem, other = two ? `${esc(CEN.chatgpt_provider)}: ${cg0.hits} of ${cg0.of}` : cg0 ? `${esc(CEN.chatgpt_provider)}’s: ${esc(cg0.name)}, ${cg0.hits} of ${cg0.of}` : '';
+        el(box, 'div', null, `<div class="hq">Ask ${esc(CEN.provider)} for a hidden gem in ${esc(cen.city)}:</div><div class="hg"><span class="gx">${esc(gem.name).replace("'", '’')}</span><span class="red">${g.hits} times in ${g.of}</span></div>` +
+          (other ? `<div class="ho${two ? ' red' : ' dim'}">${other}</div>` : '')).className = 'herom';
         return;
       }
       const story = el(box, 'div', phone ? 'position:relative;margin:6px 0 4px' : `position:absolute;left:${Math.round(W * .56)}px;top:50%;transform:translateY(-50%);width:${Math.round(W * .44)}px`);
@@ -862,12 +866,12 @@
       const gx = `<span class="gx" style="font:400 ${phone ? 30 : 54}px/1 var(--serif)">${esc(gem.name).replace("'", '’')}</span>`;
       story.innerHTML = two
         // census_stats_claude.txt:59 (13 of 16) and census_stats_codex.txt:60 (10 of 16), via census.json
-        ? `<div style="font:400 ${phone ? 17 : 26}px/1.2 var(--serif)">Ask an AI for a hidden gem in ${esc(cen.city)}.</div>
+        ? `<div style="font:400 ${phone ? 17 : 26}px/1.2 var(--serif)">Ask ${esc(CEN.provider)} for a hidden gem in ${esc(cen.city)}.</div>
            <div style="margin-top:${phone ? 6 : 10}px">${gx}</div>
-           <div style="margin-top:${phone ? 6 : 10}px;font:400 ${phone ? 15 : 19}px/1.3 var(--serif)" class="red">${esc(CEN.provider)}: ${two.hits} times out of ${two.of}<br>${esc(CEN.chatgpt_provider)}: ${cg.hits} of ${cg.of}</div>`
+           <div style="margin-top:${phone ? 6 : 10}px;font:400 ${phone ? 15 : 19}px/1.3 var(--serif)" class="red">${two.hits} times in ${two.of}<br>${esc(CEN.chatgpt_provider)}: ${cg.hits} of ${cg.of}</div>`
         : `<div style="font:400 ${phone ? 17 : 26}px/1.2 var(--serif)">Ask ${esc(CEN.provider)} for a hidden gem in ${esc(cen.city)}.</div>
            <div style="margin-top:${phone ? 6 : 10}px">${gx}</div>
-           <div style="margin-top:${phone ? 6 : 10}px;font:400 ${phone ? 15 : 19}px/1.3 var(--serif)"><span class="red">${cen.gem.hits} times out of ${cen.gem.of}</span>` +
+           <div style="margin-top:${phone ? 6 : 10}px;font:400 ${phone ? 15 : 19}px/1.3 var(--serif)"><span class="red">${cen.gem.hits} times in ${cen.gem.of}</span>` +
              (cen.gem.first != null ? `<span class="dim"> · named first in ${cen.gem.first}</span>` : '') + '</div>' +
              (cg ? `<div class="dim" style="margin-top:8px;font:400 ${phone ? 12 : 14}px/1.4 var(--mono)">${esc(CEN.chatgpt_provider)}’s: ${esc(cg.name)}, ${cg.hits} of ${cg.of}</div>` : '');
       const H = 380, mw = W * .56;
