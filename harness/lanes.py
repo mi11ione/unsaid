@@ -225,6 +225,12 @@ class CodexLane(Lane):
                     text = it.get("text") or text
                 elif k == "web_search":
                     res["search"] = "on"
+                elif k == "command_execution":  # read-only sandbox, no network; kept so that stays checkable
+                    cmd = str(it.get("command") or "")[:300]
+                    res.setdefault("commands", []).append(cmd)
+                    if re.search(r"\b(curl|wget|http|nc|ssh|ping|dig|nslookup|python[0-9.]*\s+-c.*(urllib|requests|socket))", cmd):
+                        res["search"] = "on"
+                        res.setdefault("foreign_tools", []).append("command_execution: " + cmd[:80])
                 elif k == "mcp_tool_call":
                     calls += 1
                     called.append("%s/%s" % (it.get("server"), it.get("tool")))
@@ -500,7 +506,11 @@ def run(lane, asks, path, limit=None, go=False, opts=None, on_record=None, stop_
                     return
                 a = q.popleft()
             ask_opts = dict(opts or {}, **(a.get("opts") or {}))
-            r = lane.ask(a["prompt"], **ask_opts)
+            try:
+                r = lane.ask(a["prompt"], **ask_opts)
+            except Exception as e:  # e.g. disk full (28 Oct): record the failure, never lose the ask
+                r = {"status": "failed", "error": "%s: %s" % (type(e).__name__, str(e)[:200]), "transient": True,
+                     "raw": "", "places": None, "asked_at": now(), "answered_at": now(), "secs": 0, "model": None}
             if a.get("verbatim") and r.get("status") == "unparsed":
                 r["status"] = "ok"  # a verbatim ask expects prose: the raw text is the answer (k5 reads it)
             rec = {k: v for k, v in a.items() if k != "opts"}

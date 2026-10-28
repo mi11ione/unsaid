@@ -87,6 +87,8 @@ The console shows 20 requests a day and 5 a minute per model per project. Creden
 
 **The fix:** the codex lane now runs with `--disable apps` (verified: the redone answers and the meter "with" arm show only `unsaid/qloo_places`, or no tool at all). Any tool call outside the `unsaid` server is now recorded in `foreign_tools`, and a search-like one labels the answer `search: "on"`. Every fresh v1 ask ran with `--disable apps` from the first one (checked in the live process list).
 
+**Shell commands:** 16 stored codex answers also ran a shell command (wall-1 10, fresh v1 4, meter 2). Codex runs them in the `--sandbox read-only` sandbox, which blocks network access ("Network access to … is blocked by policy"), but the command text wasn't recorded before 28 Oct. From now on every command is stored in `commands`, and a network-looking one (curl, wget, http, …) labels the answer `search: "on"`.
+
 **Audit trail:** each re-asked answer is a new record under the same id, with `redo_of`. The old line stays in the file, marked `superseded_by` (the new answer's `asked_at`) and `superseded_reason`. `lanes.load`, every builder (`walls_cli.py build`, `--census-only`) and `census_stats.py` skip superseded and quarantined lines. `python3 -I audit_codex.py` must print 0 unresolved for every file before a wall is published.
 
 ## Storage, resume and failures

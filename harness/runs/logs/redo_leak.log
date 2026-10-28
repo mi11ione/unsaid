@@ -1,0 +1,72 @@
+codex_answers.jsonl      codex records  136, contaminated   8 (already superseded 0), unresolved ids 0
+   marked 8 old lines superseded_by
+runs/wall-1.jsonl        codex records  120, contaminated  41 (already superseded 0), unresolved ids 41: w1:city:nyc:-:h00:codex, w1:city:nyc:-:h03:codex, w1:city:nyc:-:h05:codex, w1:city:nyc:-:h07:codex, w1:city:stl:-:h00:codex, w1:city:stl:-:h01:codex, w1:city:stl:-:h08:codex, w1:city:stl:-:h10:codex, w1:city:stl:-:h12:codex, w1:city:stl:-:w01:codex, w1:city:stl:-:w02:codex, w1:taste:nyc:nyc-badbunny:t1:codex, w1:taste:nyc:nyc-kendrick:t1:codex, w1:taste:nyc:nyc-newjeans:t1:codex, w1:taste:nyc:nyc-rosalia:t2:codex, w1:taste:nyc:nyc-rosalia:t4:codex, w1:taste:nyc:nyc-stapleton:t3:codex, w1:taste:nyc:nyc-stapleton:t4:codex, w1:taste:nyc:nyc-taylorswift:t3:codex, w1:taste:nyc:nyc-wutang:t2:codex, w1:taste:nyc:nyc-wutang:t3:codex, w1:taste:stl:stl-bigthief:t1:codex, w1:taste:stl:stl-bigthief:t3:codex, w1:taste:stl:stl-cedric:t2:codex, w1:taste:stl:stl-chuckberry:t2:codex, w1:taste:stl:stl-chuckberry:t4:codex, w1:taste:stl:stl-jason:t1:codex, w1:taste:stl:stl-jason:t3:codex, w1:taste:stl:stl-jason:t4:codex, w1:taste:stl:stl-jayz:t1:codex, w1:taste:stl:stl-jayz:t3:codex, w1:taste:stl:stl-jayz:t4:codex, w1:taste:stl:stl-morganwallen:t2:codex, w1:taste:stl:stl-morganwallen:t4:codex, w1:taste:stl:stl-sza:t1:codex, w1:taste:stl:stl-sza:t3:codex, w1:taste:stl:stl-sza:t4:codex, w1:taste:stl:stl-taylorswift:t1:codex, w1:taste:stl:stl-taylorswift:t2:codex, w1:taste:stl:stl-wilco:t3:codex, w1:taste:stl:stl-wilco:t4:codex
+   redo w1:city:nyc:-:h00:codex -> ok, items ['agent_message'], tools None, 12 names
+   redo w1:city:nyc:-:h03:codex -> ok, items ['agent_message'], tools None, 12 names
+   redo w1:city:nyc:-:h05:codex -> ok, items ['agent_message'], tools None, 12 names
+   redo w1:city:stl:-:h00:codex -> ok, items ['agent_message'], tools None, 12 names
+   redo w1:city:nyc:-:h07:codex -> ok, items ['agent_message'], tools None, 12 names
+   redo w1:city:stl:-:h01:codex -> ok, items ['agent_message'], tools None, 12 names
+   redo w1:city:stl:-:h08:codex -> ok, items ['agent_message'], tools None, 12 names
+   redo w1:city:stl:-:h10:codex -> ok, items ['agent_message', 'command_execution'], tools None, 12 names
+   redo w1:city:stl:-:w01:codex -> ok, items ['agent_message'], tools None, 12 names
+   redo w1:city:stl:-:h12:codex -> ok, items ['agent_message'], tools None, 12 names
+   redo w1:city:stl:-:w02:codex -> ok, items ['agent_message'], tools None, 12 names
+   redo w1:taste:nyc:nyc-badbunny:t1:codex -> ok, items ['agent_message'], tools None, 12 names
+   redo w1:taste:nyc:nyc-kendrick:t1:codex -> ok, items ['agent_message'], tools None, 12 names
+   redo w1:taste:nyc:nyc-newjeans:t1:codex -> ok, items ['agent_message'], tools None, 12 names
+   redo w1:taste:nyc:nyc-rosalia:t4:codex -> ok, items ['agent_message'], tools None, 12 names
+   redo w1:taste:nyc:nyc-rosalia:t2:codex -> ok, items ['agent_message'], tools None, 11 names
+   redo w1:taste:nyc:nyc-stapleton:t4:codex -> ok, items ['agent_message'], tools None, 11 names
+   redo w1:taste:nyc:nyc-stapleton:t3:codex -> ok, items ['agent_message'], tools None, 10 names
+   redo w1:taste:nyc:nyc-wutang:t2:codex -> ok, items ['agent_message'], tools None, 8 names
+   redo w1:taste:nyc:nyc-taylorswift:t3:codex -> ok, items ['agent_message'], tools None, 10 names
+   redo w1:taste:nyc:nyc-wutang:t3:codex -> ok, items ['agent_message'], tools None, 8 names
+   redo w1:taste:stl:stl-bigthief:t3:codex -> ok, items ['agent_message'], tools None, 6 names
+   redo w1:taste:stl:stl-bigthief:t1:codex -> ok, items ['agent_message'], tools None, 12 names
+   redo w1:taste:stl:stl-cedric:t2:codex -> ok, items ['agent_message', 'command_execution'], tools None, 10 names
+   redo w1:taste:stl:stl-chuckberry:t4:codex -> ok, items ['agent_message'], tools None, 12 names
+   redo w1:taste:stl:stl-chuckberry:t2:codex -> ok, items ['agent_message', 'command_execution'], tools None, 9 names
+   redo w1:taste:stl:stl-jason:t1:codex -> ok, items ['agent_message'], tools None, 12 names
+   redo w1:taste:stl:stl-jason:t3:codex -> ok, items ['agent_message', 'command_execution'], tools None, 12 names
+   redo w1:taste:stl:stl-jason:t4:codex -> ok, items ['agent_message'], tools None, 12 names
+   redo w1:taste:stl:stl-jayz:t1:codex -> ok, items ['agent_message'], tools None, 12 names
+   redo w1:taste:stl:stl-jayz:t4:codex -> ok, items ['agent_message'], tools None, 12 names
+   redo w1:taste:stl:stl-jayz:t3:codex -> ok, items ['agent_message'], tools None, 6 names
+   redo w1:taste:stl:stl-morganwallen:t4:codex -> ok, items ['agent_message'], tools None, 10 names
+   redo w1:taste:stl:stl-morganwallen:t2:codex -> ok, items ['agent_message'], tools None, 12 names
+   redo w1:taste:stl:stl-sza:t3:codex -> ok, items ['agent_message'], tools None, 12 names
+   redo w1:taste:stl:stl-sza:t1:codex -> ok, items ['agent_message'], tools None, 12 names
+   redo w1:taste:stl:stl-taylorswift:t1:codex -> ok, items ['agent_message'], tools None, 12 names
+   redo w1:taste:stl:stl-sza:t4:codex -> ok, items ['agent_message'], tools None, 10 names
+   redo w1:taste:stl:stl-wilco:t3:codex -> ok, items ['agent_message'], tools None, 12 names
+   redo w1:taste:stl:stl-wilco:t4:codex -> ok, items ['agent_message'], tools None, 12 names
+   redo w1:taste:stl:stl-taylorswift:t2:codex -> ok, items ['agent_message', 'command_execution'], tools None, 8 names
+   marked 41 old lines superseded_by
+runs/wall-smoke.jsonl    codex records    1, contaminated   0 (already superseded 0), unresolved ids 0
+runs/fresh.v0.jsonl      codex records    7, contaminated   0 (already superseded 0), unresolved ids 0
+runs/meter.jsonl         codex records   40, contaminated   0 (already superseded 0), unresolved ids 0
+runs/fresh.jsonl         codex records  119, contaminated   0 (already superseded 0), unresolved ids 0
+codex_answers.jsonl      codex records  136, contaminated   8 (already superseded 8), unresolved ids 0
+runs/wall-1.jsonl        codex records  161, contaminated  41 (already superseded 41), unresolved ids 0
+runs/wall-smoke.jsonl    codex records    1, contaminated   0 (already superseded 0), unresolved ids 0
+runs/fresh.v0.jsonl      codex records    7, contaminated   0 (already superseded 0), unresolved ids 0
+runs/meter.jsonl         codex records   40, contaminated   0 (already superseded 0), unresolved ids 0
+runs/fresh.jsonl         codex records  119, contaminated   0 (already superseded 0), unresolved ids 0
+wrote ../data/walls/wall-1.json: 22 entries, 240 answers, 0.43 MB
+  stl {"city/claude": 20, "city/codex": 20, "taste/claude": 40, "taste/codex": 40}
+  nyc {"city/claude": 20, "city/codex": 20, "taste/claude": 40, "taste/codex": 40}
+wrote ../data/walls/census.json: 2 entries, 259 answers, 0.45 MB
+  stl {"census/anthropic": 64, "census/codex": 64, "census/gemini": 3}
+  nyc {"census/anthropic": 64, "census/codex": 64}
+hidden-gem asks naming the census gem, per provider (16 asks per city; from stored output only)
+  Claude   stl: Gioia's Deli in 13 of 16 hidden-gem asks stored (named first in 1; census L2 rule 13; 0 without a parsed list) · plain asks 11 of 14 · model claude-sonnet-5-5
+  Claude   nyc: Sripraphai in 11 of 16 hidden-gem asks stored (named first in 6; census L2 rule 11; 0 without a parsed list) · plain asks 1 of 14 · model claude-sonnet-5-5
+  ChatGPT  stl: Gioia's Deli in 1 of 16 hidden-gem asks stored (named first in 0; census L2 rule 1; 0 without a parsed list) · plain asks 6 of 14 · model gpt-5.6-terra
+    GEM_GPT = 1 of 16 asked (stl, Gioia's Deli; 16 planned)
+  ChatGPT  nyc: Sripraphai in 0 of 16 hidden-gem asks stored (named first in 0; census L2 rule 0; 0 without a parsed list) · plain asks 0 of 14 · model gpt-5.6-terra
+    GEM_GPT_NYC = 0 of 16 asked (nyc, Sripraphai; 16 planned)
+  Gemini   stl: Gioia's Deli in 0 of 3 hidden-gem asks stored (named first in 0; census L2 rule 0; 0 without a parsed list) · plain asks 0 of 0 · model gemini-3.8-flash
+    GEM_GEM = 0 of 3 asked (stl, Gioia's Deli; 16 planned)
+  Gemini   nyc: Sripraphai in 0 of 0 hidden-gem asks stored (named first in 0; census L2 rule 0; 0 without a parsed list) · plain asks 0 of 0 · model -
+    GEM_GEM_NYC = 0 of 0 asked (nyc, Sripraphai; 16 planned)
