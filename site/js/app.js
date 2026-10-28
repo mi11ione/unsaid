@@ -722,7 +722,7 @@
       openSheet(`<div class="cap">${esc(cityName)}</div><h1>Is this just obscure places?</h1>
         <div class="blk"><p>Partly, on purpose. ${EXPLAIN} So less-known places rise when they fit you.</p>
           <p>But obscurity isn’t the test. Being named by an AI is: a place is crossed out because an AI named it, however famous or small it is.</p>
-          ${k12}${OV ? `<p>Similar tastes get similar places: ${word(OV.cluster_n)} of our ${esc(OV.city)} sets that love ${esc(OV.cluster)} share ${OV.cluster_min === OV.cluster_max ? OV.cluster_min : `${OV.cluster_min}–${OV.cluster_max}`} places pair by pair. Unrelated tastes share almost none (${OV.across_min === OV.across_max ? OV.across_min : `${OV.across_min}–${OV.across_max}`}).</p>` : ''}${P.map(t => `<p>${t}</p>`).join('')}</div>
+          ${k12}${OV ? `<p>Similar tastes get similar places: our ${word(OV.cluster_n)} ${esc(OV.cluster)} sets in ${esc(OV.city)} share ${OV.cluster_min === OV.cluster_max ? OV.cluster_min : `${OV.cluster_min}–${OV.cluster_max}`} places pair by pair. Across all ${OV.other_pairs} other pairs of our sets in the same city, the median is ${fmt1(OV.other_median)} (at most ${OV.other_max}).</p>` : ''}${P.map(t => `<p>${t}</p>`).join('')}</div>
         ${T.length ? `<details class="log"><summary>The numbers</summary><div class="logbody">${T.map(t => `<div>${t}</div>`).join('')}</div></details>` : ''}`);
     }
 
