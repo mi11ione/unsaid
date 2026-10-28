@@ -18,6 +18,7 @@ Pipeline for each raw AI-named string r, against the fixed pool U (Qloo places) 
 Unresolved names that strike nothing stay on the wall greyed out ("not found in Qloo").
 """
 import difflib
+import hashlib
 import math
 import re
 import unicodedata
@@ -43,6 +44,7 @@ BRAND_WEAK = set("""the a an and of at on in by for with to n little big old new
 blue red green black white golden gold royal grand upper lower east west north south good great happy lucky sweet
 fine hot cool local wild first last main corner city town street park""".split())   # never fire R5 alone
 
+CORP_SUFFIX = re.compile(r"(?:\s+(?:and\s+)?(?:ltd|llc|inc|co|corp)\b)+$")
 SPLIT_HOST = re.compile(r"\s+(?:at|inside|@|in the|within)\s+|\s+[-–—|]\s+|\s*\(")
 SPLIT_ON_SUFFIX = re.compile(r"\s+on (?:the )?\w+(?: \w+)?$")
 
@@ -53,26 +55,38 @@ COMPOUNDS = [
 ]
 
 
-@lru_cache(maxsize=1 << 16)
+LONG = 256    # (29 Oct, memory) answer texts are kilobytes: memoising them filled the caches with copies
+
+
 def fold(s):
+    return _fold_c(s) if len(s) <= LONG else _fold_c.__wrapped__(s)
+
+
+def norm(s):
+    return _norm_c(s) if len(s) <= LONG else _norm_c.__wrapped__(s)
+
+
+@lru_cache(maxsize=1 << 13)
+def _fold_c(s):
     s = unicodedata.normalize("NFKD", s)
     s = "".join(c for c in s if not unicodedata.combining(c))
     return s.lower().replace("’", "'").replace("‘", "'").replace("`", "'")
 
 
-@lru_cache(maxsize=1 << 16)
-def norm(s):
-    """Lower-case, accents folded, &/+ -> and, possessive 's and apostrophes dropped,
-    punctuation to spaces, compounds joined, leading 'the' dropped."""
+@lru_cache(maxsize=1 << 13)
+def _norm_c(s):
+    """Lower-case, accents folded, &/+ -> and, apostrophes dropped (possessive 's keeps its s: "Marsha's" ==
+    "Marshas"), punctuation to spaces, compounds joined, leading 'the' and trailing corporate suffixes (Ltd, LLC,
+    Inc, Co, Corp) dropped."""
     s = fold(s)
     s = s.replace("&", " and ").replace("+", " and ")
-    s = re.sub(r"'s\b", "", s)
     s = s.replace("'", "")
     s = re.sub(r"[^a-z0-9]+", " ", s)
     s = re.sub(r"\s+", " ", s).strip()
     for pat, rep in COMPOUNDS:
         s = re.sub(pat, rep, s)
     s = re.sub(r"^the ", "", s)
+    s = CORP_SUFFIX.sub("", s) or s
     return s
 
 
@@ -84,7 +98,7 @@ def distinctive(s):
     return list(_distinctive(s))
 
 
-@lru_cache(maxsize=1 << 16)
+@lru_cache(maxsize=1 << 13)
 def _distinctive(s):
     t = [x for x in tokens(s) if x not in STOP]
     if not t:  # all generic or location words: fall back to non-generic tokens, keep city words
@@ -92,13 +106,13 @@ def _distinctive(s):
     return tuple(t)
 
 
-@lru_cache(maxsize=1 << 16)
+@lru_cache(maxsize=1 << 13)
 def acronym(s):
     t = [x for x in tokens(s) if x not in ("and", "of", "the", "a")]
     return "".join(x[0] for x in t) if len(t) >= 3 else None
 
 
-@lru_cache(maxsize=1 << 16)
+@lru_cache(maxsize=1 << 13)
 def split_parts(raw):
     """'Lobby Bar at Hotel Chelsea' -> head 'Lobby Bar', host 'Hotel Chelsea'. 'Charlie Gitto's on the Hill' -> head."""
     f = fold(raw)
@@ -116,7 +130,7 @@ def keys(name, akas=()):
     return _keys(name, tuple(akas))
 
 
-@lru_cache(maxsize=1 << 16)
+@lru_cache(maxsize=1 << 13)
 def _keys1(name):
     return _keys(name, ())
 
@@ -167,7 +181,7 @@ def tok_eq(a, b):
     return _fuzzy(a, b)
 
 
-@lru_cache(maxsize=1 << 18)
+@lru_cache(maxsize=1 << 15)
 def _fuzzy(a, b):
     """The same test as before, in the same argument order (ratio() is not symmetric). quick_ratio() is an exact
     upper bound on ratio(), so a pair it rules out could never pass."""
@@ -175,7 +189,7 @@ def _fuzzy(a, b):
     return m.quick_ratio() >= 0.85 and m.ratio() >= 0.85
 
 
-@lru_cache(maxsize=1 << 16)
+@lru_cache(maxsize=1 << 13)
 def bigrams(t):
     """A token's bigram multiset, as a dict."""
     out = {}
@@ -360,20 +374,24 @@ class PoolIndex:
 
 
 _POOL_CACHE = {}
+POOL_CACHE_MAX, MEMO_MAX = 4, 20000     # (29 Oct, Render 512 MB) a few pools, each memo bounded
 
 
 def pool_index(pool, aliases=None):
     """PoolIndex for this exact pool (ids, names, akas) and aliases, reused across requests (a small LRU)."""
     sig = (tuple((p["entity_id"], p["name"], tuple(p.get("akas") or ())) for p in pool),
            repr(sorted((aliases or {}).items())))
+    sig = hashlib.sha1(repr(sig).encode("utf-8", "replace")).hexdigest()    # the key, not a copy of every name
     idx = _POOL_CACHE.pop(sig, None) or PoolIndex(pool, aliases)
+    if len(idx.memo) > MEMO_MAX:
+        idx.memo.clear()
     _POOL_CACHE[sig] = idx
-    while len(_POOL_CACHE) > 16:
+    while len(_POOL_CACHE) > POOL_CACHE_MAX:
         _POOL_CACHE.pop(next(iter(_POOL_CACHE)))
     return idx
 
 
-@lru_cache(maxsize=1 << 16)
+@lru_cache(maxsize=1 << 13)
 def brand_seq_t(raw):
     return tuple(_brand_seq(raw))
 

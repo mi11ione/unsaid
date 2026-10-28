@@ -522,5 +522,7 @@ def to_contract(res, trace, c, ls, fake):
         "reverse_struck": d.get("reverse_struck"), "last_seen_dropped": d.get("last_seen_dropped"),
         "rescore": {label.get(k, k): {kk: _nan(vv) if isinstance(vv, float) else vv for kk, vv in v.items()}
                     for k, v in (d.get("rescore") or {}).items()},
-        "explain_page1": d.get("explain_page1"), "live_error": d.get("live_error")})
+        "explain_page1": d.get("explain_page1"), "live_error": d.get("live_error"),
+        "credits": {label.get(k, k): v for k, v in (d.get("credits") or {}).items()},
+        "generic_cut": d.get("generic_cut"), "chain_cut": d.get("chain_cut"), "eligible": d.get("eligible")})
     return out

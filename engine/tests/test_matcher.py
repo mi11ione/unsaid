@@ -78,10 +78,14 @@ class TestNormalisation(unittest.TestCase):
     def test_norm(self):
         self.assertEqual(M.norm("Barbès"), "barbes")
         self.assertEqual(M.norm("Olive + Oak"), M.norm("Olive and Oak"))
-        self.assertEqual(M.norm("Pappy's Smokehouse"), "pappy smokehouse")
+        self.assertEqual(M.norm("Pappy's Smokehouse"), "pappys smokehouse")     # a possessive keeps its s (29 Oct)
         self.assertEqual(M.norm("Sugarfire Smoke House"), "sugarfire smokehouse")
-        self.assertEqual(M.norm("Phil's Bar-B-Que"), "phil bbq")
-        self.assertEqual(M.norm("O'Connell's Pub"), "oconnell pub")
+        self.assertEqual(M.norm("Phil's Bar-B-Que"), "phils bbq")
+        self.assertEqual(M.norm("O'Connell's Pub"), "oconnells pub")
+        self.assertEqual(M.norm("Marsha's"), M.norm("Marshas Ltd"))              # corporate suffixes dropped
+        self.assertEqual(M.norm("Acme Pizza Co."), "acme pizza")
+        self.assertEqual(M.norm("Smith & Co"), "smith")
+        self.assertEqual(M.norm("Blue Co Coffee"), "blue co coffee")             # only a trailing suffix
 
     def test_acronym(self):
         self.assertEqual(M.acronym("Please Don't Tell"), "pdt")
@@ -151,6 +155,11 @@ class TestContainmentNeedsEvidence(unittest.TestCase):
     def test_short_lone_token_doesnt_contain(self):
         self.assertEqual(self.strike("Pat's Bar & Grill", ["Pat Connolly Tavern", "Pat's Bar and Grill"]),
                          ["Pat's Bar and Grill"])
+
+    def test_apostrophe_and_corporate_suffix(self):
+        self.assertEqual(self.strike("Marsha's", ["Marshas Ltd", "Marsh Tavern"]), ["Marshas Ltd"])
+        self.assertEqual(self.strike("Marshas", ["Marsha's"]), ["Marsha's"])
+        self.assertEqual(self.strike("Gioia's Deli", ["Gioias Deli LLC"]), ["Gioias Deli LLC"])
 
     def test_real_one_word_brands_still_contain(self):
         self.assertEqual(self.strike("Gioia's", ["Gioia's Deli Downtown"]), ["Gioia's Deli Downtown"])

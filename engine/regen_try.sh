@@ -11,7 +11,7 @@
 # 4. The 10 try-these files + index.json -> <main tree>/site/data/live (gitignored; only those 11 files).
 # 5. Gate A (k2a_lift: taste vs popularity + the two strangers) and gate B (k3_survivors: yield), --frozen.
 # 6. Summary: card changes vs the .bak, cards the search-on lane alone struck (the same 20 sets without
-#    search-on walls, cache only), distinct places in 140 cards, max repeats per city, Cedric's seven.
+#    search-on walls, cache only), distinct places in 140 cards, max repeats per city, Cedric's seven, love balance.
 #
 # Env: REGEN_REF (origin/main), REGEN_WT (~/Desktop/qloo/wt-regen), REGEN_FRESH (~/Desktop/qloo/private/
 # fresh20-28oct), REGEN_BUDGET (Qloo calls for precompute, 150), REGEN_GATE_BUDGET (per gate, 60).
@@ -136,5 +136,15 @@ else:
     print("search-on ablation incomplete (%d of %d sets)" % (len(ns), len(new)))
 if "stl-cedric" in new:
     print("Cedric's seven: " + "; ".join(n for _, n in new["stl-cedric"][1]))
+over, uncred = [], []                      # love balance: <= 3 cards per love, >= 1 per live love
+for sid in new:
+    r = json.load(open(os.path.join(stage, "%s_%s.json" % (new[sid][0], sid))))["result"]
+    cr = r["diag"].get("credits") or {}
+    if cr and max(cr.values()) > 3:
+        over.append("%s %s" % (sid, cr))
+    uncred += ["%s: %s" % (sid, l["label"]) for l in r["loves"] if not l.get("dead") and not cr.get(l["label"])]
+print("balance: %d sets with a love over 3 cards%s; %d live loves credit no card%s" % (
+    len(over), (" (" + "; ".join(over) + ")") if over else "", len(uncred),
+    (" (" + "; ".join(uncred) + ")") if uncred else ""))
 PY
 say "done (worktree kept for inspection: $WT; logs in $OUT)"

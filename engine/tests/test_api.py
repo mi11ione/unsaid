@@ -1,5 +1,6 @@
 """Offline tests for the engine API (CONTRACT.md) and the client rules (UNSAID.md §3.1-3.3, §3.5). Fake mode only.
   python3 -I tests/test_api.py"""
+import collections
 import hashlib
 import json
 import os
@@ -58,9 +59,20 @@ class TestRunUnsaid(Tmp):
             self.assertGreaterEqual(c["rating"], 4.3 - 1e-4)
             self.assertTrue(c["open"])
             self.assertIn(c["because"], [l["label"] for l in r["loves"]])
-        # one ordering: every card scores at least as high as every reserve; every card has a for-you rank
+        # one ordering, balanced (29 Oct): no love credits more than 3 cards, each live love credits one when it can;
+        # a reserve outscores no card of a love below the cap; reserves in score order
+        credits = collections.Counter(c["because"] for c in r["picks"])
+        live = [l["label"] for l in r["loves"] if not l.get("dead")]
+        if all(credits[x] for x in live):          # a love that can credit nothing lets the others fill by score
+            self.assertLessEqual(max(credits.values()), E.CFG["LOVE_CAP"])
+        else:
+            self.assertEqual(sum(credits.values()), E.CFG["N_CARDS"])
+        self.assertEqual(r["diag"]["credits"], dict(credits))
         if r["reserves"]:
-            self.assertGreaterEqual(min(c["score"] for c in r["picks"]), max(c["score"] for c in r["reserves"]))
+            for x in r["reserves"]:
+                under = [c["score"] for c in r["picks"] if credits[c["because"]] < E.CFG["LOVE_CAP"]]
+                if credits[x["because"]] < E.CFG["LOVE_CAP"] and under:
+                    self.assertGreaterEqual(min(under), x["score"])
             self.assertEqual([c["score"] for c in r["reserves"]], sorted([c["score"] for c in r["reserves"]], reverse=True))
         for c in r["picks"] + r["reserves"]:
             self.assertFalse(c["tied"])
@@ -230,7 +242,7 @@ class TestWallCount(Tmp):
         r = api.run_unsaid("St. Louis", CEDRIC, mode="fake", qloo=self.q(), walls_path=p, gemini=False,
                            street_check=False)
         self.assertEqual(r["counts"]["wall"], 3)
-        self.assertEqual(r["diag"]["wall_names"], 8)     # distinct normalised strings (the two quote forms are one)
+        self.assertEqual(r["diag"]["wall_names"], 7)     # distinct normalised strings (Sweetie Pie's / Pie’s / Pies are one)
         self.assertTrue(all(w.get("place") for w in r["wall"]))
 
     def test_non_venue_is_dimmed_but_counted(self):
@@ -432,7 +444,7 @@ class TestLiveLaneNeverGatesCards(Tmp):
         api.LIVE_BUDGET_S = 0.2
         try:
             def too_slow(prompt):
-                _t.sleep(1.0)
+                _t.sleep(10.0)    # far past the budget even on a slow run (a daemon thread: never waited for)
                 return {"names": [{"name": "Anything"}]}
             r = api.run_unsaid("St. Louis", CEDRIC, mode="fake", qloo=self.q(), gemini=too_slow, street_check=False)
         finally:
@@ -594,6 +606,23 @@ class TestCardLines(unittest.TestCase):
         self.assertTrue(E.why_line("d", fit, pop, ids, {}, {}, True).startswith("fits you, outside the 20%"))
         for i in ids:
             self.assertLessEqual(len(E.why_line(i, fit, pop, ids, {}, {}, False)), 60)
+        # the anchor panel's tastes are samples from Qloo, not people
+        line = E.why_line("d", fit, pop, ids, {"d": 0.9}, {"d": (12, 97)}, False, "sample tastes on Qloo")
+        self.assertEqual(line, "only 12 of 97 sample tastes on Qloo put it in their top 30%")
+        self.assertLessEqual(len(line), 60)
+
+    def test_chain_rule_reads_the_places_own_website(self):
+        mk = lambda i, n, w: {"entity_id": i, "name": n, "properties": {"website": w}}  # noqa: E731
+        pool = [mk("fw1", "First Watch", "https://www.firstwatch.com/locations/saint-ann/"),
+                mk("rb", "Rush Bowls", "https://rushbowls.com/st-louis"),
+                mk("bq", "Boqueria Soho", "https://boqueriarestaurant.com/location/nyc/soho/"),
+                mk("x1", "Ex Bar", "https://exbar.com/"), mk("x2", "Ex Bar Too", "https://exbar.com/"),
+                mk("x3", "Ex Bar Three", "https://exbar.com/"),
+                mk("p", "Pappy's Smokehouse", "https://pappyssmokehouse.com/"),
+                mk("f1", "Molasses Books", "https://facebook.com/molasses"),
+                mk("f2", "Eastwood", "https://facebook.com/eastwood"), mk("f3", "Joe", "https://facebook.com/joe"),
+                mk("l", "Locations Bar", "https://locationsbar.com/locations")]
+        self.assertEqual(sorted(E.chain_ids(pool, [p["entity_id"] for p in pool])), ["bq", "fw1", "rb", "x1", "x2", "x3"])
 
 
 if __name__ == "__main__":

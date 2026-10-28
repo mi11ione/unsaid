@@ -24,12 +24,15 @@ gastropub steakhouse steak seafood cuisine chef table tables`.split(/\s+/));
       .replace(/[’‘`]/g, "'");
   }
 
+  // matcher.py CORP_SUFFIX: trailing Ltd / LLC / Inc / Co / Corp ("Marshas Ltd" == "Marsha's")
+  const CORP_SUFFIX = /(?:\s+(?:and\s+)?(?:ltd|llc|inc|co|corp)\b)+$/;
   function norm(s) {
     s = fold(s).replace(/&/g, ' and ').replace(/\+/g, ' and ');
-    s = s.replace(/'s\b/g, '').replace(/'/g, '');
+    s = s.replace(/'/g, '');            // apostrophes dropped; a possessive keeps its s
     s = s.replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
     for (const [p, r] of COMPOUNDS) s = s.replace(p, r);
-    return s.replace(/^the /, '');
+    s = s.replace(/^the /, '');
+    return s.replace(CORP_SUFFIX, '') || s;
   }
   const tokens = s => { const n = norm(s); return n ? n.split(' ') : []; };
   function distinctive(s) {

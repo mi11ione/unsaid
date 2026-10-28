@@ -9,7 +9,7 @@ const M = require('../../site/js/matcher.js');
 const wall = JSON.parse(readFileSync('site/data/walls/stl.json', 'utf8'));
 const names = [...new Set(wall.answers.flatMap(a => a.names))];
 const extra = ["Charlie Gitto's on The Hill", 'Lobby Bar at Hotel Chelsea', 'Café Ñandú & Co.', "Pappy’s Smoke House", 'Bar-B-Que Joint',
-  'Saint Louis Bread Co.', 'The Mount Pleasant Tap Room', 'Gioia\'s Deli (hot salami sandwich)', 'BB\'s Jazz, Blues & Soups'];
+  'Saint Louis Bread Co.', 'The Mount Pleasant Tap Room', 'Gioia\'s Deli (hot salami sandwich)', 'BB\'s Jazz, Blues & Soups', "Marsha's", 'Marshas Ltd', 'Acme Pizza Co.', 'Blue Co Coffee'];
 const all = names.concat(extra);
 const py = `
 import json, sys, difflib
@@ -29,7 +29,7 @@ all.forEach((n, i) => {
 P.pairs.forEach(([a, b], i) => { if (M.tokEq(a, b) !== P.tok[i]) { bad++; console.log('tok_eq', a, b); } });
 
 // dare-box cases: [pasted text, card names, expected hits]
-const cards = ["Gioia's Deli", 'Smoki O\'s', 'The Royale', 'Mekong Restaurant', 'Pho Grand', "Pappy's Smokehouse", null];
+const cards = ["Marshas Ltd", "Gioia's Deli", 'Smoki O\'s', 'The Royale', 'Mekong Restaurant', 'Pho Grand', "Pappy's Smokehouse", null];
 const cases = [
   ['Try Gioias deli on the Hill, then Pho Grand.', ["Gioia's Deli", 'Pho Grand']],
   ['1. **Smoki O’s** (North Broadway): rib tips', ['Smoki O\'s']],
@@ -39,6 +39,8 @@ const cases = [
   ['Nothing here but noodles and a flush.', []],
   ['Head to the Royale on Kingshighway', ['The Royale']],
   ['Mekong for banh mi', ['Mekong Restaurant']],
+  ["Marsha's, for the fried fish", ['Marshas Ltd']],                 // apostrophe + corporate suffix (29 Oct)
+  ['Marshas on Natural Bridge', ['Marshas Ltd']],
 ];
 for (const [t, want] of cases) {
   const got = M.find(t, cards).map(h => h.name);

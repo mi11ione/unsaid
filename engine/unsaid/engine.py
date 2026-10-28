@@ -18,10 +18,13 @@
   because         the live love whose order_i ranks x best (no explainability shares anywhere)
   CAP             base + entity loves + filter.popularity.max removing |struck| members of U (1 call)
 """
+import collections
+import hashlib
 import json
 import math
 import os
 import re
+import sys
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -45,6 +48,11 @@ CFG = {
     "CHUNK": 48, "ANCHORS": 2,   # 48 of U + 2 anchors = 50 = take
     "RRF_K": 60, "HOLD_FRAC": 1.0 / 3,
     "N_CARDS": 7, "N_RESERVES": 3,
+    # Balance (29 Oct): one love may credit at most LOVE_CAP cards, and every live love credits at least one when it
+    # can. A love may also credit a place its order ranks in its top ALT_CREDIT_FRAC (not only the love that ranks
+    # it best). A dish love credits only places Qloo tags with the dish. GENERIC_SHARE: a place that this share of
+    # the prior's tastes (the anchor panel) put in their top 30% fits everyone, not you, and is never a card.
+    "LOVE_CAP": 3, "ALT_CREDIT_FRAC": 0.3, "GENERIC_SHARE": 0.6, "BALANCE_SCAN": 60,
     "SEARCH_RADIUS_MI": 15,      # C7 city-scoped /search
     # C7 budget (gate F live: a ~700-name NYC wall sent 216 /search calls). Only names R1-R5 did not strike, that
     # share a RARE distinctive token with U, are searched, after the veto candidates (names whose only strike is a
@@ -1033,7 +1041,7 @@ def not_restaurant_or_bar(e):
     tag count (a /search result's tags don't change within the cache TTL)."""
     k = (e.get("entity_id"), len(e.get("tags") or ()), tuple(CFG["EXCLUDE_TAG_PATTERNS"]))
     if k not in _NRB:
-        if len(_NRB) > 50000:
+        if len(_NRB) > 20000:
             _NRB.clear()
         _NRB[k] = _not_restaurant_or_bar(e)
     return _NRB[k]
@@ -1104,18 +1112,36 @@ REV_WINDOW_EXTRA = 1          # the informative tokens may sit one word further 
 REV_STOP_DF = 0.005           # a non-name token in >= 0.5% of the wall's answers is not evidence of a place
 
 
+_ATOK = {}            # (29 Oct, memory + CPU) sha1(answer) -> its tokens and non-name tokens, interned; bounded
+_ATOK_MAX = 6000      # ~2 cities' walls; each set's wall is the city's answers plus a few of its own
+
+
+def _answer_toks(a):
+    """(token list, set of the tokens left once every place the answer names is removed), once per distinct answer
+    across runs: the walls' texts are kilobytes and every set's wall repeats its city's answers."""
+    text = answer_text(a)
+    names = [nm.get("name") if isinstance(nm, dict) else nm for nm in a.get("names") or a.get("places") or []]
+    k = hashlib.sha1((text + "\x00" + "\x00".join(n for n in names if n)).encode("utf-8", "replace")).digest()
+    got = _ATOK.get(k)
+    if got is None:
+        if len(_ATOK) >= _ATOK_MAX:
+            _ATOK.clear()
+        rest = M.fold(text)
+        for nm in names:
+            if nm:
+                rest = rest.replace(M.fold(nm), " ")
+        got = (tuple(sys.intern(t) for t in M.tokens(text)), frozenset(sys.intern(t) for t in M.tokens(rest)))
+        _ATOK[k] = got
+    return got
+
+
 def derive_rev_stop(answers):
     """The walls' most frequent NON-name tokens (neighbourhoods, list keys, prose): each answer's text with every
     place it names removed, counted once per answer."""
     df, n = {}, 0
     for a in answers:
-        text = M.fold(answer_text(a))
-        for nm in a.get("names") or a.get("places") or []:
-            nm = nm.get("name") if isinstance(nm, dict) else nm
-            if nm:
-                text = text.replace(M.fold(nm), " ")
         n += 1
-        for t in set(M.tokens(text)):
+        for t in _answer_toks(a)[1]:
             df[t] = df.get(t, 0) + 1
     cut = max(2, int(REV_STOP_DF * n))
     return {t for t, c in df.items() if c >= cut}
@@ -1146,26 +1172,38 @@ class _RIndex(list):
         return memo[t]
 
 
-_RCACHE = []        # [(answers kept alive, its index)]: the dated wall's reverse index is built once per snapshot
+_RCACHE = []        # [(content key, index)], most recent last: the dated wall's reverse index, built once per wall
+_RCACHE_MAX = 2     # (29 Oct, Render 512 MB) one per city/set wall in use; the old identity key added one per run
 _REV_STOP = {"stop": set()}   # the latest wall-derived stoplist; small indexes (street, live) reuse it
 
 
+def _answers_key(answers):
+    """A stable content key for a list of answers (each run loads new objects, so identity never repeats)."""
+    h = hashlib.sha1()
+    for a in answers:
+        h.update(answer_text(a).encode("utf-8", "replace"))
+        h.update(b"\x00")
+    return h.hexdigest()
+
+
 def reverse_index_cached(answers):
-    ids = tuple(map(id, answers))
-    for kept, ri in _RCACHE:
-        if len(kept) == len(answers) and tuple(map(id, kept)) == ids:
+    key = _answers_key(answers)
+    for k, (kk, ri) in enumerate(_RCACHE):
+        if kk == key:
+            _RCACHE.append(_RCACHE.pop(k))
             _REV_STOP["stop"] = ri.stop
             return ri
     ri = reverse_index(answers, derive=True)
-    _RCACHE.append((list(answers), ri))
-    del _RCACHE[:-8]
+    _RCACHE.append((key, ri))
+    del _RCACHE[:-_RCACHE_MAX]
     return ri
 
 
 def reverse_index(answers, derive=False, stop=None):
     """derive=True: the stoplist comes from these answers (a wall); else the given one or the latest wall's."""
-    ri = _RIndex((i, _Toks(M.tokens(answer_text(a)))) for i, a in enumerate(answers))
-    ri.seq = {i: M.tokens(answer_text(a)) for i, a in enumerate(answers)}
+    toks = [_answer_toks(a)[0] for a in answers]
+    ri = _RIndex((i, _Toks(t)) for i, t in enumerate(toks))
+    ri.seq = {i: list(t) for i, t in enumerate(toks)}
     ri.raw = {i: answer_text(a) for i, a in enumerate(answers)}
     ri.names = {i: [n.get("name") if isinstance(n, dict) else n for n in (a.get("names") or a.get("places") or [])]
                 for i, a in enumerate(answers)}
@@ -1388,6 +1426,43 @@ def hood_of(e, centroids, max_mi=1.5):
     return "", None
 
 
+# ---------------------------------------------------------------- chains
+_BRANCH_SEG = {"location", "locations", "store", "stores"}
+_CITY_SEG = {"st-louis", "saint-louis", "stl", "new-york", "new-york-city", "nyc"}
+
+
+def _site(e):
+    """(domain without www., path segments) of a place's own website (Qloo's website property)."""
+    w = (prop(e, "website") or "").strip().lower()
+    if not w:
+        return "", []
+    m = re.match(r"^(?:[a-z]+://)?([^/?#]+)([^?#]*)", w)
+    if not m:
+        return "", []
+    return re.sub(r"^www\.", "", m.group(1)), [x for x in m.group(2).split("/") if x]
+
+
+def chain_ids(pool, ids):
+    """Places run by a multi-location brand (29 Oct), from Qloo's own website field, no extra calls:
+      a branch page: the website is a location/store page of a brand site (".../locations/brentwood-square/",
+        ".../location/nomad/") or the brand site's page for this city ("rushbowls.com/st-louis");
+      or one domain, one brand: >= 3 places in the pool share the website's domain and the name's first word
+        (First Watch x4 on firstwatch.com). Social and ordering sites never count: their names differ.
+    Local groups with branch pages (Boqueria) go too: a card is a place, not a brand."""
+    site = {e["entity_id"]: _site(e) for e in pool}
+    first = {e["entity_id"]: (M.distinctive(e.get("name") or "") or [""])[0] for e in pool}
+    brand = collections.Counter((site[i][0], first[i]) for i in site if site[i][0] and first[i])
+    out = set()
+    for i in ids:
+        d, segs = site.get(i, ("", []))
+        if not d:
+            continue
+        if any(x in _BRANCH_SEG for x in segs[:-1]) or (len(segs) == 1 and segs[0] in _CITY_SEG) or \
+                brand[(d, first.get(i))] >= 3:
+            out.add(i)
+    return out
+
+
 # ---------------------------------------------------------------- card lines
 _CUT_POSSESSIVE = re.compile(r"(?<=[^\W\dsS_])['\u2019]$")
 
@@ -1402,11 +1477,12 @@ def display_name(name):
     return out
 
 
-def why_line(i, fit, pop_ord, ids, everyone, counts, flat):
+def why_line(i, fit, pop_ord, ids, everyone, counts, flat, tastes="other tastes"):
     """Why this card won, in <= 60 chars, from the score's own numbers (the card already shows "#f for you" and
     "#p for anyone"). lift = fit for you - max(popularity, fit for everyone); the larger of the two is the bar it
     cleared, and the line names that bar:
-      fit for everyone  -> "only 1 of 9 other tastes put it in their top 30%" (the prior's own counts)
+      fit for everyone  -> "only 9 of 97 sample tastes on Qloo put it in their top 30%" (the prior's own counts;
+                           the anchor panel's tastes are samples from Qloo, not users; older set priors: "other tastes")
       popularity        -> "fits you better than 27 of the 30 more popular places"
       flat (taste barely moves the order; the 20% most popular are dropped) -> said so."""
     if flat:
@@ -1419,8 +1495,8 @@ def why_line(i, fit, pop_ord, ids, everyone, counts, flat):
         if n == 1:
             return "%s the top %d%% of the one other taste that rates it" % ("in" if hits else "not in", top)
         if hits == 0:
-            return "none of %d other tastes put it in their top %d%%" % (n, top)
-        return "%s%d of %d other tastes put it in their top %d%%" % ("only " if 3 * hits <= n else "", hits, n, top)
+            return "none of %d %s put it in their top %d%%" % (n, tastes, top)
+        return "%s%d of %d %s put it in their top %d%%" % ("only " if 3 * hits <= n else "", hits, n, tastes, top)
     more = [j for j in ids if pop_ord[j] < pop_ord[i]]
     if not more:
         return "the most popular place here, and it fits you"
@@ -1456,9 +1532,11 @@ def because_detail(i, love, byid, ids, orders, tied, dish_tags, dish_tagged):
     txt = love["text"]
     if txt in dish_tags:
         return ("on Qloo's %s list" % (love.get("name") or txt).lower()) if i in dish_tagged.get(txt, ()) else None
-    key = (id(orders), txt)
-    if key not in _DETAIL:
-        _DETAIL.clear()
+    key = txt
+    if _DETAIL.get("orders") is not orders or key not in _DETAIL:    # one run's orders (held: an id can be reused)
+        if _DETAIL.get("orders") is not orders:
+            _DETAIL.clear()
+            _DETAIL["orders"] = orders
         o = orders[txt]
         top = [x for x in ids if x not in tied[txt]]
         top = sorted(top, key=lambda x: o[x])[:max(5, len(ids) // 4)]
@@ -1510,6 +1588,8 @@ def _anchor_shares(doc, love_ids):
     of this query's loves are left out. Returns ({place: share}, {place: (hits, n)}, median share, anchors used)."""
     keep = frozenset(k for k, a in enumerate(doc["anchors"]) if a.get("live", True) and a["id"] not in love_ids)
     memo = doc.setdefault("_memo", {})
+    if keep not in memo and len(memo) >= 8:      # one entry per distinct set of left-out anchors: bounded
+        memo.clear()
     if keep not in memo:
         share, counts = {}, {}
         top, miss = doc.get("top") or {}, doc.get("miss") or {}
@@ -1833,6 +1913,13 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
     need = n_live - 1 if n_live >= 2 else 0
     eligible = [i for i in S if (holds[i] is None or holds[i] >= need)
                 and (not live or any(i not in tied[l["text"]] for l in live))]
+    generic = {i for i in eligible if i in ev_counts and ev_counts[i][1] and
+               ev_counts[i][0] >= CFG["GENERIC_SHARE"] * ev_counts[i][1]}
+    chain = chain_ids(pool, eligible)
+    eligible = [i for i in eligible if i not in generic and i not in chain]
+    res["diag"]["generic_cut"] = len(generic)
+    res["diag"]["eligible"] = len(eligible)
+    res["diag"]["chain_cut"] = sorted(byid[i].get("name") or i for i in chain)
     if flat:
         keep_from = (1 - CFG["FLAT_POP_KEEP"]) * N        # drop the most popular 20 %
         order = sorted([i for i in eligible if pop_ord[i] > keep_from], key=lambda i: (fit[i], i))
@@ -1853,9 +1940,51 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
                                 if reverse_hit(byid[i].get("name"), rindex) is None])
         except Exception:
             pass
-    for i in order:
-        if len(selected) >= want:
-            break
+    # ---- credit: which love a card is "because". A love credits a place it scores (not tied); a dish love only a
+    # place Qloo tags with the dish. The best-ranking love credits it; at the cap, another love that ranks it in its
+    # top ALT_CREDIT_FRAC may.
+    love_by = {l["text"]: l for l in live}
+
+    def can_credit(i, l):
+        if i in tied[l["text"]]:
+            return False
+        if l["text"] in dish_tags:
+            return any((t.get("id") or "") in dish_tags[l["text"]] for t in byid[i].get("tags") or []
+                       if isinstance(t, dict))
+        return True
+
+    alt_cut = math.ceil(N * CFG["ALT_CREDIT_FRAC"])
+
+    _cr = {}
+
+    def credits(i):
+        """Loves that may credit i, best first: [(rank, text, alt_ok)] (memoised: it never depends on the counts)."""
+        if i not in _cr:
+            out = sorted((orders[l["text"]][i], l["text"]) for l in live if can_credit(i, l))
+            _cr[i] = [(r, t, k == 0 or r <= alt_cut) for k, (r, t) in enumerate(out)]
+        return _cr[i]
+
+    cap = CFG["LOVE_CAP"] if len(live) >= 2 else None
+    credit_of, cnt = {}, collections.Counter()
+
+    def credit_for(i, counts):
+        """-> (love text or None, fits under the cap)."""
+        cs = credits(i)
+        if not cs:
+            return None, not live           # no love can explain it: never a card when loves are live
+        if cap is None or counts[cs[0][1]] < cap:
+            return cs[0][1], True
+        for r, t, ok in cs[1:]:
+            if ok and counts[t] < cap:
+                return t, True
+        return cs[0][1], False
+
+    checked = {}
+
+    def check(i):
+        """The reverse check and the last-seen check, once per place."""
+        if i in checked:
+            return checked[i]
         e = byid[i]
         h = reverse_hit(e.get("name"), rindex)
         if h is not None:
@@ -1863,7 +1992,8 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
             struck.setdefault(i, []).append(("reverse", "REV"))
             emit("strike", {"name": e.get("name"), "norm": M.norm(e.get("name") or ""), "outcome": "struck",
                             "reason": "reverse check", "qloo_id": i})
-            continue
+            checked[i] = False
+            return False
         ok, why = last_seen_local(e, hours_known)
         info = {"checked_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
                 "how": "hours (Qloo)" if ok else "failed: %s" % why}
@@ -1883,15 +2013,87 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
             unseen.append({"id": i, "name": e.get("name"), "why": why, "last_seen": info})
             emit("strike", {"name": e.get("name"), "norm": M.norm(e.get("name") or ""), "outcome": "struck",
                             "reason": "last seen: failed", "qloo_id": i, "how": info.get("how")})
-            continue
+            checked[i] = False
+            return False
         seen_info[i] = info
-        selected.append(i)
+        checked[i] = True
+        return True
+
+    N7, NR = CFG["N_CARDS"], CFG["N_RESERVES"]
+    picks0, blocked, k = [], [], 0      # blocked: places whose love was at the cap (not yet checked)
+    while len(picks0) < N7 and k < len(order):
+        i = order[k]
+        k += 1
+        c, ok = credit_for(i, cnt)
+        if c is None and live:
+            continue
+        if not ok:
+            blocked.append(i)
+            continue
+        if check(i):
+            picks0.append(i)
+            credit_of[i] = c
+            cnt[c] += 1
+    # every live love credits at least one card when a passing place can be credited to it: its best-ranked place
+    # (else one its order ranks in its top ALT_CREDIT_FRAC) replaces the lowest-scored card of a love that has two+
+    if cap is not None and not all_dead:
+        for l in live:
+            t = l["text"]
+            if cnt[t]:
+                continue
+            rest = [i for i in order if i not in credit_of and checked.get(i) is not False]
+            best = [i for i in rest if credits(i) and credits(i)[0][1] == t]
+            alt = [i for i in rest if i not in best and any(tt == t and ok for _, tt, ok in credits(i)[1:])]
+            cand, tries = None, 0
+            for i in best + alt:
+                if tries >= CFG["BALANCE_SCAN"]:
+                    break
+                tries += 1
+                if check(i):
+                    cand = i
+                    break
+            victims = [x for x in picks0 if cnt[credit_of[x]] > 1]
+            if cand is None or (len(picks0) >= N7 and not victims):
+                continue
+            if len(picks0) >= N7:
+                v = victims[-1]
+                picks0.remove(v)
+                cnt[credit_of.pop(v)] -= 1
+            picks0.append(cand)
+            credit_of[cand] = t
+            cnt[t] += 1
+    # too few under the cap (a love that can credit nothing): fill by score
+    for i in order:
+        if len(picks0) >= N7:
+            break
+        if i in credit_of or (live and not credits(i)):
+            continue
+        if check(i):
+            picks0.append(i)
+            credit_of[i] = credits(i)[0][1] if credits(i) else None
+            cnt[credit_of[i]] += 1
+    picks0.sort(key=order.index)
+    # reserves: the next places that keep the cap when they rise into any card's slot; else the next by score
+    res0 = []
+    for strict in (True, False):
+        for i in order:
+            if len(res0) >= NR:
+                break
+            if i in credit_of or (live and not credits(i)):
+                continue
+            c, ok = credit_for(i, cnt)
+            if (ok or not strict) and check(i):
+                res0.append(i)
+                credit_of[i] = c
+    selected = picks0 + res0
     centroids = [("osm", osm_hoods(city.get("key"))), ("pool", pool_hoods(pool))]
     hoods = {i: hood_of(byid[i], centroids) for i in selected}
-    picks, reserves = selected[:CFG["N_CARDS"]], selected[CFG["N_CARDS"]:]
+    picks, reserves = list(picks0), list(res0)
 
-    # ---- because-line: the live love whose order ranks x best (a tied order never explains)
+    # ---- because-line: the love credit_of assigned; else the live love whose order ranks x best (never a tied one)
     def because(i):
+        if i in credit_of:
+            return love_by.get(credit_of[i])
         best = None
         for l in live:
             if i in tied[l["text"]]:
@@ -1914,7 +2116,8 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
         is_tied = bool(live) and all(i in tied[l["text"]] for l in live)     # never true for a card
         ll = latlon(e) or (None, None)
         return {"id": i, "name": display_name(e.get("name")), "what": what_line(e), "score": score[i],
-                "why": why_line(i, fit, pop_ord, ids, everyone, ev_counts, flat),
+                "why": why_line(i, fit, pop_ord, ids, everyone, ev_counts, flat,
+                                "sample tastes on Qloo" if prior_diag.get("method") == "anchors" else "other tastes"),
                 "because_detail": because_detail(i, b, byid, ids, orders, tied, dish_tags, dish_tagged), "neighbourhood_src": hood_src,
                 "last_seen": seen_info.get(i),
                 "because": b["text"] if b else None, "because_label": (b.get("name") or b["text"]) if b else None,
@@ -1935,8 +2138,13 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
         b = {"card_id": x, "name": byid[x].get("name"), "by": by, "at": at, "neighbourhood": hood, "risen": None}
         if x in picks:
             picks.remove(x)
-            if reserves:
-                up = reserves.pop(0)
+            if reserves:                 # the first reserve that keeps the balance (the lost love first)
+                now = collections.Counter(credit_of.get(p) for p in picks)
+                lost = credit_of.get(x)
+                up = next((r for r in reserves if lost is not None and not now[lost] and credit_of.get(r) == lost),
+                          None) or next((r for r in reserves if cap is None or now[credit_of.get(r)] < cap),
+                                        reserves[0])
+                reserves.remove(up)
                 picks.append(up)
                 b["risen"] = card(up)
         elif x in reserves:
@@ -2016,6 +2224,7 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
     reserves = sorted(reserves, key=lambda i: (-score[i], fit[i], i))  # reserves: the selection order, after the last card
 
     res["picks"] = [card(i) for i in picks]
+    res["diag"]["credits"] = dict(collections.Counter(c["because"] for c in res["picks"]))
     res["reserves"] = [card(i) for i in reserves]
     # legacy card shape (the MCP agent and the older scripts read it)
     for c in res["picks"]:
