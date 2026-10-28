@@ -3,7 +3,7 @@
 `media/video.html` is one deterministic timeline (`window.seek(t)`); `./render.sh video` builds its data, renders 30 fps
 frames with `tools/cdp.mjs`, adds the UI-sound track and encodes `shots/video-60s-1920x1080.mp4` (H.264, yuv420p,
 faststart) plus `shots/video-keyframes.png`. Set `URL=<live url>` to fill the end card; without it the card shows the
-placeholder ⟦LIVE_URL⟧ in amber. All data comes through `tools/build_video_data.py`, which asserts each figure against
+placeholder `LIVE_URL` in amber. All data comes through `tools/build_video_data.py`, which asserts each figure against
 its source and fails the render on a mismatch. Its output, `data/live/video.json`, is gitignored (it holds Qloo results).
 
 No humans, no voice. The installed macOS voices are the legacy ones (Fred, Kathy, Ralph…), not good enough, so there is
@@ -25,7 +25,7 @@ The only fixed choices are copy (captions), the scene lengths, and which card th
 | 22.0–37.4 | 7 for you | "Three things Cedric loves." (rib tips dims) → funnel 52 → ~~9~~ → 7 (+3 in reserve) → the seven cards, "7 for you. Ranked by Qloo." with the rib-tips line → card one: Starz Bar And Grill, "#4 for you. #30 for anyone.", NEVER SAID "Named 0 times in 179 asks.", BECAUSE "You love Frankie Beverly & Maze." |
 | 37.4–45.0 | a judge strikes | "You're the judge. Know one? Strike it." Card 2 (Harlem Tap Room) is held and struck ("struck by you"); the first reserve, The Nation Bar And Grill (#2 for you, #19 for anyone), rises in after it, "rose in its place · a reserve no AI named"; later numbers move down one (the site's `strike()`). "A reserve rises. No AI named that one either." |
 | 45.0–52.4 | an agent calls it | Only when `agent/demo/live_transcript.jsonl` exists (Agent E's live run): "Agents can call it too." Its `unsaid_places` call typed out, and its own tool result beside it (header line + first picks, each cut after its two ranks with …); Claude's first reply paragraph if the transcript has one. A fake-mode transcript is refused by the build; with no transcript the scene is dropped. |
-| 52.4–59.5 | end card | UNSAID · "Everything the AIs tell everyone, crossed out." · **418** named by the AIs in 179 asks → **~~9~~** of them in Cedric's Qloo pool: crossed out → **7** for Cedric · ⟦LIVE_URL⟧ · "try Cedric · St. Louis, or your own three loves" |
+| 52.4–59.5 | end card | UNSAID · "Everything the AIs tell everyone, crossed out." · **418** named by the AIs in 179 asks → **~~9~~** of them in Cedric's Qloo pool: crossed out → **7** for Cedric · `LIVE_URL` · "try Cedric · St. Louis, or your own three loves" |
 
 ## Every number, and where it comes from
 
@@ -56,4 +56,4 @@ Words, not numbers, with sources:
 - The agent scene: the `unsaid_places` call and its result from ONE transcript (`AGENT_TRANSCRIPT`, default `agent/demo/live_transcript.jsonl`), MCP JSON-RPC or Claude stream-json; the build refuses `mode: fake` / "FAKE MODE". The earlier mix (a fake-mode `tool_use` beside a reply from another run) is gone. Agent E's recorder (28 Oct 11:58 CET, `unsaid-demo-agent`, a scripted MCP host, server in remote mode against the hosted API) has no model reply, so none is shown; its result header reads 678 places / 275 answers (the hosted wall), not the site set's 418 / 179.
 - Census footer: Claude Sonnet 5.5 and ChatGPT gpt-5.6-terra, no web search, 27 Oct 2026, pre-registered (census.json; codex answers' `model`).
 
-Not on screen, on purpose: ⟦ASKS⟧-style placeholders other than ⟦LIVE_URL⟧, the meter (gate D failed, not featured), any latency, any NYC figure.
+Not on screen, on purpose: `ASKS`-style placeholders other than `LIVE_URL`, the meter (gate D failed, not featured), any latency, any NYC figure.

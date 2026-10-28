@@ -8,7 +8,7 @@ labelled search-on lane (below), which is stored apart.
 |---|---|
 | `walls_cli.py` | `ask` city wall (20 phrasings) / taste (4 per set) / street asks; `build` → `data/walls/`; `status`; `plan` |
 | `run_census.py --provider claude\|codex\|gemini` | the frozen 128 census asks (`asks.json`, prompt v1), verbatim |
-| `census_stats.py [--provider p] [--gems]` | census numbers per provider; `--gems` fills ⟦GEM_GPT⟧ ⟦GEM_GEM⟧ from stored output only |
+| `census_stats.py [--provider p] [--gems]` | census numbers per provider; `--gems` fills `GEM_GPT` `GEM_GEM` from stored output only |
 | `fresh_asks.py` | K5′ held-out public questions, verbatim (needs `data/fresh_asks.json`) |
 | `meter.py` | gate D, alone vs with `qloo_places` (needs `UNSAID_MODE=live` + `QLOO_API_KEY` for the with arm); the post-hoc `unsaid` arm (`meter_unsaid.md`, graded by `meter_unsaid_grade.py`) |
 | `search_on.py` | the search-on lane: Claude and ChatGPT with web search, stored apart, labelled `search: true` |
@@ -57,7 +57,7 @@ The console shows 20 requests a day and 5 a minute per model per project. Creden
 - `--already-used N` records requests made outside the harness today (the console's count).
 - `gemini_batch.sh` runs one batch: it loads the env, runs the queue, then `build --census-only`. To schedule it, run it after 03:00 ET from a wall-clock wait loop, which still fires after the Mac wakes.
 - Priority order:
-  - (a) the 16 census hidden-gem asks for STL, then NYC, verbatim (`asks.json`, prompt v1). Stored once in `gemini_answers.jsonl`: `census_stats.py --gems` reads them for ⟦GEM_GEM⟧, and `build` puts them in `census.json`, which joins every wall, so they are also wall #1's gem part.
+  - (a) the 16 census hidden-gem asks for STL, then NYC, verbatim (`asks.json`, prompt v1). Stored once in `gemini_answers.jsonl`: `census_stats.py --gems` reads them for `GEM_GEM`, and `build` puts them in `census.json`, which joins every wall, so they are also wall #1's gem part.
   - (b) the 4 plain wall phrasings per city (v2).
   - (c) taste for stl-cedric, then stl-jason.
   - (d) the other try-these sets' taste. Items (b) to (d) go to `runs/wall-1.jsonl`.

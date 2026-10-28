@@ -68,7 +68,7 @@ python3 -I k1_density.py --city both --budget 220
 ```bash
 python3 -I k2a_lift.py --city both --walls $W --budget 750
 ```
-- **Read:** `A taste moves: PASS|FAIL`, `two strangers … sevens share k (gate <=2)` and `⟦STRANGERS⟧ = k`. ρ_AB and the top-50 Jaccard are printed but not gated.
+- **Read:** `A taste moves: PASS|FAIL`, `two strangers … sevens share k (gate <=2)` and ``STRANGERS` = k`. ρ_AB and the top-50 Jaccard are printed but not gated.
 - **§4 pivot on FAIL:** per-love RRF is already on. Then try place-led seeds (one love is a bar you love), drop "#151 for anyone" from the card fronts, and use the copy "new to you". Never ship a rank that doesn't move.
 
 ## 5 · K8 closures + the live K4 relabel (K+3:00)
@@ -79,7 +79,7 @@ python3 -I k4_relabel.py --export --city both --walls $W --budget 20   # out/k4_
 #   fill `truth` by hand: the U id(s) the AI name means (from .pool.csv), ';'-separated, or `none`
 python3 -I k4_relabel.py --score
 ```
-- **Read:** `K8 is_closed: n of 3` (fills ⟦K8⟧), and `K4 live relabel: false survivors n (gate 0)` (fills ⟦LABELLED⟧, ⟦FALSE_SURV⟧, ⟦PREC⟧).
+- **Read:** `K8 is_closed: n of 3` (fills `K8`), and `K4 live relabel: false survivors n (gate 0)` (fills `LABELLED`, `FALSE_SURV`, `PREC`).
 - **§4 pivot:** K8 FAIL → the last-seen check carries it, and Shown says so. K4 FAIL → raise the guard and accept over-striking.
 
 ## 6 · Gate B, survivors (K+3:30)
@@ -96,7 +96,7 @@ python3 -I k3_survivors.py --city both --walls $W --budget 350
 python3 -I run_query.py --city stl --set stl-cedric --walls $W --budget 60     # "cedric" also works
 ```
 - **Read:** `C not a cap: cap overlap x (gate <=0.80) … -> PASS|FAIL` and `run_query: 7 cards, n Qloo calls, status ok -> PASS`.
-- **README trace:** `out/query_stl-cedric.md`. It fills ⟦WALL⟧ ⟦ASKS⟧ ⟦U⟧ ⟦R⟧ ⟦FIT⟧ ⟦ANY⟧ ⟦QLOO_CALLS⟧ ⟦A⟧ ⟦B⟧ ⟦C⟧ ⟦CAP_KEEP⟧ ⟦CAP_SHARED⟧ ⟦OBSCURE⟧ ⟦KNOWN⟧ ⟦RHO_TP⟧ ⟦RHO_RES⟧. ⟦RHO_RES⟧ prints `RHO_RES undefined (base = popularity)` when P12 said popularity.
+- **README trace:** `out/query_stl-cedric.md`. It fills `WALL` `ASKS` `U` `R` `FIT` `ANY` `QLOO_CALLS` `A` `B` `C` `CAP_KEEP` `CAP_SHARED` `OBSCURE` `KNOWN` `RHO_TP` `RHO_RES`. `RHO_RES` prints `RHO_RES undefined (base = popularity)` when P12 said popularity.
 - **§4 pivot on C FAIL:** all three proofs still ship with real numbers. The claim drops to "the wall is the proof you can read", and the strangers' pair leads image 3.
 
 ## 9 · Gate D, meter (K+5:00, after B's harness ran `meter.py`)
@@ -104,7 +104,7 @@ python3 -I run_query.py --city stl --set stl-cedric --walls $W --budget 60     #
 ```bash
 python3 -I k10_meter.py --city stl --meter ../harness/runs/meter.jsonl --walls $W
 ```
-- **Read:** `D meter: … -> PASS|FAIL` and `⟦M_ALONE⟧ … ⟦M_QLOO⟧`. It makes 0 Qloo calls, and each run is graded by the other AIs' generic answers.
+- **Read:** `D meter: … -> PASS|FAIL` and ``M_ALONE` … `M_QLOO``. It makes 0 Qloo calls, and each run is graded by the other AIs' generic answers.
 - **§4 rule:** featured only on PASS. Either way it is printed in Shown and the README; on FAIL, Elias gets the residual line.
 
 ## 10 · Gate E, fresh asks (K+6:00, after the 20 sets' cards are frozen)
@@ -113,7 +113,7 @@ python3 -I k10_meter.py --city stl --meter ../harness/runs/meter.jsonl --walls $
 python3 -I precompute.py --walls $W --sets 10 --accept-top --out /tmp/unsaid-frozen      # outside git; ~0 if warm
 python3 -I k5_fresh.py --fresh ../data/fresh_asks.json --answers ../harness/runs/fresh.jsonl --cards /tmp/unsaid-frozen --walls $W
 ```
-- **Read:** `E fresh asks: median m of 7 (gate <=1, 20 sets) -> PASS|FAIL`, with ⟦FA_Q⟧ ⟦FA_SETS⟧ ⟦FA_HITS⟧ ⟦FA_CARDS⟧ ⟦FA_MED⟧. The hash check must print `0 collisions`.
+- **Read:** `E fresh asks: median m of 7 (gate <=1, 20 sets) -> PASS|FAIL`, with `FA_Q` `FA_SETS` `FA_HITS` `FA_CARDS` `FA_MED`. The hash check must print `0 collisions`.
 - **§4 pivot on FAIL:** add the 16 gem phrasings' second pass to the wall and rerun once. If it still fails, cut the dare-as-promise, print "named by n of m" in Shown, and use the weak-data line on air.
 
 ## Afterwards

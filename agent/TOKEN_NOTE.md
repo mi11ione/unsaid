@@ -19,6 +19,6 @@ curl -N -H "Authorization: Bearer $UNSAID_TOKEN" \
 claude mcp add unsaid -e UNSAID_MODE=remote -e UNSAID_TOKEN=<token> -- python3 -I /path/to/unsaid/agent/unsaid_mcp.py
 ```
 
-Loves take the same `[text, type]` pairs. In remote mode the server lists `unsaid_places(loves, city)`: the places no AI names, ranked by Qloo. With `UNSAID_MODE=live` and a Qloo key it runs the engine locally and also lists `qloo_places(loves, city)`: Qloo's top 50 for the same loves, with nothing crossed out. That tool is the meter's "with" arm.
+Loves take the same `[text, type]` pairs. In remote mode the server lists `unsaid_places(loves, city)`: places the dated AI answers didn't name, ranked by Qloo's taste signals for your loves. With `UNSAID_MODE=live` and a Qloo key it runs the engine locally and also lists `qloo_places(loves, city)`: Qloo's top 50 for the same loves, with nothing crossed out. That tool is the meter's "with" arm.
 
-The meter line: ⟦M_ALONE⟧ → ⟦M_QLOO⟧ (filled from `k10_meter.py`, or the sentence is deleted under the bracket rule).
+The meter (gate D, pre-registered): an assistant alone put a median 6 of 12 picks on the everyone-list; with `qloo_places` as its tool, 4. Gate D failed. See the README's Gates.
