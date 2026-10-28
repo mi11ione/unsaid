@@ -34,7 +34,7 @@ def analyse(qq, city, sid, spec):
             "top20": [i for i in r["_selected"]][:20]}
 
 
-ok_all, results = True, {}
+ok_all, results, all_sh = True, {}, []
 for city in cli.cities(args):
     good, n = 0, 0
     print("  %s" % city.upper())
@@ -54,9 +54,13 @@ for city in cli.cities(args):
     print("  %s: rho<=0.90 in %d of %d -> %s%s" % (city.upper(), good, n, cli.verdict(ok), T))
     keys = [k for k in results if k[0] == city]
     sh = [len(set(results[x]["seven"]) & set(results[y]["seven"])) for x, y in combinations(keys, 2)]
+    all_sh += sh
     if sh:
-        print("  %s all pairs: mean sevens shared %s, max %d over %d pairs (printed, not gated)%s" % (
-            city.upper(), cli.f(sum(sh) / float(len(sh))), max(sh), len(sh), T))
+        print("  %s all pairs: mean sevens shared %s, median %s, max %d over %d pairs (printed, not gated)%s" % (
+            city.upper(), cli.f(sum(sh) / float(len(sh))), cli.f(cli.median(sh), 1), max(sh), len(sh), T))
+if all_sh:
+    print("  all pairs within a city, both cities: median sevens shared %s over %d pairs (fills ⟦PAIRS_MED⟧)%s" % (
+        cli.f(cli.median(all_sh), 1), len(all_sh), T))
 
 # the two strangers
 _, x, y = SD.STRANGERS

@@ -1,0 +1,265 @@
+#!/usr/bin/env bash
+# The 30 Oct 12:00 ET re-freeze, as one resumable runbook. Every number, image and data file is regenerated from the
+# final walls, and the Devpost placeholders are filled into a NEW file (~/Desktop/qloo/devpost.final.md).
+#
+#   ./freeze.sh                     the freeze: steps 1-9
+#   ./freeze.sh --dry-run           steps 1-9 without gate F (--skip-f), Render redeployed only if nothing changed since
+#                                   the live deploy (--render-if-unchanged), Qloo budgets that sum to <= 150 calls
+#   ./freeze.sh --from 5            resume at step 5 (each step re-runs from scratch: all steps are idempotent)
+#   ./freeze.sh --only 4            one step
+#   flags: --skip-f  --render-if-unchanged  --skip-render  --skip-media  --skip-site  --to N
+#
+#   1 preflight   disk >= 10 GB; harness/runs/done has gem-30 + wall-3 (warn); git on main, clean but for harness output
+#                 and walls, pulled; leak audit 0 unresolved; walls rebuilt from harness/runs (unless saturation or a
+#                 wall ask is running: then the committed walls), committed and pushed (regen reads origin/main)
+#   2 regen       engine/regen_try.sh: the 20 sets -> $FRESH and site/data/live, gates A and B --frozen
+#   3 numbers     k12, gate E (hashed 28 Oct cards + today's), run_query Cedric + README call trace, the no-street
+#                 ablation, census gems, saturation coverage -> out/freeze/numbers.json; commits the regenerated
+#                 counts-only files (engine/k12_wall_effect.md, site/data/wall_effect.json, README call trace)
+#   4 fill        tools/fill_devpost.py -> ~/Desktop/qloo/devpost.final.md (+ a README preview in out/freeze)
+#   5 render      tools/render_deploy.py: push priors, redeploy the committed walls + engine, wait for live + health
+#   6 gate F      k11_latency.py against the live site, 10 runs (~400-500 Qloo calls)
+#   7 media       media/render.sh all (video with URL=$LIVE); agent shot vs Cedric's current cards; commits the
+#                 tracked site data build_data.py rewrites
+#   8 site        media/tools/deploy-site.sh (the ⟦ check, then Pages)
+#   9 report      numbers + fill again (picks up gate F and the share image), out/freeze/report.txt
+#
+# Logs: out/freeze/ (gitignored; numbers.json names cards, which are Qloo output). Done markers: out/freeze/done/.
+# Keys come from ~/.config/unsaid/env and are never printed. Qloo output never enters git.
+set -euo pipefail
+
+MAIN=$(cd "$(dirname "$0")" && pwd)
+LOGS="$MAIN/out/freeze"
+QLOO_DIR=$(dirname "$MAIN")
+LIVE_URL=https://unsaid-ang.pages.dev
+export REGEN_WT=${REGEN_WT:-$QLOO_DIR/wt-regen}
+export REGEN_FRESH=${REGEN_FRESH:-$QLOO_DIR/private/fresh20-freeze}
+FROZEN20=${FROZEN20:-$QLOO_DIR/private/frozen20}
+SEED_FRESH=$QLOO_DIR/private/fresh20-28oct       # the 28 Oct regeneration: the first .bak, so the first diff works
+WT="$REGEN_WT"; FRESH="$REGEN_FRESH"
+CO="Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+
+FROM=1; TO=9; SKIP_F=0; DRY=0; RENDER=deploy; SKIP_MEDIA=0; SKIP_SITE=0
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --from) FROM=$2; shift;;
+    --to) TO=$2; shift;;
+    --only) FROM=$2; TO=$2; shift;;
+    --dry-run) DRY=1; SKIP_F=1; RENDER=if-unchanged;;
+    --skip-f) SKIP_F=1;;
+    --render-if-unchanged) RENDER=if-unchanged;;
+    --skip-render) RENDER=skip;;
+    --skip-media) SKIP_MEDIA=1;;
+    --skip-site) SKIP_SITE=1;;
+    -h|--help) sed -n '2,32p' "$0"; exit 0;;
+    *) echo "unknown flag $1" >&2; exit 2;;
+  esac
+  shift
+done
+# Qloo network-call caps per call site (cache hits are free). The dry run's sum is 145 (precompute 80, gates 10+10,
+# regen's search-on ablation 10, k12 15, run_query 10, no-street 10).
+if [ $DRY = 1 ]; then d_pre=80; d_gate=10; d_k12=15; d_rq=10; d_ns=10; else d_pre=400; d_gate=60; d_k12=60; d_rq=50; d_ns=60; fi
+B_PRE=${FREEZE_BUDGET_PRECOMPUTE:-$d_pre}; B_GATE=${FREEZE_BUDGET_GATE:-$d_gate}; B_K12=${FREEZE_BUDGET_K12:-$d_k12}
+B_RQ=${FREEZE_BUDGET_RUNQUERY:-$d_rq}; B_NS=${FREEZE_BUDGET_NOSTREET:-$d_ns}
+
+mkdir -p "$LOGS/done"
+say() { printf '\n== %s  %s\n' "$(date '+%H:%M:%S')" "$*"; }
+warn() { printf 'WARN: %s\n' "$*"; }
+die() { printf 'FAIL: %s\n' "$*"; exit 1; }
+
+qloo_key() {   # the Qloo key into the env, never printed
+  if [ -z "${QLOO_API_KEY:-}" ]; then
+    QLOO_API_KEY=$(sed -n 's/^QLOO_API_KEY=//p' "$HOME/.config/unsaid/env" | tail -1)
+  fi
+  [ -n "$QLOO_API_KEY" ] || die "QLOO_API_KEY not set and not in ~/.config/unsaid/env"
+  export QLOO_API_KEY
+}
+
+# commit_paths "message" path...: commit exactly these paths (if changed), rebase on origin, push
+commit_paths() {
+  local msg=$1; shift
+  local p have=()
+  for p in "$@"; do [ -e "$MAIN/$p" ] || git -C "$MAIN" ls-files --error-unmatch -- "$p" >/dev/null 2>&1 && have+=("$p"); done
+  [ ${#have[@]} -gt 0 ] || { echo "commit: nothing to commit"; return 0; }
+  git -C "$MAIN" add -A -- "${have[@]}"
+  if git -C "$MAIN" diff --cached --quiet -- "${have[@]}"; then echo "commit: no changes in ${have[*]}"; return 0; fi
+  git -C "$MAIN" commit -q -m "$msg" -m "$CO" -- "${have[@]}"
+  git -C "$MAIN" pull -q --rebase --autostash
+  git -C "$MAIN" push -q origin HEAD:main
+  echo "commit: $(git -C "$MAIN" log --oneline -1) (pushed)"
+}
+
+# ------------------------------------------------------------------------------------------------------------ steps
+step1() {
+  say "1 preflight"
+  local avail; avail=$(df -g "$MAIN" | awk 'NR==2{print $4}')
+  [ "$avail" -ge 10 ] || die "disk: ${avail} GB free (need >= 10 GB: the video's frames are ~2 GB)"
+  echo "disk: ${avail} GB free"
+  for j in gem-30 wall-3; do
+    [ -e "$MAIN/harness/runs/done/$j" ] && echo "scheduled job $j: done" || warn "scheduled job $j has not finished (harness/runs/done/$j missing)"
+  done
+  [ "$(git -C "$MAIN" rev-parse --abbrev-ref HEAD)" = main ] || die "git: not on main"
+  # tracked changes allowed only where the harness writes (its logs, answers, walls); anything else stops the freeze
+  local dirty
+  dirty=$(git -C "$MAIN" status --porcelain --untracked-files=no | awk '{print $2}' |
+          grep -vE '^(harness/runs/|harness/[a-z0-9.-]+_answers\.jsonl$|data/walls/)' || true)
+  [ -z "$dirty" ] || die "git: uncommitted changes outside the harness output: $(echo $dirty)"
+  git -C "$MAIN" pull -q --rebase --autostash || die "git pull --rebase failed"
+  echo "git: main at $(git -C "$MAIN" log --oneline -1 | cut -c1-90)"
+  local audit; audit=$(cd "$MAIN/harness" && python3 -I audit_codex.py 2>&1)
+  echo "$audit" | tail -3
+  echo "$audit" | grep -qE 'unresolved ids [1-9]' && die "leak audit: unresolved codex answers (harness/audit_codex.py)"
+  echo "leak audit: 0 unresolved"
+  if pgrep -f 'saturation\.(sh|py)|search_then_sat|walls_cli\.py ask' >/dev/null; then
+    warn "a saturation batch or wall ask is running: walls NOT rebuilt; the committed walls are used"
+    return 0
+  fi
+  local labels
+  labels=$(cd "$MAIN/harness/runs" && ls wall-*.jsonl | sed 's/^wall-//; s/\.jsonl$//' | grep -v '^smoke' | paste -sd, -)
+  echo "walls: rebuilding $labels + census"
+  rm -rf "$LOGS/walls.bak"; cp -Rp "$MAIN/data/walls" "$LOGS/walls.bak"
+  (cd "$MAIN/harness" && python3 -I walls_cli.py build --walls "$labels" --no-census && python3 -I walls_cli.py build --census-only) \
+    > "$LOGS/01-walls-build.txt" 2>&1 || { tail -5 "$LOGS/01-walls-build.txt"; die "walls build"; }
+  grep -E '^wrote' "$LOGS/01-walls-build.txt" | cut -c1-120
+  python3 -I "$MAIN/tools/freeze_numbers.py" walls-keep "$LOGS/walls.bak"
+  (cd "$MAIN" && commit_paths "Freeze: walls rebuilt from harness/runs ($labels + census)" \
+    data/walls $(cd "$MAIN" && ls harness/runs/wall-*.jsonl | grep -v smoke) harness/runs/saturation.json \
+    $(cd "$MAIN" && ls harness/*_answers.jsonl))
+}
+
+step2() {
+  say "2 regen (engine/regen_try.sh; precompute budget $B_PRE, gates $B_GATE each)"
+  python3 -I "$MAIN/tools/freeze_numbers.py" snapshot-cedric "$MAIN/site/data/live/stl_stl-cedric.json" "$LOGS/cedric.before.json"
+  if [ ! -d "$FRESH" ] && [ -d "$SEED_FRESH" ]; then cp -Rp "$SEED_FRESH" "$FRESH"; echo "seeded $FRESH from $SEED_FRESH"; fi
+  REGEN_BUDGET=$B_PRE REGEN_GATE_BUDGET=$B_GATE bash "$MAIN/engine/regen_try.sh" 2>&1 | tee "$LOGS/02-regen.log"
+  [ "${PIPESTATUS[0]}" = 0 ] || die "regen_try.sh"
+  cp "$WT/engine/out/regen_gateA.log" "$LOGS/02-gateA.txt"
+  cp "$WT/engine/out/regen_gateB.log" "$LOGS/02-gateB.txt"
+}
+
+step3() {
+  say "3 gates and stats -> out/freeze/numbers.json"
+  [ -d "$WT/engine/out" ] && [ -f "$FRESH/index.json" ] || die "no regen worktree/output: run step 2 first"
+  qloo_key
+  local E="$WT/engine"
+  cd "$E"
+  echo "k12 (budget $B_K12)"
+  python3 -I k12_wall_effect.py --walls ../data/walls --frozen --budget "$B_K12" --public-md "$E/k12_wall_effect.md" \
+    > "$LOGS/03-k12.log" 2>&1 || { tail -5 "$LOGS/03-k12.log"; die "k12"; }
+  grep -E "^  median over|^K12" "$LOGS/03-k12.log"
+  cp out/k12_wall_effect.json out/k12_wall_effect.md "$LOGS/"
+  cp "$E/k12_wall_effect.md" "$MAIN/engine/k12_wall_effect.md"
+  python3 -I - "$E/out/k12_wall_effect.json" "$MAIN/site/data/wall_effect.json" <<'PY'
+import json, sys
+rows = json.load(open(sys.argv[1])); old = json.load(open(sys.argv[2]))
+def med(k):
+    s = sorted(r[k] for r in rows); n = len(s)
+    return float(s[n // 2] if n % 2 else (s[n // 2 - 1] + s[n // 2]) / 2.0)
+old.update({"sets": len(rows), "of": 7, "named_unsaid": med("on_named"), "named_no_strike": med("off_named"),
+            "named_plain": med("plain_named")})
+json.dump(old, open(sys.argv[2], "w"), indent=1, ensure_ascii=False); open(sys.argv[2], "a").write("\n")
+print("site/data/wall_effect.json: UNSAID %s · no strike %s · plain %s" % (old["named_unsaid"], old["named_no_strike"], old["named_plain"]))
+PY
+  echo "gate E (the hashed 28 Oct cards: the official score) and the same check on today's cards"
+  python3 -I k5_fresh.py --cards "$FROZEN20" --answers ../harness/runs/fresh.jsonl --walls ../data/walls > "$LOGS/03-gateE-frozen.log" 2>&1 || true
+  python3 -I k5_fresh.py --cards "$FRESH" --answers ../harness/runs/fresh.jsonl --walls ../data/walls > "$LOGS/03-gateE-current.log" 2>&1 || true
+  grep -h "^E fresh" "$LOGS/03-gateE-frozen.log" "$LOGS/03-gateE-current.log"
+  echo "run_query Cedric (budget $B_RQ) + README call trace"
+  python3 -I run_query.py --city stl --set cedric --walls ../data/walls --frozen --budget "$B_RQ" > "$LOGS/03-run_query.log" 2>&1 \
+    || { tail -5 "$LOGS/03-run_query.log"; die "run_query"; }
+  cp out/query_stl-cedric.json "$LOGS/query_stl-cedric.json"
+  python3 -I readme_trace.py --trace out/query_stl-cedric.md --readme "$MAIN/README.md" > "$LOGS/03-readme_trace.txt" 2>&1 \
+    || { cat "$LOGS/03-readme_trace.txt"; die "readme_trace"; }
+  tail -1 "$LOGS/03-readme_trace.txt"
+  echo "street ablation: the 20 sets without the street walls (budget $B_NS)"
+  rm -rf out/walls-no-street out/fresh20-no-street; mkdir -p out/walls-no-street
+  python3 -I - "$WT/data/walls" out/walls-no-street <<'PY'
+import json, os, sys
+src, dst = sys.argv[1:3]
+for f in sorted(os.listdir(src)):
+    if not f.endswith(".json"):
+        continue
+    d = json.load(open(os.path.join(src, f)))
+    kinds = {a.get("kind") for e in d["walls"] for a in e["answers"]}
+    if kinds == {"street"}:
+        print("  left out: %s" % f); continue
+    os.symlink(os.path.join(src, f), os.path.join(dst, f))
+PY
+  python3 -I precompute.py --walls out/walls-no-street --sets-file out/sets20.json --accept-top --out out/fresh20-no-street \
+    --no-cap --budget "$B_NS" > "$LOGS/03-nostreet.log" 2>&1 || true
+  grep -E "^precompute:" "$LOGS/03-nostreet.log" || tail -2 "$LOGS/03-nostreet.log"
+  echo "census gems and saturation coverage (stored answers, 0 Qloo calls)"
+  (cd "$WT/harness" && python3 -I census_stats.py --gems) > "$LOGS/03-census_gems.log" 2>&1 || true
+  (cd "$WT/harness" && python3 -I saturation.py --metrics) > "$LOGS/03-saturation.log" 2>&1 || true
+  cd "$MAIN"
+  python3 -I tools/freeze_numbers.py numbers --fresh "$FRESH" --nostreet "$E/out/fresh20-no-street" $([ $DRY = 1 ] && echo --dry-run)
+  commit_paths "Freeze: k12 table, site wall-effect medians and the README call trace regenerated (counts and request URLs only)" \
+    engine/k12_wall_effect.md site/data/wall_effect.json README.md
+}
+
+step4() {
+  say "4 fill devpost -> $QLOO_DIR/devpost.final.md"
+  cd "$MAIN"
+  python3 -I tools/fill_devpost.py --in "$QLOO_DIR/devpost.md" --out "$QLOO_DIR/devpost.final.md"
+  python3 -I tools/fill_devpost.py --in README.md --out "$LOGS/README.filled.md" --whole | head -1
+}
+
+step5() {
+  say "5 Render ($RENDER)"
+  case $RENDER in
+    skip) echo "render: SKIPPED (--skip-render)" | tee "$LOGS/05-render.log";;
+    if-unchanged) python3 -I "$MAIN/tools/render_deploy.py" deploy --if-unchanged 2>&1 | tee "$LOGS/05-render.log"
+                  [ "${PIPESTATUS[0]}" = 0 ] || die "render deploy";;
+    *) python3 -I "$MAIN/tools/render_deploy.py" deploy 2>&1 | tee "$LOGS/05-render.log"
+       [ "${PIPESTATUS[0]}" = 0 ] || die "render deploy";;
+  esac
+}
+
+step6() {
+  say "6 gate F (k11 against $LIVE_URL, 10 runs)"
+  if [ $SKIP_F = 1 ]; then echo "gate F: SKIPPED (--skip-f); not measured at this run" | tee "$LOGS/06-gateF.log"; return 0; fi
+  grep -q "SKIPPED" "$LOGS/05-render.log" 2>/dev/null && warn "Render was not redeployed at step 5: gate F measures the old deploy"
+  [ -d "$WT/engine" ] || die "no regen worktree: run step 2 first"
+  ( set -a; . "$HOME/.config/unsaid/env"; set +a
+    cd "$WT/engine" && python3 -I k11_latency.py --url "$LIVE_URL/api/unsaid" --city both --runs 10 ) > "$LOGS/06-gateF.log" 2>&1 \
+    || { tail -5 "$LOGS/06-gateF.log"; die "k11"; }
+  grep -E "⟦P50⟧|^F speed|QLOO" "$LOGS/06-gateF.log"
+}
+
+step7() {
+  say "7 media (render.sh all, video URL=$LIVE_URL)"
+  if [ $SKIP_MEDIA = 1 ]; then echo "media: SKIPPED (--skip-media)" | tee "$LOGS/07-media.log"; return 0; fi
+  (cd "$MAIN/media" && URL=$LIVE_URL zsh render.sh all) > "$LOGS/07-media.log" 2>&1 || { tail -8 "$LOGS/07-media.log"; die "render.sh"; }
+  grep -E "\.png$|\.mp4$|video\.json|note:" "$LOGS/07-media.log" | tail -25
+  python3 -I "$MAIN/tools/freeze_numbers.py" agentcheck --fresh "$FRESH" | tee "$LOGS/07-agentcheck.log"
+  cd "$MAIN"
+  commit_paths "Freeze: site and media data rebuilt by media/tools/build_data.py" \
+    site/data/census.json site/data/map site/data/walls site/data/try.json site/data/config.json site/data/mock media/data/assistant.json
+}
+
+step8() {
+  say "8 site deploy (media/tools/deploy-site.sh)"
+  if [ $SKIP_SITE = 1 ]; then echo "site: SKIPPED (--skip-site)" | tee "$LOGS/08-site.log"; return 0; fi
+  zsh "$MAIN/media/tools/deploy-site.sh" > "$LOGS/08-site.log" 2>&1 || { tail -8 "$LOGS/08-site.log"; die "deploy-site.sh"; }
+  grep -E "placeholder check|og image|Deployment complete|https://" "$LOGS/08-site.log" | tail -4
+}
+
+step9() {
+  say "9 report"
+  cd "$MAIN"
+  python3 -I tools/freeze_numbers.py numbers --fresh "$FRESH" --nostreet "$WT/engine/out/fresh20-no-street" \
+    $([ $DRY = 1 ] && echo --dry-run) > "$LOGS/09-numbers.txt"
+  python3 -I tools/fill_devpost.py --in "$QLOO_DIR/devpost.md" --out "$QLOO_DIR/devpost.final.md" > "$LOGS/09-fill.txt"
+  python3 -I tools/fill_devpost.py --in README.md --out "$LOGS/README.filled.md" --whole > "$LOGS/09-fill-readme.txt"
+  python3 -I tools/freeze_numbers.py report
+}
+
+NAMES=(x preflight regen numbers fill render gateF media site report)
+echo "freeze: steps $FROM-$TO$([ $DRY = 1 ] && echo ' (DRY RUN: no gate F; Render only if unchanged; Qloo <= 145)')  logs $LOGS"
+for n in $(seq "$FROM" "$TO"); do
+  f="$LOGS/done/$(printf '%02d' "$n")-${NAMES[$n]}"
+  rm -f "$f"
+  if [ "$n" = 2 ]; then step2; else step$n 2>&1 | tee "$LOGS/$(printf '%02d' "$n")-${NAMES[$n]}.step.txt"; [ "${PIPESTATUS[0]}" = 0 ] || { echo "step $n failed: fix, then ./freeze.sh --from $n"; exit 1; }; fi
+  echo "$(date '+%Y-%m-%d %H:%M:%S %Z') ok$([ $DRY = 1 ] && echo ' (dry run)')" > "$f"
+done
+echo "freeze: done (report: $LOGS/report.txt)"
