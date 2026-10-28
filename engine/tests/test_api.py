@@ -650,7 +650,17 @@ class TestCardLines(unittest.TestCase):
         vocab = {"rib tips", "peach cobbler", "dive bar"}
         self.assertEqual(E.order_line(e, vocab), ["rib tips", "peach cobbler"])     # no venue kind, no stoplist word
         e["properties"]["specialty_dishes"] = [{"name": "Peach Cobbler"}]
-        self.assertEqual(E.order_line(e, vocab), ["peach cobbler"])                 # specialty dishes first
+        self.assertEqual(E.order_line(e, vocab), ["peach cobbler", "rib tips"])     # specialty dishes first, topped up
+        e2 = {"properties": {"cuisine_description": "The menu features standout items like tender rib tips, pork "
+                             "steaks, honey hot wings and gourmet cheeseburgers, alongside beer and cocktails.",
+                             "keywords": [{"name": "atmosphere"}]}}
+        self.assertEqual(E.order_line(e2, {"rib tips", "pork steak", "honey hot wings", "cheeseburger", "beer"}),
+                         ["rib tips", "pork steaks", "honey hot wings"])
+        u = {"properties": {"unique_selling_points": "The establishment is distinguished by its signature house-made "
+                            "sourdough tartines and handcrafted coffee. More text.", "short_description": "x."}}
+        self.assertEqual(E.blurb_line(u), "Signature house-made sourdough tartines and handcrafted coffee.")
+        u["properties"]["unique_selling_points"] = "Famous for their tender, smoky rib tips and highly seasoned burgers."
+        self.assertEqual(E.blurb_line(u), "Famous for their tender, smoky rib tips and highly seasoned burgers.")
         self.assertEqual(E.order_line({"properties": {"keywords": [{"name": "crowd"}]}}, vocab), [])
         long = {"properties": {"short_description": "word " * 40}}
         self.assertLessEqual(len(E.blurb_line(long)), 111)

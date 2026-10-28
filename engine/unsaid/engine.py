@@ -1542,43 +1542,143 @@ def dish_vocab(U):
     return v
 
 
+ORDER_GENERIC = set("""beer beers wine wines cocktail cocktails hard liquor liquor alcohol spirits drinks drink beverages
+beverage coffee tea soda food dishes dish options option fare bites plates sides side items menu entrees entree
+appetizers appetizer desserts dessert snacks snack comfort food bar food pub food american soul food meals meal
+sandwiches sandwich seafood salads salad small plates classic classics sauce sauces soups soup stews stew deli healthy
+organic vegan vegetarian gluten-free halal kosher german italian japanese korean mexican chinese thai indian french
+greek spanish american southern cajun creole caribbean brazilian colombian ethiopian vietnamese mediterranean
+middle-eastern fusion local seasonal beef chicken turkey pork fish rib meat meats""".split()) | {
+    "specialty cocktails", "signature cocktails", "juice bar special", "daily specials",
+    "bar food", "comfort food", "soul food", "hard liquor", "small plates", "pub food", "pub fare", "bar fare",
+    "mixed drinks", "craft cocktails", "craft cocktail", "craft beer", "craft beers", "draft beer", "draft beers",
+    "local beer", "local beers", "natural wine", "natural wines", "street food", "street foods", "simple meals",
+    "breakfast classics", "korean comfort food", "seasonal dessert", "american classics", "bar bites", "bar snacks"}
+_LEAD_WORDS = {"and", "or", "a", "an", "the", "our", "their", "its", "with", "of", "s"}
+_LIST_CUE = re.compile(r"\b(?:like|such as|including|includes|include|featuring|features|feature|signature)\s+([^.;:]+)",
+                       re.I)
+_LIST_END = re.compile(r"\s+(?:alongside|along with|as well as|complemented by|paired with|plus|served|that|which|"
+                       r"in a|in an|for)\b.*$", re.I)
+
+
+def _dishes_in(text, vocab):
+    """Dish or drink names in a description's lists ("items like tender rib tips, pork steaks and honey hot wings"):
+    each item's longest run of words the pool's dish vocabulary knows, generic words (beer, cocktails, food) never."""
+    out = []
+    for m in _LIST_CUE.finditer(text or ""):
+        seg = _LIST_END.sub("", m.group(1))
+        for item in re.split(r",\s*(?:and\s+|or\s+)?|\s+and\s+|\s+or\s+|\s*&\s*", seg):
+            words = re.findall(r"[a-z][a-z'-]*", item.lower())
+            best = None
+            for size in range(min(4, len(words)), 0, -1):
+                for k in range(len(words) - size + 1):
+                    g = words[k:k + size]
+                    ph = " ".join(g)
+                    if ph in ORDER_GENERIC or g[-1] in ORDER_VENUE or g[0] in _LEAD_WORDS or g[-1] in _LEAD_WORDS \
+                            or all(w in ORDER_STOP for w in g):
+                        continue
+                    if ph in vocab or " ".join(_sing_word(w) for w in g) in vocab:
+                        best = ph
+                        break
+                if best:
+                    break
+            if best and best not in out:
+                out.append(best)
+    return out
+
+
+def _clean_item(nm):
+    """One order item: lower-case, a leading "and"/"an"/"the" dropped, never generic, never a long menu line."""
+    w = nm.strip().lower().split()
+    while w and w[0] in ("and", "or", "an", "a", "the", "&"):
+        w = w[1:]
+    nm = " ".join(w)
+    return nm if nm and nm not in ORDER_GENERIC and len(nm) <= 32 else None
+
+
 def order_line(e, vocab, n=3):
-    """Up to n things people order: Qloo's specialty_dishes; else its review keywords that are food or drink (in the
-    pool's dish vocabulary, never a stoplist word). [] when nothing real is left."""
+    """Up to n things people order, in this order until there are n: Qloo's specialty_dishes; dish names in the
+    lists of its unique_selling_points and cuisine_description (multi-word names first);
+    else its review keywords that are food or drink (in the pool's dish vocabulary, never a stoplist word or a
+    generic drink). [] when nothing real is left."""
     out = []
     for d in prop(e, "specialty_dishes") or []:
         nm = (d.get("name") if isinstance(d, dict) else str(d) if d else "") or ""
-        nm = nm.strip().lower()
+        nm = _clean_item(nm)
         if nm and nm not in out:
             out.append(nm)
-    if not out:
+    if len(out) < n:  # the lists in Qloo's own descriptions (its selling points first), the most specific names first
+        found = _dishes_in(prop(e, "unique_selling_points"), vocab)
+        found += [x for x in _dishes_in(prop(e, "cuisine_description"), vocab) if x not in found]
+        out += [x for x in sorted(found, key=lambda x: (" " not in x, found.index(x))) if x not in out]
+    if len(out) < n:  # then review keywords that are food or drink
         for k in prop(e, "keywords") or []:
             nm = ((k.get("name") if isinstance(k, dict) else str(k)) or "").strip().lower()
             words = nm.split()
             if not words or nm in ORDER_STOP or all(w in ORDER_STOP for w in words):
                 continue
-            if words[-1] in ORDER_VENUE:
+            if words[-1] in ORDER_VENUE or nm in ORDER_GENERIC or words[0] in _LEAD_WORDS:
                 continue                  # "dive bar", "cocktail bar": what the place is, not what you order
             if nm in vocab or " ".join(_sing_word(w) for w in words) in vocab:
                 if nm not in out:
                     out.append(nm)
-    return out[:n]
+    keep, seen = [], set()
+    for x in out:                       # "tartine" == "tartines"
+        k = " ".join(_sing_word(w) for w in x.split())
+        if k not in seen:
+            seen.add(k)
+            keep.append(x)
+    return keep[:n]
 
 
-def blurb_line(e, limit=110):
-    """Qloo's short_description, first sentence, <= limit chars at a word boundary."""
-    d = (prop(e, "short_description") or "").strip()
-    if not d:
-        return None
+# Boilerplate openers of Qloo's unique_selling_points, stripped so the sentence starts with what is special
+# ("The establishment is distinguished by its signature X" -> "Signature X"). Openers that already read well
+# ("Famous for their tender, smoky rib tips", "Housed in a beautiful historic Victorian home") stay.
+_USP_SUBJ = (r"(?:the|this)\s+(?:[\w-]+\s+){0,2}?(?:restaurant|establishment|spot|venue|cafe|café|bar|lounge|"
+             r"steakhouse|staple|eatery|tavern|pub|place|business|diner|bistro|kitchen|menu|location|joint)|it|they")
+_USP_VERB = (r"(?:is\s+|are\s+)?(?:(?:widely\s+|highly\s+|best\s+|especially\s+)?(?:distinguished|defined|celebrated|"
+             r"known|regarded|recognized|recognised|renowned|praised|noted|notable|anchored|set\s+apart)|"
+             r"well-regarded|stands?\s+out|distinguishes\s+itself|sets\s+itself\s+apart|features|boasts|offers)")
+_USP_OPENER = re.compile(r"^(?:%s)\s+%s\s*(?:primarily\s+|mainly\s+|most\s+)?(?:by|for|as|through|with|"
+                         r"in)?\s*(?:its|their|an|a|the\s+fact\s+that)?\s+" % (_USP_SUBJ, _USP_VERB), re.I)
+_USP_LEAD = re.compile(r"^(?:known\s+as|distinguished\s+by|recognized\s+as)\s+(?:its\s+|their\s+)?", re.I)
+
+
+def _first_sentence(d):
     for m in re.finditer(r"[.!?](?=\s|$)", d):      # the first full stop that is not "St." / "Dr." / "N."
         word = re.findall(r"[A-Za-z]+$", d[:m.start()])
         if word and (word[0].lower() in _ABBREV or len(word[0]) == 1):
             continue
-        d = d[:m.end()]
-        break
-    if len(d) > limit:
-        d = d[:limit + 1].rsplit(" ", 1)[0].rstrip(",;:-") + "…"
+        return d[:m.end()]
     return d
+
+
+def _trim(d, limit):
+    """<= limit chars: at the last clause boundary (, ; - --) past 60% of the limit, else at a word."""
+    if len(d) <= limit:
+        return d
+    cut = d[:limit]
+    k = max(cut.rfind(", "), cut.rfind("; "), cut.rfind(" - "), cut.rfind(" — "))
+    if k >= 0.6 * limit:
+        return cut[:k].rstrip(" ,;:-—") + "…"
+    return d[:limit + 1].rsplit(" ", 1)[0].rstrip(" ,;:-—") + "…"
+
+
+def blurb_line(e, limit=110):
+    """Qloo's own words on what makes the place special: the first sentence of unique_selling_points with a
+    boilerplate opener stripped and the first letter capitalised, trimmed to <= limit at a clause or word boundary.
+    No words are added. Falls back to short_description."""
+    usp = (prop(e, "unique_selling_points") or "").strip()
+    if usp:
+        d = _first_sentence(usp)
+        t = _USP_OPENER.sub("", d, count=1)
+        t = _USP_LEAD.sub("", t, count=1) if t == d else t
+        t = re.sub(r"^being\s+", "", t, flags=re.I) if t != d else t     # "... by being a rare dive bar" -> "A rare ..."
+        if len(t) >= 25:
+            d = t[:1].upper() + t[1:]
+        return _trim(d, limit)
+    d = (prop(e, "short_description") or "").strip()
+    return _trim(_first_sentence(d), limit) if d else None
 
 
 def image_url(e):
