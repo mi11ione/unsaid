@@ -13,6 +13,8 @@ curl -s -X PUT -H "Authorization: Bearer $RENDER_API_KEY" -H "Content-Type: appl
   -d '{"value":"3"}' https://api.render.com/v1/services/srv-dbgr3fuc6qcc73ce5p3g/env-vars/UNSAID_MAX_ACTIVE
 ```
 
+The "fits everyone" priors (`data/priors/*.json`) are Qloo-derived, so they are gitignored. They reach Render as secret files, mounted at `/etc/secrets/`, with `UNSAID_PRIORS_DIR=/etc/secrets`. After `build_priors.py` changes them: `python3 -I server/push_priors.py`, then redeploy. `/api/health` shows `"priors": {"stl": true, "nyc": true}`, and each result's `diag.prior.used` says whether the prior ranked it.
+
 Redeploy the site: `cd site && npx -y wrangler@3 pages deploy . --project-name unsaid --branch main --commit-dirty=true` (run from `site/` so Pages finds `functions/`).
 
 The setup steps below are how it was first set up; keep them for a rebuild.

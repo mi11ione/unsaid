@@ -556,6 +556,7 @@ class Handler(BaseHTTPRequestHandler):
                 cur, peak = rss_mb()
                 return self._json(200, {"ok": True, "state": "warm", "boot_warm": WARM["state"],
                                         "rss_mb": cur, "peak_rss_mb": peak, "streams": STREAMS["open"],
+                                        "priors": adapter.PRIORS,
                                         "mode": MODE, "backend": adapter.BACKEND,
                                         "engine_v": adapter.ENGINE_V, "uptime_s": int(time.time() - BOOT),
                                         "queue": {"active": a, "waiting": w}})

@@ -27,6 +27,8 @@ services:
         sync: false
       - key: UNSAID_MAX_ACTIVE      # optional, default 2 concurrent fresh runs
         sync: false
+      - key: UNSAID_PRIORS_DIR      # /etc/secrets: the priors are Render secret files (server/push_priors.py), never in git
+        sync: false
       - key: QLOO_API_KEY
         sync: false
       - key: QLOO_QUOTA_HEADERS     # "<remaining header>,<limit header>" once probe P9 names them

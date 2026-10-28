@@ -443,6 +443,24 @@ class Walls(unittest.TestCase):
         self.assertTrue(any(e.get("state") == "partial" and e["text"] == app.adapter.NO_WALL_NOTE for e in ev))
         self.assertFalse([e for e in ev if e["type"] == "wall_name"])
 
+    def test_priors_dir_from_env(self):
+        E = app.adapter.E
+        old_dir, old_env = E.CFG.get("PRIORS_DIR"), os.environ.get("UNSAID_PRIORS_DIR")
+        d = os.path.join(H.TMP, "secrets")
+        os.makedirs(d, exist_ok=True)
+        with open(os.path.join(d, "stl.json"), "w") as f:
+            f.write("{}")
+        os.environ["UNSAID_PRIORS_DIR"] = d
+        try:
+            self.assertEqual(app.adapter.configure_priors(), {"stl": True, "nyc": False})
+            self.assertEqual(E.CFG["PRIORS_DIR"], d)
+        finally:
+            E.CFG["PRIORS_DIR"] = old_dir
+            if old_env is None:
+                os.environ.pop("UNSAID_PRIORS_DIR", None)
+            else:
+                os.environ["UNSAID_PRIORS_DIR"] = old_env
+
     def test_directory_is_merged_and_default_is_data_walls(self):
         d = os.path.join(H.TMP, "wdir")
         os.makedirs(d, exist_ok=True)

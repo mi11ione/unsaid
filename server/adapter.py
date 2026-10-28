@@ -71,6 +71,18 @@ def empty_walls_file(cache_dir):
             fh.write('{"walls": []}')
     return p
 
+def configure_priors():
+    """The 'fits everyone' priors (data/priors/<city>.json) are Qloo-derived, so they are gitignored and never in the
+    repo. On Render they are secret files (mounted at /etc/secrets/, uploaded by server/push_priors.py) and
+    UNSAID_PRIORS_DIR points the engine there. Returns {city: present} for /api/health."""
+    d = os.environ.get("UNSAID_PRIORS_DIR")
+    if d and os.path.isdir(d) and "PRIORS_DIR" in E.CFG:
+        E.CFG["PRIORS_DIR"] = d
+    pd = E.CFG.get("PRIORS_DIR") or ""
+    return {k: os.path.exists(os.path.join(pd, "%s.json" % k)) for k in ("stl", "nyc")}
+
+
+PRIORS = configure_priors()
 ENGINE_V = getattr(API, "ENGINE_V", None) or getattr(getattr(API, "E", None), "ENGINE_V", None) or "kit-v3+server-fallback-1"
 BACKEND = "api" if API else "fallback"
 N_PICKS, N_RESERVES = 7, 3
