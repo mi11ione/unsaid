@@ -156,6 +156,16 @@ class TestContainmentNeedsEvidence(unittest.TestCase):
         self.assertEqual(self.strike("Pat's Bar & Grill", ["Pat Connolly Tavern", "Pat's Bar and Grill"]),
                          ["Pat's Bar and Grill"])
 
+    def test_trailing_possessive_folds(self):
+        self.assertEqual(M.norm("Jody B'"), M.norm("Jody B's"))
+        self.assertEqual(M.norm("Jody B’s"), M.norm("Jody Bs"))
+        self.assertEqual(M.norm("Pappy's"), M.norm("Pappys"))
+        self.assertEqual(M.norm("The Brothers'"), M.norm("The Brothers"))
+        self.assertEqual(M.norm("Rock 'n' Roll Bar"), "rock n roll bar")
+        self.assertEqual(self.strike("Jody B's", ["Jody B'", "Jody's Diner"]), ["Jody B'"])
+        self.assertEqual(self.strike("Jody B'", ["Jody B's"]), ["Jody B's"])
+        self.assertEqual(self.strike("Pappys", ["Pappy's Smokehouse Midtown"]), ["Pappy's Smokehouse Midtown"])
+
     def test_apostrophe_and_corporate_suffix(self):
         self.assertEqual(self.strike("Marsha's", ["Marshas Ltd", "Marsh Tavern"]), ["Marshas Ltd"])
         self.assertEqual(self.strike("Marshas", ["Marsha's"]), ["Marsha's"])

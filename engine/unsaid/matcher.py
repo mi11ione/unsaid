@@ -44,6 +44,7 @@ BRAND_WEAK = set("""the a an and of at on in by for with to n little big old new
 blue red green black white golden gold royal grand upper lower east west north south good great happy lucky sweet
 fine hot cool local wild first last main corner city town street park""".split())   # never fire R5 alone
 
+BARE_POSSESSIVE = re.compile(r"(^|[^a-z0-9'])([a-z0-9]*[a-rt-z0-9])'(?![a-z0-9])")   # site/js/matcher.js too
 CORP_SUFFIX = re.compile(r"(?:\s+(?:and\s+)?(?:ltd|llc|inc|co|corp)\b)+$")
 SPLIT_HOST = re.compile(r"\s+(?:at|inside|@|in the|within)\s+|\s+[-–—|]\s+|\s*\(")
 SPLIT_ON_SUFFIX = re.compile(r"\s+on (?:the )?\w+(?: \w+)?$")
@@ -75,11 +76,12 @@ def _fold_c(s):
 
 @lru_cache(maxsize=1 << 13)
 def _norm_c(s):
-    """Lower-case, accents folded, &/+ -> and, apostrophes dropped (possessive 's keeps its s: "Marsha's" ==
-    "Marshas"), punctuation to spaces, compounds joined, leading 'the' and trailing corporate suffixes (Ltd, LLC,
+    """Lower-case, accents folded, &/+ -> and, a trailing possessive folded ("Jody B'" == "Jody B's" == "Jody Bs",
+    "Pappy's" == "Pappys", "Brothers'" == "Brothers"; possessive 's keeps its s: "Marsha's" == "Marshas"), punctuation to spaces, compounds joined, leading 'the' and trailing corporate suffixes (Ltd, LLC,
     Inc, Co, Corp) dropped."""
     s = fold(s)
     s = s.replace("&", " and ").replace("+", " and ")
+    s = BARE_POSSESSIVE.sub(r"\1\2s", s)   # Qloo's cut "Jody B'" == "Jody B's" (a bare ' after a letter other than s)
     s = s.replace("'", "")
     s = re.sub(r"[^a-z0-9]+", " ", s)
     s = re.sub(r"\s+", " ", s).strip()
