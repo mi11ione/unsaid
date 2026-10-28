@@ -14,7 +14,7 @@ CS = importlib.util.module_from_spec(spec); spec.loader.exec_module(CS)
 
 CEN = json.load(open(P("site", "data", "census.json")))
 S = CEN["stl"]
-GEM = "Mai Lee"
+GEM = S["mailee_claude"]["name"]          # the two-AI hero's gem (UNSAID.md §0)
 
 
 def hidden(provider):
@@ -61,36 +61,101 @@ card = lambda c: {k: c.get(k) for k in keep} | {"never_said": c["never_said"]["a
 typed = {l["label"]: l.get("text") or l["label"] for l in LIVE["loves"]}
 loves = [{"label": typed.get(l["label"], l["label"]), "qloo": l["label"], "type": l.get("type_label"), "dead": l.get("dead", False)} for l in R["loves"]]
 
-# the agent beat. tool_use: Claude's own call to the tool, verbatim (agent/demo/claude_with.jsonl; that server ran in
-# fake mode, so its tool_result is NOT shown). Reply: the live run's text, verbatim lines only (private/, see notes).
-tu = None
-for l in open(P("agent", "demo", "claude_with.jsonl")):
-    d = json.loads(l)
-    if d.get("type") == "assistant":
-        for c in d["message"]["content"]:
-            if isinstance(c, dict) and c.get("type") == "tool_use":
-                tu = {"name": c["name"].split("__")[-1], "input": c["input"]}
-assert tu and tu["name"] == "unsaid_places"
-QUOTE = os.path.join(ROOT, "..", "private", "agent_quote_cedric_202610280308.json")
-lines = ["The usual names (Pappy's, Sugarfire, Mai Lee, Gioia's) are great, but every AI assistant gives them to everyone, so I left them out.",
-         "**A plan for tonight:** Eat at Warehouse West, then go to Starz or Harlem Tap Room for the music."]
-if os.path.exists(QUOTE):   # the live run stays outside the repo; checked whenever it is present
-    reply = json.load(open(QUOTE))
-    for s in lines:
-        assert s in reply["result"], "not verbatim: " + s
-    assert list(reply["modelUsage"]) == ["claude-sonnet-5-5"], reply["modelUsage"]
-else:
-    print("note: %s absent; reply lines not re-checked" % QUOTE)
+# the agent beat: ONE live run, its tool call and its tool result from the same transcript (Agent E records it at
+# agent/demo/live_transcript.jsonl, remote mode against the hosted API). Two formats are read: MCP JSON-RPC lines
+# ({"dir": ">>"|"<<", "msg": ...}, like agent/transcript.jsonl) and Claude stream-json (assistant tool_use, user
+# tool_result, final result). A fake-mode result is refused. No transcript: the video drops the agent scene.
+TRANSCRIPT = os.environ.get("AGENT_TRANSCRIPT") or P("agent", "demo", "live_transcript.jsonl")
+ALLOW_FAKE = os.environ.get("VIDEO_TEST_ALLOW_FAKE") == "1"     # layout tests only; render.sh never sets it
+
+
+def result_text(content):
+    """the tool result's own text: content blocks (MCP) or a string; returns (text, structured or None)"""
+    st = None
+    if isinstance(content, dict):
+        st = content.get("structuredContent"); content = content.get("content")
+    if isinstance(content, list):
+        texts = [c.get("text", "") for c in content if isinstance(c, dict) and c.get("type") == "text"]
+    else:
+        texts = [content or ""]
+    for t in texts:
+        try:
+            j = json.loads(t)
+            if isinstance(j, dict) and st is None: st = j
+        except Exception:
+            pass
+    summary = next((t for t in texts if t and not t.lstrip().startswith("{")), None)
+    return summary, st
+
+
+def agent_beat(path):
+    if not os.path.exists(path):
+        print("note: %s absent: the video has no agent scene" % os.path.relpath(path, ROOT)); return None
+    rows = [json.loads(l) for l in open(path) if l.strip()]
+    call = res = reply = None; client = model = None; when = None
+    if rows and "dir" in rows[0]:                                           # MCP JSON-RPC
+        pend = {}
+        for r in rows:
+            m = r["msg"]
+            if r["dir"] == ">>" and m.get("method") == "initialize":
+                client = (m.get("params", {}).get("clientInfo") or {}).get("name")
+            if r["dir"] == ">>" and m.get("method") == "tools/call" and m["params"]["name"] == "unsaid_places" and call is None:
+                call = {"name": m["params"]["name"], "input": m["params"]["arguments"]}; pend = m["id"]
+            elif r["dir"] == "<<" and call and m.get("id") == pend and res is None:
+                res = m.get("result")
+        who = client or "an MCP client"
+    else:                                                                   # Claude stream-json
+        tid = None
+        for r in rows:
+            if r.get("type") == "system" and r.get("subtype") == "init":
+                model = r.get("model")
+            if r.get("type") == "assistant":
+                for c in r["message"]["content"]:
+                    if isinstance(c, dict) and c.get("type") == "tool_use" and c["name"].split("__")[-1] == "unsaid_places" and call is None:
+                        call = {"name": "unsaid_places", "input": c["input"]}; tid = c["id"]
+            if r.get("type") == "user" and tid:
+                for c in r["message"]["content"]:
+                    if isinstance(c, dict) and c.get("type") == "tool_result" and c.get("tool_use_id") == tid and res is None:
+                        res = c.get("content")
+            if r.get("type") == "result":
+                reply = r.get("result")
+        who = "Claude"
+    assert call and res is not None, "no unsaid_places call with a result in " + path
+    summary, st = result_text(res)
+    mode = (st or {}).get("mode")
+    fake = mode == "fake" or "FAKE MODE" in (summary or "") or "FAKE MODE" in json.dumps(res)
+    assert ALLOW_FAKE or not fake, "the transcript is fake mode: not shown (" + path + ")"
+    when = (st or {}).get("as_of")
+    lines = [l for l in (summary or "").splitlines() if l.strip()]
+    if not lines and st and st.get("picks"):                                 # no text summary: the result's own fields
+        lines = ["%d. %s (%s) · #%s for you · #%s for anyone" % (i + 1, p.get("name"), p.get("neighbourhood"), p.get("fit_rank") or p.get("rank_for_you"),
+                 p.get("any_rank") or p.get("rank_for_anyone")) for i, p in enumerate(st["picks"])]
+    para = None
+    if reply:
+        para = next((x.strip() for x in reply.split("\n\n") if x.strip()), None)
+    return {"client": who, "model": model, "as_of": when, "mode": "fake (TEST)" if fake else (mode or "live"), "file": os.path.relpath(path, ROOT),
+            "tool_use": call, "result_lines": lines[:5], "result_more": max(0, len(lines) - 5), "reply": para}
+
+
+AGENT = agent_beat(TRANSCRIPT)
+if AGENT and AGENT["result_lines"]:
+    top = R["picks"][0]["name"] if R["picks"] else None
+    if top and top not in AGENT["result_lines"][min(1, len(AGENT["result_lines"]) - 1)]:
+        print("note: the live tool's first pick differs from the site's set (%s); both are shown as they are" % top)
+CONF = json.load(open(P("site", "data", "config.json")))
+gpt_models = sorted({r.get("model") for r in CS.load("codex") if r["city"] == "stl" and r["family"] == "hidden"})
+assert len(gpt_models) == 1, gpt_models
 
 out = {
     "_": "Built by media/tools/build_video_data.py from stored files; see media/VIDEO-NOTES.md for every source.",
-    "census": {"model": CEN["model"], "chatgpt_model": "gpt-5.6-terra", "date": CEN["date"], "gem": GEM, "hood": S["mailee_claude"]["hood"],
+    "census": {"city": S["city"], "model": CEN["model"], "chatgpt_model": gpt_models[0], "date": CEN["date"], "gem": GEM, "hood": S["mailee_claude"]["hood"],
                "claude": nc, "chatgpt": ng, "of": len(asks), "asks": asks,
                "k50_claude": S["k50"]["n"], "k50_chatgpt": S["chatgpt"]["k50"]["n"], "asks_per_city": S["asks"]["n"]},
-    "cedric": {"loves": loves, "wall": wall, "wall_n": C["wall"], "asks": C["asks"], "asks_by": dict(prov_asks),
+    "cedric": {"label": LIVE["label"], "person": LIVE["label"].split(" · ")[0], "city": R["city"]["name"], "floor": CONF["floor"]["rating"],
+               "flags": R.get("flags", []), "loves": loves, "wall": wall, "wall_n": C["wall"], "asks": C["asks"], "asks_by": dict(prov_asks),
                "U": C["U"], "struck_in_U": C["struck_in_U"], "S": C["S"], "R_mi": C["R_mi"], "qloo_calls": R["diag"]["qloo_calls"],
                "as_of": R["diag"]["as_of"], "picks": [card(c) for c in R["picks"]], "reserves": [card(c) for c in R["reserves"]]},
-    "agent": {"tool_use": tu, "reply": lines, "reply_model": "claude-sonnet-5-5", "reply_date": "28 Oct 2026"},
+    "agent": AGENT,
 }
 os.makedirs(P("media", "data", "live"), exist_ok=True)   # gitignored: Qloo-derived results never enter git (§3.5)
 json.dump(out, open(P("media", "data", "live", "video.json"), "w"), indent=1, ensure_ascii=False)

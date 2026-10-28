@@ -10,16 +10,23 @@ No humans, no voice. The installed macOS voices are the legacy ones (Fred, Kathy
 no voice-over cut. Sound: UI cues only (ticks, a strike swish, a two-note rise, key clicks), synthesised by
 `tools/video_audio.py` from sine waves and seeded noise. No music, nothing licensed.
 
-## Shots (59.5 s)
+## Data, not literals
+
+Every name, number and place in `video.html` comes from `data/live/video.json` (built from the files below), so
+`./render.sh video` at the 30 Oct 12:00 ET freeze picks up the new cards, wall counts and live transcript with no edits.
+The only fixed choices are copy (captions), the scene lengths, and which card the judge strikes (card 2). Four lines
+of ranking copy sit in one `COPY` block, marked PENDING until the orchestrator sends the new ranking's wording.
+
+## Shots (59.5 s with the agent scene; 52.1 s without it)
 
 | t (s) | shot | on screen |
 |---|---|---|
 | 0.0–13.4 | the problem | "Ask an AI for a hidden gem in St. Louis." The 16 real hidden-gem asks run; for each, a dot per AI fills red if it named Mai Lee. **Mai Lee** · Claude 13 of 16 · ChatGPT 10 of 16; the map (grey OSM places, red = Claude's census) with Mai Lee's ring pulsing. "Different AIs. The same secret, told to everyone." "Half of everything Claude recommends here is the same 29 places. ChatGPT's: 30." Mai Lee is struck. |
-| 13.4–22.0 | the cross-out | "UNSAID crosses out every place the AIs name." "Asked 179 ways about St. Louis, Claude, ChatGPT and Gemini named 418 places." The wall's 418 names land most-named first, each struck, while the view zooms out; counter 0 → 418. "Good places. Everyone already gets them." |
+| 13.4–22.0 | the cross-out | "UNSAID crosses out every place the AIs named in 179 asks." "Claude, ChatGPT and Gemini named 418 places in St. Louis." The wall's 418 names land most-named first, each struck, while the view zooms out; counter 0 → 418. "Good places. Everyone already gets them." |
 | 22.0–37.4 | 7 for you | "Three things Cedric loves." (rib tips dims) → funnel 52 → ~~9~~ → 7 (+3 in reserve) → the seven cards, "7 for you. Ranked by Qloo." with the rib-tips line → card one: Starz Bar And Grill, "#4 for you. #30 for anyone.", NEVER SAID "Named 0 times in 179 asks.", BECAUSE "You love Frankie Beverly & Maze." |
 | 37.4–45.0 | a judge strikes | "You're the judge. Know one? Strike it." Card 2 (Harlem Tap Room) is held and struck ("struck by you"); the first reserve, The Nation Bar And Grill (#2 for you, #19 for anyone), rises in after it, "rose in its place · a reserve no AI named"; later numbers move down one (the site's `strike()`). "A reserve rises. No AI named that one either." |
-| 45.0–52.4 | an agent calls it | "Agents can call it too." Claude's `tool_use` of `unsaid_places` typed out; Claude's reply, two verbatim lines. |
-| 52.4–59.5 | end card | UNSAID · "Everything the AIs tell everyone, crossed out." · **418 → 7** · "places the AIs gave everyone · left for Cedric, ranked by Qloo" · ⟦LIVE_URL⟧ · "try Cedric · St. Louis, or your own three loves" |
+| 45.0–52.4 | an agent calls it | Only when `agent/demo/live_transcript.jsonl` exists (Agent E's live run): "Agents can call it too." Its `unsaid_places` call typed out, and its own tool result beside it (header line + first picks, each cut after its two ranks with …); Claude's first reply paragraph if the transcript has one. A fake-mode transcript is refused by the build; with no transcript the scene is dropped. |
+| 52.4–59.5 | end card | UNSAID · "Everything the AIs tell everyone, crossed out." · **418** named by the AIs in 179 asks → **~~9~~** of them in Cedric's Qloo pool: crossed out → **7** for Cedric · ⟦LIVE_URL⟧ · "try Cedric · St. Louis, or your own three loves" |
 
 ## Every number, and where it comes from
 
@@ -42,13 +49,12 @@ no voice-over cut. Sound: UI cues only (ticks, a strike swish, a two-note rise, 
 | 0 times in 179 asks | card one's never-said line | picks[0].never_said.asks |
 | #2 / #19 | the risen reserve, The Nation Bar And Grill | reserves[0].fit_rank / any_rank; reserves[0] rises first, as in `site/js/app.js` strike() |
 | 43 calls, 27 Oct (footer) | Qloo calls for the run; its date | result.diag.qloo_calls; result.diag.as_of (01:49 UTC 28 Oct = 27 Oct ET) |
-| 418 → 7 | end card | counts.wall → picks |
+| 418 → 9 → 7 | end card funnel | counts.wall → counts.struck_in_U → picks |
 
 Words, not numbers, with sources:
 - Card neighbourhoods, "what" lines, "because you love …": picks[] / reserves[] (loves shown as typed: `loves[].text`).
 - "Rib tips: Qloo scores every place here the same, so the other two ranked.": result.flags `dead_love:Rib Tips`; the site's own dead-tag line (`UM.deadLine`), shortened.
-- The `tool_use` block: Claude's own call, verbatim, from `agent/demo/claude_with.jsonl` (the JSON's line breaks are ours). That session's server ran in fake mode, so **its tool_result is not shown**.
-- Claude's reply: two verbatim lines from the live run (claude -p, Claude Sonnet 5.5, live `unsaid_places`, Cedric's three loves, 28 Oct), kept outside the repo at `~/Desktop/qloo/private/agent_quote_cedric_202610280308.json`; the same run devpost.md quotes. The build re-checks both lines against it when the file is present. The footer says the call and the reply are each verbatim.
+- The agent scene: the `unsaid_places` call and its result from ONE transcript (`AGENT_TRANSCRIPT`, default `agent/demo/live_transcript.jsonl`), MCP JSON-RPC or Claude stream-json; the build refuses `mode: fake` / "FAKE MODE". The earlier mix (a fake-mode `tool_use` beside a reply from another run) is gone.
 - Census footer: Claude Sonnet 5.5 and ChatGPT gpt-5.6-terra, no web search, 27 Oct 2026, pre-registered (census.json; codex answers' `model`).
 
 Not on screen, on purpose: ⟦ASKS⟧-style placeholders other than ⟦LIVE_URL⟧, the meter (gate D failed, not featured), any latency, any NYC figure.

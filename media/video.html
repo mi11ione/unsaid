@@ -111,14 +111,31 @@
   const cue = (t, k) => SFX.push({ t: +t.toFixed(3), k });
 
   // ---- scenes (seconds) ----
-  const S = { s1: [0, 13.4], s2: [13.4, 22.0], s3: [22.0, 37.4], s4: [37.4, 45.0], s5: [45.0, 52.4], s6: [52.4, 59.5] };
-  const END = 59.5, XF = .4;
+  // the people, places and wording that come from the data (no literal names or numbers below this block)
+  const CITY = CD.city, WHO = CD.person, PV = { anthropic: 'Claude', openai: 'ChatGPT', google: 'Gemini' };
+  const WORD = ['No', 'One', 'Two', 'Three', 'Four', 'Five'], word = n => WORD[n] || String(n);
+  const AIS = Object.keys(PV).filter(k => CD.asks_by[k]).map(k => PV[k]);
+  const AIS_TXT = AIS.length > 1 ? AIS.slice(0, -1).join(', ') + ' and ' + AIS[AIS.length - 1] : AIS.join('');
+  const nb = s => String(s).replace(/ (\S+)$/, '&nbsp;$1');            // no lone last word on a caption line
+  // PENDING (orchestrator, 28 Oct): the ranking is being changed (fit to you minus fit to everyone in the city); these
+  // four lines wait for its one-line wording. Everything else in the video is final copy.
+  const COPY = {
+    rankCap: 'What’s left, Qloo ranks for him.',
+    cardsCap: n => `${n} for you. Ranked by Qloo.`,
+    detailOf: U => `The same ${U} places, ranked by Qloo:<br>for his taste, then by popularity.`,
+    funnel3: (S_, nres) => `for him, ranked by Qloo<br>from the ${S_} left` + (nres ? `<br>(+${nres} in reserve)` : ''),
+  };
+  // scene lengths (s); the agent scene exists only when a live transcript was found
+  const DUR = [['s1', 13.4], ['s2', 8.6], ['s3', 15.4], ['s4', 7.6], ['s5', AG ? 7.4 : 0], ['s6', 7.1]];
+  const S = {}; let acc = 0;
+  DUR.forEach(([k, d]) => { if (d) { S[k] = [acc, acc + d]; acc += d; } });
+  const END = +acc.toFixed(2), XF = .4;
   const scene = id => { const d = el(stage, 'div'); d.className = 'sc'; d.id = id; return d; };
   // a crossfade of XF s centred on each boundary
   const vis = (t, [a, b], first, last) => (first ? 1 : ease((t - a + XF / 2) / XF)) * (last ? 1 : 1 - ease((t - b + XF / 2) / XF));
   const srcLine = (p, html) => { const d = el(p, 'div', '', html); d.className = 'src'; return d; };
 
-  const top = el(stage, 'div', '', `<span class="mark" style="font-size:20px"><s>UN</s>SAID</span><span class="slug" style="font-size:16px">St. Louis · eat &amp; drink</span>`);
+  const top = el(stage, 'div', '', `<span class="mark" style="font-size:20px"><s>UN</s>SAID</span><span class="slug" style="font-size:16px">${esc(CITY)} · eat &amp; drink</span>`);
   top.className = 'top';
 
   // =============== S1 · the problem: ask an AI for a hidden gem ===============
@@ -131,7 +148,7 @@
   const [mx, my] = OUT ? P(OUT.lon, OUT.lat) : [0, 0], mr = OUT ? UM.discD(OUT.count, cmax, 44, 5) / 2 : 0;
   const [cx0, cy0] = P(-90.2, 38.63);
   const delay = M.places.map(([lo, la]) => { const [x, y] = P(lo, la); return Math.hypot(x - cx0, y - cy0) / 900 * .8; });
-  const eye = el(s1, 'div', '', `Ask an AI for a hidden gem in St.&nbsp;Louis.`); eye.className = 'eye';
+  const eye = el(s1, 'div', '', `Ask an AI for a hidden gem in ${esc(CE.city).replace(/ /g, '&nbsp;')}.`); eye.className = 'eye';
   const ask = el(s1, 'div', ''); ask.className = 'ask';
   const gemN = el(s1, 'div', '', `<span class="x" style="--h:.075em">${esc(CE.gem)}</span>`); gemN.className = 'gemN';
   const mkRow = (who, y) => {
@@ -189,22 +206,25 @@
 
   // =============== S2 · the cross-out: the wall ===============
   const s2 = scene('s2');
-  const c2 = el(s2, 'div', 'top:96px;width:1500px;font-size:60px;white-space:nowrap', 'UNSAID crosses out every place the AIs name.'); c2.className = 'cap1';
-  const c2b = el(s2, 'div', 'top:178px;width:1300px;font-size:28px', `Asked ${CD.asks} ways about St. Louis, Claude, ChatGPT and Gemini named ${CD.wall_n} places.`); c2b.className = 'cap2';
+  const hd2 = el(s2, 'div', 'position:absolute;left:72px;top:92px;width:1440px');
+  const c2 = el(hd2, 'div', 'position:relative;left:0;font-size:58px', `UNSAID crosses out every place<br>the AIs named in ${CD.asks}&nbsp;asks.`); c2.className = 'cap1';
+  const sub2 = el(hd2, 'div', 'position:relative;height:40px;margin-top:14px');
+  const c2b = el(sub2, 'div', 'left:0;top:0;font-size:28px', `${esc(AIS_TXT)} named ${CD.wall_n} places in ${esc(CITY)}.`); c2b.className = 'cap2';
   const cnt = el(s2, 'div', '', `<div class="v">0</div><div class="l">places · crossed out</div>`); cnt.className = 'cnt';
   const wb = el(s2, 'div'); wb.className = 'wallbox';
   const wl = el(wb, 'div'); wl.className = 'wl';
   const names = CD.wall.map(w => { const s = document.createElement('span'); s.textContent = w.name; wl.appendChild(s); return s; });
   // the base size that fits all of them, at the end of the zoom-out
   let fs = 15; wl.style.fontSize = fs + 'px';
-  while (wl.offsetHeight > 740 && fs > 9) { fs -= .5; wl.style.fontSize = fs + 'px'; }
+  while (wl.offsetHeight > wb.offsetHeight - 10 && fs > 6) { fs -= .5; wl.style.fontSize = fs + 'px'; }
   const Z0 = 3.4;
   const app = names.map((_, i) => .6 + 4.2 * Math.pow(i / names.length, .72));
-  const c2c = el(s2, 'div', 'top:178px;width:1300px;font-size:28px;color:var(--ink)', 'Good places. Everyone already gets&nbsp;them.'); c2c.className = 'cap2';
-  srcLine(s2, `the wall behind Cedric’s set: ${CD.wall_n} distinct places from ${CD.asks} stored asks (Claude ${CD.asks_by.anthropic}, ChatGPT ${CD.asks_by.openai}, Gemini ${CD.asks_by.google}), dated, no web search · most-named first`);
+  const c2c = el(sub2, 'div', 'left:0;top:0;font-size:28px;color:var(--ink)', 'Good places. Everyone already gets&nbsp;them.'); c2c.className = 'cap2';
+  wb.style.top = (92 + hd2.offsetHeight + 34) + 'px'; wb.style.height = (1010 - 92 - hd2.offsetHeight - 34) + 'px';
+  srcLine(s2, `the wall behind ${esc(WHO)}’s set: ${CD.wall_n} distinct places from ${CD.asks} stored asks (${Object.keys(PV).filter(k => CD.asks_by[k]).map(k => `${PV[k]} ${CD.asks_by[k]}`).join(', ')}), dated, no web search · most-named first`);
   for (let i = 0; i < names.length; i += 6) cue(S.s2[0] + app[i] + .3, 'scratch');
   function seek2(u) {
-    show(c2, K(u, .1, .5));
+    show(hd2, K(u, .1, .5));
     c2b.style.opacity = K(u, .5, .5) * (1 - K(u, 5.6, .4));
     c2c.style.opacity = K(u, 6.0, .5);
     const z = Z0 + (1 - Z0) * easeIO((u - 1.6) / 4.4);
@@ -226,22 +246,22 @@
   const TL = { artist: 'artist', movie: 'movie', tag: 'dish' };
   const live = loves.filter(l => !l.dead), dead = loves.filter(l => l.dead);
   const it = l => ['movie', 'tv_show', 'book'].includes(l.type) ? `<i style="font:inherit;font-style:italic;letter-spacing:0;text-transform:none;color:inherit">${esc(l.label)}</i>` : esc(l.label);
-  const c3a = el(s3, 'div', 'top:150px', 'Three things Cedric&nbsp;loves.'); c3a.className = 'cap1';
+  const c3a = el(s3, 'div', 'top:150px', `${word(loves.length)} things ${esc(WHO)}&nbsp;loves.`); c3a.className = 'cap1';
   const chips = el(s3, 'div'); chips.className = 'chips';
   const chipEls = loves.map(l => { const c = el(chips, 'div', '', `<span>${it(l)}</span><i>${TL[l.type] || l.type || ''}</i>`); c.className = 'chip2'; return c; });
   // funnel: U → S → 7
-  const c3b = el(s3, 'div', 'top:150px;width:1700px', 'What’s left, Qloo ranks for&nbsp;him.'); c3b.className = 'cap1';
+  const c3b = el(s3, 'div', 'top:150px;width:1700px', nb(COPY.rankCap)); c3b.className = 'cap1';
   const F = [
-    el(s3, 'div', 'left:72px', `<div class="v">${CD.U}</div><div class="l">places Qloo finds for<br>his loves, within ${CD.R_mi} mi,<br>rated 4.3+ and open</div>`),
+    el(s3, 'div', 'left:72px', `<div class="v">${CD.U}</div><div class="l">places Qloo finds for<br>his loves, within ${CD.R_mi} mi,<br>rated ${CD.floor}+ and open</div>`),
     el(s3, 'div', 'left:700px', `<div class="v"><span class="x" style="--h:.06em">${CD.struck_in_U}</span></div><div class="l">of them were on<br>the AIs’ lists:<br>crossed out</div>`),
-    el(s3, 'div', 'left:1330px', `<div class="v">${CD.picks.length}</div><div class="l">for him, ranked by Qloo<br>from the ${CD.S} left<br>(+${CD.reserves.length} in reserve)</div>`)];
+    el(s3, 'div', 'left:1330px', `<div class="v">${CD.picks.length}</div><div class="l">${COPY.funnel3(CD.S, CD.reserves.length)}</div>`)];
   F.forEach((f, i) => { f.className = 'fun' + (i === 1 ? ' r' : ''); });
   const arr = [el(s3, 'div', 'left:520px', '→'), el(s3, 'div', 'left:1150px', '→')]; arr.forEach(a => { a.className = 'arw'; });
   // the cards row (shared by S3 and S4)
-  const c3c = el(s3, 'div', 'top:150px;width:1780px', `${CD.picks.length} for you. Ranked by&nbsp;Qloo.`); c3c.className = 'cap1';
+  const c3c = el(s3, 'div', 'top:150px;width:1780px', nb(COPY.cardsCap(CD.picks.length))); c3c.className = 'cap1';
   const LOVES = live.map(it).join(' and ');
   const c3d = el(s3, 'div', 'top:232px;width:1780px;font-size:26px',
-    `for <span style="color:var(--ink)">${LOVES}</span>.` + (dead.length ? ` ${esc(dead[0].label.charAt(0).toUpperCase() + dead[0].label.slice(1))}: Qloo scores every place here the same, so the other two ranked.` : ''));
+    `for <span style="color:var(--ink)">${LOVES}</span>.` + (dead.length ? ` ${esc(dead[0].label.charAt(0).toUpperCase() + dead[0].label.slice(1))}: Qloo scores every place here the same, so the other ${word(live.length).toLowerCase()} ranked.` : ''));
   c3d.className = 'cap2';
   const CW = 330, CG = 22;
   function cardHTML(c, i) {
@@ -253,17 +273,17 @@
   const mkRowC = (parent, list) => { const r = el(parent, 'div'); r.className = 'rowc';
     return { r, cards: list.map((c, i) => { const d = el(r, 'div', `left:${i * (CW + CG)}px`, cardHTML(c, i)); d.className = 'card'; return d; }) }; };
   const R3 = mkRowC(s3, CD.picks);
-  const scale7 = (W - 144) / (7 * CW + 6 * CG);
+  const NP = CD.picks.length, scale7 = Math.min(1, (W - 144) / (NP * CW + (NP - 1) * CG));
   // card one in detail
   const P1 = CD.picks[0];
   const D1 = mkRowC(s3, [P1]);
   const det = el(s3, 'div', '', `<div class="h">#${P1.fit_rank} for you. <span>#${P1.any_rank} for anyone.</span></div>
-    <div class="of">The same ${P1.U} places, ranked by Qloo:<br>for his taste, then by popularity.</div>
+    <div class="of">${COPY.detailOf(P1.U)}</div>
     <div class="k"><div class="t">NEVER SAID</div><div class="b">Named 0 times in ${P1.never_said} asks.</div></div>
     <div class="k"><div class="t">BECAUSE</div><div class="b">You love ${esc(UM.typedName({ loves: loves.map(l => ({ label: l.qloo, text: l.label })) }, P1.because))}.</div></div>`);
   det.className = 'det';
   const dk = [...det.children];
-  srcLine(s3, `Cedric · St. Louis (the site’s try-these set): Qloo Insights API, ${CD.qloo_calls} calls, ${esc(UM.day(CD.as_of))} · “for anyone” = Qloo’s popularity order of the same ${CD.U} places`);
+  srcLine(s3, `${esc(CD.label)} (the site’s try-these set): Qloo Insights API, ${CD.qloo_calls} calls, ${esc(UM.day(CD.as_of))} · “for anyone” = Qloo’s popularity order of the same ${CD.U} places`);
   const T3 = { chips: 0, fun: 3.4, cards: 7.4, det: 10.6 };
   [0, 1, 2].forEach(i => cue(S.s3[0] + .5 + i * .32, 'tick'));
   cue(S.s3[0] + T3.fun + 1.7, 'strike');
@@ -295,16 +315,17 @@
   const c4a = el(s4, 'div', 'top:150px;width:1780px', 'You’re the judge. Know one? Strike&nbsp;it.'); c4a.className = 'cap1';
   const c4b = el(s4, 'div', 'top:150px;width:1780px', 'A reserve rises. No AI named that one&nbsp;either.'); c4b.className = 'cap1';
   const R4 = mkRowC(s4, CD.picks);
-  const RES = CD.reserves[0];
+  const RES = CD.reserves[0];   // none in reserve: the strike still shows; nothing rises
   const SI = 1;                                    // strike card 2; the first reserve rises in after it (site/js/app.js strike())
-  const rz = el(R4.r, 'div', `left:${(SI + 1) * (CW + CG)}px`, cardHTML(RES, SI + 1)); rz.className = 'card risen';
-  rz.querySelector('.tag').textContent = 'rose in its place · a reserve no AI named';
+  const rz = RES ? el(R4.r, 'div', `left:${(SI + 1) * (CW + CG)}px`, cardHTML(RES, SI + 1)) : el(R4.r, 'div', 'display:none');
+  if (RES) { rz.className = 'card risen'; rz.querySelector('.tag').textContent = 'rose in its place · a reserve no AI named'; }
+  if (!RES) c4b.innerHTML = 'Struck. Nothing left in reserve.';
   // numbers after the risen card move down one (as on the site)
   R4.cards.forEach((e, i) => { if (i > SI) e.querySelector('.r1 span').dataset.n2 = String(i + 2).padStart(2, '0'); });
   const hb = el(R4.cards[SI], 'div'); hb.className = 'hb';
   srcLine(s4, `on the site: hold a card to strike it; the next reserve (Qloo’s, never named by an AI) rises in after it, and the numbers move down one`);
   const T4 = { hold: 1.4, struck: 2.3, rise: 3.0, cap2: 3.4 };
-  cue(S.s4[0] + T4.struck, 'strike'); cue(S.s4[0] + T4.rise + .2, 'rise');
+  cue(S.s4[0] + T4.struck, 'strike'); if (RES) cue(S.s4[0] + T4.rise + .2, 'rise');
   function seek4(u) {
     c4a.style.opacity = K(u, .1, .4) * (1 - K(u, T4.cap2 - .3, .3));
     c4b.style.opacity = K(u, T4.cap2, .4);
@@ -321,7 +342,7 @@
     tg.style.transform = u >= T4.hold && u < T4.struck + .2 ? `scale(${1 - .02 * ease(clamp((u - T4.hold) / .2))})` : '';
     tg.style.borderColor = u >= T4.hold && u < T4.struck ? 'var(--dim)' : '';
     // the rise: cards after the struck one slide right; the reserve comes up into the gap
-    const rk = easeIO((u - T4.rise) / .6);
+    const rk = RES ? easeIO((u - T4.rise) / .6) : 0;
     R4.cards.forEach((e, i) => {
       if (i > SI) { e.style.left = `${(i + rk) * (CW + CG)}px`; const s = e.querySelector('.r1 span'); s.textContent = rk > .5 ? s.dataset.n2 : String(i + 1).padStart(2, '0'); }
     });
@@ -329,46 +350,73 @@
     R4.r.style.opacity = 1;
   }
 
-  // =============== S5 · an agent calls it ===============
+  // =============== S5 · an agent calls it (one live run: its call and its result, verbatim) ===============
   const s5 = scene('s5');
-  const c5 = el(s5, 'div', 'top:150px', 'Agents can call it&nbsp;too.'); c5.className = 'cap1';
-  const tu = AG.tool_use;
-  const J = o => JSON.stringify(o);
-  // the call's own JSON, verbatim; only the line breaks are ours
-  const CODE = `${tu.name}({\n  "loves": [\n${tu.input.loves.map(l => `    {"text": ${J(l.text)},\n     "type": ${J(l.type)}}`).join(',\n')}\n  ],\n  "city": ${J(tu.input.city)}\n})`;
-  const p1 = el(s5, 'div', 'left:72px;width:880px;height:690px', `<div class="hd"><b>TOOL_USE</b><span>Claude → unsaid_places</span></div><div class="code"></div>`); p1.className = 'pan';
-  const code = p1.querySelector('.code');
-  const md = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/'/g, '’');
-  const p2 = el(s5, 'div', 'left:990px;width:858px;height:690px', `<div class="hd"><b>CLAUDE</b><span>its reply · verbatim excerpt</span></div><div class="rep">${AG.reply.map((r, i) => (i ? '<div class="gap">…</div>' : '') + `<p>${md(r)}</p>`).join('')}</div>`); p2.className = 'pan';
-  const reps = [...p2.querySelectorAll('.rep > *')];
-  srcLine(s5, `tool_use: Claude’s own call to unsaid_places over MCP, verbatim (agent/demo) · reply: Claude Sonnet 5.5 with the live tool and Cedric’s three loves, ${esc(AG.reply_date)}, verbatim excerpt`);
-  const T5 = { type: [.6, 2.4], rep: 2.9 };
-  for (let x = T5.type[0]; x < T5.type[1]; x += .12) cue(S.s5[0] + x, 'key');
-  function seek5(u) {
-    show(c5, K(u, .1, .4)); show(p1, K(u, .25, .4)); show(p2, K(u, T5.rep - .3, .4));
-    const n = Math.round(clamp((u - T5.type[0]) / (T5.type[1] - T5.type[0])) * CODE.length);
-    const shown = CODE.slice(0, n);
-    code.innerHTML = esc(shown).replace(/^(\w+)/, '<span style="color:var(--white);font-weight:700">$1</span>').replace(/(&quot;\w+&quot;):/g, '<span class="k">$1</span>:') +
-      (u < T5.type[1] + .8 && Math.floor(u * 3) % 2 === 0 ? '<span class="cur"></span>' : '');
-    reps.forEach((e, i) => show(e, K(u, T5.rep + i * .9, .45), 10));
+  let seek5 = () => {};
+  if (AG) {
+    const c5 = el(s5, 'div', 'top:150px', 'Agents can call it&nbsp;too.'); c5.className = 'cap1';
+    const tu = AG.tool_use, J = o => JSON.stringify(o);
+    const item = l => {
+      if (Array.isArray(l)) return `[${l.map(J).join(', ')}]`;
+      if (l && typeof l === 'object') { const kv = Object.entries(l).map(([k, v]) => `${J(k)}: ${J(v)}`); const one = `{${kv.join(', ')}}`; return one.length <= 46 ? one : `{${kv.join(',\n     ')}}`; }
+      return J(l);
+    };
+    // the call's own arguments, verbatim; only the whitespace is ours
+    const args = Object.entries(tu.input).map(([k, v]) => Array.isArray(v)
+      ? `  ${J(k)}: [\n${v.map(x => '    ' + item(x)).join(',\n')}\n  ]` : `  ${J(k)}: ${J(v)}`).join(',\n');
+    const CODE = `${tu.name}({\n${args}\n})`;
+    const p1 = el(s5, 'div', 'left:72px;width:880px;height:690px;overflow:hidden', `<div class="hd"><b>${AG.client === 'Claude' ? 'TOOL_USE' : 'TOOLS/CALL'}</b><span>${esc(AG.client)} → ${esc(tu.name)}</span></div><div class="code"></div>`); p1.className = 'pan';
+    const code = p1.querySelector('.code');
+    // the result's own lines, shortened with … (a pick line ends after its two ranks)
+    const short = (l, i) => { const k = i ? l.indexOf(' · holds') : -1; return k > 0 ? l.slice(0, k) + ' …' : l; };
+    const RL = AG.result_lines.map(short);
+    const md = x => esc(x).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/'/g, '’');
+    const p2 = el(s5, 'div', 'left:990px;width:858px;height:690px;overflow:hidden',
+      `<div class="hd"><b>TOOL_RESULT</b><span>${esc(AG.mode)} · ${esc(UM.day(AG.as_of) || '')}</span></div>
+       <div class="res" style="padding:22px 28px">${RL.map((l, i) => `<div style="font:400 ${i ? 25 : 20}px/1.4 var(--mono);color:${i ? 'var(--ink)' : 'var(--dim)'};margin-bottom:${i ? 10 : 18}px">${esc(l)}</div>`).join('')}${AG.result_more ? `<div style="font:400 22px/1 var(--mono);color:var(--faint)">… ${AG.result_more} more lines</div>` : ''}</div>` +
+      (AG.reply ? `<div class="hd" style="border-top:1.5px solid var(--rule2)"><b>${esc(AG.client).toUpperCase()}</b><span>its reply · verbatim, first paragraph</span></div><div class="rep" style="font-size:30px">${md(AG.reply)}</div>` : ''));
+    p2.className = 'pan';
+    const reps = [...p2.querySelectorAll('.res > div')].concat([...p2.querySelectorAll('.rep')]);
+    srcLine(s5, `${esc(AG.file)}: one ${esc(AG.mode)} run; the call and its result verbatim (whitespace ours; long lines end in …)`);
+    const T5 = { type: [.6, 2.2], res: 2.6 };
+    for (let x = T5.type[0]; x < T5.type[1]; x += .12) cue(S.s5[0] + x, 'key');
+    cue(S.s5[0] + T5.res, 'tick');
+    seek5 = u => {
+      show(c5, K(u, .1, .4)); show(p1, K(u, .25, .4)); show(p2, K(u, T5.res - .3, .4));
+      const n = Math.round(clamp((u - T5.type[0]) / (T5.type[1] - T5.type[0])) * CODE.length);
+      code.innerHTML = esc(CODE.slice(0, n)).replace(/^(\w+)/, '<span style="color:var(--white);font-weight:700">$1</span>').replace(/(&quot;\w+&quot;):/g, '<span class="k">$1</span>:') +
+        (u < T5.type[1] + .8 && Math.floor(u * 3) % 2 === 0 ? '<span class="cur"></span>' : '');
+      reps.forEach((e, i) => show(e, K(u, T5.res + i * .35, .4), 8));
+    };
   }
 
-  // =============== S6 · the end card ===============
+  // =============== S6 · the end card: the honest funnel ===============
   const s6 = scene('s6');
   const URL_ = UM.param('url', null);
-  const e1 = el(s6, 'div', 'top:190px', `<span class="mk"><s>UN</s>SAID</span>`); e1.className = 'end';
-  const e2 = el(s6, 'div', 'top:300px;font:400 64px/1.15 var(--serif);color:var(--ink)', 'Everything the AIs tell everyone, <span class="x" style="--h:.07em;--c:var(--ink)">crossed out</span>.'); e2.className = 'end';
-  const e3 = el(s6, 'div', 'top:420px', `<span class="fin" style="color:var(--red)">${CD.wall_n}</span><span class="fin" style="color:var(--faint);font-family:var(--mono);font-size:150px;vertical-align:40px;margin:0 50px"> → </span><span class="fin" style="color:var(--white)">${CD.picks.length}</span>`); e3.className = 'end';
-  const e4 = el(s6, 'div', 'top:740px;font:400 32px/1.4 var(--mono);color:var(--dim)', `places the AIs gave everyone · left for Cedric, ranked by Qloo`); e4.className = 'end';
-  const e5 = el(s6, 'div', 'top:860px', `<span class="url">${URL_ ? esc(URL_) : '<span class="ph">⟦LIVE_URL⟧</span>'}</span><div style="font:400 26px/1 var(--mono);color:var(--dim);margin-top:22px">try Cedric · St. Louis, or your own three loves</div>`); e5.className = 'end';
-  cue(S.s6[0] + .9, 'strike');
+  const e1 = el(s6, 'div', 'top:150px', `<span class="mk"><s>UN</s>SAID</span>`); e1.className = 'end';
+  const e2 = el(s6, 'div', 'top:250px;font:400 64px/1.15 var(--serif);color:var(--ink)', 'Everything the AIs tell everyone, <span class="x" style="--h:.07em;--c:var(--ink)">crossed out</span>.'); e2.className = 'end';
+  const FN = [
+    [CD.wall_n, 'var(--red)', `named by the AIs<br>in ${CD.asks} asks`, false],
+    [CD.struck_in_U, 'var(--red)', `of them in ${esc(WHO)}’s<br>Qloo pool: crossed out`, true],
+    [CD.picks.length, 'var(--white)', `for ${esc(WHO)}`, false]];
+  const e3 = FN.map(([v, c, l, x], i) => {
+    const d = el(s6, 'div', `position:absolute;top:400px;left:${[200, 760, 1320][i]}px;width:400px;text-align:center`,
+      `<div style="font:400 210px/1 var(--serif);color:${c};font-variant-numeric:lining-nums">${x ? `<span class="x" style="--h:.06em">${v}</span>` : v}</div><div style="font:400 28px/1.4 var(--mono);color:var(--dim);margin-top:20px">${l}</div>`);
+    return d;
+  });
+  const ea = [0, 1].map(i => el(s6, 'div', `position:absolute;top:460px;left:${[640, 1200][i]}px;width:80px;text-align:center;font:400 80px/1 var(--mono);color:var(--faint)`, '→'));
+  const e5 = el(s6, 'div', 'top:860px', `<span class="url">${URL_ ? esc(URL_) : '<span class="ph">⟦LIVE_URL⟧</span>'}</span><div style="font:400 26px/1 var(--mono);color:var(--dim);margin-top:22px">try ${esc(CD.label)}, or your own ${word(CD.loves.length).toLowerCase()} loves</div>`); e5.className = 'end';
+  cue(S.s6[0] + .9, 'strike'); cue(S.s6[0] + 2.3, 'strike');
   function seek6(u) {
     show(e1, K(u, .1, .5)); show(e2, K(u, .4, .5));
     e2.querySelector('.x').style.setProperty('--k', easeIO((u - .9) / .55));
-    show(e3, K(u, 1.6, .5)); show(e4, K(u, 2.1, .5)); show(e5, K(u, 2.8, .5));
+    e3.forEach((d, i) => show(d, K(u, 1.4 + i * .5, .45)));
+    e3[1].querySelector('.x').style.setProperty('--k', easeIO((u - 2.3) / .45));
+    ea.forEach((d, i) => { d.style.opacity = K(u, 1.7 + i * .5, .4); });
+    show(e5, K(u, 3.2, .5));
   }
 
-  const SC = [['s1', s1, seek1], ['s2', s2, seek2], ['s3', s3, seek3], ['s4', s4, seek4], ['s5', s5, seek5], ['s6', s6, seek6]];
+  const SC = [['s1', s1, seek1], ['s2', s2, seek2], ['s3', s3, seek3], ['s4', s4, seek4], ['s5', s5, u => seek5(u)], ['s6', s6, seek6]].filter(([k]) => S[k]);
   function seek(t) {
     t = clamp(t, 0, END);
     SC.forEach(([id, node, f], i) => {
