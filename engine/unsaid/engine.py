@@ -1295,23 +1295,46 @@ def hood_of(e, centroids, max_mi=1.5):
 
 
 # ---------------------------------------------------------------- card lines
+_CUT_POSSESSIVE = re.compile(r"(?<=[^\W\dsS_])['\u2019]$")
+
+
 def display_name(name):
-    """'Space Ping Pong Sports Bar & Lounge | Koreatown NYC' -> 'Space Ping Pong Sports Bar & Lounge'."""
-    return (name or "").split(" | ")[0].strip() or name
+    """'Space Ping Pong Sports Bar & Lounge | Koreatown NYC' -> 'Space Ping Pong Sports Bar & Lounge'.
+    Qloo cuts some possessives ('Jody B\'' for Jody B's, whose own descriptions say "Jody B's"): a name ending in an
+    apostrophe after a letter other than s gets its s back; a plural possessive ("The Brothers'") is left alone."""
+    out = (name or "").split(" | ")[0].strip() or name
+    if out and _CUT_POSSESSIVE.search(out):
+        out += "s"
+    return out
 
 
-def why_line(f, p, e, flat):
-    """One line from the selection score's parts: fit for you f, popularity p, fit for everyone e (percentiles)."""
+def why_line(i, fit, pop_ord, ids, everyone, counts, flat):
+    """Why this card won, in <= 60 chars, from the score's own numbers (the card already shows "#f for you" and
+    "#p for anyone"). lift = fit for you - max(popularity, fit for everyone); the larger of the two is the bar it
+    cleared, and the line names that bar:
+      fit for everyone  -> "only 1 of 9 other tastes put it in their top 30%" (the prior's own counts)
+      popularity        -> "fits you better than 27 of the 30 more popular places"
+      flat (taste barely moves the order; the 20% most popular are dropped) -> said so."""
     if flat:
-        return "fits you, among the less famous places here"
-    gap = f - max(p, e if e is not None else 0.0)
-    if e is not None and e <= 0.35 and gap >= 0.5:
-        return "fits you far more than it fits most people here"
-    if p <= 0.35 and gap >= 0.5:
-        return "fits you, and few people here know it"
-    if e is not None and e < p:
-        return "fits you more than its fame suggests"
-    return "fits you better than most of the places here"
+        return "fits you, outside the %d%% most popular places here" % round(100 * (1 - CFG["FLAT_POP_KEEP"]))
+    N = len(ids)
+    p, e = ST.pct(pop_ord[i], N), everyone.get(i)
+    if e is not None and e > p and i in counts:
+        hits, n = counts[i]
+        top = round(100 * (1 - CFG["PRIOR_TOP"]))
+        if n == 1:
+            return "%s the top %d%% of the one other taste that rates it" % ("in" if hits else "not in", top)
+        if hits == 0:
+            return "none of %d other tastes put it in their top %d%%" % (n, top)
+        return "%s%d of %d other tastes put it in their top %d%%" % ("only " if 3 * hits <= n else "", hits, n, top)
+    more = [j for j in ids if pop_ord[j] < pop_ord[i]]
+    if not more:
+        return "the most popular place here, and it fits you"
+    beat = sum(1 for j in more if fit[j] > fit[i])
+    if beat == len(more):
+        return "fits you better than all %d more popular places" % len(more) if len(more) > 1 \
+            else "fits you better than the one more popular place"
+    return "fits you better than %d of the %d more popular places" % (beat, len(more))
 
 
 WHAT_TAG_PREFIX = ("urn:tag:cuisine:", "urn:tag:category:place:", "urn:tag:genre:place:restaurant:",
@@ -1392,21 +1415,22 @@ def everyone_pct(city, ids, love_ids):
     Leave-one-out by love: a frozen set never sees its own data, and a fresh query never sees a set it overlaps."""
     doc = load_prior(city.get("key")) if CFG["PRIOR_ENABLED"] else None
     if not doc:
-        return {}, {"used": False, "why": "no prior for this city"}
+        return {}, {}, {"used": False, "why": "no prior for this city"}
     sets = [s for s in doc["sets"] if not ({l["id"] for l in s["loves"]} & love_ids)]
-    mean = {}
+    mean, counts = {}, {}                    # counts: {place: (other tastes with it in their top PRIOR_TOP, of n)}
     for i in ids:
         v = [s["fit_pct"][i] for s in sets if i in s["fit_pct"]]
         if len(v) >= CFG["PRIOR_MIN_SETS"]:
+            counts[i] = (sum(1 for x in v if x >= CFG["PRIOR_TOP"]), len(v))
             if CFG["PRIOR_STAT"] == "top":     # (hits + 0.5) / (n + 1): a lone observation counts for less
                 mean[i] = (sum(1 for x in v if x >= CFG["PRIOR_TOP"]) + 0.5) / (len(v) + 1.0)
             else:
                 mean[i] = sum(v) / len(v)
     if len(mean) < 3:
-        return {}, {"used": False, "why": "too few places with a prior", "sets": len(sets)}
+        return {}, {}, {"used": False, "why": "too few places with a prior", "sets": len(sets)}
     rk = ST.rank(mean)                       # 1 = fits everyone best
     n = len(mean)
-    return ({i: ST.pct(rk[i], n) for i in mean},
+    return ({i: ST.pct(rk[i], n) for i in mean}, counts,
             {"used": True, "sets": len(sets), "excluded_sets": len(doc["sets"]) - len(sets), "covered": n,
              "U": len(ids), "built_at": doc.get("built_at")})
 
@@ -1633,7 +1657,7 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
     pct = lambda r: ST.pct(r, N)  # noqa: E731
     # lift = pct(fit for you) - max(pct(popularity), pct(fit for everyone)): what fits THIS person, beyond what is
     # famous and beyond what fits every taste. No prior for a place (fewer than PRIOR_MIN_SETS other sets) -> popularity.
-    everyone, prior_diag = everyone_pct(city, ids, {l["id"] for l in loves if l.get("id")})
+    everyone, ev_counts, prior_diag = everyone_pct(city, ids, {l["id"] for l in loves if l.get("id")})
     lift = {i: pct(fit[i]) - max(pct(pop_ord[i]), everyone.get(i, 0.0)) for i in ids}
     rho_tp = ST.spearman(fit_avg, pop_rank_avg)
     flat = all_dead or not (rho_tp == rho_tp) or rho_tp > CFG["FLAT_RHO"]
@@ -1759,7 +1783,7 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
         is_tied = bool(live) and all(i in tied[l["text"]] for l in live)     # never true for a card
         ll = latlon(e) or (None, None)
         return {"id": i, "name": display_name(e.get("name")), "what": what_line(e), "score": score[i],
-                "why": why_line(pct(fit[i]), pct(pop_ord[i]), everyone.get(i), flat),
+                "why": why_line(i, fit, pop_ord, ids, everyone, ev_counts, flat),
                 "because_detail": because_detail(i, b, byid, ids, orders, tied, dish_tags, dish_tagged), "neighbourhood_src": hood_src,
                 "last_seen": seen_info.get(i),
                 "because": b["text"] if b else None, "because_label": (b.get("name") or b["text"]) if b else None,

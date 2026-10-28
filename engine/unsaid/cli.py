@@ -21,6 +21,8 @@ def parser(desc):
     ap.add_argument("--sets", type=int, default=10, help="seed sets per city (<=10)")
     ap.add_argument("--walls", help="walls JSON from the harness (default: fixtures/consensus.py)")
     ap.add_argument("--budget", type=int, help="abort before exceeding N Qloo network calls (cache hits are free)")
+    ap.add_argument("--frozen", action="store_true",
+                    help="ignore the cache TTL, as precompute does (gates read the same Qloo data as the sets)")
     return ap
 
 
@@ -29,6 +31,8 @@ def client(args, name, **kw):
     tp = os.path.join(OUT, "%s%s.trace.jsonl" % (name, ".fake" if args.fake else ""))
     if os.path.exists(tp):
         os.remove(tp)
+    if getattr(args, "frozen", False):
+        kw.setdefault("frozen", True)
     q = Qloo(fake=args.fake, use_cache=not args.no_cache, trace_path=tp, budget=getattr(args, "budget", None), **kw)
     banner = "[FAKE] canned responses: numbers prove code paths, not Qloo" if args.fake else "[LIVE] %s" % q.base
     print("== %s  %s  %s" % (name, banner, time.strftime("%Y-%m-%d %H:%M")))

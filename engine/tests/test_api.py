@@ -567,6 +567,35 @@ class TestClientRules(Tmp):
         self.assertNotEqual(oc[1], "not found in Qloo")
 
 
+class TestCardLines(unittest.TestCase):
+    def test_display_name_keeps_apostrophe_s(self):
+        self.assertEqual(E.display_name("Jody B'"), "Jody B's")              # Qloo's cut possessive (STL rib tips)
+        self.assertEqual(E.display_name("Jody B's"), "Jody B's")
+        self.assertEqual(E.display_name("Pappy's Smokehouse | Midtown STL"), "Pappy's Smokehouse")
+        self.assertEqual(E.display_name("The Brothers'"), "The Brothers'")   # plural possessive stays
+        self.assertEqual(E.display_name("Rock 'n' Roll"), "Rock 'n' Roll")
+
+    def test_why_line_names_the_bar_the_card_cleared(self):
+        ids = ["a", "b", "c", "d", "e"]
+        fit = {"a": 4, "b": 5, "c": 1, "d": 2, "e": 3}          # for you
+        pop = {"a": 1, "b": 2, "c": 3, "d": 4, "e": 5}          # for anyone (popularity)
+        # popularity is the bar: c is #3 by popularity, both more popular places fit you less
+        self.assertEqual(E.why_line("c", fit, pop, ids, {}, {}, False),
+                         "fits you better than all 2 more popular places")
+        self.assertEqual(E.why_line("e", fit, pop, ids, {}, {}, False),
+                         "fits you better than 2 of the 4 more popular places")
+        # everyone's fit is the bar (its percentile is above popularity's): the prior's own counts
+        self.assertEqual(E.why_line("d", fit, pop, ids, {"d": 0.9}, {"d": (1, 9)}, False),
+                         "only 1 of 9 other tastes put it in their top 30%")
+        self.assertEqual(E.why_line("d", fit, pop, ids, {"d": 0.9}, {"d": (5, 9)}, False),
+                         "5 of 9 other tastes put it in their top 30%")
+        self.assertEqual(E.why_line("d", fit, pop, ids, {"d": 0.9}, {"d": (0, 1)}, False),
+                         "not in the top 30% of the one other taste that rates it")
+        self.assertTrue(E.why_line("d", fit, pop, ids, {}, {}, True).startswith("fits you, outside the 20%"))
+        for i in ids:
+            self.assertLessEqual(len(E.why_line(i, fit, pop, ids, {}, {}, False)), 60)
+
+
 if __name__ == "__main__":
     res = unittest.main(argv=[sys.argv[0], "-v"], exit=False).result
     ok = res.wasSuccessful()
