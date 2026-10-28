@@ -1,0 +1,37 @@
+grading list: ['census.json', 'wall-1.json']
+== k10_meter, unchanged, on the frozen runs + the post-hoc runs (frozen arms' lines exactly as k10 prints them)
+== k10_meter  [LIVE] stored runs  (0 Qloo calls: no client is created)
+    STL/stl-bigthief on the generic wall, of 12: alone [3, 6, 5, 7] (median 5.5) · with Qloo [5, 5, 2, 9] (median 5.0)
+    STL/stl-cedric on the generic wall, of 12: alone [9, 7, 5, 9] (median 8.0) · with Qloo [1, 1, 1, 8] (median 1.0) · >=4 below
+    STL/stl-chuckberry on the generic wall, of 12: alone [6, 9, 7, 6] (median 6.5) · with Qloo [5, 4, 7, 8] (median 6.0)
+    STL/stl-jason on the generic wall, of 12: alone [8, 9, 6, 5] (median 7.0) · with Qloo [8, 8, 7, 5] (median 7.5)
+    STL/stl-jayz on the generic wall, of 12: alone [7, 6, 6, 6] (median 6.0) · with Qloo [1, 2, 1, 9] (median 1.5) · >=4 below
+    STL/stl-morganwallen on the generic wall, of 12: alone [6, 7, 6, 6] (median 6.0) · with Qloo [0, 0, 3, 7] (median 1.5) · >=4 below
+    STL/stl-nelly on the generic wall, of 12: alone [5, 7, 6, 8] (median 6.5) · with Qloo [3, 4, 1, 1] (median 2.0) · >=4 below
+    STL/stl-sza  on the generic wall, of 12: alone [5, 8, 7, 9] (median 7.5) · with Qloo [2, 3, 3, 6] (median 3.0) · >=4 below
+    STL/stl-taylorswift on the generic wall, of 12: alone [2, 5, 5, 7] (median 5.0) · with Qloo [4, 3, 3, 7] (median 3.5)
+    STL/stl-wilco on the generic wall, of 12: alone [4, 8, 6, 4] (median 5.0) · with Qloo [4, 4, 5, 6] (median 4.5)
+  generic wall: STL 544 names (/var/folders/_z/fns5h0m936b6l60m64prg0t40000gp/T/tmp_9xzzwbz.jsonl; each run graded by the other AIs' answers)
+  ⟦M_ALONE⟧ = 6.0 · ⟦M_QLOO⟧ = 4.0 (median of 12, 10 sets, 2 assistants)
+D meter: median with Qloo 4.0 (gate <=6), >=4 below alone in 5 of 10 sets (gate >=7 of 10) -> FAIL | FAIL = printed in Shown and the README, not featured; Elias gets the residual line
+QLOO_NETWORK_CALLS=0
+
+== POST-HOC, NOT PRE-REGISTERED: meter arm 3, an agent with unsaid_places as its only tool
+primary (per-set median of runs, then the median across 10 sets; of 12 on the other AIs' everyone-list):
+   alone 6.2 · with Qloo 3.2 · with UNSAID 1.0
+   stl-bigthief       alone [3, 6, 5, 7] · Qloo [5, 5, 2, 9] · UNSAID [0, 2, 0, 8]
+   stl-cedric         alone [9, 7, 5, 9] · Qloo [1, 1, 1, 8] · UNSAID [0, 0, 0, 6]
+   stl-chuckberry     alone [6, 9, 7, 6] · Qloo [5, 4, 7, 8] · UNSAID [0, 2, 0, 8]
+   stl-jason          alone [8, 9, 6, 5] · Qloo [8, 8, 7, 5] · UNSAID [0, 9, 0, 0]
+   stl-jayz           alone [7, 6, 6, 6] · Qloo [1, 2, 1, 9] · UNSAID [0, 0, 0, 10]
+   stl-morganwallen   alone [6, 7, 6, 6] · Qloo [0, 0, 3, 7] · UNSAID [0, 6, 0, 6]
+   stl-nelly          alone [5, 7, 6, 8] · Qloo [3, 4, 1, 1] · UNSAID [0, 3, 0, 10]
+   stl-sza            alone [5, 8, 7, 9] · Qloo [2, 3, 3, 6] · UNSAID [0, 0, 0, 6]
+   stl-taylorswift    alone [2, 5, 5, 7] · Qloo [4, 3, 3, 7] · UNSAID [0, 4, 0, 4]
+   stl-wilco          alone [4, 8, 6, 4] · Qloo [4, 4, 5, 6] · UNSAID [0, 7, 0, 4]
+k10-style pooled median over all runs: alone 6.0 · with Qloo 4.0 · with UNSAID 0.0
+leakage split: everyone-list picks in the UNSAID arm: 95 added by the agent, 0 that were tool picks
+adherence: tool called in 28 of 40 runs (70%); tool picks among the 12, median 7.0 (claude 7.0, chatgpt 0.0)
+intention to treat: 12 runs with no tool call or a failed tool, kept in the primary: stl:stl-cedric:M2:unsaid:r1:codex (no call, 6 on list); stl:stl-jason:M1:unsaid:r1:codex (no call, 9 on list); stl:stl-nelly:M2:unsaid:r1:codex (no call, 10 on list); stl:stl-chuckberry:M2:unsaid:r1:codex (no call, 8 on list); stl:stl-sza:M2:unsaid:r1:codex (no call, 6 on list); stl:stl-wilco:M1:unsaid:r1:codex (no call, 7 on list); stl:stl-wilco:M2:unsaid:r1:codex (no call, 4 on list); stl:stl-taylorswift:M1:unsaid:r1:codex (no call, 4 on list); stl:stl-taylorswift:M2:unsaid:r1:codex (no call, 4 on list); stl:stl-jayz:M2:unsaid:r1:codex (no call, 10 on list); stl:stl-bigthief:M2:unsaid:r1:codex (no call, 8 on list); stl:stl-morganwallen:M2:unsaid:r1:codex (no call, 6 on list)
+drift (alone re-asked, 8 runs): mean absolute change 1.25 of 12
+engine versions: ['unsaid-engine-4.0'] · Qloo hosted calls: 250

@@ -1,0 +1,131 @@
+bench proxy on 127.0.0.1:49357
+[claude] claude 2.1.312 (Claude Code)
+[codex] codex-cli 0.164.0, model pinned gpt-5.6-terra
+[unsaid-arm] post-hoc: 48 asks (40 unsaid + 8 drift) x lanes, 46 to ask; Qloo so far 0 (cap 370); pacing bench header
+[unsaid-arm] meter:stl:stl-cedric:M1:unsaid:r1:claude ok 21.1s tools ['mcp__unsaid__unsaid_places'] qloo 42 (total 42) engine unsaid-engine-4.0
+[unsaid-arm] meter:stl:stl-cedric:M1:unsaid:r1:codex ok 61.6s tools ['unsaid/unsaid_places'] qloo 67 (total 109) engine unsaid-engine-4.0
+./meter_unsaid.sh: line 17: 44156 Terminated: 15          caffeinate -i python3 -I meter.py --lane claude,codex --arm unsaid --go
+codex_answers.jsonl      codex records  136, contaminated   8 (already superseded 8), unresolved ids 0
+runs/fresh.jsonl         codex records  124, contaminated   4 (already superseded 4), unresolved ids 0
+runs/fresh.v0.jsonl      codex records    7, contaminated   0 (already superseded 0), unresolved ids 0
+runs/meter.jsonl         codex records   42, contaminated   2 (already superseded 2), unresolved ids 0
+runs/meter_unsaid.jsonl  codex records    2, contaminated   0 (already superseded 0), unresolved ids 0
+runs/wall-1.jsonl        codex records  170, contaminated  50 (already superseded 50), unresolved ids 0
+runs/wall-e1.jsonl       codex records   43, contaminated   0 (already superseded 0), unresolved ids 0
+runs/wall-sat.jsonl      codex records   77, contaminated   0 (already superseded 0), unresolved ids 0
+runs/wall-search-on.jsonl codex records   48, contaminated   0 (already superseded 0), unresolved ids 0
+runs/wall-smoke.jsonl    codex records    1, contaminated   0 (already superseded 0), unresolved ids 0
+runs/wall-street-1.jsonl codex records   81, contaminated   7 (already superseded 6), unresolved ids 0
+./meter_unsaid.sh: line 19: 44139 Terminated: 15          BENCH_PROXY_PORTFILE=$PF python3 -I bench_proxy.py 2> runs/logs/bench_proxy.log
+bench proxy on 127.0.0.1:49666
+[claude] claude 2.1.312 (Claude Code)
+[codex] codex-cli 0.164.0, model pinned gpt-5.6-terra
+[unsaid-arm] post-hoc: 48 asks (40 unsaid + 8 drift) x lanes, 44 to ask; Qloo so far 67 (cap 370); pacing bench header
+[unsaid-arm] meter:stl:stl-cedric:M2:alone-drift:r1:claude ok 37.5s tools [] x0 qloo 0 (total 67) engine None
+[unsaid-arm] meter:stl:stl-cedric:M2:alone-drift:r1:codex ok 22.1s tools None xNone qloo 0 (total 67) engine None
+[unsaid-arm] meter:stl:stl-cedric:M2:unsaid:r1:claude ok 12.0s tools ['mcp__unsaid__unsaid_places'] x1 qloo 0 (total 67) engine unsaid-engine-4.0
+[unsaid-arm] meter:stl:stl-cedric:M2:unsaid:r1: tool said ['ok', 'degraded', 'ok']; retrying once in 60 s
+[unsaid-arm] meter:stl:stl-cedric:M2:unsaid:r1:codex ok 22.3s tools [] x0 qloo 0 (total 67) engine unsaid-engine-4.0 TOOL_FAILED
+[unsaid-arm] meter:stl:stl-jason:M1:unsaid:r1:claude unparsed 13.3s tools ['mcp__unsaid__unsaid_places'] x3 qloo 0 (total 67) engine unknown (URLError)
+[unsaid-arm] meter:stl:stl-jason:M1:unsaid:r1:codex ok 22.5s tools ['unsaid/unsaid_places'] x2 qloo 0 (total 67) engine unknown (URLError)
+[unsaid-arm] meter:stl:stl-jason:M2:unsaid:r1:claude unparsed 7.4s tools ['mcp__unsaid__unsaid_places'] x2 qloo 0 (total 67) engine unknown (URLError)
+[unsaid-arm] meter:stl:stl-jason:M2:unsaid:r1:codex ok 18.3s tools [] x0 qloo 0 (total 67) engine unknown (URLError) TOOL_FAILED
+[unsaid-arm] meter:stl:stl-nelly:M1:unsaid:r1:claude unparsed 7.8s tools ['mcp__unsaid__unsaid_places'] x2 qloo 0 (total 67) engine unknown (URLError)
+[unsaid-arm] meter:stl:stl-nelly:M1:unsaid:r1:codex ok 19.1s tools ['unsaid/unsaid_places'] x1 qloo 0 (total 67) engine unknown (URLError)
+[unsaid-arm] meter:stl:stl-nelly:M2:unsaid:r1:claude unparsed 14.5s tools ['mcp__unsaid__unsaid_places'] x2 qloo 0 (total 67) engine unknown (URLError)
+[unsaid-arm] meter:stl:stl-nelly:M2:unsaid:r1:codex ok 14.8s tools [] x0 qloo 0 (total 67) engine unknown (URLError) TOOL_FAILED
+[unsaid-arm] meter:stl:stl-chuckberry:M1:unsaid:r1:claude unparsed 8.5s tools ['mcp__unsaid__unsaid_places'] x2 qloo 0 (total 67) engine unknown (URLError)
+[unsaid-arm] meter:stl:stl-chuckberry:M1:unsaid:r1:codex ok 65.9s tools [] x0 qloo 0 (total 67) engine unknown (URLError) TOOL_FAILED
+[unsaid-arm] meter:stl:stl-chuckberry:M2:unsaid:r1:claude unparsed 7.0s tools ['mcp__unsaid__unsaid_places'] x2 qloo 0 (total 67) engine unknown (URLError)
+[unsaid-arm] meter:stl:stl-chuckberry:M2:unsaid:r1:codex ok 42.3s tools ['unsaid/unsaid_places'] x1 qloo 0 (total 67) engine unknown (URLError)
+[unsaid-arm] meter:stl:stl-sza:M1:unsaid:r1:claude unparsed 21.0s tools ['mcp__unsaid__unsaid_places'] x2 qloo 0 (total 67) engine unknown (URLError)
+[unsaid-arm] meter:stl:stl-sza:M1:unsaid:r1:codex ok 46.6s tools ['codex/list_mcp_resources', 'unsaid/unsaid_places'] x2 qloo 0 (total 67) engine unknown (URLError)
+[unsaid-arm] meter:stl:stl-sza:M2:unsaid:r1:claude unparsed 10.6s tools ['mcp__unsaid__unsaid_places'] x3 qloo 0 (total 67) engine unknown (URLError)
+[unsaid-arm] meter:stl:stl-sza:M2:unsaid:r1:codex ok 10.9s tools [] x0 qloo 0 (total 67) engine unknown (URLError) TOOL_FAILED
+[unsaid-arm] meter:stl:stl-wilco:M1:alone-drift:r1:claude ok 28.1s tools [] x0 qloo 0 (total 67) engine None
+[unsaid-arm] meter:stl:stl-wilco:M1:alone-drift:r1:codex ok 37.9s tools None xNone qloo 0 (total 67) engine None
+[unsaid-arm] meter:stl:stl-wilco:M1:unsaid:r1:claude unparsed 11.7s tools ['mcp__unsaid__unsaid_places'] x3 qloo 0 (total 67) engine unknown (URLError)
+[unsaid-arm] meter:stl:stl-wilco:M1:unsaid:r1:codex ok 67.0s tools ['unsaid/unsaid_places'] x1 qloo 0 (total 67) engine unknown (URLError)
+[unsaid-arm] meter:stl:stl-wilco:M2:alone-drift:r1:claude ok 46.0s tools [] x0 qloo 0 (total 67) engine None
+[unsaid-arm] meter:stl:stl-wilco:M2:alone-drift:r1:codex ok 40.2s tools None xNone qloo 0 (total 67) engine None
+[unsaid-arm] meter:stl:stl-wilco:M2:unsaid:r1:claude unparsed 12.5s tools ['mcp__unsaid__unsaid_places'] x2 qloo 0 (total 67) engine unknown (URLError)
+[unsaid-arm] meter:stl:stl-wilco:M2:unsaid:r1:codex ok 21.0s tools [] x0 qloo 0 (total 67) engine unknown (URLError) TOOL_FAILED
+[unsaid-arm] meter:stl:stl-taylorswift:M1:unsaid:r1:claude unparsed 8.6s tools ['mcp__unsaid__unsaid_places'] x2 qloo 0 (total 67) engine unknown (URLError)
+[unsaid-arm] meter:stl:stl-taylorswift:M1:unsaid:r1:codex ok 18.8s tools [] x0 qloo 0 (total 67) engine unknown (URLError) TOOL_FAILED
+[unsaid-arm] meter:stl:stl-taylorswift:M2:unsaid:r1:claude unparsed 7.1s tools ['mcp__unsaid__unsaid_places'] x2 qloo 0 (total 67) engine unknown (URLError)
+[unsaid-arm] meter:stl:stl-taylorswift:M2:unsaid:r1:codex ok 21.3s tools ['unsaid/unsaid_places'] x2 qloo 0 (total 67) engine unknown (URLError)
+[unsaid-arm] meter:stl:stl-jayz:M1:unsaid:r1:claude unparsed 12.3s tools ['mcp__unsaid__unsaid_places'] x3 qloo 0 (total 67) engine unknown (URLError)
+[unsaid-arm] meter:stl:stl-jayz:M1:unsaid:r1:codex ok 64.7s tools ['unsaid/unsaid_places'] x2 qloo 0 (total 67) engine unknown (URLError)
+[unsaid-arm] meter:stl:stl-jayz:M2:unsaid:r1:claude unparsed 13.2s tools ['mcp__unsaid__unsaid_places'] x2 qloo 0 (total 67) engine unknown (URLError)
+[unsaid-arm] meter:stl:stl-jayz:M2:unsaid:r1:codex ok 31.3s tools ['unsaid/unsaid_places'] x1 qloo 0 (total 67) engine unknown (URLError)
+[unsaid-arm] meter:stl:stl-bigthief:M1:unsaid:r1:claude unparsed 10.8s tools ['mcp__unsaid__unsaid_places'] x3 qloo 0 (total 67) engine unknown (URLError)
+[unsaid-arm] meter:stl:stl-bigthief:M1:unsaid:r1:codex ok 20.6s tools ['unsaid/unsaid_places'] x2 qloo 0 (total 67) engine unknown (URLError)
+[unsaid-arm] meter:stl:stl-bigthief:M2:unsaid:r1:claude unparsed 6.2s tools ['mcp__unsaid__unsaid_places'] x2 qloo 0 (total 67) engine unknown (URLError)
+[unsaid-arm] meter:stl:stl-bigthief:M2:unsaid:r1:codex ok 48.9s tools [] x0 qloo 0 (total 67) engine unknown (URLError) TOOL_FAILED
+[unsaid-arm] meter:stl:stl-morganwallen:M1:unsaid:r1:claude unparsed 19.5s tools ['mcp__unsaid__unsaid_places'] x3 qloo 0 (total 67) engine unknown (URLError)
+[unsaid-arm] meter:stl:stl-morganwallen:M1:unsaid:r1:codex ok 13.2s tools [] x0 qloo 0 (total 67) engine unknown (URLError) TOOL_FAILED
+[unsaid-arm] meter:stl:stl-morganwallen:M2:unsaid:r1:claude unparsed 20.8s tools ['mcp__unsaid__unsaid_places'] x2 qloo 0 (total 67) engine unknown (URLError)
+[unsaid-arm] meter:stl:stl-morganwallen:M2:unsaid:r1:codex ok 24.9s tools ['unsaid/unsaid_places'] x2 qloo 0 (total 67) engine unknown (URLError)
+ABORT: bench proxy not answering /api/health (port '50952')
+bench proxy on 127.0.0.1:51220
+[claude] claude 2.1.312 (Claude Code)
+[codex] codex-cli 0.164.0, model pinned gpt-5.6-terra
+[unsaid-arm] post-hoc: 48 asks (40 unsaid + 8 drift) x lanes, 36 to ask; Qloo so far 67 (cap 900); pacing bench header
+[unsaid-arm] meter:stl:stl-jason:M1:unsaid:r1:claude ok 29.1s tools ['mcp__unsaid__unsaid_places'] x1 qloo 48 (total 115) engine unsaid-engine-4.0
+[unsaid-arm] meter:stl:stl-jason:M1:unsaid:r1:codex ok 39.2s tools [] x0 qloo 0 (total 115) engine unsaid-engine-4.0 TOOL_FAILED
+[unsaid-arm] meter:stl:stl-jason:M2:unsaid:r1:claude ok 8.0s tools ['mcp__unsaid__unsaid_places'] x1 qloo 0 (total 115) engine unsaid-engine-4.0
+[unsaid-arm] meter:stl:stl-jason:M2:unsaid:r1:codex ok 56.3s tools ['unsaid/unsaid_places'] x1 qloo 0 (total 115) engine unsaid-engine-4.0
+[unsaid-arm] meter:stl:stl-nelly:M1:unsaid:r1: tool said ['degraded', 'ok']; retrying once in 60 s
+[unsaid-arm] meter:stl:stl-nelly:M1:unsaid:r1:claude ok 10.2s tools ['mcp__unsaid__unsaid_places'] x1 qloo 0 (total 115) engine unsaid-engine-4.0
+[unsaid-arm] meter:stl:stl-nelly:M1:unsaid:r1:codex ok 46.2s tools ['unsaid/unsaid_places'] x1 qloo 0 (total 115) engine unsaid-engine-4.0
+[unsaid-arm] meter:stl:stl-nelly:M2:unsaid:r1:claude ok 8.9s tools ['mcp__unsaid__unsaid_places'] x1 qloo 0 (total 115) engine unsaid-engine-4.0
+[unsaid-arm] meter:stl:stl-nelly:M2:unsaid:r1:codex ok 43.9s tools [] x0 qloo 0 (total 115) engine unsaid-engine-4.0 TOOL_FAILED
+[unsaid-arm] meter:stl:stl-chuckberry:M1:unsaid:r1: tool said ['degraded', 'ok']; retrying once in 60 s
+[unsaid-arm] meter:stl:stl-chuckberry:M1:unsaid:r1:claude ok 8.5s tools ['mcp__unsaid__unsaid_places'] x1 qloo 0 (total 115) engine unsaid-engine-4.0
+[unsaid-arm] meter:stl:stl-chuckberry:M1:unsaid:r1:codex ok 26.2s tools ['unsaid/unsaid_places'] x1 qloo 0 (total 115) engine unsaid-engine-4.0
+[unsaid-arm] meter:stl:stl-chuckberry:M2:unsaid:r1:claude ok 8.2s tools ['mcp__unsaid__unsaid_places'] x1 qloo 0 (total 115) engine unsaid-engine-4.0
+[unsaid-arm] meter:stl:stl-chuckberry:M2:unsaid:r1:codex ok 13.9s tools [] x0 qloo 0 (total 115) engine unsaid-engine-4.0 TOOL_FAILED
+[unsaid-arm] meter:stl:stl-sza:M1:unsaid:r1: tool said ['degraded', 'ok']; retrying once in 60 s
+[unsaid-arm] meter:stl:stl-sza:M1:unsaid:r1:claude ok 18.2s tools ['mcp__unsaid__unsaid_places'] x1 qloo 0 (total 115) engine unsaid-engine-4.0
+[unsaid-arm] meter:stl:stl-sza:M1:unsaid:r1: tool said ['ok', 'degraded']; retrying once in 60 s
+[unsaid-arm] meter:stl:stl-sza:M1:unsaid:r1:codex ok 90.2s tools ['unsaid/unsaid_places'] x4 qloo 35 (total 150) engine unsaid-engine-4.0
+[unsaid-arm] meter:stl:stl-sza:M2:unsaid:r1:claude ok 11.3s tools ['mcp__unsaid__unsaid_places'] x1 qloo 0 (total 150) engine unsaid-engine-4.0
+[unsaid-arm] meter:stl:stl-sza:M2:unsaid:r1:codex ok 29.4s tools [] x0 qloo 0 (total 150) engine unsaid-engine-4.0 TOOL_FAILED
+[unsaid-arm] meter:stl:stl-wilco:M1:unsaid:r1:claude ok 29.3s tools ['mcp__unsaid__unsaid_places'] x1 qloo 28 (total 178) engine unsaid-engine-4.0
+[unsaid-arm] meter:stl:stl-wilco:M1:unsaid:r1:codex ok 36.2s tools [] x0 qloo 0 (total 178) engine unsaid-engine-4.0 TOOL_FAILED
+[unsaid-arm] meter:stl:stl-wilco:M2:unsaid:r1:claude ok 8.4s tools ['mcp__unsaid__unsaid_places'] x1 qloo 0 (total 178) engine unsaid-engine-4.0
+[unsaid-arm] meter:stl:stl-wilco:M2:unsaid:r1:codex ok 35.5s tools [] x0 qloo 0 (total 178) engine unsaid-engine-4.0 TOOL_FAILED
+[unsaid-arm] meter:stl:stl-taylorswift:M1:unsaid:r1: tool said ['degraded', 'ok']; retrying once in 60 s
+[unsaid-arm] meter:stl:stl-taylorswift:M1:unsaid:r1:claude ok 14.7s tools ['mcp__unsaid__unsaid_places'] x1 qloo 0 (total 178) engine unsaid-engine-4.0
+[unsaid-arm] meter:stl:stl-taylorswift:M1:unsaid:r1:codex ok 23.4s tools [] x0 qloo 0 (total 178) engine unsaid-engine-4.0 TOOL_FAILED
+[unsaid-arm] meter:stl:stl-taylorswift:M2:unsaid:r1: tool said ['degraded', 'needs_input', 'ok']; retrying once in 60 s
+[unsaid-arm] meter:stl:stl-taylorswift:M2:unsaid:r1:claude ok 10.6s tools ['mcp__unsaid__unsaid_places'] x1 qloo 0 (total 178) engine unsaid-engine-4.0
+[unsaid-arm] meter:stl:stl-taylorswift:M2:unsaid:r1:codex ok 13.4s tools [] x0 qloo 0 (total 178) engine unsaid-engine-4.0 TOOL_FAILED
+[unsaid-arm] meter:stl:stl-jayz:M1:unsaid:r1:claude ok 38.2s tools ['mcp__unsaid__unsaid_places'] x1 qloo 33 (total 211) engine unsaid-engine-4.0
+[unsaid-arm] meter:stl:stl-jayz:M1:unsaid:r1:codex ok 111.1s tools ['unsaid/unsaid_places'] x4 qloo 39 (total 250) engine unsaid-engine-4.0
+[unsaid-arm] meter:stl:stl-jayz:M2:unsaid:r1:claude ok 7.4s tools ['mcp__unsaid__unsaid_places'] x1 qloo 0 (total 250) engine unsaid-engine-4.0
+[unsaid-arm] meter:stl:stl-jayz:M2:unsaid:r1:codex ok 60.9s tools [] x0 qloo 0 (total 250) engine unsaid-engine-4.0 TOOL_FAILED
+[unsaid-arm] meter:stl:stl-bigthief:M1:unsaid:r1: tool said ['degraded', 'ok']; retrying once in 60 s
+[unsaid-arm] meter:stl:stl-bigthief:M1:unsaid:r1:claude ok 10.4s tools ['mcp__unsaid__unsaid_places'] x1 qloo 0 (total 250) engine unsaid-engine-4.0
+[unsaid-arm] meter:stl:stl-bigthief:M1:unsaid:r1:codex ok 45.9s tools ['unsaid/unsaid_places'] x1 qloo 0 (total 250) engine unsaid-engine-4.0
+[unsaid-arm] meter:stl:stl-bigthief:M2:unsaid:r1:claude ok 7.9s tools ['mcp__unsaid__unsaid_places'] x1 qloo 0 (total 250) engine unsaid-engine-4.0
+[unsaid-arm] meter:stl:stl-bigthief:M2:unsaid:r1: tool said ['ok', 'degraded', 'ok', 'needs_input', 'ok', 'ok', 'ok', 'needs_input', 'needs_input', 'ok', 'ok']; retrying once in 60 s
+[unsaid-arm] meter:stl:stl-bigthief:M2:unsaid:r1:codex ok 41.2s tools [] x0 qloo 0 (total 250) engine unsaid-engine-4.0 TOOL_FAILED
+[unsaid-arm] meter:stl:stl-morganwallen:M1:unsaid:r1: tool said ['degraded', 'ok']; retrying once in 60 s
+[unsaid-arm] meter:stl:stl-morganwallen:M1:unsaid:r1:claude ok 15.0s tools ['mcp__unsaid__unsaid_places'] x1 qloo 0 (total 250) engine unsaid-engine-4.0
+[unsaid-arm] meter:stl:stl-morganwallen:M1:unsaid:r1:codex ok 94.2s tools ['codex/list_mcp_resources'] x1 qloo 0 (total 250) engine unsaid-engine-4.0
+[unsaid-arm] meter:stl:stl-morganwallen:M2:unsaid:r1:claude ok 9.5s tools ['mcp__unsaid__unsaid_places'] x1 qloo 0 (total 250) engine unsaid-engine-4.0
+[unsaid-arm] meter:stl:stl-morganwallen:M2:unsaid:r1: tool said ['ok', 'degraded']; retrying once in 60 s
+[unsaid-arm] meter:stl:stl-morganwallen:M2:unsaid:r1:codex ok 41.9s tools [] x0 qloo 0 (total 250) engine unsaid-engine-4.0 TOOL_FAILED
+codex_answers.jsonl      codex records  136, contaminated   8 (already superseded 8), unresolved ids 0
+runs/fresh.jsonl         codex records  124, contaminated   4 (already superseded 4), unresolved ids 0
+runs/fresh.v0.jsonl      codex records    7, contaminated   0 (already superseded 0), unresolved ids 0
+runs/meter.jsonl         codex records   42, contaminated   2 (already superseded 2), unresolved ids 0
+runs/meter_unsaid.jsonl  codex records   24, contaminated   0 (already superseded 0), unresolved ids 0
+runs/wall-1.jsonl        codex records  170, contaminated  50 (already superseded 50), unresolved ids 0
+runs/wall-e1.jsonl       codex records   43, contaminated   0 (already superseded 0), unresolved ids 0
+runs/wall-sat.jsonl      codex records  287, contaminated   0 (already superseded 0), unresolved ids 0
+runs/wall-search-on.jsonl codex records   48, contaminated   0 (already superseded 0), unresolved ids 0
+runs/wall-smoke.jsonl    codex records    1, contaminated   0 (already superseded 0), unresolved ids 0
+runs/wall-street-1.jsonl codex records   81, contaminated   7 (already superseded 6), unresolved ids 0
+./meter_unsaid.sh: line 21: 62407 Terminated: 15          BENCH_PROXY_PORTFILE=$PF python3 -I bench_proxy.py 2> runs/logs/bench_proxy.log
