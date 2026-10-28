@@ -313,13 +313,78 @@ def _collab(name, top):
     return bool(t) and n != t and (" %s " % t) in (" %s " % n) and bool(re.search(r"[&,]| x | feat| with | and ", (name or "").lower()))
 
 
-def _disamb(r):
-    d = r.get("disambiguation") or prop(r, "disambiguation") or prop(r, "address") or ""
-    return str(d)[:80] or None
+def _years(r):
+    """A film's or show's years from Qloo's disambiguation ('1998,2004') or release_year: [first, last] or []."""
+    ys = [int(y) for y in re.findall(r"\b(1[89]\d\d|20\d\d)\b", str(r.get("disambiguation") or ""))]
+    if not ys and isinstance(prop(r, "release_year"), (int, str)) and str(prop(r, "release_year")).isdigit():
+        ys = [int(prop(r, "release_year"))]
+    return [min(ys), max(ys)] if ys else []
+
+
+def _disamb(r, sub=None):
+    """What tells two same-named candidates apart, without the type (api.py puts the type in front): a film's year,
+    a show's years, a place's address, else Qloo's disambiguation when it says more than the name, else the top
+    genres ('Soul, Rhythm & Blues' for Beyoncé)."""
+    if sub in SCREEN_TYPES:
+        ys = _years(r)
+        return ("%d" % ys[0] if ys[0] == ys[1] or sub == "urn:entity:movie" else "%d–%d" % tuple(ys)) if ys else None
+    d = str(r.get("disambiguation") or prop(r, "disambiguation") or prop(r, "address") or "").strip()
+    if d and (sub == PLACE or M.norm(d) != M.norm(r.get("name") or "")):
+        return d[:80]
+    genres = [t.get("name") for t in r.get("tags") or [] if isinstance(t, dict) and t.get("type") == "urn:tag:genre"
+              and t.get("name")]
+    return ", ".join(genres[:2]) or None
+
+
+SCREEN_WANT = re.compile(r"\s*[(\[]?\b(?:the )?(movie|film|tv show|tv series|tv|series|show)\b[)\]]?\s*$", re.I)
+
+
+def _screen_query(text):
+    """'Sex and the City movie' -> ('Sex and the City', None, 'urn:entity:movie'); 'Dune (2021)' -> ('Dune', 2021,
+    None). A year or a trailing movie/film/tv/series/show word says which one; the title is matched without it."""
+    t, year, want = text, None, None
+    m = re.search(r"\s*[(\[]?\b(1[89]\d\d|20\d\d)\b[)\]]?\s*$", t)
+    if m and m.start() > 0:
+        year, t = int(m.group(1)), t[:m.start()]
+    m = SCREEN_WANT.search(t)
+    if m and m.start() > 0:
+        want = "urn:entity:movie" if m.group(1).lower() in ("movie", "film") else "urn:entity:tv_show"
+        t = t[:m.start()]
+    if year is None:
+        m = re.search(r"\s*[(\[]?\b(1[89]\d\d|20\d\d)\b[)\]]?\s*$", t)
+        if m and m.start() > 0:
+            year, t = int(m.group(1)), t[:m.start()]
+    return t.strip(" -,:"), year, want
+
+
+def _rank_screen(text, title, res, year, want):
+    """Films and shows: _rank_entities on the title, then the typed qualifier decides. A year picks the candidate it
+    falls in (+0.3); 'movie'/'film' or 'tv'/'series'/'show' picks that type (+0.1); with neither, a TV show whose
+    exact title is also a film's wins near-ties in popularity (+0.02, i.e. within 0.04: 'Sex and the City' is the
+    series, 0.977 against the 2008 film's 0.981; 'Dune' stays the 2021 film, 0.9996 against the 2000 show's 0.916)."""
+    ranked = _rank_entities(title, res)
+    if title != text:                           # "Scary Movie", "Blade Runner 2049": the typed text is the title
+        full = {id(x[2]): x for x in _rank_entities(text, res)}
+        ranked = [(full[id(x[2])][0] + 0.3,) + full[id(x[2])][1:] if full[id(x[2])][1] >= 0.95 > x[1] or
+                  full[id(x[2])][1] >= 0.95 and full[id(x[2])][1] >= x[1] else x for x in ranked]
+    exact_types = {x[3] for x in ranked if x[1] >= 0.95}
+    out = []
+    for s, m, r, sub in ranked:
+        if m >= 0.95:
+            ys = _years(r)
+            if year and ys and ys[0] <= year <= ys[1]:
+                s += 0.3
+            if want and sub == want:
+                s += 0.1
+            elif not want and not year and sub == "urn:entity:tv_show" and exact_types >= set(SCREEN_TYPES):
+                s += 0.02
+        out.append((s, m, r, sub))
+    out.sort(key=lambda x: -x[0])
+    return out
 
 
 def _ent_alt(r, sub):
-    return {"id": r["entity_id"], "label": r.get("name"), "kind": "entity", "type": sub, "disamb": _disamb(r)}
+    return {"id": r["entity_id"], "label": r.get("name"), "kind": "entity", "type": sub, "disamb": _disamb(r, sub)}
 
 
 def _tag_alt(t):
@@ -364,7 +429,7 @@ def resolve_love(q, text, hint=None):
         ok = m >= 0.95 and (not rivals or bool(hint) or s - rivals[0][0] >= 0.05)
         rest = [x for x in ranked[1:] if not (x[3] == "urn:entity:artist" and _collab(x[2].get("name"), r.get("name")))]
         out.update({"kind": "entity", "id": r["entity_id"], "name": r.get("name"), "type": sub,
-                    "disamb": _disamb(r), "status": "ok" if ok else "needs_input", "is_place": sub == PLACE,
+                    "disamb": _disamb(r, sub), "status": "ok" if ok else "needs_input", "is_place": sub == PLACE,
                     "alternatives": _love_alts([_ent_alt(x[2], x[3]) for x in rest] + list(others), r["entity_id"])})
         return out
 
@@ -391,15 +456,24 @@ def resolve_love(q, text, hint=None):
         return as_tag(tags, True) if tags else out
     if hint:
         # A film-or-show hint searches films AND TV shows (the site's field 2 sends 'movie' for "a film or show you
-        # can quote"); the hinted type only breaks near-ties. Other hints keep their one type.
+        # can quote"); a typed year or "movie"/"tv" decides, else a show beats a same-titled film (_rank_screen).
+        # Other hints keep their one type.
         screen = "urn:entity:%s" % hint in SCREEN_TYPES
         types = ",".join(SCREEN_TYPES) if screen else "urn:entity:%s" % hint
-        res = q.search(text, types=types, take=10 if screen else 5, label="C2 love")
-        ranked = _rank_entities(text, res, ("urn:entity:%s" % hint,))
-        if (not ranked or ranked[0][1] < 0.95) and not M.fold(text).startswith("the "):
+        title, year, want = _screen_query(text) if screen else (text, None, None)
+
+        def rank(rs):
+            return _rank_screen(text, title, rs, year, want) if screen else _rank_entities(text, rs, ("urn:entity:%s" % hint,))
+
+        res = q.search(title, types=types, take=10 if screen else 5, label="C2 love")
+        if title != text:                       # "Scary Movie", "2001: A Space Odyssey": the typed text as well
             ids = {r["entity_id"] for r in res}
-            more = q.search("The " + text, types=types, take=10 if screen else 5, label="C2 love")
-            ranked = _rank_entities(text, res + [r for r in more if r["entity_id"] not in ids], ("urn:entity:%s" % hint,))
+            res = res + [r for r in q.search(text, types=types, take=10, label="C2 love") if r["entity_id"] not in ids]
+        ranked = rank(res)
+        if (not ranked or ranked[0][1] < 0.95) and not M.fold(title).startswith("the "):
+            ids = {r["entity_id"] for r in res}
+            more = q.search("The " + title, types=types, take=10 if screen else 5, label="C2 love")
+            ranked = rank(res + [r for r in more if r["entity_id"] not in ids])
         if ranked:
             return as_entity(ranked)
         tags = q.tags(text, take=5, label="C2 love tag") or q.tags(text, take=5, semantic=True, label="C2 love tag~")

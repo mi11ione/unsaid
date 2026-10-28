@@ -87,10 +87,18 @@ def type_label(t):
     return TYPE_LABELS.get(k, k.replace("_", " ")) if t else None
 
 
+def love_disamb(t, name, detail):
+    """'TV show, 1998–2004', 'film, 2008', 'artist, Soul, Rhythm & Blues', 'place, 247 Broome St New York, NY 10002':
+    the type, then what tells same-named candidates apart (engine._disamb)."""
+    k = love_label(t, name)
+    return ("%s, %s" % (k, detail) if k else detail) if detail else k
+
+
 def _chip(l):
     t = l.get("type") or ""
     return {"id": l.get("id"), "label": l.get("name") or l.get("text"), "kind": l.get("kind"), "type": t,
-            "type_label": love_label(t, l.get("name")), "disamb": l.get("disamb"), "dead": bool(l.get("dead"))}
+            "type_label": love_label(t, l.get("name")), "disamb": love_disamb(t, l.get("name"), l.get("disamb")),
+            "dead": bool(l.get("dead"))}
 
 
 def c2_count(trace):
@@ -112,7 +120,8 @@ def resolve_love(text, hint=None, *, mode="fake", qloo=None):
     except QlooError as e:
         return {"status": "degraded", "chip": None, "alternatives": [], "reason": "Qloo HTTP %s" % e.status}
     chip = dict(_chip(l), text=text, c2_calls=n) if l.get("id") else None
-    alts = [dict(a, type_label=love_label(a.get("type"), a.get("label"))) for a in l.get("alternatives") or []]
+    alts = [dict(a, type_label=love_label(a.get("type"), a.get("label")),
+                 disamb=love_disamb(a.get("type"), a.get("label"), a.get("disamb"))) for a in l.get("alternatives") or []]
     return {"status": l["status"], "chip": chip, "alternatives": alts, "text": text}
 
 

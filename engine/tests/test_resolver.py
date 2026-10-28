@@ -1,4 +1,4 @@
-"""Love resolution, live: 60 typed inputs (engine/tests/resolver_cases.json), top-1 accuracy per site field.
+"""Love resolution, live: 64 typed inputs (engine/tests/resolver_cases.json), top-1 accuracy per site field.
 
     set -a; . ~/.config/unsaid/env; set +a          # QLOO_API_KEY, sent only in the X-Api-Key header
     python3 -I engine/tests/test_resolver.py [--budget 250] [--only before|after] [-v]
@@ -90,6 +90,8 @@ def grade(q, case, got, dish_tags):
         return False
     if case.get("id") and got.get("id") != case["id"]:
         return False
+    if case.get("disamb_contains") and case["disamb_contains"] not in (got.get("disamb") or ""):
+        return False
     if case.get("near"):
         ents = q.entities([got["id"]], label="test place") if got.get("id") else []
         ll = latlon(ents[0]) if ents else None
@@ -110,7 +112,7 @@ def run(q, fn, cases, dish_tags, verbose, name):
             print("  %-6s %s f%d %-26s -> %s · %s [%s]%s%s" % (
                 name, "ok  " if ok else "MISS", c["field"], c["text"], got.get("label"),
                 got.get("type_label") or (got.get("type") or "").split(":")[-1] or "-", got.get("status"),
-                ("  %s" % got["disamb"][:40]) if got.get("disamb") else "",
+                ("  %s" % got["disamb"][:50]) if got.get("disamb") else "",
                 ("  alts: " + "; ".join(got["alts"])) if verbose and got.get("alts") else ""))
     return per
 

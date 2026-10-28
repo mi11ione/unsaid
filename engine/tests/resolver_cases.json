@@ -1,8 +1,8 @@
 {
- "note": "Love-resolution test set: 60 typed inputs, 20 per site field, sent with the hint the site sends (field 1 'artist', field 2 'movie', field 3 none). A case passes top-1 when the chip's type is one of `types` and matcher.norm(label) equals norm of one of `labels`; `id`, when present, must match too (places, where the name alone is ambiguous). Run: engine/tests/test_resolver.py.",
+ "note": "Love-resolution test set: 60 typed inputs, 20 per site field, sent with the hint the site sends (field 1 'artist', field 2 'movie', field 3 none). A case passes top-1 when the chip's type is one of `types` and matcher.norm(label) equals norm of one of `labels`; `id`, when present, must match too (places, where the name alone is ambiguous), and `disamb_contains` must be in the chip's disamb (the 'before' resolver has none). Run: engine/tests/test_resolver.py.",
  "dish_tags": ["urn:tag:specialty_dish:place", "urn:tag:menu_highlight:qloo", "urn:tag:cuisine:qloo"],
  "cases": [
-  {"field": 1, "text": "Beyoncé", "difficulty": "easy", "types": ["urn:entity:artist"], "labels": ["Beyoncé"]},
+  {"field": 1, "text": "Beyoncé", "difficulty": "easy", "types": ["urn:entity:artist"], "labels": ["Beyoncé"], "disamb_contains": "artist, Soul", "why": "the disambiguation must say more than the name (round-2 judge)"},
   {"field": 1, "text": "beyonce", "difficulty": "medium", "types": ["urn:entity:artist"], "labels": ["Beyoncé"]},
   {"field": 1, "text": "Bad Bunny", "difficulty": "easy", "types": ["urn:entity:artist"], "labels": ["Bad Bunny"]},
   {"field": 1, "text": "Frankie Beverly & Maze", "difficulty": "medium", "types": ["urn:entity:artist"], "labels": ["Maze Featuring Frankie Beverly"]},
@@ -23,6 +23,10 @@
   {"field": 1, "text": "Bon Iver", "difficulty": "easy", "types": ["urn:entity:artist"], "labels": ["Bon Iver"]},
   {"field": 1, "text": "Tribe Called Quest", "difficulty": "medium", "types": ["urn:entity:artist"], "labels": ["A Tribe Called Quest"]},
 
+  {"field": 2, "text": "Sex and the City", "difficulty": "hard", "types": ["urn:entity:tv_show"], "labels": ["Sex and the City"], "disamb_contains": "TV show, 1998", "why": "an exact title that is both a show and a (slightly more popular) 2008 film: the show (round-2 judge)"},
+  {"field": 2, "text": "Sex and the City movie", "difficulty": "hard", "types": ["urn:entity:movie"], "labels": ["Sex and the City"], "disamb_contains": "film, 2008"},
+  {"field": 2, "text": "Dune", "difficulty": "hard", "types": ["urn:entity:movie"], "labels": ["Dune"], "disamb_contains": "film, 2021", "why": "a show of the same title exists (2000) but is far less popular: the film"},
+  {"field": 2, "text": "The Truman Show", "difficulty": "medium", "types": ["urn:entity:movie"], "labels": ["The Truman Show"], "why": "a title that ends in 'show' is still the title"},
   {"field": 2, "text": "The Bear", "difficulty": "hard", "types": ["urn:entity:tv_show"], "labels": ["The Bear"]},
   {"field": 2, "text": "Ted Lasso", "difficulty": "medium", "types": ["urn:entity:tv_show"], "labels": ["Ted Lasso"]},
   {"field": 2, "text": "The Office", "difficulty": "medium", "types": ["urn:entity:tv_show"], "labels": ["The Office"]},
