@@ -28,19 +28,6 @@
    "mock": false
   },
   {
-   "id": "stl-nelly",
-   "label": "Nelly · St. Louis",
-   "city": "st-louis",
-   "loves": [
-    "Nelly",
-    "The Blues Brothers",
-    "toasted ravioli"
-   ],
-   "ran": null,
-   "src": null,
-   "mock": false
-  },
-  {
    "id": "stl-chuckberry",
    "label": "Chuck Berry · St. Louis",
    "city": "st-louis",
@@ -54,13 +41,26 @@
    "mock": false
   },
   {
-   "id": "stl-sza",
-   "label": "SZA · St. Louis",
+   "id": "stl-bigthief",
+   "label": "Big Thief · St. Louis",
    "city": "st-louis",
    "loves": [
-    "SZA",
-    "Insecure",
-    "chicken wings"
+    "Big Thief",
+    "Twin Peaks",
+    "pho"
+   ],
+   "ran": null,
+   "src": null,
+   "mock": false
+  },
+  {
+   "id": "stl-morganwallen",
+   "label": "Morgan Wallen · St. Louis",
+   "city": "st-louis",
+   "loves": [
+    "Morgan Wallen",
+    "Yellowstone",
+    "pork steak"
    ],
    "ran": null,
    "src": null,

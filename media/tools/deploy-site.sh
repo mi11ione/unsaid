@@ -19,6 +19,9 @@ if [[ -f site/data/live/stl_stl-cedric.json ]]; then
   echo "og image: site/data/live/og-cedric.png"
 fi
 
+# similar vs unrelated tastes, for the "Is this just obscure places?" sheet (from the regenerated store, when present)
+python3 -I media/tools/build_overlap.py || true
+
 bad=0
 # static: no bracket in shipped HTML or JSON (mock streams are marked MOCK and never shown without ?mock=)
 if grep -rl "⟦" site --include='*.html' --include='*.json' | grep -v '^site/data/mock/'; then echo "FAIL: ⟦ in the files above"; bad=1; fi

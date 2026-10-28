@@ -1,0 +1,11 @@
+{
+ "_": "Shared cards between St. Louis preset sets (7 cards each), from fresh20-28oct via media/tools/build_overlap.py",
+ "city": "St. Louis",
+ "sets": 10,
+ "cluster": "soul and hip-hop",
+ "cluster_n": 4,
+ "cluster_min": 3,
+ "cluster_max": 4,
+ "across_min": 0,
+ "across_max": 1
+}

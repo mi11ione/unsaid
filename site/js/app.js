@@ -8,6 +8,7 @@
   const $ = (s, r = document) => r.querySelector(s);
   const [CFG, CEN, TRY, LIVE, WE] = await Promise.all([UM.json('data/config.json'), UM.json('data/census.json'), UM.json('data/try.json'),
     UM.json('data/live/index.json').catch(() => null), UM.json('data/wall_effect.json').catch(() => null)]);
+  const OV = await UM.json('data/overlap.json').catch(() => null);   // similar vs unrelated tastes (build_overlap.py)
   const fmt1 = x => Number.isInteger(+x) ? String(+x) : (+x).toFixed(1);
   // real precomputed sets (site/data/live, uploaded with the deploy) replace the MOCK ones and enable the rest
   if (LIVE && Array.isArray(LIVE.sets)) LIVE.sets.forEach(l => {
@@ -69,7 +70,7 @@
       <h1>Everything the AIs tell everyone, <s>crossed out</s>.</h1>
       <p class="subhead">Seven bars and restaurants the AIs didn’t name when we asked, ranked by Qloo for your taste.</p>
       <div class="landcard-m" id="landcardm"></div>
-      <div class="presets">${['stl-cedric', 'nyc-taylorswift', 'stl-jason'].map(id => TRY.sets.find(x => x.id === id)).filter(x => x && x.src && !x.mock)
+      <div class="presets">${['stl-cedric', 'nyc-taylorswift', 'stl-morganwallen'].map(id => TRY.sets.find(x => x.id === id)).filter(x => x && x.src && !x.mock)
         .map(x => `<a class="pchip" href="#/r?set=${encodeURIComponent(x.id)}">${esc(x.label)}</a>`).join('')}<a class="pchip more" href="#try">more ↓</a></div>
       ${hookLine()}
       <div class="fields">
@@ -721,7 +722,7 @@
       openSheet(`<div class="cap">${esc(cityName)}</div><h1>Is this just obscure places?</h1>
         <div class="blk"><p>Partly, on purpose. ${EXPLAIN} So less-known places rise when they fit you.</p>
           <p>But obscurity isn’t the test. Being named by an AI is: a place is crossed out because an AI named it, however famous or small it is.</p>
-          ${k12}${P.map(t => `<p>${t}</p>`).join('')}</div>
+          ${k12}${OV ? `<p>Similar tastes get similar places: ${word(OV.cluster_n)} of our ${esc(OV.city)} sets that love ${esc(OV.cluster)} share ${OV.cluster_min === OV.cluster_max ? OV.cluster_min : `${OV.cluster_min}–${OV.cluster_max}`} places pair by pair. Unrelated tastes share almost none (${OV.across_min === OV.across_max ? OV.across_min : `${OV.across_min}–${OV.across_max}`}).</p>` : ''}${P.map(t => `<p>${t}</p>`).join('')}</div>
         ${T.length ? `<details class="log"><summary>The numbers</summary><div class="logbody">${T.map(t => `<div>${t}</div>`).join('')}</div></details>` : ''}`);
     }
 
