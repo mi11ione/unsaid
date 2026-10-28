@@ -1,4 +1,5 @@
 {
+ "_": "built from data/sets.json (try_these: true); src is null until a stored result exists",
  "sets": [
   {
    "id": "stl-cedric",
@@ -27,17 +28,108 @@
    "mock": false
   },
   {
+   "id": "stl-nelly",
+   "label": "Nelly · St. Louis",
+   "city": "st-louis",
+   "loves": [
+    "Nelly",
+    "The Blues Brothers",
+    "toasted ravioli"
+   ],
+   "ran": null,
+   "src": null,
+   "mock": false
+  },
+  {
+   "id": "stl-chuckberry",
+   "label": "Chuck Berry · St. Louis",
+   "city": "st-louis",
+   "loves": [
+    "Chuck Berry",
+    "Back to the Future",
+    "Ted Drewes Frozen Custard"
+   ],
+   "ran": null,
+   "src": null,
+   "mock": false
+  },
+  {
+   "id": "stl-sza",
+   "label": "SZA · St. Louis",
+   "city": "st-louis",
+   "loves": [
+    "SZA",
+    "Insecure",
+    "chicken wings"
+   ],
+   "ran": null,
+   "src": null,
+   "mock": false
+  },
+  {
    "id": "nyc-khruangbin",
    "label": "Khruangbin · New York",
    "city": "new-york",
    "loves": [
     "Khruangbin",
-    null,
-    null
+    "The Grand Budapest Hotel",
+    "Ten Bells"
    ],
    "ran": null,
    "src": "data/mock/nyc-khruangbin.ndjson",
    "mock": true
+  },
+  {
+   "id": "nyc-taylorswift",
+   "label": "Taylor Swift · New York",
+   "city": "new-york",
+   "loves": [
+    "Taylor Swift",
+    "Gilmore Girls",
+    "matcha latte"
+   ],
+   "ran": null,
+   "src": null,
+   "mock": false
+  },
+  {
+   "id": "nyc-wutang",
+   "label": "Wu-Tang Clan · New York",
+   "city": "new-york",
+   "loves": [
+    "Wu-Tang Clan",
+    "The Sopranos",
+    "chopped cheese"
+   ],
+   "ran": null,
+   "src": null,
+   "mock": false
+  },
+  {
+   "id": "nyc-newjeans",
+   "label": "NewJeans · New York",
+   "city": "new-york",
+   "loves": [
+    "NewJeans",
+    "Past Lives",
+    "Korean fried chicken"
+   ],
+   "ran": null,
+   "src": null,
+   "mock": false
+  },
+  {
+   "id": "nyc-badbunny",
+   "label": "Bad Bunny · New York",
+   "city": "new-york",
+   "loves": [
+    "Bad Bunny",
+    "Narcos",
+    "tacos al pastor"
+   ],
+   "ran": null,
+   "src": null,
+   "mock": false
   }
  ]
 }

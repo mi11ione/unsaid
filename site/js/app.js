@@ -18,7 +18,7 @@
 
   function topbar({ city, loves, mock } = {}) {
     topEl.innerHTML = `<a class="mark" href="#/"><s>UN</s>SAID</a>` +
-      (city ? `<span class="slug">${esc(city)} · eat &amp; drink</span>` : '') +
+      (city ? `<span class="slug">${esc(city)}<span class="rest"> · eat &amp; drink</span></span>` : '') +
       (loves ? `<span class="chips">${loves.map(l => `<span class="chip${l.dead ? ' dead' : ''}">${l.label == null ? ph(null, 'love') : esc(l.label)}${tl(l) ? ` <i>${esc(tl(l))}</i>` : ''}</span>`).join('')}</span>` : '') +
       `<span class="grow"></span>` + (mock ? `<span class="mock">${esc(mock)}</span>` : '');
   }
@@ -26,7 +26,7 @@
   function tryList(head = 'Or try one (instant):') {
     return `<div class="try"><h3>${head}</h3><ul>` + TRY.sets.map(s => {
       const loves = s.loves.map(l => l == null ? ph(null, 'love') : esc(l)).join(' · ');
-      const inner = `<b>${esc(s.label)}</b><span class="when">ran ${ph(et(s.ran), 'date')}</span><span class="dim">${loves}</span>` + (s.mock ? '<span class="mock">mock</span>' : '');
+      const inner = `<b>${esc(s.label)}</b>` + (s.src && s.ran ? `<span class="when">ran ${esc(et(s.ran))}</span>` : '') + `<span class="dim">${loves}</span>` + (s.mock ? '<span class="mock">mock</span>' : '');
       return `<li>${s.src ? `<a href="#/r?set=${encodeURIComponent(s.id)}">${inner}</a>` : `<span class="row off">${inner}</span>`}</li>`;
     }).join('') + '</ul></div>';
   }
@@ -165,7 +165,7 @@
     const cc = CFG.cities[slug] || null;
     cityName = cityName || (cc && cc.name) || slug;
     const cen = cc && CEN[cc.census];
-    await API.ping();
+    if (!src) await API.ping();   // a stored set never waits on the engine: it opens at once
 
     const st = {
       slug, cityName, loves, wall: new Map(), asks: new Map(), U: null, calls: null, cards: new Map(), result: null, status: null,
@@ -178,7 +178,7 @@
       <div class="status" id="status"><span class="live"></span><span id="stxt"></span></div>
       <div class="note" id="notes"></div>
       <section class="sec" id="s-wall">
-        <div class="sh"><h2>Everyone gets these</h2><span class="sub">Good places. Every AI sends everyone here.</span>
+        <div class="sh"><h2>Everyone gets these</h2><span class="sub">Good places. Already on the AIs’ lists.</span>
           <div class="tr"><div class="counter" id="counter"></div><div class="counter-cap">names the AIs gave everyone · left for you, ranked by Qloo</div></div></div>
         <div class="fieldwrap" id="fw"><div class="field" id="field"></div>
           <button class="showall" id="showall"></button>
@@ -234,8 +234,8 @@
     if (cc && cc.wall) {
       UM.json(cc.wall).then(W => {
         const names = W.answers.flatMap(a => a.names.map(n => ({ name: n, provider: a.provider, model: a.model, phrasing_id: a.phrasing_id, phrasing: a.phrasing, asked_at: a.asked_at, lane: a.lane })));
-        const step = Math.max(1, Math.floor(names.length / 40));
-        for (let i = 0; i < names.length; i += step) setTimeout(() => { if (!st.reconciled) { names.slice(i, i + step).forEach(addName); counter(); status(); } }, (i / names.length) * 900);
+        // dated names are not happening now: they appear at once, without a landing animation
+        if (!st.reconciled) { names.forEach(addName); counter(); status(); }
       }).catch(() => {});
     }
 
@@ -283,7 +283,7 @@
     }
     function status() {
       $('#stxt').innerHTML = statusLine();
-      $('#status').classList.toggle('idle', st.done);
+      $('#status').classList.toggle('busy', !st.done && !!st.calls && st.calls.done < st.calls.total);
       const mock = st.fake || st.mock;
       topbar({ city: cityName, loves: (st.result && st.result.loves) || loves, mock: mock ? (st.fake ? 'mock data' : 'mock stream · no server') : null });
     }
@@ -297,7 +297,12 @@
       $('#notes').innerHTML = out.map(t => `<div>${t}</div>`).join('');
     }
 
-    // ---- burn beat: street checks are DATED (asked in advance), so the line states a result and never moves
+    // one labelled ask count, the same field everywhere (lead line, card back): counts.asks and diag.as_of
+    function askLine() {
+      const R = st.result || {}, n = R.counts && R.counts.asks;
+      return `${ph(n, 'n')} asks (${esc(cityName)} lists + census + street) · ${ph(et(R.diag && R.diag.as_of), 'date')}`;
+    }
+        // ---- burn beat: street checks are DATED (asked in advance), so the line states a result and never moves
     function burnLine() {
       const b = $('#burn');
       const asked = (st.result && st.result.burn && st.result.burn.asked) || [];
@@ -307,10 +312,9 @@
           const c = st.cards.get(x.card_id) || {}, r = x.replaced_by && st.cards.get(x.replaced_by);
           const hood = c.neighbourhood ?? x.neighbourhood, a = askOf(hood);
           const who = x.by || a.provider, when = et(x.at || a.asked_at);
-          const ci = cardNo(x.card_id), ri = r ? cardNo(r.id) : null;
           // "⟦provider⟧ named ⟦X⟧ when asked about ⟦Soulard⟧ · ⟦date⟧ · burned. ⟦Y⟧ takes its place."
-          return `<span class="red">${ph(who, 'provider')} named ${c.name ? esc(c.name) : ph(null, `place ${ci}`)}</span> when asked about ${ph(hood, 'neighbourhood')} · ${ph(when, 'date')} · burned.` +
-            (r ? ` ${r.name ? esc(r.name) : ph(null, `place ${ri}`)} takes its place.` : '');
+          return `<span class="red">${ph(who, 'provider')} named ${placeName(c, x.card_id)}</span> when asked about ${ph(hood, 'neighbourhood')} · ${ph(when, 'date')} · burned.` +
+            (r ? ` ${placeName(r, r.id)} takes its place.` : '');
         }).join('<br>');
       } else if (st.done && asked.length) {
         // "Asked about all 7 streets · ⟦date⟧. None named."
@@ -318,7 +322,10 @@
         b.innerHTML = `Asked about all ${asked.length} streets · ${ph(et(when), 'date')}. None named.`;
       } else b.innerHTML = '';
     }
-    const cardNo = id => { const i = st.order.indexOf(id); return i < 0 ? '?' : i + 1; };
+    // one numbering: after the result, a card's number is its position in the list (cards, map dots, placeholders);
+    // while streaming, the order cards arrived in. A burned card has left the list and has no number.
+    const cardNo = id => { const L = st.done ? st.slots : st.order; const i = L.indexOf(id); return i < 0 ? null : i + 1; };
+    const placeName = (c, id) => c.name ? esc(c.name) : (cardNo(id) ? ph(null, `place ${cardNo(id)}`) : ph(null, 'burned card'));
 
     // ---- events
     function onEvent(e) {
@@ -395,13 +402,23 @@
       }
       const lead = R.status === 'empty_few'
         ? `<p class="empty">Only ${n} places in ${esc(cityName)} fit you that no AI names. Here they are.</p>`
-        : `<div class="lead"><span class="n">${n}</span><span class="c">None of these ${n} came up in ${ph(asks, 'ASKS')} asks about ${esc(cityName)} · ${ph(date, 'date')}.</span></div>`;
-      body.innerHTML = lead + `<div class="cards" id="cards"></div>
+        : `<div class="lead"><span class="n">${n}</span><span class="c">None of these ${n} came up in ${askLine()}.</span></div>`;
+      // shown only when the data says so: every fit rank above card 1 was struck by the wall
+      const k = R.picks && R.picks[0] && R.picks[0].fit_rank, SR = new Set((R.diag && R.diag.struck_fit_ranks) || []);
+      const above = k > 1 && [...Array(k - 1)].every((_, j) => SR.has(j + 1))
+        ? `<p class="above">${k === 2 ? 'Your #1 was' : `Your #1–#${k - 1} were`} on the AIs’ lists.</p>` : '';
+      body.innerHTML = lead + above + `<div class="cards" id="cards"></div>
         <div class="dare"><label for="dare">Ask any AI yourself. Paste what it says: any of these ${n} it names burns.</label>
+          <div class="copyrow"><button class="link" id="copyask">copy an ask</button><span class="dim" id="askq">“hidden gems to eat and drink in ${esc(cityName)}”</span></div>
           <textarea id="dare" placeholder="paste an answer here" spellcheck="false"></textarea><div class="out" id="dareout"></div></div>
         <div class="links"><button class="link" id="lnk-pop">not a popularity filter →</button><button class="link" id="lnk-share">share</button></div>`;
-      const cardsEl = $('#cards');
-      st.slots.forEach(id => cardsEl.appendChild(cardEl(id)));
+      drawCards();
+      $('#cards').after($('#burn'));          // the burn line sits after the seven, never before cards not yet seen
+      $('#copyask').addEventListener('click', () => {
+        const q = `hidden gems to eat and drink in ${cityName}`, b = $('#copyask');
+        (navigator.clipboard ? navigator.clipboard.writeText(q) : Promise.reject()).then(() => { b.textContent = 'copied'; }, () => { b.textContent = 'select the line to copy'; });
+        setTimeout(() => { b.textContent = 'copy an ask'; }, 1600);
+      });
       $('#lnk-pop').addEventListener('click', popSheet);
       $('#lnk-share').addEventListener('click', shareSheet);
       let t = null;
@@ -414,10 +431,10 @@
       const rank = c.tied || c.fit_rank == null ? '' : `<b>#${c.fit_rank}</b>for you`;
       const any = flat ? '' : `<span class="any">#${ph(c.any_rank, 'ANY')} for anyone</span>`;
       const tag = st.struck.get(c.id), rose = st.risen.get(c.id);
-      return `<div class="card${tag ? ' struck' : ''}${rose ? ' risen' : ''}" data-id="${esc(c.id)}">
+      return `<div class="card${tag ? ' struck' : ''}${tag && tag.human ? ' byyou' : ''}${rose ? ' risen' : ''}" data-id="${esc(c.id)}">
         <div class="row1"><span>${String(i + 1).padStart(2, '0')}</span><span>${c.rating == null ? ph(null, 'rating') : Number(c.rating).toFixed(1)} · ${c.open == null ? ph(null, 'open') : (c.open ? 'open' : 'closed')}</span></div>
         <div class="hood">${ph(c.neighbourhood, 'neighbourhood')}</div>
-        <div class="name">${c.name ? esc(c.name) : ph(null, `place ${cardNo(c.id)}`)}</div>
+        <div class="name">${known ? (c.name ? esc(c.name) : ph(null, `place ${i + 1}`)) : placeName(c, c.id)}</div>
         <div class="what">${ph(c.what, 'what it is')}</div>
         ${known ? '' : `<div class="rk">${rank}${any}</div>
         <div class="because">because you love<b>${ph(c.because, 'love')}</b></div>`}
@@ -434,29 +451,28 @@
       node.addEventListener('pointerdown', e => {
         if (st.struck.has(id) || e.button > 0) return;
         held = false; node.classList.add('holding');
-        timer = setTimeout(() => { held = true; node.classList.remove('holding'); strike(id, `struck by you · ${hhmm()}`); }, 900);
+        timer = setTimeout(() => { held = true; node.classList.remove('holding'); strike(id, `struck by you · ${hhmm()}`, true); }, 900);
       });
       ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => node.addEventListener(ev, cancel));
       node.addEventListener('contextmenu', e => e.preventDefault());
       node.addEventListener('click', () => { if (held) { held = false; return; } cardSheet(id); });
       return node;
     }
-    function redrawCard(id) {
-      const old = view.querySelector(`.card[data-id="${CSS.escape(id)}"]`); if (!old) return;
-      old.replaceWith(cardEl(id));
+    function drawCards() {
+      const el2 = $('#cards'); if (!el2) return;
+      el2.innerHTML = '';
+      st.slots.forEach(id => el2.appendChild(cardEl(id)));
     }
-    // a struck card stays where it was, struck; the next reserve rises in under it
-    function strike(id, text) {
-      st.struck.set(id, { text });
-      redrawCard(id);
+    // a struck card stays where it was, struck (in ink if you struck it, red if an AI named it); the next reserve rises
+    // in under it, and every number after it moves down one, on the cards and the map alike
+    function strike(id, text, human) {
+      st.struck.set(id, { text, human: !!human });
       const rid = st.reserves.shift();
       if (rid) {
         st.risen.set(rid, 'rose in its place · a reserve no AI named');
         st.slots.splice(st.slots.indexOf(id) + 1, 0, rid);
-        const after = view.querySelector(`.card[data-id="${CSS.escape(id)}"]`);
-        after.after(cardEl(rid));
       }
-      counter(); mapDraw();
+      drawCards(); counter(); mapDraw();
       return rid;
     }
     function dare(text) {
@@ -469,7 +485,7 @@
         const id = ids[h.index], c = st.cards.get(id);
         const rid = strike(id, `named in your paste · ${hhmm()}`);
         const r = rid && st.cards.get(rid);
-        return `<span class="red">It named ${esc(c.name)} · burned.</span>` + (r ? ` ${r.name ? esc(r.name) : ph(null, `place ${cardNo(rid)}`)} takes its place.` : '');
+        return `<span class="red">It named ${esc(c.name)} · burned.</span>` + (r ? ` ${placeName(r, rid)} takes its place.` : '');
       }).join('<br>');
     }
 
@@ -500,7 +516,7 @@
         ${flat ? '<div class="sub">your loves barely move this city’s order</div>' : ''}
         ${thin ? `<div class="sub">out of ${ph(U, 'U')}; many places tie for you here</div>` : ''}
         <div class="blk"><div class="sh"><h2>Never said</h2></div>
-          <p>Named 0 times in ${ph(ns.asks, 'ASKS')} asks: ${ph(ns.city_asks, 'n')} about ${esc(cityName)}, ${ph(ns.street_asks, 'm')} about ${ph(c.neighbourhood, 'neighbourhood')} · ${ph(et(ns.as_of), 'date')}.</p></div>
+          <p>Named 0 times in ${askLine()}.</p></div>
         <div class="blk"><div class="sh"><h2>Fits you</h2></div>${slider}
           <p class="dim">of ${ph(U, 'U')} places within ${ph(Rmi, 'R')} mi, rated ${CFG.floor.rating}+, open. ‘Anyone’ is Qloo’s popularity order of the same places.</p></div>
         <div class="blk"><div class="sh"><h2>Because</h2></div>
@@ -562,13 +578,13 @@
     }
     function shareData() {
       const R = st.result;
-      return { ...R, picks: liveIds().map(id => ({ ...st.cards.get(id), _ph: `place ${cardNo(id)}` })), wallNames: [...st.wall.values()].filter(w => w.outcome === 'struck' && w.name).map(w => w.name) };
+      return { ...R, picks: liveIds().map(id => ({ ...st.cards.get(id), _ph: cardNo(id) ? `place ${cardNo(id)}` : 'burned card' })), wallNames: [...st.wall.values()].filter(w => w.outcome === 'struck' && w.name).map(w => w.name) };
     }
     window.__shareData = shareData;
 
     // ---- go
     if (API.health === 'waking' && !src) status();
-    ctl = API.run({ city: slug, loves, src }, onEvent, () => { if (!st.done) { status(); } });
+    ctl = API.run({ city: slug, loves, src, instant: !!set }, onEvent, () => { if (!st.done) { status(); } });
     st.mock = ctl.mock;
     window.__st = st;
     status(); counter();
@@ -580,12 +596,15 @@
       box.innerHTML = '';
       const W = box.clientWidth, phone = W < 600;
       const story = el(box, 'div', phone ? 'position:relative;margin:18px 0 6px' : `position:absolute;left:${Math.round(W * .56)}px;top:50%;transform:translateY(-50%);width:${Math.round(W * .44)}px`);
-      // census_stats.txt:58 (13 of 16) and :46 + :52 (11 of 14), via census.json
-      story.innerHTML = `<div style="font:400 ${phone ? 20 : 26}px/1.15 var(--serif)">Ask an AI for a hidden gem in ${esc(cen.city)}.</div>
+      // harness/census_stats_claude.txt:58 (13 of 16) and :46 + :52 (11 of 14); ChatGPT's line from census_stats_codex.txt, via census.json
+      const cg = cen.chatgpt && cen.chatgpt.gem;
+      const also = cg && cen.mailee_claude && cen.mailee_claude.name === cg.name ? ` · ${esc(CEN.provider)} says it ${cen.mailee_claude.hits} times too` : '';
+      story.innerHTML = `<div style="font:400 ${phone ? 20 : 26}px/1.15 var(--serif)">Ask ${esc(CEN.provider)} for a hidden gem in ${esc(cen.city)}.</div>
         <div style="margin-top:10px"><span style="position:relative;font:400 ${phone ? 40 : 54}px/1 var(--serif);color:var(--red);white-space:nowrap">${esc(cen.gem.name).replace("'", '’')}<span style="position:absolute;left:-.04em;right:-.04em;top:56%;height:.07em;background:var(--red);box-shadow:0 0 0 .022em var(--bg)"></span></span></div>
         <div style="margin-top:10px;font:400 ${phone ? 16 : 19}px/1.3 var(--serif)"><span class="red">${cen.gem.hits} times out of ${cen.gem.of}</span>` +
         (cen.plain ? `<br><span class="dim">also on ${cen.plain.hits} of its ${cen.plain.of} plain lists</span>`
-          : cen.gem.first != null ? `<br><span class="dim">named first in ${cen.gem.first}</span>` : '') + '</div>';
+          : cen.gem.first != null ? `<br><span class="dim">named first in ${cen.gem.first}</span>` : '') + '</div>' +
+        (cg ? `<div class="dim" style="margin-top:8px;font:400 ${phone ? 13 : 14}px/1.4 var(--mono)">${esc(CEN.chatgpt_provider)}’s: ${esc(cg.name)}, ${cg.hits} of ${cg.of}${also}</div>` : '');
       const H = phone ? 320 : 430, mw = phone ? W : W * .56;
       const holder = el(box, 'div', `position:relative;height:${H}px;width:${phone ? W : W}px`);
       if (!phone) { box.style.height = H + 'px'; holder.style.position = 'absolute'; holder.style.left = '0'; holder.style.top = '0'; } else box.style.height = 'auto';
@@ -608,9 +627,10 @@
       ids.forEach((id, i) => {
         const c = st.cards.get(id); if (!c || c.lat == null) return;
         const [x, y] = P(c.lon, c.lat);
-        const gone = st.struck.has(id) || st.burned.some(b => b.card_id === id);
-        UM.seven(ctx, x, y, 1, phone ? 7 : 9, 3, gone ? UM.C.red : UM.C.white);
-        el(holder, 'div', `top:${y - 5}px;left:${x + 9}px`, String(i + 1)).className = 'lab num' + (gone ? ' x' : '');
+        // an AI naming it (burn, paste) is red; your own strike is ink
+        const k = st.struck.get(id), byAI = (k && !k.human) || st.burned.some(b => b.card_id === id), byYou = k && k.human;
+        UM.seven(ctx, x, y, byYou ? .45 : 1, phone ? 7 : 9, 3, byAI ? UM.C.red : UM.C.white);
+        el(holder, 'div', `top:${y - 5}px;left:${x + 9}px`, String(i + 1)).className = 'lab num' + (byAI ? ' x' : byYou ? ' xi' : '');
       });
     }
     draw();

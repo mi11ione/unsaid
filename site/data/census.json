@@ -9,43 +9,43 @@
   "city": "St. Louis",
   "asks": {
    "n": 64,
-   "src": "census_stats.txt:3"
+   "src": "harness/census_stats_claude.txt:3"
   },
   "gem": {
    "name": "Gioia's Deli",
    "hits": 13,
    "of": 16,
    "hood": "The Hill",
-   "src": "census_stats.txt:58"
+   "src": "harness/census_stats_claude.txt:58"
   },
   "gem_family": {
    "n": 16,
-   "src": "census_stats.txt:51"
+   "src": "harness/census_stats_claude.txt:51"
   },
   "plain": {
    "hits": 11,
    "of": 14,
-   "src": "census_stats.txt:46 (generic first) + census_stats.txt:52"
+   "src": "harness/census_stats_claude.txt:46 (generic first) + harness/census_stats_claude.txt:52"
   },
   "second": {
    "name": "Pappy's Smokehouse",
-   "src": "census_stats.txt:49"
+   "src": "harness/census_stats_claude.txt:49"
   },
   "said": {
    "n": 236,
-   "src": "census_stats.txt:20"
+   "src": "harness/census_stats_claude.txt:20"
   },
   "k50": {
    "n": 29,
-   "src": "census_stats.txt:44"
+   "src": "harness/census_stats_claude.txt:44"
   },
   "strangers_shared": {
    "n": 9,
-   "src": "census_stats.txt:76"
+   "src": "harness/census_stats_claude.txt:76"
   },
   "osm": {
    "n": 818,
-   "src": "census_stats.txt:81"
+   "src": "harness/census_stats_claude.txt:81"
   },
   "gem_asks": [
    {
@@ -163,15 +163,40 @@
   ],
   "asked": {
    "first": "2026-10-27T12:05:34+00:00",
-   "last": "2026-10-27T12:10:37+00:00",
-   "src": "claude_answers.jsonl t_start"
+   "last": "2026-10-27T23:23:33+00:00",
+   "src": "data/walls/census.json asked_at"
+  },
+  "mailee_claude": {
+   "name": "Mai Lee",
+   "hits": 13,
+   "of": 16,
+   "hood": "Brentwood",
+   "src": "harness/census_stats_claude.txt:59"
+  },
+  "chatgpt": {
+   "gem": {
+    "name": "Mai Lee",
+    "hits": 9,
+    "of": 16,
+    "first": 4,
+    "src": "harness/census_stats_codex.txt:59 + harness/census_stats_codex.txt:48"
+   },
+   "gioia": {
+    "hits": 1,
+    "of": 16,
+    "src": "harness/codex_answers.jsonl (hidden family, recounted; the stats file lists Gioia only in its asks-out-of-64 line)"
+   },
+   "k50": {
+    "n": 33,
+    "src": "harness/census_stats_codex.txt:45"
+   }
   }
  },
  "nyc": {
   "city": "New York",
   "asks": {
    "n": 64,
-   "src": "census_stats.txt:92"
+   "src": "harness/census_stats_claude.txt:92"
   },
   "gem": {
    "name": "Sripraphai",
@@ -179,20 +204,36 @@
    "of": 16,
    "first": 6,
    "hood": "Woodside, Queens",
-   "src": "census_stats.txt:147 + census_stats.txt:136"
+   "src": "harness/census_stats_claude.txt:147 + harness/census_stats_claude.txt:136"
   },
   "said": {
    "n": 334,
-   "src": "census_stats.txt:109"
+   "src": "harness/census_stats_claude.txt:109"
   },
   "osm": {
    "n": 11959,
-   "src": "census_stats.txt:170"
+   "src": "harness/census_stats_claude.txt:170"
+  },
+  "chatgpt": {
+   "gem": {
+    "name": "Rolo's",
+    "hits": 10,
+    "of": 16,
+    "src": "harness/census_stats_codex.txt:148"
+   },
+   "sripraphai": {
+    "hits": 0,
+    "of": 16,
+    "src": "harness/codex_answers.jsonl (hidden family, recounted; absent from the stats file)"
+   }
   },
   "asked": {
    "first": "2026-10-27T12:05:34+00:00",
-   "last": "2026-10-27T12:10:32+00:00",
-   "src": "claude_answers.jsonl t_start"
+   "last": "2026-10-27T23:23:18+00:00",
+   "src": "data/walls/census.json asked_at"
   }
- }
+ },
+ "chatgpt_model": "gpt-5.6-terra",
+ "provider": "Claude",
+ "chatgpt_provider": "ChatGPT"
 }

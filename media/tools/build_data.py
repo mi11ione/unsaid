@@ -19,6 +19,7 @@ Writes:
     site/data/mock/resolve.json  MOCK answers for GET /api/resolve when no server is up
     media/data/assistant.json    the real assistant answer for image 3
 """
+import csv
 import hashlib
 import json
 import re
@@ -34,16 +35,21 @@ MEDIA = UNSAID / 'media' / 'data'
 sys.path.insert(0, str(UNSAID / 'engine'))
 from unsaid.matcher import norm  # noqa: E402  the engine's own normalisation, so the wall's norm keys match it
 
-STATS = (EXP / 'census_stats.txt').read_text().splitlines()
+HARNESS = UNSAID / 'harness'
+# the Claude census (same text and line numbers as research/round4/exp/census_stats.txt) and the ChatGPT one
+STATS_FILES = {'claude': HARNESS / 'census_stats_claude.txt', 'codex': HARNESS / 'census_stats_codex.txt'}
+STATS_TXT = {k: v.read_text().splitlines() for k, v in STATS_FILES.items()}
+STATS = STATS_TXT['claude']
 
 
-def cite(line, pattern, *expect):
-    """Assert census_stats.txt line `line` (1-based) matches `pattern` and its groups equal `expect`."""
-    m = re.search(pattern, STATS[line - 1])
-    assert m, f'census_stats.txt:{line} does not match {pattern!r}: {STATS[line - 1]!r}'
+def cite(line, pattern, *expect, f='claude'):
+    """Assert harness/census_stats_<f>.txt line `line` (1-based) matches `pattern` and its groups equal `expect`."""
+    T = STATS_TXT[f]
+    m = re.search(pattern, T[line - 1])
+    assert m, f'census_stats_{f}.txt:{line} does not match {pattern!r}: {T[line - 1]!r}'
     got = tuple(int(g) if g.isdigit() else g for g in m.groups())
-    assert got == expect, f'census_stats.txt:{line}: {got} != {expect}'
-    return f'census_stats.txt:{line}'
+    assert got == expect, f'census_stats_{f}.txt:{line}: {got} != {expect}'
+    return f'harness/census_stats_{f}.txt:{line}'
 
 
 def jdump(path, obj, indent=None):
@@ -51,7 +57,8 @@ def jdump(path, obj, indent=None):
     path.write_text(json.dumps(obj, ensure_ascii=False, indent=indent) + '\n')
 
 
-rows = [json.loads(line) for line in open(EXP / 'claude_answers.jsonl')]
+rows = [json.loads(line) for line in open(HARNESS / 'claude_answers.jsonl')]
+codex_rows = [json.loads(line) for line in open(HARNESS / 'codex_answers.jsonl')]
 names_of = lambda r: [p['name'] if isinstance(p, dict) else p for p in r['places']]
 
 # ---------------------------------------------------------------- census figures (each cited) --------
@@ -94,6 +101,28 @@ census = {
         'osm': {'n': 11959, 'src': cite(170, r'(\d+) named', 11959)},
     },
 }
+# ChatGPT (codex) census. Counts the stats file doesn't print as one line are recounted from codex_answers.jsonl.
+def codex_hidden(city, key):
+    h = [r for r in codex_rows if r['city'] == city and r['family'] == 'hidden']
+    return sum(any(key in n.lower() for n in names_of(r)) for r in h), len(h)
+
+
+assert codex_hidden('stl', 'gioia') == (1, 16) and codex_hidden('nyc', 'sripraphai') == (0, 16)
+CODEX_MODEL = re.search(r"models: \['(.+?)'\]", STATS_TXT['codex'][0]).group(1)
+census['chatgpt_model'] = CODEX_MODEL
+census['provider'] = 'Claude'          # whose census the gem figures are
+census['chatgpt_provider'] = 'ChatGPT'
+census['stl']['mailee_claude'] = {'name': 'Mai Lee', 'hits': 13, 'of': 16, 'hood': 'Brentwood', 'src': cite(59, r'Mai Lee\s+(\d+)/(\d+)', 13, 16)}
+census['stl']['chatgpt'] = {
+    'gem': {'name': 'Mai Lee', 'hits': 9, 'of': 16, 'first': 4,
+            'src': cite(59, r'Mai Lee\s+(\d+)/(\d+)', 9, 16, f='codex') + ' + ' + cite(48, r'Mai Lee (\d+), Monte', 4, f='codex')},
+    'gioia': {'hits': 1, 'of': 16, 'src': 'harness/codex_answers.jsonl (hidden family, recounted; the stats file lists Gioia only in its asks-out-of-64 line)'},
+    'k50': {'n': 33, 'src': cite(45, r'K50 = (\d+) names', 33, f='codex')},
+}
+census['nyc']['chatgpt'] = {
+    'gem': {'name': "Rolo's", 'hits': 10, 'of': 16, 'src': cite(148, r"Rolo's\s+(\d+)/(\d+)", 10, 16, f='codex')},
+    'sripraphai': {'hits': 0, 'of': 16, 'src': 'harness/codex_answers.jsonl (hidden family, recounted; absent from the stats file)'},
+}
 # the per-ask list must reproduce the cited figures
 assert sum(a['hit'] for a in gem_asks) == census['stl']['gem']['hits'] and len(gem_asks) == census['stl']['gem']['of']
 assert plain_hits == census['stl']['plain']['hits'] and len(plain) == census['stl']['plain']['of']
@@ -111,6 +140,8 @@ stl_map = {
     'places': roster['places'],
     'ai': [{'name': a['name'], 'count': a['count'], 'lat': a['lat'], 'lon': a['lon']} for a in roster['ai']],
     'callouts': [census['stl']['gem']['name'], census['stl']['second']['name']],
+    'outside': [{'name': 'Mai Lee', 'count': next(int(r['mentions']) for r in csv.DictReader(open(HARNESS / 'claude_named_stl.csv')) if r['display'] == 'Mai Lee'),
+                 **{k: v for k, v in json.load(open(MEDIA / 'geo.json'))['Mai Lee'].items() if k in ('lat', 'lon', 'osm')}}],
     'credit': 'grey: {n} mapped places to eat and drink, © OpenStreetMap contributors, ODbL'.format(n=f"{len(roster['places']):,}"),
     'osm_as_of': roster['meta']['osm'],
 }
@@ -125,10 +156,18 @@ def clean(n):
     return n
 
 
-answers = []
-for r in stl:
-    answers.append({'provider': 'Claude', 'model': r['model'], 'phrasing_id': r['id'], 'phrasing': r['phrasing'],
-                    'family': r['family'], 'asked_at': r['t_start'], 'lane': 'dated', 'names': [clean(n) for n in names_of(r)]})
+CENSUS_WALLS = json.load(open(UNSAID / 'data' / 'walls' / 'census.json'))
+
+
+def wall_answers(city):
+    """Every census answer for a city, as the static dated wall: Agent B's data/walls/census.json, all providers in it."""
+    w = next(w for w in CENSUS_WALLS['walls'] if w['city'] == city and w['set'] == 'census')
+    return [{'provider': a['assistant'], 'model': a['model'], 'phrasing_id': a['phrasing_id'], 'phrasing': a['phrasing'],
+             'asked_at': a['asked_at'], 'lane': a.get('lane', 'dated'), 'names': [clean(n['name']) for n in a['names']]}
+            for a in w['answers'] if a.get('status', 'ok') == 'ok']
+
+
+answers = wall_answers('stl')
 wall_items, seen = [], {}
 for a in answers:
     for n in a['names']:
@@ -143,17 +182,16 @@ for a in answers:
         seen[k] = it
         wall_items.append(it)
 jdump(SITE / 'walls' / 'stl.json', {
-    'city': 'st-louis', 'as_of': max(a['asked_at'] for a in answers), 'source': 'Claude census, claude -p, no web search',
+    'city': 'st-louis', 'as_of': max(a['asked_at'] for a in answers), 'source': 'data/walls/census.json (dated census answers, no web search)',
     'answers': answers, 'distinct': len(wall_items)})
 
 # ---------------------------------------------------------------- New York: map (Manhattan, Brooklyn, Queens) + wall ----
-import csv  # noqa: E402
 nyc = sorted([r for r in rows if r['city'] == 'nyc'], key=lambda r: r['order'])
-nyc_answers = [{'provider': 'Claude', 'model': r['model'], 'phrasing_id': r['id'], 'phrasing': r['phrasing'], 'family': r['family'],
-                'asked_at': r['t_start'], 'lane': 'dated', 'names': [clean(n) for n in names_of(r)]} for r in nyc]
+nyc_answers = wall_answers('nyc')
 jdump(SITE / 'walls' / 'nyc.json', {'city': 'new-york', 'as_of': max(a['asked_at'] for a in nyc_answers),
-                                    'source': 'Claude census, claude -p, no web search', 'answers': nyc_answers})
-census['nyc']['asked'] = {'first': nyc[0]['t_start'], 'last': max(r['t_start'] for r in nyc), 'src': 'claude_answers.jsonl t_start'}
+                                    'source': 'data/walls/census.json (dated census answers, no web search)', 'answers': nyc_answers})
+census['nyc']['asked'] = {'first': min(a['asked_at'] for a in nyc_answers), 'last': max(a['asked_at'] for a in nyc_answers), 'src': 'data/walls/census.json asked_at'}
+census['stl']['asked'] = {'first': min(a['asked_at'] for a in answers), 'last': max(a['asked_at'] for a in answers), 'src': 'data/walls/census.json asked_at'}
 jdump(SITE / 'census.json', census, 1)
 osm_nyc = MEDIA / 'osm-nyc.json'
 NYC_MAP = None
@@ -166,7 +204,7 @@ if osm_nyc.exists():
         if f['name']:
             by_norm.setdefault(norm(f['name']), []).append(f)
     discs, unplaced = [], []
-    for row in csv.DictReader(open(EXP / 'claude_named_nyc.csv')):
+    for row in csv.DictReader(open(HARNESS / 'claude_named_nyc.csv')):
         hit = next((by_id[i] for i in row['osm_ids'].split() if i in by_id), None)
         if not hit:
             cands = by_norm.get(norm(row['display']), [])
@@ -191,15 +229,19 @@ jdump(SITE / 'config.json', {
                'new-york': {'name': 'New York', 'map': 'data/map/nyc.json' if NYC_MAP else None, 'wall': 'data/walls/nyc.json', 'census': 'nyc'}},
     'floor': {'rating': 4.3},
 }, 1)
-jdump(SITE / 'try.json', {'sets': [
-    {'id': 'stl-cedric', 'label': 'Cedric · St. Louis', 'city': 'st-louis',
-     'loves': ['Frankie Beverly & Maze', 'The Original Kings of Comedy', 'rib tips'], 'ran': None,
-     'src': 'data/mock/stl-cedric.ndjson', 'mock': True},
-    {'id': 'stl-jason', 'label': 'Jason · St. Louis', 'city': 'st-louis', 'loves': ['Frank Sinatra', 'Rounders', 'Carbone'],
-     'ran': None, 'src': None, 'mock': False},
-    {'id': 'nyc-khruangbin', 'label': 'Khruangbin · New York', 'city': 'new-york', 'loves': ['Khruangbin', None, None],
-     'ran': None, 'src': 'data/mock/nyc-khruangbin.ndjson' if NYC_MAP else None, 'mock': bool(NYC_MAP)},
-]}, 1)
+SETS = json.load(open(UNSAID / 'data' / 'sets.json'))['sets']
+MOCK_SRC = {'stl-cedric': 'data/mock/stl-cedric.ndjson', 'nyc-khruangbin': 'data/mock/nyc-khruangbin.ndjson' if NYC_MAP else None}
+CITY_SLUG = {'stl': 'st-louis', 'nyc': 'new-york'}
+try_sets = []
+for x in SETS:
+    if not x.get('try_these'):
+        continue
+    stored = SITE / 'sets' / f"{x['id']}.ndjson"   # a precomputed real result, when one exists
+    src = f"data/sets/{x['id']}.ndjson" if stored.exists() else MOCK_SRC.get(x['id'])
+    try_sets.append({'id': x['id'], 'label': x['label'], 'city': x.get('city_slug') or CITY_SLUG.get(x['city'], x['city']),
+                     'loves': [l[0] if isinstance(l, list) else l for l in x['loves']],
+                     'ran': None, 'src': src, 'mock': bool(src) and not stored.exists()})
+jdump(SITE / 'try.json', {'_': 'built from data/sets.json (try_these: true); src is null until a stored result exists', 'sets': try_sets}, 1)
 
 # ---------------------------------------------------------------- MOCK streams -------------------------
 hoods = json.load(open(PROTO / 'hoods-stl.json'))['elements']
@@ -326,7 +368,8 @@ def stream(name, *, status='ok', n_picks=7, n_res=3, flags=(), loves=LOVES, tied
         'burn': {'asked': asked, 'burned': burned} if asked else None,
         'diag': {'qloo_calls': total, 'calls': {'pool': 6, 'rescore': 15, 'ids': 5, 'cap': 1, 'total': total},
                  'rho_tp': 0.41, 'rho_res': 0.12, 'cap_keep': 23, 'cap_shared': 1,
-                 'obscure_names': [None] * 4, 'known_names': [None] * 2,  # never real names in a mock: that would be a claim
+                 'obscure_names': [None] * 4, 'known_names': [None] * 2,
+                 'struck_fit_ranks': [1, 2, 3],  # MOCK (proposed CONTRACT field): fit ranks above card 1 that the wall struck  # never real names in a mock: that would be a claim
                  'engine_v': 'mock', 'as_of': degraded_as_of or AS_OF, 'trace_url': None, **(diag_extra or {})},
     }
     if known:
@@ -395,10 +438,34 @@ for line in open(UNSAID / 'agent' / 'demo' / 'claude_without.jsonl'):
         model = d.get('model')
     if d.get('type') == 'result':
         txt = d['result']
+# image 3's strikes, decided by the engine's own matcher (engine/unsaid/matcher.py match_wall) against the St. Louis
+# census wall: candidates are the answer's bold spans (after a "Label:" prefix); a span is struck when a rule hits.
+# Only R1 (exact keys: full / core / compact / head) strikes in the image; other rules are recorded, not drawn.
+from unsaid.matcher import match_wall  # noqa: E402
+wall_names = sorted({n for a in answers for n in a['names']})
+cands = []
+for m in re.finditer(r'\*\*(.+?)\*\*', txt or ''):
+    t, s0 = m.group(1), m.start(1)
+    if ':' in t:
+        k = t.index(':') + 1
+        s0 += k + (len(t[k:]) - len(t[k:].lstrip()))
+        t = t[k:].strip()
+    cands.append((t, s0))
+hits, per = match_wall([c for c, _ in cands], [{'entity_id': str(i), 'name': n} for i, n in enumerate(wall_names)])
+strikes, seen_c = [], set()
+for c, s0 in cands:
+    if c in seen_c:
+        continue
+    seen_c.add(c)
+    rules = [(wall_names[int(e)], r) for e, v in hits.items() for rr, r in v if rr == c]
+    if rules:
+        strikes.append({'text': c, 'start': s0, 'end': s0 + len(c), 'struck': any(r == 'R1' for _, r in rules),
+                        'matches': [{'wall': w, 'rule': r} for w, r in rules]})
 jdump(MEDIA / 'assistant.json', {
     'prompt': 'plan my Friday in St. Louis, I love Frankie Beverly & Maze, Kings of Comedy and rib tips, but nothing every AI would tell me',
     'prompt_src': 'research/round4/agentic.md (the user line of the demo runs)',
-    'model': model, 'answer': txt, 'src': 'unsaid/agent/demo/claude_without.jsonl', 'asked_at': None}, 1)
+    'model': model, 'answer': txt, 'src': 'unsaid/agent/demo/claude_without.jsonl', 'asked_at': None,
+    'strikes': strikes, 'strikes_src': 'engine/unsaid/matcher.py match_wall vs site/data/walls/stl.json; drawn only where R1 fired'}, 1)
 
 print(f"census ok: gem {census['stl']['gem']['hits']}/{census['stl']['gem']['of']}, plain {plain_hits}/{len(plain)}, "
       f"asks {len(stl)}; map {len(roster['places'])} dots, {len(roster['ai'])} discs; wall {len(wall_items)} distinct names "

@@ -56,7 +56,7 @@
 
   /* Run one query. onEvent(evt) for each NDJSON line; returns {abort()}.
      src: a static stream (try-these set or mock). Otherwise GET /api/unsaid?city=&loves=. */
-  function run({ city, loves, src }, onEvent, onEnd) {
+  function run({ city, loves, src, instant }, onEvent, onEnd) {
     let stopped = false;
     const timers = [];
     const ctl = { abort() { stopped = true; timers.forEach(clearTimeout); if (ctl.ac) ctl.ac.abort(); }, mock: false };
@@ -67,11 +67,14 @@
       const lag = health === 'waking' ? 3500 : 0;             // the waking state: the dated wall first, then the ranker
       fetch(file).then(r => r.text()).then(t => {
         const evs = t.trim().split('\n').map(l => JSON.parse(l));
+        // a try-these set is a stored result: it opens at once, replayed in about a second (Devpost: "opens in about a second")
+        const span = Math.max(...evs.map(e => (e.t || 0) * slow + lag)) / SPEED;
+        const fit = instant ? Math.max(1, span / 1000) : 1;
         evs.forEach(e => {
-          const at = (e.type === 'wall_name' ? (e.t || 0) : (e.t || 0) * slow + lag) / SPEED;
+          const at = (e.type === 'wall_name' ? (e.t || 0) : (e.t || 0) * slow + lag) / SPEED / fit;
           timers.push(setTimeout(() => { if (!stopped) onEvent(e); }, at));
         });
-        const end = Math.max(...evs.map(e => (e.t || 0) * slow + lag)) / SPEED + 50;
+        const end = span / fit + 50;
         timers.push(setTimeout(() => { if (!stopped) onEnd && onEnd(); }, end));
       }).catch(e => onEvent({ type: 'status', state: 'degraded', text: null, error: String(e) }));
       return ctl;

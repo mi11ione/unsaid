@@ -5,12 +5,13 @@ set -e
 cd "$(dirname "$0")/.."
 OUT=shots/site; mkdir -p $OUT
 PORT=$((8700 + RANDOM % 200))
-python3 -m http.server $PORT -d ../site >/dev/null 2>&1 &
+UNSAID_API=http://127.0.0.1:9 python3 -I tools/devserver.py $PORT >/dev/null 2>&1 &   # static site; /api answers 404 (no engine)
 SRV=$!
 trap "kill $SRV 2>/dev/null" EXIT
 sleep 0.8
 B="http://127.0.0.1:$PORT"
-DONE='new Promise(r=>{const f=()=>window.__st&&window.__st.done?setTimeout(r,500):setTimeout(f,100);f();})'
+# a fixed wait: every stored set and ?speed=8 mock settles within ~2 s (polling inside the CDP evaluate can stall)
+DONE='new Promise(r=>setTimeout(r,4000))'
 AT() { echo "new Promise(r=>setTimeout(r,$1))"; }
 shot() { node tools/cdp.mjs shot "$@" >/dev/null && echo "$2"; }
 FILL='(async()=>{const s=(q,v)=>{const i=document.querySelector(q);i.focus();i.value=v;i.dispatchEvent(new Event("input"));i.dispatchEvent(new Event("blur"));};
@@ -21,8 +22,8 @@ for W in 1600 390; do
   D=$([[ $W == 390 ]] && echo 2 || echo 1)
   shot "$B/index.html" $OUT/s1-input-$W.png $W 0 $D
   shot "$B/index.html" $OUT/s1-needs-input-$W.png $W 0 $D "$FILL"
-  shot "$B/index.html?speed=1#/r?set=stl-cedric" $OUT/s2-run-2s-$W.png $W 0 $D "$(AT 2300)"
-  shot "$B/index.html?speed=1#/r?set=stl-cedric" $OUT/s2-run-burn-$W.png $W 0 $D "$(AT 11500)"
+  shot "$B/index.html?mock=stl-cedric#/r?city=st-louis" $OUT/s2-run-2s-$W.png $W 0 $D "$(AT 2300)"
+  shot "$B/index.html?mock=stl-cedric#/r?city=st-louis" $OUT/s2-run-burn-$W.png $W 0 $D "$(AT 11500)"
   shot "$B/index.html?speed=8#/r?set=stl-cedric" $OUT/s2-result-$W.png $W 0 $D "$DONE"
   shot "$B/index.html?speed=8#/r?set=stl-cedric" $OUT/s3-card-back-$W.png $W 1000 $D "$DONE.then(()=>{document.querySelector('.card').click();document.querySelector('details.log').open=true})"
   shot "$B/index.html?speed=8#/r?set=stl-cedric" $OUT/s4-popularity-$W.png $W 1000 $D "$DONE.then(()=>document.getElementById('lnk-pop').click())"

@@ -63,3 +63,8 @@ fi
 if [[ $what == all || $what == site ]]; then
   zsh tools/shoot-site.sh
 fi
+
+if [[ $what == all || $what == hero || $what == images ]]; then
+  shot "$U/hero-mailee.html?v=devpost&$q" $S/1b-hero-mailee-1600x1000.png 1600 1000 1
+  small $S/1b-hero-mailee-1600x1000.png $S/1b-hero-mailee-600-check.png 600
+fi

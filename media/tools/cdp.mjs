@@ -40,11 +40,18 @@ const evalp = async expr => { const r = await send('Runtime.evaluate', { express
 await send('Page.enable'); await send('Runtime.enable');
 const dpr = mode !== 'frames' ? +(a5 || 1) : 1;
 await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: dpr, mobile: false });
-const loaded = on('Page.loadEventFired');
-await send('Page.navigate', { url }); await loaded;
-// wait for the page to say it has drawn (pages load their JSON asynchronously)
-await evalp('document.fonts.ready');
-for (let i = 0; i < 100 && !(await evalp('window.__ready === true')); i++) await sleep(100);
+// navigate, and wait for the page to say it has drawn (pages load their JSON asynchronously). A local preview server
+// sometimes leaves a request pending; if the page hasn't signalled ready in 6 s, load it again (up to 3 times).
+for (let attempt = 0; attempt < 3; attempt++) {
+  const loaded = on('Page.loadEventFired');
+  await send('Page.navigate', { url: attempt ? 'about:blank' : url }); await loaded;
+  if (attempt) { const l2 = on('Page.loadEventFired'); await send('Page.navigate', { url }); await l2; }
+  await evalp('document.fonts.ready');
+  let ok = false;
+  for (let i = 0; i < 60 && !(ok = await evalp('window.__ready === true')); i++) await sleep(100);
+  if (ok) break;
+  console.error('page not ready, reloading');
+}
 const err = await evalp('window.__error || null'); if (err) console.error('page error:', err);
 await sleep(300);
 if (mode !== 'frames' && a6) { await Promise.race([evalp(a6), sleep(40000).then(() => console.error('pre-capture script timed out'))]); await sleep(400); }

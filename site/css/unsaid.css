@@ -89,9 +89,10 @@ a { color: inherit; }
 .lab.red .t { display: block; font-family: var(--mono); color: var(--red); font-size: 11px; margin-top: 5px; }
 .lab.num { font: 600 11px/1 var(--mono); color: var(--white); }
 .lab.num.x { color: var(--red); text-decoration: line-through; text-decoration-thickness: 2px; }
+.lab.num.xi { color: var(--ink); text-decoration: line-through; text-decoration-thickness: 2px; }
 .status { display: flex; gap: 10px; align-items: baseline; min-height: 20px; color: var(--dim); font-size: 11px; margin: 10px 0 0; }
-.status .live { width: 6px; height: 6px; border-radius: 50%; background: var(--ink); flex: 0 0 6px; animation: pulse 1.2s ease-in-out infinite; align-self: center; }
-.status.idle .live { animation: none; background: var(--faint); }
+.status .live { width: 6px; height: 6px; border-radius: 50%; background: var(--faint); flex: 0 0 6px; align-self: center; }
+.status.busy .live { background: var(--ink); animation: pulse 1.2s ease-in-out infinite; }  /* only while Qloo calls are in flight */
 @keyframes pulse { 50% { opacity: .25; } }
 .note { color: var(--dim); font-size: 11px; margin-top: 4px; }
 
@@ -101,7 +102,8 @@ a { color: inherit; }
 .counter .ar { color: var(--faint); margin: 0 .25em; }
 .counter-cap { color: var(--dim); font-size: 10.5px; margin-top: 6px; }
 .field { display: flex; flex-wrap: wrap; gap: 4px 16px; line-height: 19px; font-size: 12px; margin-top: 14px; }
-.nm { position: relative; color: #a9a69e; white-space: nowrap; animation: land .35s var(--ease) both; }
+.nm { position: relative; color: #a9a69e; white-space: nowrap; }
+.nm.live { animation: land .35s var(--ease) both; }   /* only names asked just now land; dated ones are simply there */
 @keyframes land { from { opacity: 0; transform: translateY(-4px); } }
 .nm::after { content: ''; position: absolute; left: -2px; right: -2px; top: 54%; height: 1.5px; background: var(--red); transform: scaleX(0); transform-origin: left; transition: transform .38s var(--ease); }
 .nm.x::after { transform: scaleX(1); }
@@ -134,7 +136,9 @@ a { color: inherit; }
 .card .hood { color: var(--dim); font-size: 10.5px; letter-spacing: .04em; }
 .card .name { position: relative; font: 400 19px/1.18 var(--serif); color: var(--white); align-self: flex-start; }
 .card .name::after { content: ''; position: absolute; left: -2px; right: -2px; top: 55%; height: 2px; background: var(--red); transform: scaleX(0); transform-origin: left; }
-.card.holding .name::after { transform: scaleX(1); transition: transform .9s linear; }
+.card.holding .name::after { transform: scaleX(1); transition: transform .9s linear; background: var(--ink); }
+.card.byyou .name::after { background: var(--ink); }      /* your strike is ink; red is only for what the AIs said */
+.card.byyou .tag { color: var(--ink); }
 .card.struck .name::after { transform: scaleX(1); }
 .card.struck { border-color: var(--rule); background: none; }
 .card.struck .name, .card.struck .what, .card.struck .rk, .card.struck .because { color: var(--faint); }
@@ -192,6 +196,13 @@ details.log[open] summary::after { content: ' ⌄'; }
 .cols li.x span::after { content: ''; position: absolute; left: -2px; right: -2px; top: 55%; height: 1.5px; background: var(--red); }
 .sharecv { width: 100%; height: auto; border: 1px solid var(--rule2); display: block; margin-top: 16px; }
 
+/* result: the seven above the wall at every width (§2.1 phone order, now everywhere) */
+.res.done { display: flex; flex-direction: column; }
+.res.done #maphead { order: 0; } .res.done #status { order: 1; } .res.done #notes { order: 2; }
+.res.done #s-left { order: 3; } .res.done #s-wall { order: 4; }
+.above { color: var(--dim); margin: 12px 0 0; }
+.copyrow { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; margin: -2px 0 10px; font-size: 11px; }
+
 /* ---------- footer ---------- */
 .foot { border-top: 1px solid var(--rule2); margin-top: 48px; padding: 14px 0 28px; color: var(--faint); font-size: 10.5px; display: flex; gap: 8px 18px; flex-wrap: wrap; }
 
@@ -214,14 +225,16 @@ details.log[open] summary::after { content: ' ⌄'; }
   .card { min-height: 0; }
   .card .rk { margin-top: 6px; }
   .sheet { padding-top: 14px; border-left: 0; }
+  /* top bar in two rows at most: mark, city, MOCK; then the loves on one line, each shortened if it must */
+  .top { gap: 8px 12px; }
+  .top .slug .rest { display: none; }
+  .top .chips { order: 9; flex: 1 0 100%; flex-wrap: nowrap; min-width: 0; overflow: hidden; }
+  .top .chip { min-width: 0; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; font-size: 10.5px; }
+  .top .chip i { display: none; }
   .sheet h1 { font-size: 30px; }
   .cols { grid-template-columns: 1fr; }
   .field { font-size: 11.5px; gap: 3px 12px; }
   .doc pre { white-space: pre-wrap; overflow-wrap: anywhere; overflow-x: hidden; }
-  /* phone (§2.1): the map, then the seven, then "everything the AI named, crossed out · show ›" */
-  .res.done { display: flex; flex-direction: column; }
-  .res.done #maphead { order: 0; } .res.done #status { order: 1; } .res.done #notes { order: 2; }
-  .res.done #burn { order: 3; } .res.done #s-left { order: 4; } .res.done #s-wall { order: 5; }
   .card { padding: 10px 12px; gap: 4px; }
   .card .rk b { font-size: 20px; }
 }

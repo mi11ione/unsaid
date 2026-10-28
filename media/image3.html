@@ -60,15 +60,10 @@
   el(S, 'h1', '', 'Everything the AIs tell everyone, <s>crossed out</s>.').className = 'hl';
   const g = el(S, 'div', ''); g.className = 'cols3';
 
-  // ---- left: the answer; a span is struck only where the matcher (site/js/matcher.js) finds a wall name by its phrase rule (R1);
-  //      the fuzzy rules that over-strike in the dare box would strike plain words here ("soul" for Cafe Soul)
-  const wallNames = [...new Set((R.wall || []).map(w => w.name).filter(Boolean))];
+  // ---- left: the answer. The strikes come from the engine's own matcher (match_wall, run by build_data.py against the
+  //      census wall); a span is drawn struck only where R1 fired. assistant.json lists every rule that fired.
   const text = A.answer || '';
-  const spans = [];
-  for (const h of Matcher.find(text, wallNames, { phraseOnly: true })) {
-    const hit = [h.at[0], h.at[1], h.name];
-    if (!spans.some(s => hit[0] < s[1] && s[0] < hit[1])) spans.push(hit);
-  }
+  const spans = (A.strikes || []).filter(x => x.struck).map(x => [x.start, x.end, x.matches.filter(m => m.rule === 'R1').map(m => m.wall + ' (R1)').join(', ')]);
   spans.sort((a, b) => a[0] - b[0]);
   window.__struck = spans.map(s => s[2] + ' ← ' + text.slice(s[0], s[1]));
   let html = '', at = 0;
@@ -85,7 +80,7 @@
   const left = el(g, 'div', '');
   left.innerHTML = `<div class="chat"><div class="who">assistant<span>${A.model ? esc(A.model) + ' · ' : ''}no tools</span></div>
       <div class="u">${esc(A.prompt)}</div><div class="a">${html}</div></div>
-    <div class="cap3">Asked to avoid what every AI says. <span class="red">Struck</span>: names found, by exact phrase, on ${esc(city)}’s everyone-list.</div>`;
+    <div class="cap3">Asked to avoid what every AI says. <span class="red">Struck</span>: names that match ${esc(city)}’s everyone-list exactly.</div>`;
 
   // ---- right: the seven
   const right = el(g, 'div', ''); right.className = 'seven';
