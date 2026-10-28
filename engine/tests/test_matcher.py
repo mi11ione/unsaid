@@ -107,6 +107,34 @@ class TestNormalisation(unittest.TestCase):
         self.assertEqual(per["Good Room"]["status"], "outside_pool")
 
 
+class TestR5BrandContainment(unittest.TestCase):
+    """Golden cases from the live K4 relabel on nyc-khruangbin (28 Oct): 3 false survivors before R5. In each, the
+    AI's name resolves strongly to a branch OUTSIDE U, which used to switch containment off for its siblings in U."""
+    CASES = [("Ippudo NY", "IPPUDO Hell's Kitchen", "IPPUDO NY"),
+             ("Sant Ambroeus", "Sant Ambroeus W 4", "Sant Ambroeus Madison"),
+             ("La Goulue", "Omar's at La Goulue", "La Goulue")]
+
+    def test_live_false_survivors_are_struck(self):
+        for raw, in_pool, outside in self.CASES:
+            pool = [{"entity_id": "u", "name": in_pool}, {"entity_id": "other", "name": "Dante"}]
+            cat = pool + [{"entity_id": "o", "name": outside}]
+            struck, per = M.match_wall([raw], pool, fake_search(cat))
+            self.assertIn("u", struck, "%s should strike %s" % (raw, in_pool))
+            self.assertIn(("%s" % raw, "R5"), struck["u"])
+            self.assertNotIn("other", struck)
+
+    def test_weak_words_never_fire_alone(self):
+        pool = [{"entity_id": i, "name": n} for i, n in (("1", "Little Owl"), ("2", "Rooftop at Pier 17"),
+                                                          ("3", "The Bar Room"), ("4", "Bar Goto"))]
+        for raw in ("Little", "The Rooftop", "Rooftop Bar", "The Bar", "Bar", "NY", "Brooklyn Bar"):
+            self.assertEqual(M.PoolIndex(pool).r5(raw), [], raw)
+
+    def test_position_start_or_after_at_only(self):
+        pool = [{"entity_id": "a", "name": "Goulue Club"}, {"entity_id": "b", "name": "Le Petit La Goulue"},
+                {"entity_id": "c", "name": "Bar at La Goulue"}]
+        self.assertEqual(sorted(M.PoolIndex(pool).r5("La Goulue")), ["c"])
+
+
 class TestK4Golden(unittest.TestCase):
     def test_zero_false_survivors(self):
         labels = load_labels()

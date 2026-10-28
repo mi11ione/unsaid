@@ -9,6 +9,11 @@ Pipeline for each raw AI-named string r, against the fixed pool U (Qloo places) 
   R3  reverse containment: a pool name's distinctive tokens (>=2) all appear in r (pool name is the shorter brand)
       R2/R3 run when r matched in U or is unresolved. They are skipped when r resolved strongly outside U.
   R4  guard (unresolved only): a pool name sharing >= 60% of r's distinctive tokens is struck ("may be what X meant")
+  R5  brand containment (always, even when /search resolved r to a branch outside U): r's brand, i.e. its head with
+      city/borough words and generic suffixes dropped, is a whole-word token sequence at the START of a pool name or
+      right after "at" in it ("Ippudo NY" -> "IPPUDO Hell's Kitchen"; "La Goulue" -> "Omar's at La Goulue"). It needs
+      one distinctive token of length >= 4 or two tokens, and a weak word never fires it alone. Added 28 Oct after
+      the live K4 relabel found 3 false survivors (UNSAID.md §4 K4 pivot: raise the guard, accept over-striking).
 Unresolved names that strike nothing stay on the wall greyed out ("not found in Qloo").
 """
 import difflib
@@ -26,6 +31,10 @@ LOCATION = set("""
 nyc new york brooklyn manhattan queens bronx st saint louis stl mo ny usa downtown midtown uptown
 """.split())
 STOP = GENERIC | LOCATION
+BOROUGHS = set("""manhattan brooklyn queens bronx staten island harlem soho tribeca""".split())
+BRAND_WEAK = set("""the a an and of at on in by for with to n little big old new rooftop original famous best real
+blue red green black white golden gold royal grand upper lower east west north south good great happy lucky sweet
+fine hot cool local wild first last main corner city town street park""".split())   # never fire R5 alone
 
 SPLIT_HOST = re.compile(r"\s+(?:at|inside|@|in the|within)\s+|\s+[-–—|]\s+|\s*\(")
 SPLIT_ON_SUFFIX = re.compile(r"\s+on (?:the )?\w+(?: \w+)?$")
@@ -141,11 +150,13 @@ class PoolIndex:
         self.aliases = {norm(k): v for k, v in (aliases or {}).items()}
         self.k = {}
         self.d = {}
+        self.t = {}     # R5: the pool name's normalised tokens, in order
         for p in pool:
             ak = list(p.get("akas") or [])
             self.k[p["entity_id"]] = keys(p["name"], ak)
             self.d[p["entity_id"]] = distinctive(split_parts(p["name"])[0]) or distinctive(p["name"])
             self.d[p["entity_id"] + "#full"] = distinctive(p["name"])
+            self.t[p["entity_id"]] = tokens(p["name"])
 
     def r1(self, raw):
         names = [raw]
@@ -173,12 +184,42 @@ class PoolIndex:
                 hits.append((p["entity_id"], "R3"))
         return hits
 
+    def r5(self, raw):
+        seq = brand_seq(raw)
+        if not seq:
+            return []
+        n = len(seq)
+        hits = []
+        for p in self.pool:
+            t = self.t[p["entity_id"]]
+            starts = [0] + [k + 1 for k, w in enumerate(t) if w == "at"]
+            if any(t[s:s + n] == seq for s in starts):
+                hits.append(p["entity_id"])
+        return hits
+
     def guard(self, raw, thr=0.6):
         dr = distinctive(raw)
         if len(dr) < 2:  # a single distinctive token is fully handled by R2
             return []
         return [p["entity_id"] for p in self.pool
                 if overlap(dr, self.d[p["entity_id"] + "#full"]) / len(dr) >= thr]
+
+
+def brand_seq(raw):
+    """R5's brand: the head of r ('X at Y' / 'X (…)' / 'X - Y' -> X), tokens normalised, city and borough words and
+    trailing generic suffixes dropped. Empty when it is too weak to strike on its own."""
+    head = split_parts(raw)[0]
+    seq = [w for w in tokens(head) if w not in LOCATION and w not in BOROUGHS]
+    while seq and seq[-1] in GENERIC:
+        seq.pop()
+    while seq and seq[0] in ("the", "a", "an"):
+        seq.pop(0)
+    strong_tok = [w for w in seq if w not in STOP and w not in BRAND_WEAK]
+    if len(seq) == 1:
+        return seq if strong_tok and len(seq[0]) >= 4 else []
+    if len(seq) >= 2 and (strong_tok or any(len(w) >= 4 and w not in STOP for w in seq)):
+        return seq if strong_tok else []
+    return []
 
 
 def strong(raw, cand_name):
@@ -227,6 +268,8 @@ def match_wall(raw_names, pool, search_fn=None, aliases=None, guard_thr=0.6):
                     for e in idx.r1(c["name"]):  # chain siblings of the resolved entity
                         if e != c["entity_id"]:
                             hit(e, raw, "S-chain")
+        for e in idx.r5(raw):                  # R5 runs even when r resolved to a branch outside U
+            hit(e, raw, "R5")
         if not outside_strong:
             for e, rule in idx.containment(raw):
                 hit(e, raw, rule)
