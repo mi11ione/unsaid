@@ -190,6 +190,56 @@ class TestSetsAndWalls(Tmp):
         self.assertIn("not_venue_music", r["counts"]["floor"])
 
 
+class TestWallCount(Tmp):
+    VARIANTS = ["Ted Drewes", "Ted Drewes Frozen Custard", "Frozen custard at Ted Drewes",
+                "Lemmons", "Lemmons Restaurant",
+                "Sweetie Pie's", "Sweetie Pie’s", "Sweetie Pies", "Sweetie Pie's Upper Crust", "Sweetie Pie's"]
+    DISTINCT = ["Jazz St. Louis", "Robbie's House of Jazz", "Bailey's Range", "Bailey's Smokehouse",
+                "Tower Grove Park", "Tower Grove Tavern",
+                "Pork steak and ribs at Salt + Smoke", "Pork steak and ribs BBQ at Pappy's Smokehouse"]
+
+    def test_variants_merge_and_distinct_places_stay_apart(self):
+        p = E.wall_places(self.VARIANTS + self.DISTINCT + ["Tower Grove"], {})
+        self.assertEqual(len({p[n] for n in self.VARIANTS}), 3)                 # Ted Drewes, Lemmons, Sweetie Pie's
+        self.assertEqual(len({p[n] for n in self.DISTINCT}), len(self.DISTINCT))
+        self.assertEqual(p["Frozen custard at Ted Drewes"], p["Ted Drewes"])      # "X at Y" counts Y
+        self.assertNotEqual(p["Jazz St. Louis"], p["Robbie's House of Jazz"])
+        self.assertNotEqual(p["Tower Grove Park"], p["Tower Grove Tavern"])      # no bridge through "Tower Grove"
+
+    def test_counts_wall_is_places_and_wall_names_is_strings(self):
+        a = lambda names: {"provider": "t", "asked_at": "2026-10-28", "lane": "dated",  # noqa: E731
+                           "names": [{"name": n} for n in names]}
+        doc = {"walls": [{"city": "stl", "set": "city", "answers": [a(self.VARIANTS[:5]), a(self.VARIANTS[5:])]}]}
+        p = os.path.join(self.dir, "w.json")
+        with open(p, "w") as f:
+            json.dump(doc, f)
+        r = api.run_unsaid("St. Louis", CEDRIC, mode="fake", qloo=self.q(), walls_path=p, gemini=False,
+                           street_check=False)
+        self.assertEqual(r["counts"]["wall"], 3)
+        self.assertEqual(r["diag"]["wall_names"], 8)     # distinct normalised strings (the two quote forms are one)
+        self.assertTrue(all(w.get("place") for w in r["wall"]))
+
+    def test_non_venue_is_dimmed_but_counted(self):
+        venue = {"entity_id": "v", "tags": [{"id": "urn:tag:category:place:restaurant"}]}
+        music = {"entity_id": "m", "tags": [{"id": "urn:tag:category:place:live_music_venue"}]}
+        mall = {"entity_id": "x", "tags": [{"id": "urn:tag:category:place:restaurant"},
+                                           {"id": "urn:tag:category:place:fast_food"}]}
+        self.assertFalse(E.not_restaurant_or_bar(venue))
+        self.assertTrue(E.not_restaurant_or_bar(music))
+        self.assertTrue(E.not_restaurant_or_bar(mall))
+        self.assertFalse(E.not_restaurant_or_bar({"entity_id": "u"}))   # tags unknown: never guess
+
+        class CS:
+            closed, busy, skipped, nonvenue = set(), set(), set(), {"m"}
+        drops = {"ids": {"closed": [], "not_venue": ["x"]}}
+        oc = E.name_outcome("The Pageant", {"status": "outside_pool", "ids": [], "resolved_id": "m"}, CS, None, drops)
+        self.assertEqual(oc, ("dimmed", "not a restaurant or bar", "m"))
+        idx = __import__("unsaid.matcher", fromlist=["PoolIndex"]).PoolIndex([{"entity_id": "x", "name": "Food Hall X"}])
+        oc = E.name_outcome("Food Hall X", {"status": "not_found", "ids": []}, CS, idx, drops)
+        self.assertEqual(oc[1], "not a restaurant or bar")
+        self.assertEqual(len(set(E.wall_places(["The Pageant", "Gioia's Deli"], {"The Pageant": "m"}).values())), 2)
+
+
 class TestDeadline(Tmp):
     def test_hard_cap_degrades(self):
         events = []

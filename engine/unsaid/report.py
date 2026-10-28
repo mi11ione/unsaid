@@ -151,8 +151,8 @@ def markdown(r, trace, city_label, loves_text, fake, set_id=None):
     for w in r["wall"]:
         st[w["reason"]] = st.get(w["reason"], 0) + 1
     provs = sorted({"%s (%s)" % (w["provider"], w["lane"]) for w in r["wall"]})
-    L.append("%s distinct names from %s asks (%s). Source: %s. Name outcomes: %s." % (
-        cn.get("wall"), cn.get("asks"), ", ".join(provs) or "none", d.get("wall_source"),
+    L.append("%s distinct places (%s distinct name strings, merged by the matcher's rules) from %s asks (%s). "
+             "Source: %s. Name outcomes: %s." % (cn.get("wall"), d.get("wall_names"), cn.get("asks"), ", ".join(provs) or "none", d.get("wall_source"),
         ", ".join("%s %d" % kv for kv in sorted(st.items()))))
     if d.get("reverse_struck"):
         L.append("")

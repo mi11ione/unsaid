@@ -390,7 +390,7 @@ def to_contract(res, trace, c, ls, fake):
     cap = d.get("cap") or {}
     out["diag"].update({
         "obscure_names": [n for _, n in d.get("obscure") or []], "known_names": [n for _, n in d.get("known") or []],
-        "calls": call_counts(trace),
+        "calls": call_counts(trace), "wall_names": d.get("wall_names"),
         "qloo_calls": len(trace), "qloo_network": sum(1 for r in trace if not r["cache"]),
         "rho_tp": _nan(d.get("rho_tp")), "rho_res": _nan(d.get("rho_res")), "rho_res_note": d.get("rho_res_note"),
         "cap_keep": d.get("cap_keep"),

@@ -19,6 +19,7 @@
   CAP             base + entity loves + filter.popularity.max removing |struck| members of U (1 call)
 """
 import math
+import re
 import time
 from concurrent.futures import ThreadPoolExecutor
 
@@ -423,6 +424,7 @@ class CitySearch:
         for e in U:
             self.u_tokens.update(M.distinctive(e.get("name", "")))
         self.skipped, self.busy, self.closed, self.calls = set(), set(), set(), 0
+        self.nonvenue = set()   # resolved entities that are not a restaurant or bar (tags known, no category tag)
 
     def shares_token(self, raw):
         d = M.distinctive(raw)
@@ -443,6 +445,8 @@ class CitySearch:
             self.busy.add(raw)
             return []
         for r in res:
+            if not_restaurant_or_bar(r):
+                self.nonvenue.add(r["entity_id"])
             if prop(r, "is_closed") is True:
                 self.closed.add(r["entity_id"])
         return [{"entity_id": r["entity_id"], "name": r.get("name", "")} for r in res]
@@ -455,6 +459,15 @@ def strike(q, city, U, wall_names, use_search=True):
     return struck, per, cs
 
 
+def not_restaurant_or_bar(e):
+    """Tags known and either no restaurant/bar category tag, or an allowlist hard-exclude."""
+    tags = [t for t in e.get("tags") or [] if isinstance(t, dict)]
+    if not tags:
+        return False          # unknown: never guess
+    ids = {(t.get("id") or "") for t in tags}
+    return excluded_kind(e) is not None or not (ids & set(CFG["CAT_TAGS"]))
+
+
 def name_outcome(raw, info, cs, dropped_index, drops):
     """-> (outcome, reason, qloo_id) for one wall name (CONTRACT.md wall item)."""
     st = info["status"]
@@ -465,6 +478,9 @@ def name_outcome(raw, info, cs, dropped_index, drops):
     closed_ids = set(drops["ids"]["closed"]) | cs.closed
     if (rid and rid in closed_ids) or any(i in closed_ids for i in local):
         return "dimmed", "closed (Qloo)", rid or next(i for i in local if i in closed_ids)
+    nonvenue = set(drops["ids"]["not_venue"]) | cs.nonvenue
+    if (rid and rid in nonvenue) or any(i in nonvenue for i in local):
+        return "dimmed", "not a restaurant or bar", rid or next(i for i in local if i in nonvenue)
     if st == "outside_pool" or local:
         return "dimmed", "not in pool", rid or (local[0] if local else None)
     if raw in cs.busy:
@@ -881,6 +897,18 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
     obscure = sorted([i for i in struck_u if pop_ord[i] > N / 2.0], key=lambda i: -pop_ord[i])
     known = [c["id"] for c in res["picks"] if pop_ord[c["id"]] <= N / 3.0]
     distinct_norms = {M.norm(w["name"]) for w in wall_items}
+    strong_id = {}
+    for eid, hits in struck.items():
+        for raw, rule in hits:
+            if rule == "R1":
+                strong_id.setdefault(raw, eid)
+    for raw, info in per.items():
+        if info.get("status") == "outside_pool" and info.get("resolved_id"):
+            strong_id.setdefault(raw, info["resolved_id"])
+    place_of = wall_places([w["name"] for w in wall_items], strong_id)
+    for w in wall_items:
+        w["place"] = place_of.get(w["name"])
+    n_places = len(set(place_of.values()))
 
     # ---- status and flags
     n = len(res["picks"])
@@ -900,7 +928,7 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
         if l.get("dead"):
             flags.append("dead_love:%s" % (l.get("name") or l["text"]))
     res["flags"] = flags
-    res["counts"].update({"wall": len(distinct_norms), "asks": n_city + len(street_answers), "S": len(S),
+    res["counts"].update({"wall": n_places, "asks": n_city + len(street_answers), "S": len(S),
                           "struck_in_U": len(struck_u)})
     res["diag"].update({
         "N": N, "S": len(S), "kept": len(eligible), "flat": flat, "all_dead": all_dead, "thin_taste": thin,
@@ -910,7 +938,8 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
         "popcap_overlap": cap.get("overlap", float("nan")), "cap": {k: v for k, v in cap.items() if k != "topk"},
         "obscure": [(i, byid[i].get("name")) for i in obscure], "known": [(i, byid[i].get("name")) for i in known],
         "auc_pop_struck": ST.auc([pop[i] for i in ids], [i in struck_u for i in ids]),
-        "wall": {"answers": len(all_answers), "names": len(distinct_norms), "struck": len(struck_u),
+        "wall_names": len(distinct_norms),
+        "wall": {"answers": len(all_answers), "names": len(distinct_norms), "places": n_places, "struck": len(struck_u),
                  "status": _count(per), "source": wall.get("source"),
                  "c7_calls": sum(c.calls for c in css), "c7_skipped": sum(len(c.skipped) for c in css),
                  "c7_busy": sum(len(c.busy) for c in css)},
@@ -925,6 +954,75 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
     res["_holds"] = holds
     res["_selected"] = selected
     return res
+
+
+HOST_AT = re.compile(r"\s+(?:at|inside|@|within)\s+", re.I)
+
+
+def place_part(raw):
+    """The place a wall string names: drop a parenthetical; 'X at Y' -> Y; 'X - Y' / 'X | Y' -> X."""
+    s = re.sub(r"\s*\(.*?\)\s*", " ", raw).strip() or raw
+    m = HOST_AT.split(s)
+    if len(m) > 1 and M.distinctive(m[-1]):
+        return m[-1].strip()
+    return re.split(r"\s+[-–—|]\s+", s)[0].strip() or s
+
+
+def wall_places(raws, qid_of):
+    """Distinct PLACES among wall names (⟦WALL⟧). Merges, strongest first, never through a weak bridge:
+      1. the same Qloo ID from a strong resolution (R1 in U, or a strong /search hit outside U)   [qid_of]
+      2. the matcher's R1 keys name to name (full / core / compact / acronym / the head of "X at Y", "X (dish)")
+      3. plural/possessive folded ("Sweetie Pies" == "Sweetie Pie's")
+      4. R2/R3 containment name to name, only when the shorter name has >= 2 distinctive tokens AND every name that
+         contains it already sits in one place ("Tower Grove" never bridges Tower Grove Park and Tower Grove Tavern).
+    No R4 guard and no single-token containment here: they over-strike on purpose, but would over-merge a count.
+    Every rule compares the PLACE part of a name: "Slinger at Crown Candy Kitchen" -> Crown Candy Kitchen,
+    "Gioia's Deli (hot salami sandwich)" -> Gioia's Deli, "Salt + Smoke - Delmar Loop" -> Salt + Smoke.
+    Returns {raw: place key} (the cluster's first name, normalised)."""
+    raws = list(dict.fromkeys(raws))
+    order = {r: k for k, r in enumerate(raws)}
+    parent = {r: r for r in raws}
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    def union(a, b):
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            lo, hi = sorted((ra, rb), key=order.get)
+            parent[hi] = lo
+
+    by_id, by_key, by_sing, by_tok = {}, {}, {}, {}
+    part = {r: place_part(r) for r in raws}
+    for r in raws:
+        q = qid_of.get(r)
+        if q:
+            union(r, by_id.setdefault(q, r))
+        for k in M.keys(part[r]):
+            if k[0] != "acro":
+                union(r, by_key.setdefault(k, r))
+        ds = M.distinctive(part[r])
+        sing = " ".join(sorted(t[:-1] if len(t) > 3 and t.endswith("s") else t for t in ds))
+        if sing:
+            union(r, by_sing.setdefault(sing, r))
+        for t in ds:
+            by_tok.setdefault(t, []).append(r)
+    members = {}
+    for r in raws:
+        members.setdefault(find(r), set()).add(" ".join(t[:-1] if len(t) > 3 and t.endswith("s") else t
+                                                        for t in M.tokens(part[r])))
+    for r in raws:                                   # 4. containment, unambiguous only
+        ds = M.distinctive(part[r])
+        if len(ds) < 2 or len(members.get(find(r), ())) > 1:   # only a lone short name attaches (no bridges)
+            continue
+        bigs = {c for c in by_tok.get(ds[0], []) if c != r and len(M.distinctive(part[c])) > len(ds)
+                and M.contained(ds, M.distinctive(part[c]))}
+        if bigs and len({find(c) for c in bigs}) == 1:
+            union(r, next(iter(bigs)))
+    return {r: M.norm(find(r)) for r in raws}
 
 
 def wall_item(a, raw):
