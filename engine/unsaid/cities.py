@@ -13,11 +13,11 @@ MI = 1609.344
 
 CITIES = {
     "nyc": {"name": "New York City", "slug": "new-york", "query": "New York City", "region": "New York",
-            "mode": "locality", "radius_mi": 8, "center": (40.7831, -73.9712),       # Manhattan centroid
+            "mode": "locality", "radius_mi": 10, "center": (40.7831, -73.9712),       # Manhattan centroid
             "aliases": ["new york", "new york city", "nyc", "ny", "manhattan", "brooklyn", "queens", "bronx",
                         "the bronx", "staten island"]},
     "stl": {"name": "St. Louis", "slug": "st-louis", "query": "St. Louis", "region": "Missouri",
-            "mode": "point", "radius_mi": 10, "radius_m": 16093, "center": (38.6270, -90.1994),
+            "mode": "point", "radius_mi": 15, "radius_m": 24140, "center": (38.6270, -90.1994),
             "aliases": ["st. louis", "st louis", "saint louis", "stl", "st-louis"]},
     "la": {"name": "Los Angeles", "slug": "los-angeles", "query": "Los Angeles", "region": "California",
            "mode": "point", "radius_mi": 15, "radius_m": 24140, "center": (34.0522, -118.2437),

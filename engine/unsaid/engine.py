@@ -274,11 +274,18 @@ def taste_pool(q, city, loves, pages=None, kind_tags=None, label=None, adaptive=
 # ---------------------------------------------------------------- floor
 def excluded_kind(e):
     pats, names = CFG["EXCLUDE_TAG_PATTERNS"], set(CFG["EXCLUDE_TAG_NAMES"])
-    for t in e.get("tags") or []:
-        if not isinstance(t, dict):
-            continue
+    tags = [t for t in (e.get("tags") or []) if isinstance(t, dict)]
+    ids = {(t.get("id") or t.get("tag_id") or "").lower() for t in tags}
+    eatery = any(i in ("urn:tag:category:place:restaurant", "urn:tag:category:place:bar") or
+                 i.startswith("urn:tag:genre:place:restaurant") and "fast_food" not in i for i in ids)
+    for t in tags:
         tid = (t.get("id") or t.get("tag_id") or "").lower()
-        if any(p in tid for p in pats) or (t.get("name") or "").strip().lower() in names:
+        # live data (28 Oct): setting/decor/interest tags ("setting:qloo:hotel" on Ruth's Chris) are not the
+        # place's kind, so only category/genre tags, plus fast-food cuisine tags, can exclude it
+        kind_tag = tid.startswith(("urn:tag:category:place:", "urn:tag:genre:place:"))
+        fast = "fast_food" in tid and (kind_tag or tid.startswith(("urn:tag:cuisine:", "urn:tag:culinary_style:")))
+        hit = any(p in tid for p in pats) or (t.get("name") or "").strip().lower() in names
+        if hit and (fast or (kind_tag and not eatery)):
             return t.get("id") or t.get("name")
     return None
 
