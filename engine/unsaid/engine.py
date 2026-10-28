@@ -18,7 +18,9 @@
   because         the live love whose order_i ranks x best (no explainability shares anywhere)
   CAP             base + entity loves + filter.popularity.max removing |struck| members of U (1 call)
 """
+import json
 import math
+import os
 import re
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -130,6 +132,22 @@ def dead_tag(t):
     return any(p in s for p in CFG["DEAD_TAG_PATTERNS"])
 
 
+_PRE = None
+
+
+def _pre_resolved():
+    """§3.2 C2: common loves pre-resolved by hand (data/loves_resolved.json, keyed by matcher.norm of the typed text)."""
+    global _PRE
+    if _PRE is None:
+        path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                            "data", "loves_resolved.json")
+        try:
+            _PRE = {M.norm(k): v for k, v in json.load(open(path)).get("loves", {}).items()}
+        except (OSError, ValueError):
+            _PRE = {}
+    return _PRE
+
+
 def resolve_love(q, text, hint=None):
     """-> {text, status ok|needs_input|miss, kind entity|tag, id, name, type, is_place, alternatives, dead, dead_reason}.
     needs_input still carries the top candidate, so scripts can proceed the way the kit's 'confirm' did."""
@@ -148,6 +166,13 @@ def resolve_love(q, text, hint=None):
             out.update({"dead": True, "dead_reason": "vibe"})
         return out
 
+    pre = _pre_resolved().get(M.norm(text))
+    if pre and (not hint or hint == "tag" and pre.get("kind") == "tag" or pre.get("type", "").endswith(":" + hint)):
+        out.update({"kind": pre["kind"], "id": pre["id"], "name": pre["name"], "type": pre["type"], "status": "ok",
+                    "is_place": pre["type"] == PLACE, "pre_resolved": True})
+        if pre["kind"] == "tag" and dead_tag({"type": pre["type"], "id": pre["id"]}):
+            out.update({"dead": True, "dead_reason": "vibe"})
+        return out
     if hint == "tag":
         tags = q.tags(text, take=5, label="C2 love tag") or q.tags(text, take=5, semantic=True, label="C2 love tag~")
         return as_tag(tags, True) if tags else out

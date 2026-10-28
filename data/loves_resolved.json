@@ -1,0 +1,8 @@
+{
+ "note": "UNSAID.md §3.2 C2: common loves pre-resolved by hand, keyed by the typed text. Each entry was checked against Qloo /search on 28 Oct 2026.",
+ "loves": {
+  "Frankie Beverly & Maze": {"id": "E67A957E-99EF-4941-A74C-1D3A0C4DB3D9", "name": "Maze Featuring Frankie Beverly", "kind": "entity", "type": "urn:entity:artist"},
+  "Frankie Beverly and Maze": {"id": "E67A957E-99EF-4941-A74C-1D3A0C4DB3D9", "name": "Maze Featuring Frankie Beverly", "kind": "entity", "type": "urn:entity:artist"},
+  "Maze": {"id": "E67A957E-99EF-4941-A74C-1D3A0C4DB3D9", "name": "Maze Featuring Frankie Beverly", "kind": "entity", "type": "urn:entity:artist"}
+ }
+}
