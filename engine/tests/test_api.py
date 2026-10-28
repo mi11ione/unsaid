@@ -665,6 +665,18 @@ class TestCardLines(unittest.TestCase):
         long = {"properties": {"short_description": "word " * 40}}
         self.assertLessEqual(len(E.blurb_line(long)), 111)
 
+    def test_kind_of_and_variety(self):
+        tag = lambda k: {"id": "urn:tag:category:place:" + k, "name": k}  # noqa: E731
+        self.assertEqual(E.kind_of({"tags": [tag("bar"), tag("restaurant")]}), ("drink", "drink"))
+        self.assertEqual(E.kind_of({"tags": [tag("bar"), tag("barbecue_restaurant")]}), ("eat", "barbecue"))
+        self.assertEqual(E.kind_of({"tags": [tag("coffee_shop")]}), ("eat", "cafe"))
+        self.assertEqual(E.kind_of({"tags": [tag("restaurant")]}), ("eat", "other"))
+        r = api.run_unsaid("St. Louis", CEDRIC, mode="fake", qloo=QL.Qloo(fake=True, cache_dir=tempfile.mkdtemp()),
+                           gemini=False, street_check=False)
+        fam = collections.Counter((c["kind"], c["kind_family"]) for c in r["picks"])
+        self.assertTrue(all(c.get("kind") in ("eat", "drink") for c in r["picks"] + r["reserves"]))
+        self.assertLessEqual(max(fam.values()), E.CFG["KIND_CAP"] + 1)   # fake pool: one love may force one more
+
     def test_chain_rule_reads_the_places_own_website(self):
         mk = lambda i, n, w: {"entity_id": i, "name": n, "properties": {"website": w}}  # noqa: E731
         pool = [mk("fw1", "First Watch", "https://www.firstwatch.com/locations/saint-ann/"),
@@ -675,8 +687,10 @@ class TestCardLines(unittest.TestCase):
                 mk("p", "Pappy's Smokehouse", "https://pappyssmokehouse.com/"),
                 mk("f1", "Molasses Books", "https://facebook.com/molasses"),
                 mk("f2", "Eastwood", "https://facebook.com/eastwood"), mk("f3", "Joe", "https://facebook.com/joe"),
-                mk("l", "Locations Bar", "https://locationsbar.com/locations")]
-        self.assertEqual(sorted(E.chain_ids(pool, [p["entity_id"] for p in pool])), ["bq", "fw1", "rb", "x1", "x2", "x3"])
+                mk("l", "Locations Bar", "https://locationsbar.com/locations"),
+                mk("bf", "Bonefish Grill", "https://locations.bonefishgrill.com/missouri/brentwood/8780-eager-road")]
+        self.assertEqual(sorted(E.chain_ids(pool, [p["entity_id"] for p in pool])),
+                         ["bf", "bq", "fw1", "rb", "x1", "x2", "x3"])
 
 
 if __name__ == "__main__":

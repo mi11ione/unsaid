@@ -53,6 +53,12 @@ CFG = {
     # it best). A dish love credits only places Qloo tags with the dish. GENERIC_SHARE: a place that this share of
     # the prior's tastes (the anchor panel) put in their top 30% fits everyone, not you, and is never a card.
     "LOVE_CAP": 3, "ALT_CREDIT_FRAC": 0.3, "GENERIC_SHARE": 0.6, "BALANCE_SCAN": 60,
+    # Variety (29 Oct): a seven is a list for a person, a mix of places to eat and to drink. At most KIND_CAP cards
+    # of one kind ("drink", or "eat" by cuisine family: southern, barbecue, italian, asian, cafe ...); at least
+    # MIN_EAT and MIN_DRINK when the eligible pool has them; at least MIN_HOODS neighbourhoods when it can. A greedy
+    # re-rank over the same score: the score stays the order, the kinds only skip a card.
+    "KIND_CAP": 3, "MIN_EAT": 2, "MIN_DRINK": 2, "MIN_HOODS": 3,
+    "MIX_WIDE": True,     # the mix may reach places holding for one pair of loves when all-but-one leaves too few
     "SEARCH_RADIUS_MI": 15,      # C7 city-scoped /search
     # C7 budget (gate F live: a ~700-name NYC wall sent 216 /search calls). Only names R1-R5 did not strike, that
     # share a RARE distinctive token with U, are searched, after the veto candidates (names whose only strike is a
@@ -1472,6 +1478,7 @@ def _site(e):
 def chain_ids(pool, ids):
     """Places run by a multi-location brand (29 Oct), from Qloo's own website field, no extra calls:
       a branch page: the website is a location/store page of a brand site (".../locations/brentwood-square/",
+        "locations.bonefishgrill.com/missouri/brentwood/...",
         ".../location/nomad/") or the brand site's page for this city ("rushbowls.com/st-louis");
       or one domain, one brand: >= 3 places in the pool share the website's domain and the name's first word
         (First Watch x4 on firstwatch.com). Social and ordering sites never count: their names differ.
@@ -1484,10 +1491,64 @@ def chain_ids(pool, ids):
         d, segs = site.get(i, ("", []))
         if not d:
             continue
-        if any(x in _BRANCH_SEG for x in segs[:-1]) or (len(segs) == 1 and segs[0] in _CITY_SEG) or \
+        if d.split(".")[0] in _BRANCH_SEG or any(x in _BRANCH_SEG for x in segs[:-1]) or \
+                (len(segs) == 1 and segs[0] in _CITY_SEG) or \
                 brand[(d, first.get(i))] >= 3:
             out.add(i)
     return out
+
+
+DISH_STYLE = set("""fried deep-fried grilled smoked bbq barbecued baked roasted crispy spicy hot pan-fried pan seared
+braised steamed blackened jerk sweet sour""".split())
+
+# ---------------------------------------------------------------- kinds (variety in the seven)
+DRINK_KINDS = {"bar", "cocktail_bar", "wine_bar", "bar_grill", "sports_bar", "pub", "lounge_bar", "irish_pub",
+               "gastropub", "brewery", "live_music_bar", "night_club", "jazz_club", "beer_garden", "brewpub",
+               "dance_club", "beer_hall", "gay_bar", "karaoke_bar", "dive_bar", "comedy_club", "beer_bar",
+               "lounge", "tavern", "piano_bar", "whiskey_bar", "sake_bar", "hookah_bar", "taproom"}
+EAT_FAMILY = {
+    "barbecue": "barbecue", "korean_barbecue": "barbecue", "smokehouse": "barbecue",
+    "soul_food": "southern", "southern_restaurant_us": "southern", "southern": "southern", "cajun": "southern",
+    "creole": "southern", "chicken": "southern", "chicken_wings": "southern", "fried_chicken": "southern",
+    "italian": "italian", "pizza": "italian", "pizzeria": "italian",
+    "mexican": "latin", "taco": "latin", "burrito": "latin", "latin_american": "latin", "colombian": "latin",
+    "caribbean": "latin", "brazilian": "latin", "peruvian": "latin", "honduran": "latin", "salvadoran": "latin",
+    "spanish": "spanish", "tapas": "spanish", "tapas_bar": "spanish", "basque": "spanish",
+    "japanese": "asian", "sushi": "asian", "ramen": "asian", "korean": "asian", "chinese": "asian",
+    "sichuan": "asian", "thai": "asian", "vietnamese": "asian", "asian": "asian", "asian_fusion": "asian",
+    "dim_sum": "asian", "indian": "asian", "filipino": "asian",
+    "seafood": "seafood", "oyster_bar": "seafood", "fish_and_chips": "seafood",
+    "steak_house": "steak", "steakhouse": "steak",
+    "hamburger": "diner", "diner": "diner", "sandwich_shop": "diner", "deli": "diner", "hot_dog": "diner",
+    "mediterranean": "mediterranean", "middle_eastern": "mediterranean", "greek": "mediterranean",
+    "lebanese": "mediterranean", "falafel": "mediterranean", "turkish": "mediterranean",
+    "french": "european", "modern_french": "european", "bistro": "european", "european": "european",
+    "irish": "european", "german": "european", "eastern_european": "european", "polish": "european",
+    "russian": "european", "ukrainian": "european",
+    "cafe": "cafe", "coffee_shop": "cafe", "bakery": "cafe", "espresso_bar": "cafe", "ice_cream_shop": "cafe",
+    "dessert": "cafe", "dessert_shop": "cafe", "pancake": "cafe", "tea_house": "cafe", "juice_shop": "cafe",
+    "bubble_tea": "cafe", "breakfast": "cafe", "brunch": "cafe", "coffee_roastery": "cafe", "donut_shop": "cafe",
+    "vegan": "healthy", "vegetarian": "healthy", "health_food": "healthy", "gluten_free": "healthy",
+    "ethiopian": "african", "african": "african", "west_african": "african", "nigerian": "african"}
+
+
+def kind_of(e):
+    """("eat", family) or ("drink", "drink") from the place's Qloo category / restaurant-genre tags: a specific
+    cuisine kind ("barbecue_restaurant", "italian") makes it a place to eat of that family; else any bar-type kind
+    (bar, pub, lounge, cocktail bar, bar & grill ...) makes it a place to drink; else a place to eat."""
+    kinds = []
+    for t in e.get("tags") or []:
+        tid = (t.get("id") or "") if isinstance(t, dict) else ""
+        for pre in ("urn:tag:category:place:", "urn:tag:genre:place:restaurant:"):
+            if tid.startswith(pre):
+                k = tid[len(pre):]
+                kinds.append(k[:-len("_restaurant")] if k.endswith("_restaurant") else k)
+    fams = [EAT_FAMILY[k] for k in kinds if k in EAT_FAMILY]
+    if fams:                                  # a cuisine before a cafe, a cafe before a diet tag (vegan, healthy)
+        return ("eat", min(fams, key=lambda f: (f == "healthy", f == "cafe", fams.index(f))))
+    if any(k in DRINK_KINDS for k in kinds):
+        return ("drink", "drink")
+    return ("eat", "other")
 
 
 # ---------------------------------------------------------------- card lines
@@ -1794,6 +1855,14 @@ def because_detail(i, love, byid, ids, orders, tied, dish_tags, dish_tagged, use
     lname = love.get("name") or txt
     if txt in dish_tags and i in dish_tagged.get(txt, ()):
         return "on Qloo's %s list" % lname.lower()
+    if txt in dish_tags:                      # credited through the dish itself ("fried catfish" -> "Catfish")
+        nm = M.norm(lname)
+        heads = {nm, " ".join(w for w in nm.split() if w not in DISH_STYLE)}
+        for t in byid[i].get("tags") or []:
+            if isinstance(t, dict) and (t.get("id") or "").startswith(
+                    ("urn:tag:menu_highlight:", "urn:tag:specialty_dish:", "urn:tag:cuisine:")) \
+                    and M.norm(t.get("name") or "") in heads:
+                return "Qloo tags it %s" % (t.get("name") or "").lower()
     if txt not in orders:
         return None
     key = txt
@@ -2184,6 +2253,7 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
     need = n_live - 1 if n_live >= 2 else 0
     eligible = [i for i in S if (holds[i] is None or holds[i] >= need)
                 and (not live or any(i not in tied[l["text"]] for l in live))]
+    res["diag"]["S_holds"] = [len(S), len(eligible)]
     generic = {i for i in eligible if i in ev_counts and ev_counts[i][1] and
                ev_counts[i][0] >= CFG["GENERIC_SHARE"] * ev_counts[i][1]}
     chain = chain_ids(pool, eligible)
@@ -2198,6 +2268,15 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
     else:
         order = sorted(eligible, key=lambda i: (-lift[i], fit[i], i))
         score = {i: round(lift[i], 4) for i in ids}
+    # Variety fallback (29 Oct): when the seven can't reach its mix from `order`, places that hold for at least one
+    # pair of loves (instead of all but one) may fill the gap, in the same score order; never generic, never chains
+    wide = []
+    if CFG.get("MIX_WIDE", True) and n_live >= 3:
+        inset = set(order)
+        wide = [i for i in S if i not in inset and holds[i] is not None and holds[i] >= 1
+                and any(i not in tied[l["text"]] for l in live) and i not in generic and i not in chain_ids(pool, [i])]
+        wide = sorted(wide, key=(lambda i: (fit[i], i)) if flat else (lambda i: (-lift[i], fit[i], i)))
+    res["diag"]["wide"] = len(wide)
 
     # ---- 7 + 3 via the reverse check and the last-seen check
     rindex = reverse_index_cached(all_answers)
@@ -2216,12 +2295,24 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
     # top ALT_CREDIT_FRAC may.
     love_by = {l["text"]: l for l in live}
 
+    # a dish love also credits a place tagged with the dish itself without its cooking style: "fried catfish"
+    # credits a place Qloo tags "Catfish" (29 Oct; the sub-pool and the ranking are unchanged)
+    dish_heads = {}
+    for l in live:
+        if l["text"] in dish_tags:
+            nm = M.norm(l.get("name") or l["text"])
+            head = " ".join(w for w in nm.split() if w not in DISH_STYLE)
+            dish_heads[l["text"]] = {nm, head} - {""}
+
     def can_credit(i, l):
-        if i in tied[l["text"]]:
+        if i in tied[l["text"]] and l["text"] not in dish_tags:
             return False
         if l["text"] in dish_tags:
-            return any((t.get("id") or "") in dish_tags[l["text"]] for t in byid[i].get("tags") or []
-                       if isinstance(t, dict))
+            heads = dish_heads.get(l["text"]) or set()
+            return any(isinstance(t, dict) and ((t.get("id") or "") in dish_tags[l["text"]] or (
+                (t.get("id") or "").startswith(("urn:tag:menu_highlight:", "urn:tag:specialty_dish:",
+                                                "urn:tag:cuisine:")) and M.norm(t.get("name") or "") in heads))
+                       for t in byid[i].get("tags") or [])
         return True
 
     alt_cut = math.ceil(N * CFG["ALT_CREDIT_FRAC"])
@@ -2231,8 +2322,10 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
     def credits(i):
         """Loves that may credit i, best first: [(rank, text, alt_ok)] (memoised: it never depends on the counts)."""
         if i not in _cr:
-            out = sorted((orders[l["text"]][i], l["text"]) for l in live if can_credit(i, l))
-            _cr[i] = [(r, t, k == 0 or r <= alt_cut) for k, (r, t) in enumerate(out)]
+            # a place carrying a dish you love is credited to that dish first (29 Oct: catfish -> fried catfish)
+            out = sorted((0 if l["text"] in dish_tags else 1, orders[l["text"]][i], l["text"])
+                         for l in live if can_credit(i, l))
+            _cr[i] = [(r, t, k == 0 or r <= alt_cut) for k, (_d, r, t) in enumerate(out)]
         return _cr[i]
 
     cap = CFG["LOVE_CAP"] if len(live) >= 2 else None
@@ -2291,69 +2384,155 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
         return True
 
     N7, NR = CFG["N_CARDS"], CFG["N_RESERVES"]
-    picks0, blocked, k = [], [], 0      # blocked: places whose love was at the cap (not yet checked)
-    while len(picks0) < N7 and k < len(order):
-        i = order[k]
-        k += 1
+    centroids = [("osm", osm_hoods(city.get("key"))), ("pool", pool_hoods(pool))]
+    _kind, _hood = {}, {}
+
+    def kind(i):
+        if i not in _kind:
+            _kind[i] = kind_of(byid[i])
+        return _kind[i]
+
+    def bucket(i):
+        k = kind(i)
+        return k[0] if k[0] == "drink" else "eat:" + k[1]
+
+    def hood(i):
+        if i not in _hood:
+            _hood[i] = hood_of(byid[i], centroids)[0] or ""
+        return _hood[i]
+
+    kcap = CFG["KIND_CAP"]
+    kcnt = collections.Counter()
+    picks0 = []
+    rank_of = {i: r for r, i in enumerate(order + wide)}
+
+    def add(i, c):
+        picks0.append(i)
+        credit_of[i] = c
+        cnt[c] += 1
+        kcnt[bucket(i)] += 1
+
+    def drop(i):
+        picks0.remove(i)
+        cnt[credit_of.pop(i)] -= 1
+        kcnt[bucket(i)] -= 1
+
+    # 1. greedy over the score: a card is skipped while its love (LOVE_CAP) or its kind (KIND_CAP) is full
+    blocked = []
+    for i in order + wide:
+        if len(picks0) >= N7:
+            break
         c, ok = credit_for(i, cnt)
         if c is None and live:
             continue
-        if not ok:
+        if not ok or kcnt[bucket(i)] >= kcap:
             blocked.append(i)
             continue
         if check(i):
-            picks0.append(i)
-            credit_of[i] = c
-            cnt[c] += 1
-    # every live love credits at least one card when a passing place can be credited to it: its best-ranked place
-    # (else one its order ranks in its top ALT_CREDIT_FRAC) replaces the lowest-scored card of a love that has two+
+            add(i, c)
+
+    def swap_in(want, may_drop, credit=None, scan=None, any_kind=False):
+        """The best-scoring passing place `want` accepts replaces the lowest-scored card `may_drop` allows, keeping
+        both caps (the victim's love and kind counts already reduced). Returns True when a swap happened."""
+        tries = 0
+        for i in (scan if scan is not None else order):
+            if i in credit_of or checked.get(i) is False or not want(i):
+                continue
+            for v in sorted(picks0, key=lambda x: -rank_of[x]) if len(picks0) >= N7 else [None]:
+                if v is not None and not may_drop(v):
+                    continue
+                cc = Counter_minus(cnt, credit_of.get(v)) if v is not None else cnt
+                kc = Counter_minus(kcnt, bucket(v)) if v is not None else kcnt
+                c = credit if credit is not None else credit_for(i, cc)[0]
+                if c is None and live:
+                    continue
+                if cap is not None and cc[c] >= cap and credit is None:
+                    c2, ok2 = credit_for(i, cc)
+                    if not ok2:
+                        continue
+                    c = c2
+                if kc[bucket(i)] >= kcap and not any_kind:
+                    continue
+                tries += 1
+                if tries > CFG["BALANCE_SCAN"]:
+                    return False
+                if not check(i):
+                    break
+                if v is not None:
+                    drop(v)
+                add(i, c)
+                return True
+        return False
+
+    def Counter_minus(cn, key):
+        x = collections.Counter(cn)
+        x[key] -= 1
+        return x
+
+    def keeps_loves(v):         # dropping v leaves every credited love with a card
+        return credit_of.get(v) is None or cnt[credit_of[v]] > 1
+
+    # 2. every live love credits at least one card when a passing place can be credited to it
     if cap is not None and not all_dead:
         for l in live:
             t = l["text"]
             if cnt[t]:
                 continue
-            rest = [i for i in order if i not in credit_of and checked.get(i) is not False]
-            best = [i for i in rest if credits(i) and credits(i)[0][1] == t]
-            alt = [i for i in rest if i not in best and any(tt == t and ok for _, tt, ok in credits(i)[1:])]
-            cand, tries = None, 0
-            for i in best + alt:
-                if tries >= CFG["BALANCE_SCAN"]:
+            done_ = False
+            for any_kind in (False, True):          # a love's first card outranks the kind cap
+                for pool_ in (order, wide):
+                    best = [i for i in pool_ if credits(i) and credits(i)[0][1] == t]
+                    alt = [i for i in pool_ if i not in best and any(tt == t and ok for _, tt, ok in credits(i)[1:])]
+                    if swap_in(lambda i: True, keeps_loves, credit=t, scan=best + alt, any_kind=any_kind):
+                        done_ = True
+                        break
+                if done_:
                     break
-                tries += 1
-                if check(i):
-                    cand = i
-                    break
-            victims = [x for x in picks0 if cnt[credit_of[x]] > 1]
-            if cand is None or (len(picks0) >= N7 and not victims):
-                continue
-            if len(picks0) >= N7:
-                v = victims[-1]
-                picks0.remove(v)
-                cnt[credit_of.pop(v)] -= 1
-            picks0.append(cand)
-            credit_of[cand] = t
-            cnt[t] += 1
-    # too few under the cap (a love that can credit nothing): fill by score
-    for i in order:
-        if len(picks0) >= N7:
+    # 3. at least MIN_EAT places to eat and MIN_DRINK to drink, when the pool has them
+    for sd, other, need in (("eat", "drink", CFG["MIN_EAT"]), ("drink", "eat", CFG["MIN_DRINK"])):
+        while sum(1 for x in picks0 if kind(x)[0] == sd) < need:
+            if not swap_in(lambda i, s=sd: kind(i)[0] == s,
+                           lambda v, o=other: kind(v)[0] == o and keeps_loves(v)
+                           and sum(1 for x in picks0 if kind(x)[0] == o) > need, scan=order + wide):
+                break
+    # 4. at least MIN_HOODS neighbourhoods: a place in a new one replaces the lowest-scored card of the busiest
+    while len({hood(x) for x in picks0}) < CFG["MIN_HOODS"] and len(picks0) >= N7:
+        hc = collections.Counter(hood(x) for x in picks0)
+        busiest = hc.most_common(1)[0][0]
+        have = set(hc)
+        sd_n = collections.Counter(kind(x)[0] for x in picks0)
+        if not swap_in(lambda i: hood(i) and hood(i) not in have,
+                       lambda v: hood(v) == busiest and keeps_loves(v)
+                       and sd_n[kind(v)[0]] > (CFG["MIN_EAT"] if kind(v)[0] == "eat" else CFG["MIN_DRINK"]),
+                       scan=order + wide):
             break
-        if i in credit_of or (live and not credits(i)):
-            continue
-        if check(i):
-            picks0.append(i)
-            credit_of[i] = credits(i)[0][1] if credits(i) else None
-            cnt[credit_of[i]] += 1
-    picks0.sort(key=order.index)
-    # reserves: the next places that keep the cap when they rise into any card's slot; else the next by score
+    # 5. too few under the caps: the wider pool under both caps, then a love may pass its cap (a love that can
+    # credit nothing leaves the others more), then the kinds give way, then both
+    for scan, relax_kind, relax_love in ((wide, False, False), (order + wide, False, True), (order, True, False),
+                                         (order + wide, True, True)):
+        for i in scan:
+            if len(picks0) >= N7:
+                break
+            if i in credit_of or (live and not credits(i)):
+                continue
+            c, ok = credit_for(i, cnt)
+            if (not ok and not relax_love) or (kcnt[bucket(i)] >= kcap and not relax_kind):
+                continue
+            if check(i):
+                add(i, c)
+    picks0.sort(key=lambda i: rank_of[i])
+    # reserves: the next places that keep both caps when they rise into any card's slot; else the next by score
     res0 = []
     for strict in (True, False):
-        for i in order:
+        for i in order + wide:
             if len(res0) >= NR:
                 break
             if i in credit_of or (live and not credits(i)):
                 continue
             c, ok = credit_for(i, cnt)
-            if (ok or not strict) and check(i):
+            if strict and (not ok or kcnt[bucket(i)] >= kcap):
+                continue
+            if check(i):
                 res0.append(i)
                 credit_of[i] = c
     selected = picks0 + res0
@@ -2405,7 +2584,7 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
                 "neighbourhood_src": hood_src, "area": hood or None,
                 "distance_mi": round(C.haversine_mi((ll[0], ll[1]), city["center_latlon"]), 1)
                 if ll[0] is not None else None, "distance_from": CENTER_LABEL.get(city.get("key")),
-                "image": image_url(e), "blurb": (cl.get(i) or {}).get("line") or blurb_line(e),
+                "kind": kind(i)[0], "kind_family": kind(i)[1], "image": image_url(e), "blurb": (cl.get(i) or {}).get("line") or blurb_line(e),
                 "line_src": "claude" if (cl.get(i) or {}).get("line") else "rules",
                 "order": (cl.get(i) or {}).get("dishes") or order_line(e, vocab), "price": price_line(e),
                 "hours": prop(e, "hours") or None, "tz": CITY_TZ.get(city.get("key")),
@@ -2432,9 +2611,11 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
             if reserves:                 # the first reserve that keeps the balance (the lost love first)
                 now = collections.Counter(credit_of.get(p) for p in picks)
                 lost = credit_of.get(x)
+                kn = collections.Counter(bucket(p) for p in picks)
+                fits = [r for r in reserves if (cap is None or now[credit_of.get(r)] < cap) and kn[bucket(r)] < kcap]
                 up = next((r for r in reserves if lost is not None and not now[lost] and credit_of.get(r) == lost),
-                          None) or next((r for r in reserves if cap is None or now[credit_of.get(r)] < cap),
-                                        reserves[0])
+                          None) or next(iter(fits), None) or next((r for r in reserves if cap is None or
+                                                                   now[credit_of.get(r)] < cap), reserves[0])
                 reserves.remove(up)
                 picks.append(up)
                 b["risen"] = card(up)
