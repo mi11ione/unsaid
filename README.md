@@ -35,7 +35,7 @@ python3 -I tests/test_api.py              # the engine API contract
 1. **Your pool.** Qloo's `/v2/insights` ranks places for each of your three loves, one at a time, within 15 mi (St. Louis) or 10 mi (New York). A dish love ("rib tips") adds a sub-pool of places Qloo tags with that dish.
 2. **The floor.** Tagged as a restaurant or bar in Qloo, rated 4.3 or better, open. Adult venues, hookah lounges, liquor and wine stores, banquet halls and out-of-state places are excluded. Each card also gets a last-seen check: hours and address in Qloo, and the venue's own site when Qloo has one.
 3. **Crossing out.** Every place the AIs named in the dated answers is matched to the pool and struck (see *Matching* below).
-4. **The score.** Qloo scores every place for each of your loves. We keep the places that fit you much more than they fit most people's taste, or than their popularity alone would say. In code: fit for you − max(popularity, fit for everyone), where *fit for everyone* is how often other people's taste sets (sets that share none of your loves) put the place in their top 30%. Cards and reserves come from this one score.
+4. **The score.** Qloo scores every place for each of your loves. We keep the places that fit you much more than they fit most people's taste, or than their popularity alone would say. In code: fit for you − max(popularity, fit for everyone), where *fit for everyone* is the share of about 100 anchor tastes that put the place in their top 30% of the city. The anchors are single loves drawn by a fixed-seed procedure from Qloo's own most popular artists, films, shows, brands, books and podcasts, spread over their Qloo genre tags (*Run it live* below), and never one of your loves. Every place in the city's candidate universe has a value; a place no anchor scored gets the panel median, never a free pass. Cards and reserves come from this one score.
 5. **Seven cards, three reserves.** Strike a card you know and a reserve takes its place. Under seven, the page says so.
 
 **Matching.** Mostly name rules (exact, alias, brand containment: "Ippudo NY" strikes IPPUDO Hell's Kitchen), checked against Qloo IDs with a city-scoped `/search` where it matters, up to 20 lookups per query. Close matches are struck. Weak one-word matches past the lookup cap are not, because in testing they were matcher errors ("Home Wine Kitchen" striking Down Home Elegance).
@@ -47,6 +47,17 @@ export QLOO_API_KEY=...                   # from the environment, never in a fil
 cd engine
 python3 -I run_query.py --city nyc --set nyc-khruangbin --walls ../data/walls --budget 60
 ```
+
+The "fit for everyone" priors (`data/priors/<city>.json`, plus the anchor panel `anchors-<city>.json`) are Qloo output keyed by Qloo IDs, so they are gitignored. Build them once per city:
+
+```bash
+cd engine
+python3 -I build_priors.py --city stl --budget 1150 --frozen   # ~9 calls per anchor: about 1,000 calls
+python3 -I build_priors.py --city nyc --budget 2500 --frozen   # ~22 calls per anchor: about 2,300 calls
+python3 -I build_priors.py --city both --dry --frozen           # the universe and the projected cost only
+```
+
+The procedure (fixed in the `build_priors.py` docstring; seed `unsaid-anchors-v1`): for each of six entity types with a quota (artist 25, movie 20, TV show 20, brand 15, book 10, podcast 10), take Qloo's 200 most popular entities of that type (`/v2/insights`, `filter.popularity.min=0.9`, no signal), group them by their Qloo genre tags, and draw round-robin over the genres with a seeded RNG. In draw order, an anchor is kept if it is live (under 95% of places at Qloo's default affinity), until the quota is met. The city's universe is the city-wide no-signal pool pages plus the pools of the 20 preset sets. Each anchor rescores the whole universe with the engine's own chunked `filter.results.entities` rescoring (48 places + 2 check places per call), and a chunk whose check places drift more than `ANCHOR_DRIFT_MAX` is dropped. Calls are cached, so a rerun after a `--budget` stop resumes. The script stops before the month's remaining Qloo calls would fall below `--quota-floor` (25,000).
 
 Keys come only from environment variables, and the Qloo key goes only in the `X-Api-Key` header. `--budget N` stops before the (N+1)-th live Qloo call, and cached calls cost nothing. `engine/KEYDAY.md` lists every gate command in order; `engine/regen_try.sh` regenerates the site's try-these sets in one command. The server is `python3 -I server/app.py` (fake mode on port 8710; see `server/DEPLOY.md`). Qloo responses, results and the `.cache/` directory never enter git.
 
@@ -182,6 +193,7 @@ The list is not every place an AI could name. Claude's St. Louis census covered 
 - **Wider radius:** K1 failed at 10 mi (STL) and 8 mi (NYC), so the radius is now 15 mi (STL) and 10 mi (NYC). This is the documented pivot.
 - **Extra pool pages:** offsets 100 and 150 are fetched, but only when the floored pool has fewer than 150 places.
 - **Ranking (28 Oct):** the first ranking put the same place on most sets' cards (Warehouse West in 10 of 10 St. Louis sets). The score now subtracts what fits everyone (above). Over 20 sets: ⟦DISTINCT⟧ distinct places in 140 cards (before: 68), at most ⟦MAXREP⟧ per place per city (before: 10).
+- **Fit-for-everyone prior (30 Oct):** it was first built from the city's other nine preset sets. That made the diversity numbers circular (measured on the sets the prior came from), and a place outside those sets' pools got no penalty at all (in 5 of 10 New York sets only 1–2 of 7 cards had a prior). It now comes from a Qloo-sampled anchor panel (97 live anchors per city, `build_priors.py`) over each city's whole candidate universe, with the median for any place no anchor scored. On the 20 sets: cards with a prior value 100 → 136 of 140 (the other 4 get the median; pool places 82% → 95%); distinct places 118 → 105; at most 4 repeats per place per city (was 3); gates A and B still pass; held-out AI-named cards, plain → our score with no list → UNSAID: 32 → 11 → 1 (was 32 → 7 → 1).
 - **Dish loves:** a dish counts through a `filter.tags` sub-pool of places Qloo tags with it. A dish no place is tagged with (Dry Martini) stays dead: it shows the dead-love line and leaves the ranking.
 - **R5 brand containment:** a branch of a named brand is struck. A weak word never fires this rule alone. Added after the live K4 relabel.
 - **The 20-lookup cap:** name → Qloo ID lookups are capped at 20 per query, spent first on vetoing one-word strikes; a one-word match past the cap is not applied (gate F needed it; K4 stayed at 0).

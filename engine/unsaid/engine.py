@@ -86,8 +86,9 @@ CFG = {
                             "liquor_store", "wine_store", "beer_store", "banquet_hall", "event_planner",
                             "party_planner", "wedding_planner", "event_management_company",
                             "hookah_bar", "hookah_lounge", "hookah_store"],
-    # Diversity (28 Oct): "everyone's taste" prior per city, data/priors/<city>.json (build_priors.py). A place's
-    # prior is its mean fit percentile over the preset sets that share no love with this query (>= PRIOR_MIN_SETS).
+    # Diversity: "fit for everyone" prior per city, data/priors/<city>.json (build_priors.py). 30 Oct: the share of
+    # ~100 Qloo-sampled anchor tastes (not this query's loves) ranking the place in their top 30% of the city's
+    # universe; no value -> the median (everyone_pct). Older 28 Oct files hold the preset sets instead.
     # UNSAID_PRIORS_DIR overrides it (Render Secret Files: /etc/secrets holding nyc.json / stl.json or
     # priors-nyc.json / priors-stl.json)
     "PRIORS_DIR": os.environ.get("UNSAID_PRIORS_DIR") or os.path.join(
@@ -776,11 +777,14 @@ def floor(pool, city=None):
 
 
 # ---------------------------------------------------------------- C6' fixed-set rescoring
-def rescore(q, city, loves_all, ids, sig_love, label, workers=None):
+def rescore(q, city, loves_all, ids, sig_love, label, workers=None, anchors=None, on_drift="flag"):
     """Affinity of every id under ONE love's signal (entity or tag), or no signal (sig_love None), with the same
-    base filters. Chunks of 48 + 2 anchors; the anchors check that scores merge across chunks. Timeout 3 s."""
+    base filters. Chunks of 48 + 2 anchors; the anchors check that scores merge across chunks. Timeout 3 s.
+    Drift (ANCHOR_DRIFT_MAX): a chunk where an anchor's affinity is more than ANCHOR_DRIFT_MAX from that anchor's
+    median over the chunks drifted. on_drift="flag" keeps its scores and lists it; "drop" discards the chunk (its
+    places count as missing). A chunk that returns neither anchor cannot be checked ("unverified")."""
     ids = sorted(ids)
-    anchors = ids[:CFG["ANCHORS"]]
+    anchors = [a for a in (anchors or ids[:CFG["ANCHORS"]]) if a in ids][:CFG["ANCHORS"]]
     rest = [i for i in ids if i not in anchors]
     chunks = [rest[i:i + CFG["CHUNK"]] for i in range(0, len(rest), CFG["CHUNK"])] or [[]]
     base = dict(base_filters(city, loves_all), take=CFG["TAKE"])
@@ -798,25 +802,41 @@ def rescore(q, city, loves_all, ids, sig_love, label, workers=None):
 
     out = _pmap(run, list(enumerate(chunks, 1)), workers or CFG["WORKERS"])
     aff, anchor_vals, ents_by_id, failed, busy = {}, {a: [] for a in anchors}, {}, 0, False
-    for resp, err in out:
+    per_chunk = []                                   # (chunk no, {id: affinity}, {anchor: affinity})
+    for n, (resp, err) in enumerate(out, 1):
         if isinstance(err, QlooDeadline):
             raise err
         if err is not None:
             failed += 1
             busy = busy or err.busy
             continue
+        got, av = {}, {}
         for e in (resp.get("results") or {}).get("entities") or []:
             a = affinity(e)
             ents_by_id[e["entity_id"]] = e
-            if e["entity_id"] in anchor_vals:
-                anchor_vals[e["entity_id"]].append(a)
+            if e["entity_id"] in anchor_vals and a is not None:
+                anchor_vals[e["entity_id"]].append(float(a))
+                av[e["entity_id"]] = float(a)
             if a is not None:
-                aff[e["entity_id"]] = float(a)
-    drift = max([max(v) - min(v) for v in anchor_vals.values() if len(v) > 1 and None not in v] or [0.0])
+                got[e["entity_id"]] = float(a)
+        per_chunk.append((n, got, av))
+    ref = {a: sorted(v)[len(v) // 2] for a, v in anchor_vals.items() if v}
+    drift, drifted, unverified = 0.0, [], []
+    for n, got, av in per_chunk:
+        d = max([abs(v - ref[a]) for a, v in av.items()] or [0.0])
+        drift = max(drift, d)
+        if not av and len(per_chunk) > 1:
+            unverified.append(n)
+        if d > CFG["ANCHOR_DRIFT_MAX"]:
+            drifted.append(n)
+            if on_drift == "drop":
+                got = {i: v for i, v in got.items() if i in anchor_vals}
+        aff.update(got)
     missing = [i for i in ids if i not in aff]
     tied = [i for i in ids if i in aff and is_default_affinity(aff[i])]
     return {"aff": aff, "coverage": (len(ids) - len(missing)) / max(1, len(ids)), "missing": missing,
-            "drift": drift, "calls": len(chunks), "failed": failed, "busy": busy, "tied": tied,
+            "drift": drift, "drifted_chunks": drifted, "drift_ok": not drifted, "unverified_chunks": unverified,
+            "calls": len(chunks), "failed": failed, "busy": busy, "tied": tied,
             "tie_share": len(tied) / max(1, len(ids)), "distinct": len(set(round(v, 9) for v in aff.values())),
             "ents": ents_by_id}
 
@@ -1484,12 +1504,43 @@ def load_prior(city_key):
     return doc
 
 
+def _anchor_shares(doc, love_ids):
+    """Anchor panel (build_priors.py): per place, the share of the city's anchor tastes (single loves sampled from
+    Qloo) that put it in their top PRIOR_TOP of the city's universe, as (hits + 0.5) / (n + 1). Anchors that are one
+    of this query's loves are left out. Returns ({place: share}, {place: (hits, n)}, median share, anchors used)."""
+    keep = frozenset(k for k, a in enumerate(doc["anchors"]) if a.get("live", True) and a["id"] not in love_ids)
+    memo = doc.setdefault("_memo", {})
+    if keep not in memo:
+        share, counts = {}, {}
+        top, miss = doc.get("top") or {}, doc.get("miss") or {}
+        for i in doc["scored"]:
+            n = len(keep) - len(keep.intersection(miss.get(i, ())))
+            h = len(keep.intersection(top.get(i, ())))
+            if n > 0:
+                share[i], counts[i] = (h + 0.5) / (n + 1.0), (h, n)
+        vals = sorted(share.values())
+        med = (vals[(len(vals) - 1) // 2] + vals[len(vals) // 2]) / 2.0 if vals else 0.5
+        memo[keep] = (share, counts, med, len(keep))
+    return memo[keep]
+
+
 def everyone_pct(city, ids, love_ids):
-    """{place: percentile within this U of its mean fit over the preset sets sharing no love with this query}.
-    Leave-one-out by love: a frozen set never sees its own data, and a fresh query never sees a set it overlaps."""
+    """{place: percentile within this U of its fit for everyone}. Every place in U gets a value: a place with no
+    prior gets the median, never zero (zero would exempt exactly the places the prior never saw).
+    Anchor-panel priors (doc["anchors"]): see _anchor_shares. Older set priors (doc["sets"]): mean over the preset
+    sets sharing no love with this query (leave-one-out by love)."""
     doc = load_prior(city.get("key")) if CFG["PRIOR_ENABLED"] else None
     if not doc:
         return {}, {}, {"used": False, "why": "no prior for this city"}
+    if doc.get("anchors"):
+        share, counts, med, n_anchors = _anchor_shares(doc, love_ids)
+        val = {i: share.get(i, med) for i in ids}
+        rk = ST.rank(val)
+        covered = sum(1 for i in ids if i in share)
+        return ({i: ST.pct(rk[i], len(ids)) for i in ids}, {i: counts[i] for i in ids if i in counts},
+                {"used": True, "method": "anchors", "anchors": n_anchors,
+                 "excluded_anchors": sum(1 for a in doc["anchors"] if a["id"] in love_ids), "covered": covered,
+                 "imputed_median": len(ids) - covered, "U": len(ids), "built_at": doc.get("built_at")})
     sets = [s for s in doc["sets"] if not ({l["id"] for l in s["loves"]} & love_ids)]
     mean, counts = {}, {}                    # counts: {place: (other tastes with it in their top PRIOR_TOP, of n)}
     for i in ids:
@@ -1502,9 +1553,12 @@ def everyone_pct(city, ids, love_ids):
                 mean[i] = sum(v) / len(v)
     if len(mean) < 3:
         return {}, {}, {"used": False, "why": "too few places with a prior", "sets": len(sets)}
-    rk = ST.rank(mean)                       # 1 = fits everyone best
+    vals = sorted(mean.values())
+    n0 = len(vals)
+    med = (vals[(n0 - 1) // 2] + vals[n0 // 2]) / 2.0 if n0 else 0.5
+    rk = ST.rank({i: mean.get(i, med) for i in ids})     # 1 = fits everyone best; no prior -> the median
     n = len(mean)
-    return ({i: ST.pct(rk[i], n) for i in mean}, counts,
+    return ({i: ST.pct(rk[i], len(ids)) for i in ids}, counts,
             {"used": True, "sets": len(sets), "excluded_sets": len(doc["sets"]) - len(sets), "covered": n,
              "U": len(ids), "built_at": doc.get("built_at")})
 
@@ -1694,6 +1748,9 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
         rs_diag[l["text"]]["coverage_visible"] = round(vis_cov, 4)
         if rs["failed"] or vis_cov < CFG["COVERAGE_MIN"]:
             lanes_failed.append("C6' %s coverage %.2f" % (l["text"], vis_cov))
+        rs_diag[l["text"]]["drifted_chunks"] = rs["drifted_chunks"]
+        if not rs["drift_ok"]:              # chunks did not merge on one scale (ANCHOR_DRIFT_MAX): flagged, not hidden
+            lanes_failed.append("C6' %s anchor drift %.4f in chunks %s" % (l["text"], rs["drift"], rs["drifted_chunks"]))
     base_label = "anyone = Qloo popularity order of these %d places" % N
     ns_rank = None          # the city's no-signal rank over U: only when P12 said it is NOT popularity (C5 branch)
     if (baseline or CFG["BASELINE"]) == "nosignal":
