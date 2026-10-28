@@ -19,6 +19,9 @@ if [[ -f site/data/live/stl_stl-cedric.json ]]; then
   echo "og image: site/data/live/og-cedric.png"
 fi
 
+# neighbourhood names for the paste box (a neighbourhood is never matched as a place: "The Hill")
+python3 -I -c "import json;d=json.load(open('harness/neighbourhoods.json'));json.dump({'_':'neighbourhood names (harness/neighbourhoods.json, OpenStreetMap): the paste box never matches these as places','cities':d['cities']},open('site/data/hoods.json','w'),ensure_ascii=False)"
+
 # similar vs unrelated tastes, for the "Is this just obscure places?" sheet (from the regenerated store, when present)
 python3 -I media/tools/build_overlap.py || true
 

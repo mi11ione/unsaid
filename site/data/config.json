@@ -9,13 +9,15 @@
    "name": "St. Louis",
    "map": "data/map/stl.json",
    "wall": "data/walls/stl.json",
-   "census": "stl"
+   "census": "stl",
+   "from": "downtown"
   },
   "new-york": {
    "name": "New York",
    "map": "data/map/nyc.json",
    "wall": "data/walls/nyc.json",
-   "census": "nyc"
+   "census": "nyc",
+   "from": "central Manhattan"
   }
  },
  "floor": {

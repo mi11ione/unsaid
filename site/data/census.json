@@ -4,7 +4,6 @@
  "model_id": "claude-sonnet-5-5",
  "date": "27 Oct 2026",
  "web_search": false,
- "preregistered": true,
  "stl": {
   "city": "St. Louis",
   "asks": {

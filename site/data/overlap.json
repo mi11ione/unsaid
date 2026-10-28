@@ -1,16 +1,36 @@
 {
- "_": "Shared cards between preset sets in the same city (7 cards each), from fresh20-28oct via media/tools/build_overlap.py",
+ "_": "Shared cards between preset sets in the same city (7 cards each), from fresh20-28oct via media/tools/build_overlap.py; other_* = every same-city pair outside both clusters",
  "city": "St. Louis",
  "sets": 20,
- "cluster": "soul and hip-hop",
- "cluster_n": 4,
- "cluster_min": 3,
- "cluster_max": 4,
- "other_pairs": 84,
- "other_median": 0.0,
- "other_max": 5,
+ "clusters": [
+  {
+   "label": "soul and hip-hop",
+   "ids": [
+    "stl-cedric",
+    "stl-sza",
+    "stl-jayz",
+    "stl-nelly"
+   ],
+   "n": 4,
+   "min": 3,
+   "max": 4
+  },
+  {
+   "label": "indie",
+   "ids": [
+    "stl-wilco",
+    "stl-bigthief"
+   ],
+   "n": 2,
+   "min": 3,
+   "max": 3
+  }
+ ],
+ "other_pairs": 83,
+ "other_median": 0,
+ "other_max": 3,
  "other_max_pair": [
-  "stl-bigthief",
-  "stl-wilco"
+  "stl-morganwallen",
+  "stl-taylorswift"
  ]
 }

@@ -68,7 +68,7 @@
     topbar({});
     view.innerHTML = `<div class="land"><section class="s1">
       <h1>Everything the AIs tell everyone, <s>crossed out</s>.</h1>
-      <p class="subhead">Seven bars and restaurants the AIs didn’t name when we asked, ranked by Qloo for your taste.</p>
+      <p class="subhead">Every AI sends everyone to the same places. Give us three things you love; get seven that fit you and no AI mentions.</p>
       <div class="landcard-m" id="landcardm"></div>
       <div class="presets">${['stl-cedric', 'nyc-taylorswift', 'stl-morganwallen'].map(id => TRY.sets.find(x => x.id === id)).filter(x => x && x.src && !x.mock)
         .map(x => `<a class="pchip" href="#/r?set=${encodeURIComponent(x.id)}">${esc(x.label)}</a>`).join('')}<a class="pchip more" href="#try">more ↓</a></div>
@@ -78,8 +78,8 @@
       </div>
       <div class="helper">or anything: a bar, a book, a team</div>
       <div class="fields" style="margin-top:18px"><div class="fld"><span class="n">in</span><div class="cityopts" role="radiogroup" aria-label="city">${CITIES.map(c => `<button role="radio" aria-checked="false" data-c="${esc(c.slug)}">${esc(c.name)}</button>`).join('')}</div></div></div>
-      <div class="go"><button class="btn solid" id="cross" disabled>Cross out</button></div>
-      <div class="legal">Your three loves go to Qloo and to Gemini’s free tier (Google may use free-tier prompts to improve its products). Don’t type anything personal. 18+.</div>
+      <div class="go"><button class="btn solid" id="cross" disabled>Find my seven</button></div>
+      <div class="legal">Your three loves go to Qloo, and to Gemini for one live AI check. Don’t type anything personal.</div>
       <div id="try">${tryList()}</div>
     </section><aside class="landcard" id="landcard"></aside></div>`;
     view.querySelectorAll('input[data-i]').forEach(inp => {
@@ -103,14 +103,21 @@
     if (!$('#landcard') || !set || !set.src || set.mock) return;
     try {
       const R = await UM.result(set.src);
-      const seen = new Set();
-      const wallNames = (R.wall || []).filter(w => w.name && !seen.has(w.place || w.norm) && seen.add(w.place || w.norm)).map(w => UM.cleanName(w.name));
+      const wallNames = Share.wallNames(R);
       ['#landcard', '#landcardm'].forEach(sel => {
         const box = $(sel); if (!box) return;
         box.innerHTML = `<a href="#/r?set=stl-cedric" aria-label="Open ${esc(set.label)}"><canvas class="sharecv"></canvas></a><p class="dim">${esc(set.label)}: <a class="link" href="#/r?set=stl-cedric">open his seven →</a></p>`;
         Share.draw(box.querySelector('canvas'), { ...R, loves: UM.typedLoves(R, set.loves), wallNames, site: siteHost() });
       });
     } catch (e) { /* the landing works without it */ }
+  }
+  // a link we share or copy never carries the API token (it lives only in the visitor's own address bar)
+  function shareUrl(href = location.href) {
+    const u = new URL(href);
+    u.searchParams.delete('token');
+    const [h, q] = u.hash.split('?');
+    if (q && new URLSearchParams(q).has('token')) { const p = new URLSearchParams(q); p.delete('token'); u.hash = h + (p.toString() ? '?' + p : ''); }
+    return u.toString();
   }
   const siteHost = () => location.protocol.startsWith('http') && !/^(127\.|localhost)/.test(location.host) ? location.host : (CFG.site || '');
 
@@ -271,12 +278,14 @@
     // ---- counters, status, notes
     const liveIds = () => st.slots.filter(id => !st.struck.has(id));
     function counter() {
-      const W = st.result && st.result.counts && st.result.counts.wall != null ? st.result.counts.wall : st.wall.size;
-      $('#showall').textContent = `show all ${W} ›`;
-      $('#counter').innerHTML = `<span class="w">${W}</span>`;
+      // held until the result: the streamed names are spellings, the final count merges them into places (and only
+      // counts food and drink when the engine says so), so a running count would go down. One number per result.
+      const W = st.result ? Share.wallCount(st.result) : null;
+      $('#showall').textContent = W != null ? `show all ${W} ›` : 'show all ›';
+      $('#counter').innerHTML = W != null ? `<span class="w">${W}</span>` : `<span class="w dim counting">…</span>`;
       const K = st.result && st.result.counts, A = K && K.asks;
       // the honest funnel: all of them are crossed out; only the ones in this person's pool cost a card
-      $('#countercap').innerHTML = `places the AIs named${A ? ` in ${A} asks` : ''}, all crossed out` +
+      $('#countercap').innerHTML = W == null ? 'counting the places the AIs named…' : `places the AIs named${A ? ` in ${A} asks` : ''}, all crossed out` +
         (K && K.struck_in_U != null && K.U != null ? `<br>${K.struck_in_U} of them were in your ${K.U}-place Qloo pool` : '');
     }
     function statusLine() {
@@ -285,6 +294,9 @@
       // the server's own §2.2 copy wins when it sends it (status events' text, result.notes); otherwise the same copy is built here
       const SERVER_STATES = ['queued', 'waking', 'dated_only', 'partial', 'degraded', 'limited', 'ranking', 'unsupported_city'];
       if (s === 'unauthorized') return 'needs the token from the testing instructions: add ?token=… to this page’s address';
+      // after Qloo's last call the engine still checks the streets and asks one AI live (several seconds): say so
+      const ranked = !st.done && st.fresh && (st.order.length || (st.U != null && st.calls && st.calls.total != null && st.calls.done >= st.calls.total));
+      if (ranked) return `Qloo has ranked your ${st.U != null ? st.U + ' ' : ''}places · picking your ${word(7)}…`;
       if (!st.done && s && SERVER_STATES.includes(s) && !['dated_only', 'partial'].includes(s) && st.status.text) return esc(st.status.text);
       if (s === 'waking' && !st.done) return 'waking the ranker up · about a minute';
       if (s === 'queued') { const a = st.status.ahead; return `${a == null ? ph(null, 'n') : word(a, true)} run${a === 1 ? '' : 's'} ahead of yours · about ${ph(st.status.eta_s, 's')} s`; }
@@ -316,7 +328,7 @@
     }
     function status() {
       $('#stxt').innerHTML = statusLine();
-      $('#status').classList.toggle('busy', !st.done && !!st.calls && st.calls.done < st.calls.total);
+      $('#status').classList.toggle('busy', !st.done && !st.failed && (!!st.calls || st.order.length > 0));
       const mock = st.fake || st.mock;
       topbar({ city: cityName, loves: tLoves(), mock: mock ? (st.fake ? 'mock data' : 'mock stream · no server') : null });
     }
@@ -373,13 +385,25 @@
         case 'pool': st.U = e.U; if (e.R_mi != null) st.R_mi = e.R_mi; break;
         case 'strike': setOutcome(e.place || e.norm, e.outcome, e.reason, e.qloo_id); break;
         case 'calls': st.calls = e; break;
-        case 'card': st.cards.set(e.id, e); if (!st.order.includes(e.id)) st.order.push(e.id); mapDraw(); break;
+        case 'card': st.cards.set(e.id, e); if (!st.order.includes(e.id)) st.order.push(e.id); mapDraw(); provisional(); break;
         case 'burn':
           if (e.card_id) { st.burned.push({ ...e, seen: hhmm() }); }
-          burnLine(); mapDraw(); break;
+          if (e.risen && e.risen.id) { st.cards.set(e.risen.id, e.risen); if (!st.order.includes(e.risen.id)) st.order.push(e.risen.id); st.risen.set(e.risen.id, 'rose in its place'); }
+          burnLine(); mapDraw(); provisional(); break;
         case 'done': finish(e.result); break;
       }
       counter(); status();
+    }
+    // a fresh run: each card shows as it arrives (Qloo has ranked; the street and live AI checks still run). The result
+    // replaces this list; a card an AI names meanwhile leaves it and the next one rises.
+    function provisional() {
+      if (st.done || st.failed) return;
+      const ids = st.order.filter(id => !st.burned.some(b => b.card_id === id));
+      if (!ids.length) return;
+      $('#s-left').hidden = false; $('#res').classList.add('hascards');
+      $('#leftbody').innerHTML = `<h2 class="lead2"><span class="n">${ids.length}</span> for you so far</h2>
+        <p class="leadsub">Ranked by Qloo for what fits you, not everyone. Still checking that no AI names them…</p>
+        <div class="cards prov" id="cards">${ids.map((id, i) => cardHTML(st.cards.get(id), i, false, true)).join('')}</div>`;
     }
     function finish(R) {
       st.result = R; st.done = true;
@@ -449,8 +473,9 @@
       const k = R.picks && R.picks[0] && R.picks[0].fit_rank, SR = new Set((R.diag && R.diag.struck_fit_ranks) || []);
       const above = k > 1 && [...Array(k - 1)].every((_, j) => SR.has(j + 1))
         ? `<p class="above">${k === 2 ? 'Qloo’s top match for your taste was' : `Qloo’s top ${k - 1} for your taste were`} on the AIs’ lists, so ${k === 2 ? 'it is' : 'they are'} crossed out.</p>` : '';
-      const top = [...st.wall.values()].filter(w => w.name).sort((a, b) => b.hits.size - a.hits.size).slice(0, 40);
-      const W = (R.counts && R.counts.wall) ?? st.wall.size;
+      // restaurants and bars first (Share.tier), then by how many asks named it
+      const top = [...st.wall.values()].filter(w => w.name).sort((a, b) => Share.tier(a) - Share.tier(b) || b.hits.size - a.hits.size).slice(0, 40);
+      const W = Share.wallCount(R) ?? st.wall.size;
       const strip = top.length ? `<div class="xstrip"><div class="xnames">${top.map(w => `<span class="xn">${esc(UM.cleanName(w.name))}</span>`).join(' ')}</div>
         <button class="link" id="xall">all ${W} the AIs named, crossed out ↓</button></div>` : '';
       body.innerHTML = strip + lead + above + hint + `<div class="cards" id="cards"></div>
@@ -487,38 +512,59 @@
       const norm = x => String(x || '').toLowerCase().trim();
       const asked = d && d.input && (d.input.loves || []).map(l => norm(Array.isArray(l) ? l[0] : l && typeof l === 'object' ? l.text : l));
       if (!d || !d.input || !asked || !TYPED.every(t => asked.includes(norm(t)))) return;
-      // an answer recorded before this set ran names older cards: then only the call is shown
-      const ranAt = set && set.ran ? new Date(set.ran) : null, fresh = d.answer && ranAt && new Date(d.recorded_at) >= ranAt;
-      // a line that names no card: the recorded run can predate today's cards
-      const cardNames = [...st.cards.values()].map(c => norm(c.name)).filter(Boolean);
-      // one sentence of its answer, verbatim: the hidden-gem line if it has one, else the everyone-gets-these line
-      const sentences = d.answer.split('\n').flatMap(l => l.replace(/^\s*(\d+\.|[-*])\s*/, '').split(/(?<=[.!?])\s+(?=[A-Z])/)).map(x => x.trim()).filter(Boolean);
-      const plan = sentences.find(x => /hidden gem on this list/i.test(x))
-        || sentences.reverse().find(x => /every ai|everyone gets/i.test(x) && !cardNames.some(n => norm(x).includes(n)));
+      // Claude's own sentence, verbatim: the hidden-gem line of its answer, shown only while the card it is about is
+      // still one of this set's cards with the same ranks it quotes (#fit for you, last of U); else only the call
+      const items = d.answer ? d.answer.split('\n').map(l => l.trim()).filter(Boolean) : [];
+      let quote = null, about = null;
+      for (const line of items) {
+        const head = (line.match(/^\s*(?:\d+\.|[-*])\s*\*\*(.+?)\*\*/) || [])[1];
+        const sent = line.replace(/^\s*(\d+\.|[-*])\s*/, '').split(/(?<=[.!?])\s+(?=[A-Z])/).map(x => x.trim()).find(x => /hidden gem on this list/i.test(x));
+        if (!head || !sent) continue;
+        const c = [...st.cards.values()].find(c => [c.name_qloo, c.name].some(n => n && Matcher.find(head, [n]).length));
+        const nums = (sent.match(/\d+/g) || []).map(Number);
+        if (c && c.fit_rank != null && nums.includes(c.fit_rank) && (c.any_rank == null || nums.includes(c.any_rank))) { quote = sent; about = c.name; break; }
+      }
       const md = x => esc(x).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\*(.+?)\*/g, '<i>$1</i>');
       box.innerHTML = `<section class="agentblk"><div class="sh"><h2>Use it from Claude</h2><span class="sub">one real run, ${esc(UM.day(d.recorded_at) || '')}</span></div>
-        <p class="q">“${esc(d.question)}”</p>
+        <p class="q">You: “${esc(d.question)}”</p>
+        ${quote ? `<p class="a"><span class="who">Claude, on ${esc(about)}:</span> “${md(quote)}”</p>` : ''}
+        <p class="dim">The call it made:</p>
         <pre>${esc(d.tool)}(${esc(JSON.stringify(d.input))})</pre>
-        ${fresh && plan ? `<p class="a">From its answer: “${md(plan)}”</p>` : ''}
         <p class="dim">${esc(d.model || '')} via Claude Code, with UNSAID as its only tool. <a class="link" href="agents">Set it up in your agent →</a></p></section>`;
     }
-    function cardHTML(c, i, known) {
+    function cardHTML(c, i, known, prov) {
       const R = st.result || {}, flags = R.flags || [];
       const flat = flags.includes('flat');
-      // the face carries one taste reason and the popularity rank; the for-you rank lives on the card's sheet
-      const any = flat || c.any_rank == null ? '' : `<span class="any">#${c.any_rank} for anyone</span>`;
+      // the face carries the popularity rank in words, the taste reason when the engine gives one, and the distance
+      const any = flat ? '' : popWords(c) ? `<span class="any">${esc(popWords(c))}</span>` : '';
+      const fitWhy = known || !/^fits you better/i.test(c.why || '') ? '' : `<div class="fitwhy">${esc(cap1(c.why))}</div>`;
+      const dist = distWords(c);
       const tag = st.struck.get(c.id), rose = st.risen.get(c.id);
       const meta = [c.rating != null ? `★ ${Number(c.rating).toFixed(1)}` : null, c.open === false ? 'closed' : null, price(c)].filter(Boolean).join(' · ');
       return `<div class="card${tag ? ' struck' : ''}${tag && tag.human ? ' byyou' : ''}${rose ? ' risen' : ''}" data-id="${esc(c.id)}">
-        <div class="row1"><span>${String(i + 1).padStart(2, '0')}</span><span>${esc(meta)}${known || tag ? '' : `<button class="xbtn" data-x="1" aria-label="strike ${esc(c.name || 'this card')}" title="I know it: strike it">✕</button>`}</span></div>
-        ${c.neighbourhood ? `<div class="hood">${esc(c.neighbourhood)}</div>` : ''}
+        <div class="row1"><span>${String(i + 1).padStart(2, '0')}</span><span>${esc(meta)}${known || tag || prov ? '' : `<button class="xbtn" data-x="1" aria-label="strike ${esc(c.name || 'this card')}" title="I know it: strike it">✕</button>`}</span></div>
+        ${c.neighbourhood || dist ? `<div class="hood">${[c.neighbourhood, dist].filter(Boolean).map(esc).join(' · ')}</div>` : ''}
         <div class="name">${known ? (c.name ? esc(c.name) : '') : placeName(c, c.id)}</div>
         ${c.what ? `<div class="what">${esc(c.what)}</div>` : ''}
         ${known ? '' : `<div class="because">because you love<b>${c.because == null ? '' : esc(tName(c.because))}</b>${c.because_detail ? `<span class="why">${esc(typedText(c.because_detail))}</span>` : ''}</div>
-        <div class="rk">${any}</div>`}
+        ${fitWhy}<div class="rk">${any}</div>`}
         ${street(c) ? `<div class="addr">${esc(street(c))}${hours(c) ? ` · ${esc(hours(c))}` : ''}<span class="maps">${mapsLinks(c)}</span></div>` : ''}
         <div class="tag${rose && !tag ? ' rose' : ''}">${tag ? esc(tag.text) : (rose ? esc(rose) : '')}</div>
       </div>`;
+    }
+    // "31st most popular of 78 nearby": Qloo's popularity order among this person's pool (c.U places)
+    const ordinal = n => { const t = n % 100, u = n % 10; return n + (t >= 11 && t <= 13 ? 'th' : u === 1 ? 'st' : u === 2 ? 'nd' : u === 3 ? 'rd' : 'th'); };
+    function popWords(c, short) {
+      if (c.any_rank == null) return '';
+      const U = c.U ?? (st.result && st.result.counts && st.result.counts.U);
+      const head = c.any_rank === 1 ? 'the most popular' : `${ordinal(c.any_rank)} most popular`;
+      return short || U == null ? head : `${head} of ${U} nearby`;
+    }
+    // "14 mi from downtown" (the engine's distance_mi, measured from the city centre it searches around)
+    function distWords(c) {
+      if (c.distance_mi == null) return '';
+      const d = +c.distance_mi, from = c.distance_from || (cc && cc.from) || 'the city centre';
+      return `${d < 1 ? d.toFixed(1) : Math.round(d)} mi from ${from}`;
     }
     // the street part of a Qloo address ("8734 Goodfellow Blvd St. Louis, MO 63147" -> "8734 Goodfellow Blvd")
     function street(c) {
@@ -587,35 +633,92 @@
       n.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
       n.classList.remove('flash'); void n.offsetWidth; n.classList.add('flash');
     }
-    // the paste: what it named from the wall (already crossed out), and whether it named any of the seven
+    // ---- the paste. UI-only pre-extraction: the names an answer gives are its list items' heads, its bold heads and the
+    // names that start a line ("Gioia's Deli – The Hill: hot salami" -> "Gioia's Deli – The Hill"); prose is not read
+    // for wall names, so "an old-school soda fountain" never matches The Fountain on Locust. Card burns then use the
+    // matcher's own rules (Matcher.find, identical to matcher.py) on those names.
+    const SEP = /\s+[–—-]\s+|:\s|\s\(|,\s|;\s|\.\s|\s+\|\s+/;
+    function pasteNames(text) {
+      const out = [], seen = new Set();
+      const add = (t, list) => {
+        t = String(t).replace(/\*\*|__|[*_`#>]/g, '').replace(/^[\s"“”'‘’]+|[\s:.,;"“”'‘’]+$/g, '').trim();
+        if (!t || t.split(/\s+/).length > 8 || !/^[\p{Lu}\p{N}]/u.test(t)) return;   // a name starts with a capital
+        const k = t.toLowerCase(); if (seen.has(k)) { if (list) out.find(x => x.t.toLowerCase() === k).list = true; return; }
+        seen.add(k); out.push({ t, list });
+      };
+      // a JSON answer (the form we ask in): its "name" values are the names
+      for (const m of String(text).matchAll(/"name"\s*:\s*"((?:[^"\\]|\\.)+)"/g)) add(m[1].replace(/\\(.)/g, '$1'), true);
+      if (out.length) return out;
+      for (const raw of String(text).split(/\r?\n/)) {
+        const line = raw.replace(/^\s*>?\s*#{0,6}\s*/, '');
+        if (!line.trim()) continue;
+        const m = line.match(/^\s*(?:\d+[.)]|[-*•·–])\s+(.*)$/), body = m ? m[1] : line;
+        const bolds = [...line.matchAll(/\*\*(.+?)\*\*|__(.+?)__/g)].map(x => x[1] || x[2]);
+        bolds.forEach(b => add(b, !!m && body.trim().startsWith('**' + b)));
+        if (body.trim().startsWith('**')) continue;                       // the bold head is the name
+        const parts = body.split(SEP), head = parts[0];
+        // a list item's head; a line that starts with a name and a separator; a short line on its own (a heading)
+        if (m || parts.length > 1 || (head.split(/\s+/).length <= 6 && !/[.!?]$/.test(head.trim()))) add(head, !!m);
+      }
+      return out;
+    }
+    let HOODS = null;   // neighbourhood names (data/hoods.json, from harness/neighbourhoods.json): never a place
+    UM.json('data/hoods.json').then(h => { HOODS = new Set([].concat(...Object.values(h.cities || {})).map(Matcher.norm)); }).catch(() => { HOODS = new Set(); });
+    const SMALL = new Set(['of', 'the', 'and', '&', 'a', 'an', 'at', 'on', 'in', 'de', 'la', 'le', 'del', 'n', 'y', 'e', 'di', 'da']);
+    const titled = t => { const w = t.split(/\s+/); return w.length <= 5 && w.every((x, i) => (i && SMALL.has(x.toLowerCase())) || /^[\p{Lu}\p{N}'’"“]/u.test(x)); };
     function dare(text) {
       const out = $('#dareout');
       if (!text.trim()) { out.innerHTML = ''; return; }
-      const ids = liveIds();
-      const hits = Matcher.find(text, ids.map(id => st.cards.get(id).name));
-      const wallList = [...st.wall.values()].filter(w => w.name).sort((a, b) => b.hits.size - a.hits.size);
-      let wallHits = [...new Set(Matcher.find(text, wallList.map(w => UM.cleanName(w.name)), { phraseOnly: true }).map(h => h.index))].map(i => UM.cleanName(wallList[i].name));
-      // "The Hill" inside "Blueberry Hill": a hit whose words all sit inside a longer hit is not a separate place
-      const toks = n => Matcher.norm(n).split(' ').filter(t => t && t !== 'the');
-      const all = wallHits.concat(hits.map(h => h.name));
-      wallHits = wallHits.filter(n => !all.some(m => m !== n && toks(m).length > toks(n).length && toks(n).every(t => toks(m).includes(t))));
-      const named = wallHits.length + hits.length;
-      const list = xs => xs.length <= 5 ? xs.map(esc).join(', ') : xs.slice(0, 4).map(esc).join(', ') + ` and ${xs.length - 4} more`;
-      let html = named ? `It named ${named} place${named === 1 ? '' : 's'} we know.` : 'It named none of the places we know.';
-      if (wallHits.length) html += ` ${wallHits.length === named ? (named === 1 ? 'It was' : 'All were') : `${wallHits.length} ${wallHits.length === 1 ? 'was' : 'were'}`} already crossed out: <span class="red">${list(wallHits)}</span>.`;
+      const ids = liveIds(), seven = word(ids.length);
+      const names = pasteNames(text);
+      const isHood = n => HOODS && HOODS.has(Matcher.norm(n));
+      const wallList = [...st.wall.values()].filter(w => w.name && !isHood(UM.cleanName(w.name))).sort((a, b) => b.hits.size - a.hits.size);
+      const wallNames = wallList.map(w => UM.cleanName(w.name));
+      // each card under its raw Qloo name (what matcher.py sees: "Jody B'") and its display name ("Jody B's")
+      const cardNames = [], cardOf = [];
+      ids.forEach(id => { const c = st.cards.get(id); [...new Set([c.name_qloo, c.name].filter(Boolean))].forEach(n => { cardNames.push(n); cardOf.push(id); }); });
+      const wallSeen = new Map(), cardSeen = new Map(), unknown = [];
+      for (const n of names) {
+        if (isHood(n.t)) continue;
+        const ch = Matcher.find(n.t, cardNames);
+        // a wall name only as a name: the phrase itself, capitalised where it stands in the answer
+        let wh = Matcher.find(n.t, wallNames, { phraseOnly: true }).filter(h => /^[\p{Lu}\p{N}]/u.test(n.t.slice(h.at[0])));
+        const toks = x => Matcher.norm(x).split(' ').filter(t => t && t !== 'the');
+        const all = wh.map(h => h.name).concat(ch.map(h => h.name));
+        // "The Hill" inside "Blueberry Hill": a hit whose words all sit inside a longer hit is not a separate place
+        wh = wh.filter(h => !all.some(m => m !== h.name && toks(m).length > toks(h.name).length && toks(h.name).every(t => toks(m).includes(t))));
+        ch.forEach(h => cardSeen.set(cardOf[h.index], h));
+        wh.forEach(h => { const w = wallList[h.index]; if (!wallSeen.has(w.key)) wallSeen.set(w.key, h.name); });
+        // a place we don't know counts only when it reads as a name: a list item's head in title case, five words at most
+        if (!ch.length && !wh.length && n.list && titled(n.t)) unknown.push(n.t);
+      }
+      const crossed = [...wallSeen.values()], burnedIds = [...cardSeen.keys()];
+      const named = crossed.length + burnedIds.length + unknown.length;
+      const list = xs => xs.length <= 6 ? xs.map(esc).join(', ') : xs.slice(0, 5).map(esc).join(', ') + ` and ${xs.length - 5} more`;
+      const big = [];
+      if (!named) big.push('It named none of the places we know.');
+      else {
+        big.push(`Your AI named ${named} place${named === 1 ? '' : 's'}.`);
+        if (crossed.length) big.push(`We’d already crossed out ${crossed.length === named ? (named === 1 ? 'it' : named === 2 ? 'both' : `all ${named}`) : crossed.length}.`);
+      }
       const burned = [];
-      if (hits.length) {
-        html += ' ' + hits.map(h => {
-          const id = ids[h.index], c = st.cards.get(id);
-          const rid = strike(id, `named in your paste · ${hhmm()}`);
-          burned.push(id);
-          const r = rid && st.cards.get(rid);
-          return `<span class="red">It named ${esc(c.name)}, one of your ${ids.length}: burned.</span>` + (r ? ` ${placeName(r, rid)} takes its place.` : '');
-        }).join(' ');
-      } else html += ` None of your ${ids.length}.`;
-      out.innerHTML = html;
+      const after = [];
+      burnedIds.forEach(id => {
+        const c = st.cards.get(id);
+        const rid = strike(id, `named in your paste · ${hhmm()}`);
+        burned.push(id);
+        big.push(`<span class="red">It named ${esc(c.name)}, one of your ${seven}: burned.</span>`);
+        const r = rid && st.cards.get(rid);
+        if (r) after.push(`${placeName(r, rid)} takes its place.`);
+      });
+      if (!burnedIds.length) big.push(`None of your ${seven}.`);
+      const small = [];
+      if (crossed.length) small.push(`Crossed out already: <span class="red">${list(crossed)}</span>.`);
+      if (unknown.length) small.push(`Not on our lists: ${list(unknown)}.`);
+      out.innerHTML = `<p class="big">${big.join(' ')}</p>` + (after.length ? `<p>${after.join(' ')}</p>` : '') + (small.length ? `<p class="dim">${small.join(' ')}</p>` : '');
       if (burned.length) flash(burned[0]);
     }
+    window.__pasteNames = pasteNames;
 
     // ---- S3 · card back
     function cardSheet(id) {
@@ -625,14 +728,14 @@
       const ns = c.never_said || {};
       const fit = c.tied ? null : c.fit_rank;
       const head = esc(c.name || '');
-      const ranks = [fit != null ? `#${fit} for you` : null, flat || c.any_rank == null ? null : `#${c.any_rank} for anyone`].filter(Boolean).join(' · ');
+      const ranks = [fit != null ? `#${fit} for you` : null, flat ? null : popWords(c) || null].filter(Boolean).map(esc).join(' · ');
       const pct = r => Math.max(0, Math.min(100, ((r - 1) / Math.max(1, (U || 1) - 1)) * 100));
       const pos = r => `${pct(r)}%`;
       // a label near either end hangs inward, so it never leaves the sheet
       const lab = r => pct(r) < 12 ? `left:${pct(r)}%;transform:none` : pct(r) > 88 ? `right:${100 - pct(r)}%;transform:none` : `left:${pct(r)}%`;
       const slider = flat || U == null ? '' : `<div class="slider"><div class="track"></div>
           ${fit != null ? `<div class="tick" style="left:${pos(fit)}"></div><div class="tl" style="${lab(fit)}">#${fit} for you</div>` : ''}
-          ${c.any_rank != null ? `<div class="tick any" style="left:${pos(c.any_rank)}"></div><div class="tl any" style="${lab(c.any_rank)}">#${c.any_rank} for anyone</div>` : ''}
+          ${c.any_rank != null ? `<div class="tick any" style="left:${pos(c.any_rank)}"></div><div class="tl any" style="${lab(c.any_rank)}">${esc(popWords(c, true))}</div>` : ''}
           <div class="end" style="left:0">#1</div><div class="end" style="right:0">#${U}</div></div>`;
       const holds = c.holds != null && c.n_loves != null && c.holds >= c.n_loves ? 'It stays a pick even if you drop any one love.'
         : c.holds_without ? `It stays a pick without ${[].concat(c.holds_without).map(x => esc(tName(x))).join(' or ')}.` : '';
@@ -650,7 +753,7 @@
           <p>Named 0 times in ${askLine()}.</p></div>
         <div class="blk"><div class="sh"><h2>Fits you</h2></div>${slider}
           ${c.why ? `<p>${esc(cap1(c.why))}.</p>` : ''}
-          <p class="dim">${fit != null && U != null ? `#${fit} for you is Qloo’s taste rank among the ${U} places${Rmi != null ? ` within ${Rmi} mi` : ''}, rated ${CFG.floor.rating}+; we pick by how much more a place fits you than everyone else. ` : ''}“For anyone” is Qloo’s popularity order of the same places.</p></div>
+          <p class="dim">${fit != null && U != null ? `#${fit} for you is Qloo’s taste rank among the ${U} places${Rmi != null ? ` within ${Rmi} mi` : ''}, rated ${CFG.floor.rating}+; we pick by how much more a place fits you than everyone else. ` : ''}“Most popular” is Qloo’s popularity order of the same places.</p></div>
         <div class="blk"><div class="sh"><h2>Because</h2></div>
           <div class="big1">${c.because == null ? '' : 'You love ' + esc(tName(c.because)) + '.'}</div>${c.because_detail ? `<p>${esc(cap1(typedText(c.because_detail)))}.</p>` : ''}<p class="dim">${holds}</p></div>
         <div class="blk"><div class="sh"><h2>Go</h2></div>
@@ -718,18 +821,25 @@
       if (K.P != null && K.U != null) T.push(`${K.P} places from Qloo → ${K.U} kept` + [['closed', F.closed], [`rated below ${CFG.floor.rating}`, F.below_43], [`outside ${K.R_mi} mi`, F.outside_R], ['not a restaurant or bar', F.not_venue]]
         .filter(([, v]) => v != null).map(([k, v]) => ` · ${k} ${v}`).join(''));
       const E = WE;
-      const k12 = E ? `<p>Across our ${E.sets} preset sets, how many of the ${E.of} cards some AI named (median): <b>UNSAID ${fmt1(E.named_unsaid)}</b> · the same pipeline with nothing crossed out ${fmt1(E.named_no_strike)} · Qloo’s plain top ${E.of} for the same taste ${fmt1(E.named_plain)}.</p>` : '';
+      // held-out only: the dated asks built the list, so UNSAID's count on them is zero by construction
+      const k12 = E && E.held_out_cards != null ? `<p>On held-out questions, how many of our ${E.sets} preset sets’ ${E.held_out_cards} cards some AI named: Qloo’s plain taste order <b>${E.held_out_plain}</b> → our score without the list <b>${E.held_out_no_strike}</b> → <b>UNSAID ${E.held_out_unsaid}</b>. Held-out = questions never used to build the list.</p>` : '';
+      // similar tastes share places: each cluster's pairwise range, then every other same-city pair (data/overlap.json)
+      const rng = C => C.min === C.max ? String(C.min) : `${C.min}–${C.max}`;
+      const CL = OV && (OV.clusters || (OV.cluster ? [{ label: OV.cluster, n: OV.cluster_n, min: OV.cluster_min, max: OV.cluster_max }] : []));
+      const ovl = CL && CL.length ? `<p>Similar tastes get similar places. In ${esc(OV.city)}, ${CL.length === 2 ? 'two clusters of similar tastes' : 'similar tastes'}: ` +
+        CL.map(C => `our ${word(C.n)} ${esc(C.label)} sets share ${rng(C)} places${C.n > 2 ? ' pair by pair' : ''}`).join('; ') +
+        `. Across all ${OV.other_pairs} other pairs of our sets in the same city, the median is ${fmt1(OV.other_median)} (at most ${OV.other_max}).</p>` : '';
       openSheet(`<div class="cap">${esc(cityName)}</div><h1>Is this just obscure places?</h1>
         <div class="blk"><p>Partly, on purpose. ${EXPLAIN} So less-known places rise when they fit you.</p>
           <p>But obscurity isn’t the test. Being named by an AI is: a place is crossed out because an AI named it, however famous or small it is.</p>
-          ${k12}${OV ? `<p>Similar tastes get similar places: our ${word(OV.cluster_n)} ${esc(OV.cluster)} sets in ${esc(OV.city)} share ${OV.cluster_min === OV.cluster_max ? OV.cluster_min : `${OV.cluster_min}–${OV.cluster_max}`} places pair by pair. Across all ${OV.other_pairs} other pairs of our sets in the same city, the median is ${fmt1(OV.other_median)} (at most ${OV.other_max}).</p>` : ''}${P.map(t => `<p>${t}</p>`).join('')}</div>
+          ${k12}${ovl}${P.map(t => `<p>${t}</p>`).join('')}</div>
         ${T.length ? `<details class="log"><summary>The numbers</summary><div class="logbody">${T.map(t => `<div>${t}</div>`).join('')}</div></details>` : ''}`);
     }
 
     // ---- share
     function shareSheet() {
-      const link = set ? `${location.origin}${location.pathname}#/r?set=${encodeURIComponent(set.id)}` : location.href;
-      const W = (st.result.counts && st.result.counts.wall) ?? st.wall.size, N = liveIds().length;
+      const link = set ? `${location.origin}${location.pathname}#/r?set=${encodeURIComponent(set.id)}` : shareUrl();
+      const W = Share.wallCount(st.result) ?? st.wall.size, N = liveIds().length;
       const text = `The AIs named ${W} places. None named these ${N}.`;
       openSheet(`<div class="cap">share</div><canvas class="sharecv" id="sharecv"></canvas>
         <p>${esc(text)}<br><span class="dim">${esc(link)}</span></p>
@@ -749,7 +859,7 @@
     }
     function shareData() {
       const R = st.result;
-      return { ...R, loves: tLoves(), picks: liveIds().map(id => ({ ...st.cards.get(id), _ph: cardNo(id) ? `place ${cardNo(id)}` : 'burned card' })), wallNames: [...st.wall.values()].filter(w => w.name).map(w => UM.cleanName(w.name)) };
+      return { ...R, loves: tLoves(), picks: liveIds().map(id => ({ ...st.cards.get(id), _ph: cardNo(id) ? `place ${cardNo(id)}` : 'burned card' })), wallNames: Share.wallNames(R) };
     }
     window.__shareData = shareData;
 

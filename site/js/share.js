@@ -19,6 +19,30 @@
     return new Intl.DateTimeFormat('en-GB', { timeZone: 'America/New_York', day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(iso));
   }
 
+  // "The AIs named N places": the food-and-drink places only when the engine counts them (counts.named_food_count:
+  // no cemeteries or museums), else every distinct place on the wall (counts.wall). null while unknown.
+  function wallCount(R) {
+    const K = (R && R.counts) || {};
+    const v = K.named_food_count ?? (R && R.named_food_count) ?? K.wall;
+    return v == null ? null : v;
+  }
+
+  // the struck names as texture, restaurants and bars first: a name that resolved to a Qloo place that passed the
+  // restaurant-or-bar check (qloo_id, and not "not a restaurant or bar"), most-mentioned first; then names Qloo was
+  // never asked about; landmarks Qloo says are not a restaurant or bar last. One entry per place.
+  const tier = w => w.qloo_id && w.reason !== 'not a restaurant or bar' ? 0 : w.reason === 'not a restaurant or bar' ? 2 : 1;
+  function wallNames(R) {
+    const by = new Map();
+    for (const w of (R && R.wall) || []) {
+      if (!w.name) continue;
+      const k = w.place || w.norm || w.name, o = by.get(k);
+      if (o) { o.n++; if (w.qloo_id && !o.qloo_id) { o.qloo_id = w.qloo_id; o.reason = w.reason; } }
+      else by.set(k, { name: w.name, qloo_id: w.qloo_id, reason: w.reason, n: 1 });
+    }
+    return [...by.values()].sort((a, b) => tier(a) - tier(b) || b.n - a.n || String(a.name).localeCompare(String(b.name)))
+      .map(o => (window.UM ? UM.cleanName(o.name) : o.name));
+  }
+
   function draw(cv, R) {
     const W = 1080, H = 1350, pad = 72;
     cv.width = W; cv.height = H;
@@ -28,7 +52,7 @@
     const fake = (R.flags || []).includes('fake');
     const picks = R.picks || [];
     const N = picks.length;
-    const WALL = R.counts && R.counts.wall != null ? R.counts.wall : null;
+    const WALL = wallCount(R);
 
     // mark
     ctx.font = `700 22px ${MONO}`; ctx.fillStyle = C.ink;
@@ -45,7 +69,7 @@
     // headline
     let y = 210;
     ctx.font = `400 58px ${SERIF}`;
-    // "The AIs named WALL places." (counts.wall of this result)
+    // "The AIs named WALL places." (wallCount of this result)
     const a = 'The AIs named ', wtxt = WALL == null ? '' : String(WALL);
     const l1 = wrap(ctx, a + wtxt + ' places.', W - 2 * pad);
     // draw line 1 with the number in red (the number is at the end of the sentence)
@@ -76,7 +100,7 @@
     ctx.save(); ctx.beginPath(); ctx.rect(pad, top - 24, colW, bottom - top + 24); ctx.clip();
     ctx.font = `400 19px ${SERIF}`;
     let wx = pad, wy = top;
-    const seenP = new Set(), names = R.wallNames || (R.wall || []).filter(w => w.name && !seenP.has(w.place || w.norm || w.name) && seenP.add(w.place || w.norm || w.name)).map(w => (window.UM ? UM.cleanName(w.name) : w.name));
+    const names = R.wallNames || wallNames(R);
     for (const n of names) {
       const tw = ctx.measureText(n).width;
       if (wx + tw > pad + colW && wx > pad) { wx = pad; wy += 29; }
@@ -114,5 +138,5 @@
     return cv;
   }
 
-  window.Share = { draw };
+  window.Share = { draw, wallCount, wallNames, tier };
 })();

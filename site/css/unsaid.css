@@ -150,7 +150,10 @@ a { color: inherit; }
 .card .what { color: #b9b6ad; font-size: 11px; }
 .card .rk { margin-top: auto; font-size: 11px; color: var(--dim); }
 .card .rk b { font: 600 24px/1 var(--mono); color: var(--ink); margin-right: 4px; }
-.card .rk .any { display: block; margin-top: 3px; color: var(--faint); }
+.card .rk .any { display: block; margin-top: 3px; color: var(--dim); }
+.card .fitwhy { font: 400 13px/1.3 var(--serif); color: var(--ink); }
+.card.struck .fitwhy { color: var(--faint); }
+.cards.prov .card { cursor: default; }
 .card .because { border-top: 1px solid var(--rule2); padding-top: 7px; color: var(--dim); font-size: 10.5px; }
 .card .because b { display: block; color: var(--ink); font-weight: 400; font-size: 11px; }
 .card .tag { font-size: 10px; color: var(--red); }
@@ -166,6 +169,8 @@ a { color: inherit; }
 .dare textarea { width: 100%; min-height: 84px; resize: vertical; background: #0e0e0d; border: 1px solid var(--rule2); outline: 0; padding: 10px; font: 12px/1.5 var(--mono); color: var(--ink); }
 .dare textarea:focus { border-color: var(--dim); }
 .dare .out { margin-top: 8px; min-height: 18px; color: var(--dim); font-size: 11.5px; }
+.dare .out p { margin: 6px 0 0; }
+.dare .out .big { font: 400 24px/1.3 var(--serif); color: var(--white); margin-top: 12px; }
 .links { display: flex; gap: 22px; margin-top: 18px; flex-wrap: wrap; }
 
 /* ---------- sheets (S3 card back, S4, share) ---------- */
@@ -202,9 +207,9 @@ details.log[open] summary::after { content: ' ⌄'; }
 .sharecv { width: 100%; height: auto; border: 1px solid var(--rule2); display: block; margin-top: 16px; }
 
 /* result: the seven above the wall at every width (§2.1 phone order, now everywhere) */
-.res.done { display: flex; flex-direction: column; }
-.res.done #maphead { order: 0; } .res.done #status { order: 1; } .res.done #notes { order: 2; }
-.res.done #s-left { order: 3; } .res.done #s-wall { order: 4; }
+.res.done, .res.hascards { display: flex; flex-direction: column; }
+.res.done #maphead, .res.hascards #maphead { order: 0; } .res.done #status, .res.hascards #status { order: 1; } .res.done #notes, .res.hascards #notes { order: 2; }
+.res.done #s-left, .res.hascards #s-left { order: 3; } .res.done #s-wall, .res.hascards #s-wall { order: 4; }
 .above { color: var(--dim); margin: 12px 0 0; }
 .copyrow { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; margin: -2px 0 10px; font-size: 11px; }
 
@@ -260,7 +265,9 @@ details.log[open] summary::after { content: ' ⌄'; }
 .agentblk { margin-top: 34px; }
 .agentblk .q { font: 400 17px/1.4 var(--serif); margin: 12px 0 8px; }
 .agentblk pre { background: var(--panel); border: 1px solid var(--rule2); padding: 10px 12px; font: 11px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; }
-.agentblk .a { font: 400 16px/1.45 var(--serif); margin: 12px 0 6px; }
+.agentblk .a { font: 400 22px/1.35 var(--serif); color: var(--white); margin: 14px 0 14px; max-width: 760px; }
+.agentblk .a .who { display: block; font: 11px/1.4 var(--mono); color: var(--dim); margin-bottom: 4px; }
+.counter .counting { color: var(--faint); }
 
 /* ---------- footer ---------- */
 .foot { border-top: 1px solid var(--rule2); margin-top: 48px; padding: 14px 0 28px; color: var(--faint); font-size: 10.5px; display: flex; gap: 8px 18px; flex-wrap: wrap; }
@@ -292,7 +299,11 @@ details.log[open] summary::after { content: ' ⌄'; }
   .top .chip i { display: none; }
   .res.done #s-left { order: 0; } .res.done #maphead { order: 1; margin-top: 26px; } .res.done #status { order: 2; } .res.done #notes { order: 3; }
   .res.done #s-left { margin-top: 14px; }
+  /* streaming on a phone: the status, then the cards as they arrive, then the map; the wall stays below */
+  .res.hascards:not(.done) #status { order: 0; } .res.hascards:not(.done) #s-left { order: 1; }
+  .res.hascards:not(.done) #maphead { order: 2; margin-top: 26px; } .res.hascards:not(.done) #notes { order: 3; }
   .lead2 { font-size: 28px; } .lead2 .n { font-size: 28px; }
+  .dare .out .big { font-size: 21px; } .agentblk .a { font-size: 19px; }
   .subhead { font-size: 18px; } .hook { font-size: 15.5px; }
   .cityopts button { font-size: 18px; }
   .sheet h1 { font-size: 30px; }
