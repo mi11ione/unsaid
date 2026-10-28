@@ -19,9 +19,9 @@ CAP proof call is skipped (cards never depend on it), and the last-seen check is
   python3 -I k12_wall_effect.py                     # 20 sets, writes out/k12_wall_effect.md
   python3 -I k12_wall_effect.py --fake --sets 2     # the code path, [FAKE]
 """
-import copy, json, os, sys
+import copy, json, os, random, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from unsaid import cli, engine as E, matcher as M, seeds as SD, walls as W  # noqa: E402
+from unsaid import cli, engine as E, matcher as M, seeds as SD, stats as ST, walls as W  # noqa: E402
 
 ROOT = os.path.dirname(cli.KIT)
 ap = cli.parser(__doc__)
@@ -29,6 +29,7 @@ ap.set_defaults(walls=os.path.join(ROOT, "data", "walls"), budget=40)
 ap.add_argument("--fresh-answers", default=os.path.join(ROOT, "harness", "runs", "fresh.jsonl"))
 ap.add_argument("--site-check", action="store_true", help="last-seen also checks venue sites (network, cached 24 h)")
 ap.add_argument("--md", default=os.path.join(cli.OUT, "k12_wall_effect.md"))
+ap.add_argument("--draws", type=int, default=200, help="RANDOM-7 draws per set (seeded by the set id)")
 ap.add_argument("--public-md", help="also write the counts-only table (no place names: Qloo output stays out of git)")
 args = ap.parse_args()
 T = cli.tag(args)
@@ -96,6 +97,34 @@ def explain(card_names, wall_answers, fresh_answers, per, name_of):
     return {k: v for k, v in out.items() if v}
 
 
+def named_ids(ids, name_of, answers, veto=()):
+    """Which of these places any answer names, judged over the whole of U at once (one pool, so every arm, RANDOM-7
+    included, gets the same per-place verdict): matcher R1-R5 with the strike's /search vetoes + the reverse check."""
+    if not ids or not answers:
+        return set()
+    pool = [{"entity_id": i, "name": name_of.get(i) or ""} for i in ids]
+    raws = [n["name"] if isinstance(n, dict) else n for a in answers for n in a.get("names") or []]
+    st, _ = M.match_wall([r for r in raws if r not in veto], pool, None)
+    rix = E.reverse_index(answers)
+    return set(st) | {i for i in ids if E.reverse_hit(name_of.get(i) or "", rix) is not None}
+
+
+def plain_rules_run(c, ls):
+    """PLAIN+RULES: the same engine.run with an empty wall and the lift term removed. The 'fit for everyone' input is
+    pinned at 1.0, so lift = pct(fit) - 1 and the order is Qloo's fused taste order; every picks rule stays (floor,
+    eligibility/holds, the prior's generic cut (its counts are untouched), chains off, love cap and balance)."""
+    orig = E.everyone_pct
+
+    def pinned(city, ids, love_ids):
+        ev, counts, diag = orig(city, ids, love_ids)
+        return {i: 1.0 for i in ids}, counts, dict(diag or {}, k12="pinned at 1.0 (PLAIN+RULES)")
+    E.everyone_pct = pinned
+    try:
+        return E.run(q, c, copy.deepcopy(ls), EMPTY, last_seen=last_seen_hook())
+    finally:
+        E.everyone_pct = orig
+
+
 def last_seen_hook():
     if not args.site_check:
         return None
@@ -141,6 +170,32 @@ for city in cli.cities(args):
             a, f = score(ids)
             r[k + "_named"], r[k + "_fresh"], r[k + "_names"] = len(a), len(f), sorted(a)
             r[k + "_struck"] = sum(1 for i in ids if i in on["_struck"])
+        # ---- baselines on the held-out fresh asks only, one per-place verdict over U (k12 baselines, 30 Oct)
+        pr = plain_rules_run(c, ls)
+        R = on["_R"]
+        Uids = sorted(name_of)
+        N = len(Uids)
+        fitp = {i: ST.pct(R["fit"][i], N) for i in Uids}
+        popp = {i: ST.pct(R["pop_ord"][i], N) for i in Uids}
+        named_f = named_ids(Uids, name_of, fr, veto)
+        S = [i for i in Uids if i not in on["_struck"]]
+        arms = {"plain": plain7, "plain_rules": [p["id"] for p in pr["picks"]][:N7], "score_only": off7, "unsaid": on7}
+        r["arms"] = {k: {"ids": v, "names": [name_of.get(i) for i in v], "fresh": sum(1 for i in v if i in named_f),
+                         "fit_pct": [round(fitp[i], 4) for i in v], "pop_pct": [round(popp[i], 4) for i in v]}
+                     for k, v in arms.items()}
+        rng = random.Random("k12-random7:" + sid)
+        draws = [rng.sample(S, min(N7, len(S))) for _ in range(args.draws)]
+        r["random"] = {"S": len(S), "draws": len(draws),
+                       "fresh_mean": sum(sum(1 for i in d if i in named_f) for d in draws) / float(len(draws)),
+                       "fit_pct": [round(fitp[i], 4) for d in draws for i in d],
+                       "pop_pct": [round(popp[i], 4) for d in draws for i in d],
+                       "named_in_S": sum(1 for i in S if i in named_f)}
+        r["S_ids"] = S
+        r["U_names"] = name_of
+        r["U_where"] = {e["entity_id"]: ", ".join(x for x in (E.prop(e, "address"), E.prop(e, "neighborhood")) if x)
+                        for e in off["_U"]}
+        r["veto"] = sorted(veto)
+        r["fresh_ids"] = [a.get("id") for a in fr]
         r["on_explain"] = explain([name_of.get(i) or i for i in on7], list(wall["answers"]), fr, on["_per"], name_of)
         r["on_ids"] = {name_of.get(i) or i: i for i in on7}
         rows.append(r)
@@ -157,6 +212,43 @@ summary = ("median over %d sets: %s of 7 cards differ; AI-named cards: with the 
                cli.f(med["plain_named"], 1), cli.f(med["on_fresh"], 1), cli.f(med["off_fresh"], 1),
                cli.f(med["plain_fresh"], 1)))
 print("  " + summary + T)
+
+
+def _med(xs):
+    return cli.median(xs) if xs else float("nan")
+
+
+ARMS = (("plain", "Qloo's plain top 7 (fused taste order, no rules)"),
+        ("plain_rules", "PLAIN+RULES (taste order + the picks rules, no strike, no popularity/prior term)"),
+        ("score_only", "score-only (UNSAID without the strike)"),
+        ("unsaid", "UNSAID (strike + score + rules)"),
+        ("random", "RANDOM-7 (7 random survivors of strike + floor, mean of %d draws)" % args.draws))
+
+
+def baselines(rs):
+    out = {}
+    for k, _ in ARMS:
+        if k == "random":
+            fresh = sum(r["random"]["fresh_mean"] for r in rs)
+            fit = [x for r in rs for x in r["random"]["fit_pct"]]
+            pop = [x for r in rs for x in r["random"]["pop_pct"]]
+        else:
+            fresh = sum(r["arms"][k]["fresh"] for r in rs)
+            fit = [x for r in rs for x in r["arms"][k]["fit_pct"]]
+            pop = [x for r in rs for x in r["arms"][k]["pop_pct"]]
+        out[k] = {"fresh_pooled": round(fresh, 2), "cards": 7 * len(rs), "fit_med": round(_med(fit), 3),
+                  "fit_mean": round(sum(fit) / len(fit), 3) if fit else None, "pop_med": round(_med(pop), 3)}
+    return out
+
+
+BASE = {"all": baselines(rows)}
+for cty in sorted({r["city"] for r in rows}):
+    BASE[cty] = baselines([r for r in rows if r["city"] == cty])
+for k, label in ARMS:
+    b = BASE["all"][k]
+    print("  baseline %-11s held-out named %6.2f of %d (%s) · fit pct median %.3f · popularity pct median %.3f%s" % (
+        k, b["fresh_pooled"], b["cards"], " · ".join("%s %.2f" % (c.upper(), BASE[c][k]["fresh_pooled"])
+                                                     for c in sorted(BASE) if c != "all"), b["fit_med"], b["pop_med"], T))
 
 
 
@@ -178,6 +270,22 @@ def write_table(f, names):
     f.write("| **median** | | | **%s** | **%s** | **%s** | **%s** | **%s** | **%s** | **%s** | **%s** | |\n\n" % tuple(
         cli.f(med[k], 1) for k in ("differ", "on_named", "off_named", "plain_named", "on_fresh", "off_fresh",
                                    "plain_fresh", "plain_struck")))
+    f.write("## Baselines: is it just obscure?\n\nHeld-out fresh asks only (they never fed the wall). One per-place "
+            "verdict over U (matcher with the strike's /search vetoes + the reverse check), so every arm is judged the "
+            "same way; these pooled counts can differ slightly from the 7-name check in the table above. Fit percentile: "
+            "1.0 = Qloo's best fit for these loves in U. Popularity percentile: 1.0 = the most popular place in U.\n\n")
+    cities = [c for c in sorted(BASE) if c != "all"]
+    f.write("| arm | held-out AI-named, pooled | %s | median fit pct | median popularity pct |\n|---|---:|%s---:|---:|\n"
+            % (" | ".join(c.upper() for c in cities), "---:|" * len(cities)))
+    for k, label in ARMS:
+        b = BASE["all"][k]
+        f.write("| %s | %s of %d | %s | %.2f | %.2f |\n" % (
+            label, cli.f(b["fresh_pooled"], 1 if k == "random" else 0), b["cards"],
+            " | ".join("%s of %d" % (cli.f(BASE[c][k]["fresh_pooled"], 1 if k == "random" else 0), BASE[c][k]["cards"])
+                       for c in cities), b["fit_med"], b["pop_med"]))
+    f.write("\nRANDOM-7 mean fit percentile: %.2f (UNSAID %.2f). Per set, held-out AI-named (UNSAID · RANDOM-7 mean): %s.\n\n" % (
+        BASE["all"]["random"]["fit_mean"], BASE["all"]["unsaid"]["fit_mean"],
+        ", ".join("%s %d · %.1f" % (r["set"], r["arms"]["unsaid"]["fresh"], r["random"]["fresh_mean"]) for r in rows)))
     kinds = {"a": 0, "b": 0, "c": 0}
     for r in rows:
         for xs in r["on_explain"].values():
@@ -216,6 +324,8 @@ if args.public_md:
         write_table(f, False)
 with open(args.md.replace(".md", ".json"), "w") as f:
     json.dump(rows, f, indent=1, ensure_ascii=False, default=str)
+with open(args.md.replace(".md", ".baselines.json"), "w") as f:      # counts only (no names): the freeze reads it
+    json.dump({"engine_v": E.ENGINE_V, "draws": args.draws, "baselines": BASE}, f, indent=1)
 print("  table: %s" % args.md)
 print("K12 wall effect: %d sets -> %s%s" % (len(rows), cli.verdict(len(rows) > 0), T))
 cli.finish(q, args, "k12_wall_effect")

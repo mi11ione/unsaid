@@ -577,6 +577,7 @@ def numbers(a):
                     ("K12_ON_FRESH_POOLED", "on_fresh_pooled")):
         put(key, num(k.get(kk)), "out/freeze/k12_wall_effect.json (engine/k12_wall_effect.py --frozen)",
             "" if k else "k12 did not run")
+    k12_k14_keys(put)        # baselines (RANDOM-7, PLAIN+RULES) and the independent labeller (Agent E)
 
     # ---- Qloo calls spent by this freeze run (every QLOO_NETWORK_CALLS line in out/freeze logs)
     qc = {}
@@ -598,6 +599,75 @@ def numbers(a):
         print("  %-12s %-28s %s" % (k, (v["value"] or "-")[:28].replace("\n", " "), v["note"][:110]))
     print("  gates: " + " · ".join("%s %s" % (k, v.get("verdict")) for k, v in G.items() if isinstance(v, dict) and "verdict" in v))
     print("  Qloo network calls in this run's logs: %d %s" % (doc["qloo_calls"]["total"], qc))
+
+
+# ------------------------------------------------------------------------------- k12 baselines and k14 (Agent E)
+K12_ARMS = (("PLAIN", "plain"), ("PLAINRULES", "plain_rules"), ("OFF", "score_only"), ("UNSAID", "unsaid"),
+            ("RANDOM", "random"))
+
+
+def k12_baselines(rows):
+    """Per arm, held-out fresh asks only, one per-place verdict over U (k12 'Baselines'): pooled AI-named of 7 x sets,
+    per city, and the median fit / popularity percentile of the arm's cards (RANDOM-7: over all its draws)."""
+    out = {}
+    for _, k in K12_ARMS:
+        for scope in ["all"] + sorted({r["city"] for r in rows}):
+            rs = [r for r in rows if scope == "all" or r["city"] == scope]
+            if k == "random":
+                fresh = sum(r["random"]["fresh_mean"] for r in rs)
+                fit = [x for r in rs for x in r["random"]["fit_pct"]]
+                pop = [x for r in rs for x in r["random"]["pop_pct"]]
+            else:
+                fresh = sum(r["arms"][k]["fresh"] for r in rs)
+                fit = [x for r in rs for x in r["arms"][k]["fit_pct"]]
+                pop = [x for r in rs for x in r["arms"][k]["pop_pct"]]
+            out[(k, scope)] = {"fresh": fresh, "cards": 7 * len(rs), "fit_med": median(fit), "pop_med": median(pop),
+                               "fit_mean": sum(fit) / len(fit) if fit else None}
+    return out
+
+
+def k12_k14_keys(put):
+    """⟦K12_<ARM>_FRESH_U⟧ ⟦K12_<ARM>_FRESH_STL/NYC⟧ ⟦K12_<ARM>_FIT_MED⟧ ⟦K12_<ARM>_POP_MED⟧ (ARM: PLAIN, PLAINRULES,
+    OFF, UNSAID, RANDOM; percentiles as 0-100), ⟦K12_RANDOM_FIT_MEAN⟧, and k14's ⟦K14_AGREE⟧ ⟦K14_PRECISION⟧
+    ⟦K14_RECALL⟧ ⟦K14_KAPPA⟧ ⟦K14_PAIRS⟧ ⟦K14_<ARM>_LAB⟧ (labeller-based held-out AI-named, pooled), all from stored
+    files: out/freeze/k12_wall_effect.json and engine/k14_label.json (used only when its k12_sha256 matches)."""
+    import hashlib
+    kp = os.path.join(LOGS, "k12_wall_effect.json")
+    src = "out/freeze/k12_wall_effect.json (engine/k12_wall_effect.py --frozen, Baselines)"
+    rows = json.load(open(kp)) if os.path.exists(kp) else []
+    rows = [r for r in rows if "arms" in r and "random" in r]
+    B = k12_baselines(rows) if rows else {}
+    pct = lambda x: None if x is None else "%d" % round(100 * x)  # noqa: E731
+    one = lambda x: None if x is None else ("%.1f" % x if x != int(x) else "%d" % x)  # noqa: E731
+    for K, k in K12_ARMS:
+        b = B.get((k, "all"))
+        note = "" if b else "k12 has no baselines (an older k12, or it did not run)"
+        put("K12_%s_FRESH_U" % K, one(b["fresh"]) if b else None, src, note)
+        for c in ("stl", "nyc"):
+            bc = B.get((k, c))
+            put("K12_%s_FRESH_%s" % (K, c.upper()), one(bc["fresh"]) if bc else None, src, note)
+        put("K12_%s_FIT_MED" % K, pct(b["fit_med"]) if b else None, src, note)
+        put("K12_%s_POP_MED" % K, pct(b["pop_med"]) if b else None, src, note)
+    b = B.get(("random", "all"))
+    put("K12_RANDOM_FRESH_POOLED", one(b["fresh"]) if b else None, src)
+    put("K12_RANDOM_FIT_MEAN", pct(b["fit_mean"]) if b else None, src)
+    lp = os.path.join(ROOT, "engine", "k14_label.json")
+    k14 = json.load(open(lp)) if os.path.exists(lp) else None
+    sha = hashlib.sha256(open(kp, "rb").read()).hexdigest() if os.path.exists(kp) else None
+    src14 = "engine/k14_label.json (engine/k14_label.py on this k12 run)"
+    note14 = ("" if k14 and k14.get("k12_sha256") == sha else
+              "k14 labels are for another k12 run: re-run engine/k14_label.py --k12 out/freeze/k12_wall_effect.json "
+              "(resumable; only new pairs cost claude -p calls)" if k14 else "k14 did not run")
+    ok = not note14
+    f2 = lambda x: None if x is None else "%.2f" % x  # noqa: E731
+    put("K14_AGREE", f2(k14.get("agreement")) if ok else None, src14, note14)
+    put("K14_PRECISION", f2(k14.get("precision")) if ok else None, src14, note14)
+    put("K14_RECALL", f2(k14.get("recall")) if ok else None, src14, note14)
+    put("K14_KAPPA", f2(k14.get("kappa")) if ok else None, src14, note14)
+    put("K14_PAIRS", "%d" % k14["labelled"] if ok else None, src14, note14)
+    for K, k in K12_ARMS:
+        a = ((k14 or {}).get("arms") or {}).get("all", {}).get(k) if ok else None
+        put("K14_%s_LAB" % K, one(a["labeller"]) if a else None, src14, note14)
 
 
 # --------------------------------------------------------------------------------------------------------- agentcheck
