@@ -71,7 +71,7 @@ def empty_walls_file(cache_dir):
             fh.write('{"walls": []}')
     return p
 
-ENGINE_V = getattr(API, "ENGINE_V", None) or "kit-v3+server-fallback-1"
+ENGINE_V = getattr(API, "ENGINE_V", None) or getattr(getattr(API, "E", None), "ENGINE_V", None) or "kit-v3+server-fallback-1"
 BACKEND = "api" if API else "fallback"
 N_PICKS, N_RESERVES = 7, 3
 if not API:
