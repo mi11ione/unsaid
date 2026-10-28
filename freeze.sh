@@ -8,7 +8,9 @@
 #   ./freeze.sh --from 5            resume at step 5 (each step re-runs from scratch: all steps are idempotent)
 #   ./freeze.sh --only 4            one step
 #   flags: --skip-f  --render-if-unchanged  --skip-render  --skip-media  --skip-site  --allow-dirty  --to N
-#          --no-street-catchup  --skip-agent
+#          --no-street-catchup  --skip-agent  --skip-k14
+#          --numbers-only  step 3 runs only k12, k14 and numbers (no gate E, run_query, street ablation, census); a missing
+#                          regen worktree is recreated clean at origin/main (cache-only reruns of the k12/k14 keys)
 #
 #   1 preflight   the 5 pre-registered files hash to data/prereg/SHA256SUMS; disk >= 10 GB; harness/runs/done has gem-30 + wall-3 (warn); git on main, clean but for harness output
 #                 and walls, pulled; leak audit 0 unresolved; walls rebuilt from harness/runs (unless saturation or a
@@ -46,6 +48,7 @@ SEED_FRESH=$QLOO_DIR/private/fresh20-28oct       # the 28 Oct regeneration: the 
 WT="$REGEN_WT"; FRESH="$REGEN_FRESH"
 CO="Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
+SKIP_K14=0; NUMBERS_ONLY=0
 FROM=1; TO=9; SKIP_F=0; DRY=0; ALLOW_DIRTY=0; STREET_CATCHUP=1; SKIP_AGENT=0; RENDER=deploy; SKIP_MEDIA=0; SKIP_SITE=0
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -61,6 +64,8 @@ while [ $# -gt 0 ]; do
     --allow-dirty) ALLOW_DIRTY=1;;
     --no-street-catchup) STREET_CATCHUP=0;;
     --skip-agent) SKIP_AGENT=1;;
+    --skip-k14) SKIP_K14=1;;
+    --numbers-only) NUMBERS_ONLY=1;;
     -h|--help) sed -n '2,32p' "$0"; exit 0;;
     *) echo "unknown flag $1" >&2; exit 2;;
   esac
@@ -200,8 +205,20 @@ step2() {
     || warn "street: $n neighbourhoods still unasked after 3 catch-up passes; ⟦STREET_*⟧ stay unfilled"
 }
 
+ensure_wt() {   # --numbers-only: a clean regen-style worktree at origin/main when step 2's is gone (regen_try.sh's setup)
+  [ -d "$WT/engine/out" ] && return 0
+  echo "worktree $WT missing: recreating it clean at origin/main (priors copied, Qloo cache linked)"
+  git -C "$MAIN" fetch -q origin
+  git -C "$MAIN" worktree prune
+  git -C "$MAIN" worktree add -q --detach "$WT" origin/main
+  cp -Rp "$MAIN/data/priors" "$WT/data/"
+  mkdir -p "$MAIN/engine/.cache" "$WT/engine/out"
+  ln -s "$MAIN/engine/.cache" "$WT/engine/.cache"
+}
+
 step3() {
-  say "3 gates and stats -> out/freeze/numbers.json"
+  say "3 gates and stats -> out/freeze/numbers.json$([ $NUMBERS_ONLY = 1 ] && echo ' (--numbers-only: k12, k14, numbers)')"
+  [ $NUMBERS_ONLY = 1 ] && ensure_wt
   [ -d "$WT/engine/out" ] && [ -f "$FRESH/index.json" ] || die "no regen worktree/output: run step 2 first"
   qloo_key
   local E="$WT/engine"
@@ -226,6 +243,26 @@ old.update({"sets": len(rows), "of": 7, "named_unsaid": med("on_named"), "named_
 json.dump(old, open(sys.argv[2], "w"), indent=1, ensure_ascii=False); open(sys.argv[2], "a").write("\n")
 print("site/data/wall_effect.json: UNSAID %s · no strike %s · plain %s" % (old["named_unsaid"], old["named_no_strike"], old["named_plain"]))
 PY
+  # k14 (Agent E): the independent labeller on THIS k12 run's cards; resumable, so only pairs not yet in
+  # engine/out/k14_labels.jsonl cost claude -p calls (subscription). ⟦K14_*⟧ fill only when the labels match this run.
+  if [ $SKIP_K14 = 1 ]; then echo "k14: SKIPPED (--skip-k14)"
+  else
+    echo "k14 independent labeller (claude -p, resumable)"
+    mkdir -p "$MAIN/engine/out"
+    if python3 -I k14_label.py --k12 "$LOGS/k12_wall_effect.json" --fresh ../harness/runs/fresh.jsonl \
+        --labels "$MAIN/engine/out/k14_labels.jsonl" --public-md "$MAIN/engine/k14_label.md" > "$LOGS/03-k14.log" 2>&1; then
+      grep -E "^== k14|labelled .* pairs" "$LOGS/03-k14.log" || true
+    else
+      tail -5 "$LOGS/03-k14.log"; warn "k14 failed: ⟦K14_*⟧ stay unfilled"
+    fi
+  fi
+  if [ $NUMBERS_ONLY = 1 ]; then
+    cd "$MAIN"
+    python3 -I tools/freeze_numbers.py numbers --fresh "$FRESH" --nostreet "$E/out/fresh20-no-street" $([ $DRY = 1 ] && echo --dry-run)
+    commit_paths "Freeze (--numbers-only): k12 table with baselines, k14 counts, site wall-effect medians (counts only)" \
+      engine/k12_wall_effect.md site/data/wall_effect.json engine/k14_label.md engine/k14_label.json
+    return 0
+  fi
   echo "gate E (the hashed 28 Oct cards: the official score) and the same check on today's cards"
   python3 -I k5_fresh.py --cards "$FROZEN20" --answers ../harness/runs/fresh.jsonl --walls ../data/walls > "$LOGS/03-gateE-frozen.log" 2>&1 || true
   python3 -I k5_fresh.py --cards "$FRESH" --answers ../harness/runs/fresh.jsonl --walls ../data/walls > "$LOGS/03-gateE-current.log" 2>&1 || true
@@ -260,7 +297,7 @@ PY
   cd "$MAIN"
   python3 -I tools/freeze_numbers.py numbers --fresh "$FRESH" --nostreet "$E/out/fresh20-no-street" $([ $DRY = 1 ] && echo --dry-run)
   commit_paths "Freeze: k12 table, site wall-effect medians and the README call trace regenerated (counts and request URLs only)" \
-    engine/k12_wall_effect.md site/data/wall_effect.json README.md
+    engine/k12_wall_effect.md site/data/wall_effect.json README.md engine/k14_label.md engine/k14_label.json
 }
 
 step4() {
