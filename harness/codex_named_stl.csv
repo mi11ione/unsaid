@@ -1,111 +1,101 @@
 canonical,display,asks,mentions,hidden_asks,cedric_asks,jason_asks,spellings,osm_match,osm_ids
-lee mai,Mai Lee,19,19,9,0,0,Mai Lee,False,
-indo,iNDO,17,18,6,1,0,Indo | iNDO,True,node/12900408626
-balkan box treat,Balkan Treat Box,16,16,8,2,0,Balkan Treat Box,False,
-louie,Louie,16,16,0,0,4,Louie,False,
+lee mai,Mai Lee,21,21,10,0,0,Mai Lee,False,
+indo,iNDO,18,19,7,1,0,Indo | iNDO,True,node/12900408626
+louie,Louie,17,17,0,0,5,Louie,False,
 anthonino taverna,Anthonino's Taverna,15,15,1,0,10,Anthonino's Taverna | Anthonino’s Taverna,True,node/4400541690
+balkan box treat,Balkan Treat Box,15,15,7,2,0,Balkan Treat Box,False,
 pappy,Pappy's Smokehouse,13,13,1,7,0,Pappy's Smokehouse,True,way/879002975
 bogart,Bogart's Smokehouse,12,12,0,7,0,Bogart's Smokehouse,True,way/559190582
+sado,Sado,12,12,5,0,0,Sado,True,way/488761095
 royale,The Royale Food & Spirits,12,12,2,5,2,The Royale Food & Spirits,True,node/10840865292 node/1978608514
-sado,Sado,11,11,4,0,0,Sado,True,way/488761095
 sidney street,Sidney Street Cafe,11,11,0,0,1,Sidney Street Cafe,True,way/663647766
 charlie gitto,Charlie Gitto's On the Hill,11,11,0,0,11,Charlie Gitto's On The Hill | Charlie Gitto's On the Hill | Charlie Gitto's on The Hill | Charlie Gitto's on the Hill | Charlie Gitto’s | Charlie Gitto’s On The Hill,True,node/4810036108
 planter,Planter's House,11,11,0,1,3,Planter's House | Planter’s House,True,way/581999480
+eats lil lona,Lona's Lil Eats,11,11,9,0,0,Lona's Lil Eats | Lona’s Lil Eats,True,way/344615126
+brasil yemanja,Yemanja Brasil,10,10,10,0,0,Yemanja Brasil,False,
 vicia,Vicia,10,10,1,0,1,Vicia,True,node/5844631788
-venice,Venice Cafe,10,10,2,3,1,Venice Cafe | Venice Café,True,way/663647757
-salt smoke,Salt + Smoke,9,9,0,6,0,Salt + Smoke,True,node/10949963238 way/620711659
-eats lil lona,Lona's Lil Eats,9,9,8,0,0,Lona's Lil Eats | Lona’s Lil Eats,True,way/344615126
-brasil yemanja,Yemanja Brasil,8,8,8,0,0,Yemanja Brasil,False,
-gioia,Gioia's Deli,8,8,1,1,0,Gioia's Deli,True,way/1408818127
+salt smoke,Salt + Smoke,10,10,0,7,0,Salt + Smoke,True,node/10949963238 way/620711659
+gioia,Gioia's Deli,9,9,1,1,0,Gioia's Deli,True,way/1408818127
+venice,Venice Cafe,9,9,1,3,1,Venice Cafe | Venice Café,True,way/663647757
+dominic,Dominic's,9,9,0,0,8,Dominic's | Dominic's on The Hill | Dominic's on the Hill | Dominic’s | Dominic’s on The Hill,False,
+tony,Tony's,9,9,0,0,6,Tony's | Tony’s,True,node/14185580447
+candy crown,Crown Candy Kitchen,8,8,1,1,0,Crown Candy Kitchen,True,node/2924677100
 menya rui,Menya Rui,8,8,1,0,0,Menya Rui,True,node/12087992777
 loafers union,Union Loafers,8,8,0,0,0,Union Loafers,True,node/11335047469
-dominic,Dominic's on The Hill,8,8,0,0,7,Dominic's | Dominic's on The Hill | Dominic's on the Hill | Dominic’s | Dominic’s on The Hill,False,
 marcella,Trattoria Marcella,8,8,0,0,7,Trattoria Marcella,True,node/7965479650
 change small,Small Change,8,8,1,0,0,Small Change,True,way/663647764
-tony,Tony's,8,8,0,0,5,Tony's | Tony’s,True,node/14185580447
-candy crown,Crown Candy Kitchen,7,7,0,1,0,Crown Candy Kitchen,True,node/2924677100
-nudo,Nudo House,7,7,3,0,0,Nudo House,True,node/13717227115
+tiny,Tiny Chef,8,8,8,0,0,Tiny Chef,True,node/7118177950
+duck shaved,The Shaved Duck,7,7,0,7,0,Shaved Duck Smokehouse | The Shaved Duck,True,node/5835092176
 vandy,The Vandy,7,7,1,0,2,The Vandy,False,
+gramophone,The Gramophone,7,7,2,2,0,Gramophone | The Gramophone,True,way/363772848
 acero,Acero,7,7,0,0,2,Acero,False,
-duck shaved,The Shaved Duck,6,6,0,6,0,Shaved Duck Smokehouse | The Shaved Duck,True,node/5835092176
+nudo,Nudo House,6,6,3,0,0,Nudo House,True,node/13717227115
 accomplice lucky,The Lucky Accomplice,6,6,2,1,1,The Lucky Accomplice,True,node/9873035083
-gramophone,The Gramophone,6,6,2,2,0,Gramophone | The Gramophone,True,way/363772848
-tiny,Tiny Chef,6,6,6,0,0,Tiny Chef,True,node/7118177950
 golden hoosier,The Golden Hoosier,6,6,2,0,0,Golden Hoosier | The Golden Hoosier,True,way/1079868194
 cajun cities sister,Sister Cities Cajun,5,5,3,2,0,Sister Cities Cajun | Sister Cities Cajun & BBQ,True,node/13307237838
 el mercado morelia super,El Morelia Super Mercado,5,5,5,0,0,El Morelia Super Mercado,False,
+local lulu,Lulu's Local Eatery,5,5,3,0,0,Lulu's Local Eatery,False,
 dogs hot steve,Steve's Hot Dogs,5,5,0,3,0,Steve's Hot Dogs,True,node/1978608479
 bulrush,Bulrush,5,5,0,0,0,Bulrush,False,
 cunetto pasta,Cunetto House of Pasta,5,5,0,0,5,Cunetto House of Pasta,True,way/856997454
+hog stellar,Stellar Hog,5,5,0,5,0,Stellar Hog | The Stellar Hog,False,
+crow nest,The Crow's Nest,5,5,4,0,0,The Crow's Nest | The Crow’s Nest,False,
+gin,The Gin Room,5,5,1,0,3,The Gin Room,True,node/14099836954
 blue duck,The Blue Duck,4,4,3,0,1,The Blue Duck,False,
-local lulu,Lulu's Local Eatery,4,4,2,0,0,Lulu's Local Eatery,False,
 fountain,The Fountain on Locust,4,4,1,1,1,Fountain on Locust | The Fountain on Locust,True,node/10960879257
+lorenzo,Lorenzo's Trattoria,4,4,0,0,4,Lorenzo's Trattoria | Lorenzo’s Trattoria,True,way/1209850573
 zia,Zia's Restaurant,4,4,0,0,4,Zia's Restaurant,False,
 adam,Adam's Smokehouse,4,4,0,4,0,Adam's Smokehouse,True,way/605725386
-hog stellar,Stellar Hog,4,4,0,4,0,Stellar Hog,False,
+o smoki,Smoki O's BBQ,4,4,0,4,0,Smoki O's BBQ | Smoki O's Barbecue,False,
+tacos terror,Terror Tacos,4,4,2,0,0,Terror Tacos,True,node/5917366406
 brennan,Brennan's,4,4,0,0,4,Brennan's,True,node/12532316097
-gin,The Gin Room,4,4,0,0,3,The Gin Room,True,node/14099836954
 dark,The Dark Room at The Grandel,4,4,0,4,0,The Dark Room | The Dark Room at The Grandel,False,
-crow nest,The Crow's Nest,4,4,3,0,0,The Crow's Nest | The Crow’s Nest,False,
 crossing,The Crossing,4,4,0,0,1,The Crossing,False,
 akar,Akar,4,4,4,0,0,Akar,False,
 fox little,Little Fox,4,4,1,0,0,Little Fox,True,node/9873035086
 yellowbelly,Yellowbelly,4,4,0,2,0,Yellowbelly,True,node/12532320660
+blues city,Blues City Deli,3,3,1,0,0,Blues City Deli,False,
 beast craft,Beast Craft BBQ Co.,3,3,0,3,0,BEAST Craft BBQ Co. | Beast Craft BBQ Co.,False,
 blue strawberry,Blue Strawberry,3,3,0,1,0,Blue Strawberry | The Blue Strawberry,False,
 comedy helium,Helium Comedy Club,3,3,0,3,0,Helium Comedy Club,False,
 improv,The Improv Shop,3,3,0,3,0,The Improv Shop,False,
-lorenzo,Lorenzo's Trattoria,3,3,0,0,3,Lorenzo's Trattoria | Lorenzo’s Trattoria,True,way/1209850573
-il palato,Il Palato,3,3,0,0,3,Il Palato,False,
-o smoki,Smoki O's BBQ,3,3,0,3,0,Smoki O's BBQ | Smoki O's Barbecue,False,
+sugarfire,Sugarfire Smoke House,3,3,0,3,0,Sugarfire Smoke House,True,node/4489679876
+batch small,Small Batch,3,3,1,1,0,Small Batch,False,
+board drawing,The Drawing Board,3,3,2,0,1,The Drawing Board,True,node/11050090161
 bridge tap,Bridge Tap House & Wine Bar,3,3,0,0,1,Bridge Tap House & Wine Bar | The Bridge Tap House & Wine Bar,True,node/2593941232
 crack fox,The Crack Fox,3,3,1,1,1,The Crack Fox,True,way/312984365
-ethiopian meskerem,Meskerem Ethiopian Restaurant,3,3,2,0,0,Meskerem Ethiopian Restaurant,True,node/5917366430
+ethiopian meskerem,Meskerem Ethiopian Restaurant,3,3,1,0,0,Meskerem Ethiopian Restaurant,True,node/5917366430
 grace meat three,Grace Meat + Three,3,3,0,3,0,Grace Meat + Three,True,node/9244854382
-market mediterranean vine,The Vine Mediterranean Café and Market,3,3,1,0,0,The Vine Mediterranean Cafe and Market | The Vine Mediterranean Café and Market,True,way/582713102
-blues city,Blues City Deli,2,2,1,0,0,Blues City Deli,False,
+market mediterranean vine,The Vine Mediterranean Cafe and Market,3,3,2,0,0,The Vine Mediterranean Cafe and Market | The Vine Mediterranean Café and Market,True,way/582713102
 custard drewes frozen ted,Ted Drewes Frozen Custard,2,2,0,0,0,Ted Drewes Frozen Custard,False,
 17 corner,Corner 17,2,2,1,0,0,Corner 17,False,
 anchor heavy,The Heavy Anchor,2,2,0,2,0,The Heavy Anchor,True,node/14166569198
 favazza,Favazza's,2,2,0,0,2,Favazza's,True,way/857003693
 gian tony,Gian-Tony's,2,2,0,0,2,Gian-Tony's,True,node/14185580447
 alfonso casa don,Casa Don Alfonso,2,2,0,0,2,Casa Don Alfonso,False,
-basso,Basso,2,2,0,0,2,Basso,True,node/5965083247
-lombardo,Lombardo's Trattoria,2,2,0,0,2,Lombardo's Trattoria,True,node/12329597152
+edera italian,Edera Italian Eatery,2,2,0,0,2,Edera Italian Eatery,True,node/12616201134
+pastaria,Pastaria,2,2,0,0,2,Pastaria,False,
 annie gunn,Annie Gunn's,2,2,0,0,0,Annie Gunn's,False,
 blue city,Blue City Deli,2,2,0,0,0,Blue City Deli,False,
 blueberry hill,Blueberry Hill,2,2,0,0,0,Blueberry Hill,False,
 city museum,City Museum,2,2,1,0,0,City Museum,False,
 civil life,Civil Life Brewing Co.,2,2,1,0,0,Civil Life Brewing Co.,False,
 mud,The Mud House,2,2,1,0,0,The Mud House,True,node/4398962091
-one only red,Red's The One and Only BBQ,2,2,0,2,0,Red's The One and Only BBQ,False,
-ribs roper,Roper's Ribs,2,2,0,2,0,Roper's Ribs,False,
-sugarfire,Sugarfire Smoke House,2,2,0,2,0,Sugarfire Smoke House,True,node/4489679876
-barg continental,Barg Continental,2,2,2,0,0,Barg Continental,False,
-bello monte,Monte Bello Pizzeria,2,2,2,0,0,Monte Bello Pizzeria,False,
-mediterranean phoenicia,Phoenicia Mediterranean Deli,2,2,2,0,0,Phoenicia Mediterranean Deli,False,
-omar,Omar's Grill,2,2,2,0,0,Omar's Grill,False,
-speakeasy thaxton,Thaxton Speakeasy,2,2,1,0,1,Thaxton Speakeasy | The Thaxton Speakeasy,True,node/12516948991
 bb blues jazz soups,"BB's Jazz, Blues & Soups",2,2,0,2,0,"BB's Jazz, Blues & Soups | BB’s Jazz, Blues and Soups",False,
 batch fare small whiskey,Small Batch Whiskey & Fare,2,2,2,0,0,Small Batch Whiskey & Fare,False,
 blues stella,Stella Blues,2,2,1,0,0,Stella Blues,False,
+il palato,Il Palato,2,2,0,0,2,Il Palato,False,
 bellwether,The Bellwether,2,2,0,1,0,The Bellwether,True,node/10962679899 node/14178657836
-courtesy,Courtesy Diner,2,2,0,0,0,Courtesy Diner,True,way/564435515
 down up,Up-Down STL,2,2,0,0,0,Up-Down STL,False,
 tick tock,Tick Tock Tavern,2,2,0,0,0,Tick Tock Tavern,True,node/3679061187
-board drawing,The Drawing Board,2,2,1,0,1,The Drawing Board,True,node/11050090161
 italia,Bar Italia,2,2,0,0,2,Bar Italia,True,node/12616201134 node/14107533683 way/627473818
 lobby,The Lobby Lounge at The Ritz-Carlton,2,2,0,0,2,The Lobby Lounge at The Ritz-Carlton,False,
-batch small,Small Batch,2,2,0,1,0,Small Batch,False,
-tacos terror,Terror Tacos,2,2,1,0,0,Terror Tacos,True,node/5917366406
+fritanga,Fritanga,2,2,2,0,0,Fritanga,False,
 olio,Olio,2,2,1,0,0,Olio,False,
+mediterranean vine,The Vine Mediterranean Cafe,2,2,2,0,0,The Vine Mediterranean Cafe,False,
 sweetart,SweetArt,2,2,0,2,0,SweetArt,True,node/13731412717
 manno paul,Paul Manno's Cafe,2,2,0,0,2,Paul Manno's Cafe | Paul Manno’s,False,
 afghan sameem,Sameem Afghan Restaurant,2,2,2,0,0,Sameem Afghan Restaurant,True,way/724634029
-c k,C&K Barbecue,2,2,0,2,0,C&K Barbecue,False,
-eovaldi,Eovaldi's Deli,2,2,1,0,0,Eovaldi's Deli,False,
-caf fattened,Fattened Caf,2,2,2,0,0,Fattened Caf | The Fattened Caf,False,
-everest,Everest Cafe & Bar,2,2,2,0,0,Everest Cafe & Bar,True,way/627547687
 oak olive,Olive + Oak,2,2,0,0,0,Olive + Oak,False,
 amaizing arepa,Amaizing Arepa Bar,1,1,1,0,0,Amaizing Arepa Bar,True,node/14005096801
 chop old suey,Old St. Louis Chop Suey,1,1,1,0,0,Old St. Louis Chop Suey,True,node/10249517761
@@ -116,22 +106,16 @@ factory fitz root,Fitz's Root Beer Factory,1,1,0,0,0,Fitz's Root Beer Factory,Fa
 joint mission taco,Mission Taco Joint,1,1,0,0,0,Mission Taco Joint,True,way/559190581
 barbq store,STL BarBQ Store,1,1,0,1,0,STL BarBQ Store,False,
 carmine,Carmine's Steak House,1,1,0,0,1,Carmine's Steak House,True,node/12363565051
-gian ristorante tony,Gian-Tony's Ristorante,1,1,0,0,1,Gian-Tony's Ristorante,True,node/14185580447
-madrina,Madrina,1,1,0,0,1,Madrina,False,
-napoli,Cafe Napoli,1,1,0,0,1,Cafe Napoli,False,
 cherokee street,Cherokee Street,1,1,0,0,0,Cherokee Street,False,
 forest park,Forest Park,1,1,0,0,0,Forest Park,False,
 fox theatre,The Fox Theatre,1,1,0,0,0,The Fox Theatre,False,
 grove park tower,Tower Grove Park,1,1,0,0,0,Tower Grove Park,False,
-above none,None of the Above,1,1,1,0,0,None of the Above,False,
-bemiston social,Bemiston Cocktail & Social Club,1,1,1,0,0,Bemiston Cocktail & Social Club,False,
-bocce milo,Milo's Bocce Garden,1,1,1,0,0,Milo's Bocce Garden,False,
-clements,Clements Bar,1,1,1,0,0,Clements Bar,False,
-i may mother,Mother May I,1,1,1,0,0,Mother May I,False,
+one only red,Red's The One and Only BBQ,1,1,0,1,0,Red's The One and Only BBQ,False,
+ribs roper,Roper's Ribs,1,1,0,1,0,Roper's Ribs,False,
+nixta,Nixta,1,1,1,0,0,Nixta,True,node/13000346618
 frazier,Frazier's Restaurant & Lounge,1,1,1,0,0,Frazier's Restaurant & Lounge,True,way/412503383
 moro,Bar Moro,1,1,1,0,0,Bar Moro,False,
 katie osteria pasta,Katie's Pizza & Pasta Osteria,1,1,0,0,1,Katie's Pizza & Pasta Osteria,True,node/12228143798
-pastaria,Pastaria,1,1,0,0,1,Pastaria,False,
 burro el loco,El Burro Loco,1,1,1,0,0,El Burro Loco,False,
 bristol,Bristol Seafood Grill,1,1,0,0,0,Bristol Seafood Grill,False,
 cyrano,Cyrano's Cafe,1,1,0,0,0,Cyrano's Cafe,False,
@@ -139,20 +123,22 @@ london tea,The London Tea Room,1,1,0,0,0,The London Tea Room,False,
 bill pancake uncle,Uncle Bill's Pancake House,1,1,0,0,0,Uncle Bill's Pancake House,True,way/478001906
 castle white,White Castle,1,1,0,0,0,White Castle,True,node/2728906168 way/269713595 way/271294311 way/448850825 way/532961311 way/624361050
 city,City Diner,1,1,0,0,0,City Diner,True,node/12303496583 node/13419098439 node/6326678986 node/6550017491 way/1552408022
+courtesy,Courtesy Diner,1,1,0,0,0,Courtesy Diner,True,way/564435515
 crow eat,Eat Crow,1,1,0,0,0,Eat Crow,True,way/559190573
 waffle,Waffle House,1,1,0,0,0,Waffle House,True,way/238508228
 tenderloin,The Tenderloin Room,1,1,0,0,1,The Tenderloin Room,False,
-fritanga,Fritanga,1,1,1,0,0,Fritanga,False,
+basso,Basso,1,1,0,0,1,Basso,True,node/5965083247
+speakeasy thaxton,The Thaxton Speakeasy,1,1,0,0,1,The Thaxton Speakeasy,True,node/12516948991
 frida,Frida's,1,1,0,0,0,Frida's,False,
 head,Pizza Head,1,1,0,0,0,Pizza Head,True,node/5588495668
 seedz,Seedz Café,1,1,0,0,0,Seedz Café,False,
 tempus,Tempus,1,1,0,0,0,Tempus,True,node/9244750010
 i king,King & I,1,1,1,0,0,King & I,False,
-mediterranean vine,The Vine Mediterranean Cafe,1,1,1,0,0,The Vine Mediterranean Cafe,False,
 nathaniel reid,Nathaniel Reid Bakery,1,1,1,0,0,Nathaniel Reid Bakery,False,
 chicken out,Chicken Out,1,1,0,1,0,Chicken Out,False,
 hodak,Hodak's,1,1,0,1,0,Hodak's,True,node/2553575175
 mama,Mama's On The Hill,1,1,0,0,1,Mama's On The Hill,True,node/9735126251
+lombardo,Lombardo's Trattoria,1,1,0,0,1,Lombardo's Trattoria,True,node/12329597152
 gourmet soul,Gourmet Soul,1,1,0,1,0,Gourmet Soul,True,node/12591797806
 kitchen,The Kitchen,1,1,0,1,0,The Kitchen,False,
 nubby,Nubby's BBQ,1,1,0,1,0,Nubby's BBQ,False,
@@ -162,10 +148,8 @@ jazz,Jazz St. Louis,1,1,0,1,0,Jazz St. Louis,True,node/2124813842
 sheldon,The Sheldon,1,1,0,1,0,The Sheldon,False,
 bronco el taqueria,Taqueria El Bronco,1,1,1,0,0,Taqueria El Bronco,True,node/4485922459
 curry,The Curry Club,1,1,1,0,0,The Curry Club,False,
-aces five smokestaq,Five Aces Smokestaq,1,1,0,1,0,Five Aces Smokestaq,False,
-hungry jamaican mi,Mi Hungry BBQ & Jamaican Cuisine,1,1,0,1,0,Mi Hungry BBQ & Jamaican Cuisine,False,
-mosito,Mosito's BBQ,1,1,0,1,0,Mosito's BBQ,True,node/12554576819
-q,St. Louis Q Smokehouse,1,1,0,1,0,St. Louis Q Smokehouse,False,
+beast block butcher,BEAST Butcher & Block,1,1,0,1,0,BEAST Butcher & Block,False,
+big express mama,Big Mama's BBQ Express,1,1,0,1,0,Big Mama's BBQ Express,False,
 broadway oyster,Broadway Oyster Bar,1,1,0,0,1,Broadway Oyster Bar,True,way/561309696
 cigar,The Cigar Inn,1,1,0,0,1,The Cigar Inn,True,node/2122879438
 hideaway,The Hideaway,1,1,0,0,1,The Hideaway,True,node/3678263640 way/605725436
@@ -173,6 +157,7 @@ horseshoe poker,Horseshoe St. Louis Poker Room,1,1,0,0,1,Horseshoe St. Louis Pok
 artist sophie,Sophie's Artist Lounge,1,1,0,1,0,Sophie's Artist Lounge,False,
 handlebar,HandleBar,1,1,0,1,0,HandleBar,True,way/367173734
 polite society,Polite Society,1,1,0,1,0,Polite Society,True,node/12498600800
+c k,C&K Barbecue,1,1,0,1,0,C&K Barbecue,False,
 cb chop,CB's Chop House,1,1,0,1,0,CB's Chop House,False,
 evangeline music,Evangeline's Bistro & Music House,1,1,0,1,0,Evangeline's Bistro & Music House,False,
 lebanon taste,Taste of Lebanon,1,1,0,1,0,Taste of Lebanon,True,node/12532328914
@@ -188,22 +173,18 @@ civil missouri museum war,Missouri Civil War Museum,1,1,1,0,0,Missouri Civil War
 compton hill park reservoir tower water,Compton Hill Reservoir Park and Water Tower,1,1,1,0,0,Compton Hill Reservoir Park and Water Tower,False,
 historic joplin scott site state,Scott Joplin House State Historic Site,1,1,1,0,0,Scott Joplin House State Historic Site,False,
 sappington,Sappington House,1,1,1,0,0,Sappington House,False,
-baba family,Baba's Family Restaurant,1,1,1,0,0,Baba's Family Restaurant,False,
-el taqueria toluco,El Toluco Taqueria,1,1,1,0,0,El Toluco Taqueria,False,
-joe,Joe's Café,1,1,1,0,0,Joe's Café,True,way/550734684 way/605725382
-mi taqueria tierra,Mi Tierra Taqueria,1,1,1,0,0,Mi Tierra Taqueria,False,
-pine,The Pine Room,1,1,1,0,0,The Pine Room,False,
+lam truc,Truc Lam,1,1,1,0,0,Truc Lam,True,node/1978608499
+medina mediterranean,Medina Mediterranean Grill,1,1,1,0,0,Medina Mediterranean Grill,False,
+momo ouzeria taverna,Momo's Ouzeria Taverna,1,1,1,0,0,Momo's Ouzeria Taverna,False,
 801 chophouse,801 Chophouse,1,1,0,0,1,801 Chophouse,False,
 al,Al's Restaurant,1,1,0,0,1,Al's Restaurant,True,way/270603647
 citizen kane,Citizen Kane's Steak House,1,1,0,0,1,Citizen Kane's Steak House,False,
 kreis,Kreis' Steakhouse & Bar,1,1,0,0,1,Kreis' Steakhouse & Bar,False,
 dalie,Dalie's Smokehouse,1,1,0,1,0,Dalie's Smokehouse,False,
-buddha taco,Taco Buddha,1,1,0,0,0,Taco Buddha,True,node/13869439603
-bueno chico,Chico Bueno,1,1,0,0,0,Chico Bueno,True,node/14185588301
-burger chuck,Chuck-A-Burger,1,1,0,0,0,Chuck-A-Burger,False,
-buzz hawaiian,Buzz's Hawaiian Grill,1,1,0,0,0,Buzz's Hawaiian Grill,True,node/3679071425
-dumpling soup,Soup Dumpling STL,1,1,0,0,0,Soup Dumpling STL,False,
-mi ranchito,Mi Ranchito,1,1,0,0,0,Mi Ranchito,False,
+caf fattened,Fattened Caf,1,1,1,0,0,Fattened Caf,False,
+everest,Everest Cafe & Bar,1,1,1,0,0,Everest Cafe & Bar,True,way/627547687
+carl drive,Carl's Drive In,1,1,0,0,0,Carl's Drive In,False,
+catering vincenzo,Vincenzo's Deli & Catering,1,1,0,0,0,Vincenzo's Deli & Catering,False,
 seoul taco,Seoul Taco,1,1,0,0,0,Seoul Taco,True,node/6814259630
 brasserie niche,Brasserie by Niche,1,1,0,0,0,Brasserie by Niche,True,node/3428677297
 sasha,Sasha's on Shaw,1,1,0,0,0,Sasha's on Shaw,True,node/2104677824
@@ -211,14 +192,14 @@ ballroom silver,The Silver Ballroom,1,1,1,0,0,The Silver Ballroom,False,
 bolyard meat provisions,Bolyard’s Meat & Provisions,1,1,1,0,0,Bolyard’s Meat & Provisions,False,
 eats local mac,Mac's Local Eats,1,1,0,0,0,Mac's Local Eats,True,node/2090160177
 southwest,Southwest Diner,1,1,0,0,0,Southwest Diner,True,way/374781113 way/857003378
-edera italian,Edera Italian Eatery,1,1,0,0,1,Edera Italian Eatery,True,node/12616201134
 franco,Franco,1,1,0,0,1,Franco,False,
 chilispot,Chilispot,1,1,1,0,0,Chilispot,False,
 hong wei,Wei Hong Seafood,1,1,1,0,0,Wei Hong Seafood,False,
 meskerem,Meskerem,1,1,1,0,0,Meskerem,True,node/5917366430
 miami,Café Miami,1,1,1,0,0,Café Miami,True,way/1268837415
 osteria salve,Salve Osteria,1,1,1,0,0,Salve Osteria,False,
-cate chinese zone,Cate Zone Chinese Cafe,1,1,1,0,0,Cate Zone Chinese Cafe,False,
-coffeestamp,Coffeestamp,1,1,1,0,0,Coffeestamp,True,node/14320230808 node/9873035084
+el morelia,El Morelia,1,1,1,0,0,El Morelia,False,
+kain tayo,Kain Tayo,1,1,1,0,0,Kain Tayo,True,node/10960879260
+ke shabu shabu tai,Tai Ke Shabu Shabu,1,1,1,0,0,Tai Ke Shabu Shabu,False,
 cathy,Cathy's Kitchen,1,1,0,1,0,Cathy's Kitchen,False,
 crab lobster peacemaker,Peacemaker Lobster & Crab,1,1,0,1,0,Peacemaker Lobster & Crab,False,

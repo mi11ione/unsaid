@@ -30,7 +30,7 @@ The model id is read from `modelUsage` (the key with the most output tokens).
 **codex** (codex-cli 0.164.0, ChatGPT plan, 2 workers):
 ```
 codex exec --json --ephemeral --skip-git-repo-check --sandbox read-only --output-schema places.schema.json \
-  --ignore-user-config -c web_search="disabled" -m gpt-5.6-terra "<ask>"
+  --ignore-user-config -c web_search="disabled" --disable apps -m gpt-5.6-terra "<ask>"
 ```
 Any `web_search` item in the event stream labels the answer `search: "on"`. `CODEX_MODEL` overrides the model.
 
@@ -60,6 +60,7 @@ The console shows 20 requests a day and 5 a minute per model per project. Creden
 ## Deviations from §3.6, and why
 
 1. **codex `--ignore-user-config -c web_search="disabled"`.** Roman's `~/.codex/config.toml` loads a browser plugin and MCP servers, and codex's own `web_search` tool is on (`"cached"`) by default. Either one would break the no-web-search rule. Auth still comes from `CODEX_HOME`.
+1b. **codex `--disable apps`** (added 28 Oct). The built-in `codex_apps` connector exposes `search_service.web_run`, a web search that arrives as an `mcp_tool_call`, not a `web_search` item. It ran in 8 of the 128 census answers and in the first meter "with" ask. Those 8 were re-asked with apps disabled (`run_census.py --provider codex --redo-foreign`): the new records supersede the old ones, which stay in the file for audit. The meter record is in `runs/quarantine.jsonl`. Any tool call outside the `unsaid` server is now recorded in `foreign_tools`, and a search-like one labels the answer `search: "on"`.
 2. **codex model pinned with `-m`.** The `--json` stream in 0.164.0 carries no model id: its events are `thread.started`, `turn.*`, `item.*` and `error`, with `thread_id`, `items` and `usage`, as checked in the binary and in a real ask on 27 Oct. Answers are recorded as `model: "gpt-5.6-terra"`, `model_source: "pinned (-m)"`. If an event ever carries a `model` field, that value wins and `model_source` becomes `"event stream"`.
 3. **Meter, claude, both arms: `--safe-mode` is replaced by `--setting-sources local --disable-slash-commands`.**
    - Why: `--safe-mode` drops every `--mcp-config` server. Checked on 2.1.311 on 27 Oct: the init event showed `mcp_servers: []` and `tools: []`.
@@ -67,6 +68,7 @@ The console shows 20 requests a day and 5 a minute per model per project. Creden
    - Both arms use it, so they differ only in the tool. The meter also uses `--output-format stream-json --verbose`, so every `tool_use` is counted.
    - The with arm adds `--mcp-config runs/.meter.mcp.json --allowedTools mcp__unsaid__qloo_places --disallowedTools mcp__unsaid__unsaid_places`.
 4. **Meter, codex:** the walls line plus `-c mcp_servers.unsaid.{command,args,enabled_tools=["qloo_places"],env_vars}`. **Meter, gemini:** no JSON mode (it doesn't mix with function calling), plus one `functionDeclaration` whose calls run through the same MCP server (`mcp_client.py`). Both are untested against real tools so far.
+5a. **Fresh asks, v1-subreddit-context** (28 Oct, `data/fresh_asks.deviations.md`): one line, "Posted in r/<sub> (<city>):", goes before each verbatim post. The 23 v0 answers sent without it are kept in `runs/fresh.v0.jsonl`.
 5. **Fresh asks go out verbatim:** no JSON suffix, codex without `--output-schema`, Gemini without JSON mode. The raw text is the answer, and k5 matches on it. Records carry `verbatim: true, suffix: false`. `--suffix` opts out.
 6. **Taste sets per wall:** wall 1 asks all 20 sets. Every other wall asks only the sets marked `try_these` (`data/sets.json`, else `data/sets.draft.json`). `--sets a,b` or `--all-sets` overrides.
 

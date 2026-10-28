@@ -25,6 +25,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--provider", required=True, choices=sorted(L.LANES))
     ap.add_argument("--only-hidden", action="store_true", help="only the 16+16 hidden-gem asks")
+    ap.add_argument("--redo-foreign", action="store_true",
+                    help="re-ask stored answers that called any tool (codex_apps web search, 28 Oct); old lines stay for audit")
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--go", action="store_true", help="actually ask (default: dry run)")
     a = ap.parse_args()
@@ -38,7 +40,12 @@ def main():
     lanes = L.lanes_from(a.provider)
     if not lanes:
         sys.exit(1)
-    L.run(lanes[0], asks, out_path(a.provider), a.limit, a.go)
+    if a.redo_foreign:
+        stored = L.load(out_path(a.provider))
+        bad = {i for i, r in stored.items() if "mcp_tool_call" in (r.get("items") or []) or r.get("foreign_tools")}
+        asks = [dict(x, redo_of="tool call in the earlier answer (codex_apps web search)") for x in asks if x["id"] in bad]
+        print("redo: %d stored answers called a tool: %s" % (len(asks), ", ".join(sorted(x["id"] for x in asks))))
+    L.run(lanes[0], asks, out_path(a.provider), a.limit, a.go, force=a.redo_foreign)
 
 
 if __name__ == "__main__":

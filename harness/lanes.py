@@ -115,7 +115,7 @@ class ClaudeLane(Lane):
                                    timeout=TIMEOUT, stdin=subprocess.DEVNULL)
             except subprocess.TimeoutExpired:
                 return _finish(dict(res, status="failed", error="timeout %ds" % TIMEOUT), "", t0, s)
-        d, calls = None, []
+        d, calls, results = None, [], []
         if meter:  # stream-json: count tool_use blocks, take the final result event
             for line in p.stdout.splitlines():
                 try:
@@ -130,9 +130,14 @@ class ClaudeLane(Lane):
                         calls.append(b.get("name"))
                         if "search" in str(b.get("name")).lower():
                             res["search"] = "on"
+                for b in ((e.get("message") or {}).get("content") or []) if e.get("type") == "user" else []:
+                    if isinstance(b, dict) and b.get("type") == "tool_result":
+                        results.append(b.get("content"))
                 if e.get("type") == "result":
                     d = e
             res["tool_calls"], res["tools_called"] = len(calls), sorted(set(calls))
+            if mcp_config:
+                res["qloo"] = qloo_counts(results)
         else:
             try:
                 d = json.loads(p.stdout)
@@ -179,7 +184,9 @@ class CodexLane(Lane):
             c += ["--output-schema", schema]
         # Added to §3.6's line, for the no-web-search rule: the user config.toml loads a browser plugin and MCP
         # servers, and codex's own web_search tool is on ("cached") by default.
-        c += ["--ignore-user-config", "-c", 'web_search="disabled"', "-m", self.model]
+        c += ["--ignore-user-config", "-c", 'web_search="disabled"', "--disable", "apps", "-m", self.model]
+        # --disable apps: the built-in codex_apps connector exposes search_service.web_run, a web search that arrives
+        # as an mcp_tool_call (seen 28 Oct in 8 of 128 census answers and in the first meter ask)
         if mcp:  # meter "with" arm: one MCP server, only the qloo_places tool
             c += ["-c", "mcp_servers.unsaid.command=%s" % json.dumps(mcp["command"]),
                   "-c", "mcp_servers.unsaid.args=%s" % json.dumps(mcp["args"]),
@@ -198,7 +205,7 @@ class CodexLane(Lane):
                                    timeout=TIMEOUT, stdin=subprocess.DEVNULL, env=env)
             except subprocess.TimeoutExpired:
                 return _finish(dict(res, status="failed", error="timeout %ds" % TIMEOUT), "", t0, s)
-        text, err, kinds, calls = "", None, [], 0
+        text, err, kinds, calls, results, called = "", None, [], 0, [], []
         for line in p.stdout.splitlines():
             try:
                 e = json.loads(line)
@@ -220,12 +227,60 @@ class CodexLane(Lane):
                     res["search"] = "on"
                 elif k == "mcp_tool_call":
                     calls += 1
+                    called.append("%s/%s" % (it.get("server"), it.get("tool")))
+                    if it.get("server") != "unsaid":  # any tool but ours is foreign; a search one means search on
+                        res.setdefault("foreign_tools", []).append(called[-1])
+                        if re.search(r"search|web|browse|fetch", called[-1], re.I):
+                            res["search"] = "on"
+                    results.append(it.get("result"))
+                    if it.get("error") or it.get("status") == "failed":
+                        res.setdefault("tool_errors", []).append(str(it.get("error") or it.get("status"))[:200])
         res["items"] = sorted(set(x for x in kinds if x))
         if mcp:
-            res["tool_calls"] = calls
+            res["tool_calls"], res["tools_called"], res["qloo"] = calls, sorted(set(called)), qloo_counts(results)
         if err or (p.returncode and not text):
             return _finish(dict(res, status="failed", error=err or ("exit %s: %s" % (p.returncode, p.stderr[-300:]))), "", t0, s)
         return _finish(res, text, t0, s)
+
+
+def qloo_counts(payloads):
+    """Sum qloo_places' own qloo_calls {total, from_cache} over tool-result payloads (strings or objects)."""
+    tot = cached = n = 0
+    for p in payloads:
+        if isinstance(p, str):
+            try:
+                p = json.loads(p)
+            except Exception:
+                continue
+        q = _find_obj(p, "qloo_calls")
+        if isinstance(q, dict):
+            n += 1
+            tot += int(q.get("total") or 0)
+            cached += int(q.get("from_cache") or 0)
+    return {"results": n, "total": tot, "from_cache": cached, "network": tot - cached}
+
+
+def _find_obj(o, key, depth=0):
+    if depth > 6:
+        return None
+    if isinstance(o, dict):
+        if isinstance(o.get(key), dict):
+            return o[key]
+        for v in o.values():
+            r = _find_obj(v, key, depth + 1)
+            if r is not None:
+                return r
+    elif isinstance(o, list):
+        for v in o:
+            r = _find_obj(v, key, depth + 1)
+            if r is not None:
+                return r
+    elif isinstance(o, str) and key in o and depth < 6:
+        try:
+            return _find_obj(json.loads(o), key, depth + 1)
+        except Exception:
+            return None
+    return None
 
 
 def _find_key(o, key, depth=0):
@@ -419,10 +474,10 @@ def append(path, rec):
         f.flush()
 
 
-def run(lane, asks, path, limit=None, go=False, opts=None):
+def run(lane, asks, path, limit=None, go=False, opts=None, on_record=None, stop_if=None, force=False):
     """Ask every not-yet-stored ask on one lane with lane.workers threads. Stops the lane after 3 failures in a row
     (a plan limit or a dead key), or at once on a fatal error (Gemini 401/403/429, cap). Resume = run it again."""
-    done = done_ids(path)
+    done = set() if force else done_ids(path)  # force: re-ask these ids; the new record supersedes (last one wins)
     pending = [a for a in asks if a["id"] not in done]
     todo = pending[:limit] if limit is not None else pending
     print("[%s] %d asks, %d already stored, %d to ask%s" % (lane.name, len(asks), len(asks) - len(pending), len(todo),
@@ -436,6 +491,10 @@ def run(lane, asks, path, limit=None, go=False, opts=None):
             with lk:
                 if not q:
                     return
+                if stop_if and stop_if():
+                    print("[%s] stopping the lane: %s" % (lane.name, stop_if()), flush=True)
+                    stop.set()
+                    return
                 a = q.popleft()
             ask_opts = dict(opts or {}, **(a.get("opts") or {}))
             r = lane.ask(a["prompt"], **ask_opts)
@@ -445,6 +504,8 @@ def run(lane, asks, path, limit=None, go=False, opts=None):
             rec.update(r, lane="dated", provider=lane.provider, assistant=lane.assistant, runner=lane.name)
             fatal = rec.pop("fatal", False)
             append(path, rec)
+            if on_record:
+                on_record(rec)
             with lk:
                 st["asked"] += 1
                 if rec["status"] == "failed" and rec.get("transient"):

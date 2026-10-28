@@ -1,0 +1,27 @@
+[meter] sets (../data/sets.json order): stl-cedric, stl-jason, stl-nelly, stl-chuckberry, stl-sza, stl-wilco, stl-taylorswift, stl-jayz, stl-bigthief, stl-morganwallen
+[meter] qloo_places found (live mode)
+[claude] claude 2.1.312 (Claude Code)
+[codex] codex-cli 0.164.0, model pinned gpt-5.6-terra
+[codex] 20 asks, 0 already stored, 20 to ask
+[claude] 20 asks, 0 already stored, 20 to ask
+[claude] meter:stl:stl-jason:M2:alone:r1:claude ok 16.8s 12 names claude-sonnet-5-5
+[claude] meter:stl:stl-cedric:M1:alone:r1:claude ok 19.4s 12 names claude-sonnet-5-5
+[claude] meter:stl:stl-jason:M1:alone:r1:claude ok 28.4s 12 names claude-sonnet-5-5
+[codex] meter:stl:stl-cedric:M1:alone:r1:codex ok 32.3s 12 names gpt-5.6-terra
+[claude] meter:stl:stl-nelly:M1:alone:r1:claude ok 22.0s 12 names claude-sonnet-5-5
+[codex] meter:stl:stl-cedric:M2:alone:r1:codex ok 46.0s 12 names gpt-5.6-terra
+[claude] meter:stl:stl-nelly:M2:alone:r1:claude ok 26.8s 12 names claude-sonnet-5-5
+[claude] meter:stl:stl-cedric:M2:alone:r1:claude ok 50.2s 12 names claude-sonnet-5-5
+[claude] meter:stl:stl-chuckberry:M1:alone:r1:claude ok 22.2s 12 names claude-sonnet-5-5
+[codex] meter:stl:stl-jason:M1:alone:r1:codex ok 24.3s 12 names gpt-5.6-terra
+[codex] meter:stl:stl-jason:M2:alone:r1:codex ok 13.6s 12 names gpt-5.6-terra
+[claude] meter:stl:stl-chuckberry:M2:alone:r1:claude ok 25.2s 12 names claude-sonnet-5-5
+[claude] meter:stl:stl-sza:M1:alone:r1:claude ok 27.9s 12 names claude-sonnet-5-5
+[claude] meter:stl:stl-sza:M2:alone:r1:claude ok 28.0s 12 names claude-sonnet-5-5
+[codex] meter:stl:stl-nelly:M2:alone:r1:codex ok 19.4s 12 names gpt-5.6-terra
+[claude] meter:stl:stl-wilco:M1:alone:r1:claude ok 29.4s 12 names claude-sonnet-5-5
+[claude] meter:stl:stl-taylorswift:M1:alone:r1:claude ok 15.2s 12 names claude-sonnet-5-5
+[codex] meter:stl:stl-nelly:M1:alone:r1:codex ok 36.9s 12 names gpt-5.6-terra
+[claude] meter:stl:stl-jayz:M1:alone:r1:claude ok 18.4s 12 names claude-sonnet-5-5
+[claude] meter:stl:stl-taylorswift:M2:alone:r1:claude ok 20.6s 12 names claude-sonnet-5-5
+[claude] meter:stl:stl-wilco:M2:alone:r1:claude ok 39.1s 12 names claude-sonnet-5-5

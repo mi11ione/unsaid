@@ -1,0 +1,1 @@
+./fresh_then_meter.sh: line 5: 10872 Terminated: 15          caffeinate -i python3 -I fresh_asks.py --lane claude,codex --go > runs/logs/fresh.log 2>&1

@@ -1,0 +1,60 @@
+{
+ "protocol": "data/meter.protocol.md",
+ "lanes": [
+  "codex"
+ ],
+ "reps": 1,
+ "sets": [
+  {
+   "set": "stl-cedric",
+   "city": "stl",
+   "complete": false
+  },
+  {
+   "set": "stl-jason",
+   "city": "stl",
+   "complete": false
+  },
+  {
+   "set": "stl-nelly",
+   "city": "stl",
+   "complete": false
+  },
+  {
+   "set": "stl-chuckberry",
+   "city": "stl",
+   "complete": false
+  },
+  {
+   "set": "stl-sza",
+   "city": "stl",
+   "complete": false
+  },
+  {
+   "set": "stl-wilco",
+   "city": "stl",
+   "complete": false
+  },
+  {
+   "set": "stl-taylorswift",
+   "city": "stl",
+   "complete": false
+  },
+  {
+   "set": "stl-jayz",
+   "city": "stl",
+   "complete": false
+  },
+  {
+   "set": "stl-bigthief",
+   "city": "stl",
+   "complete": false
+  },
+  {
+   "set": "stl-morganwallen",
+   "city": "stl",
+   "complete": false
+  }
+ ],
+ "qloo_network_calls": 6
+}

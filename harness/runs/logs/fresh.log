@@ -1,0 +1,30 @@
+hash check: 40 fresh questions (+80 with loves): 0 collisions against 419 wall/census phrasings (folded) and 669 (exact sha256); every sha256 field matches its text
+with loves (stl): STL-01, STL-02, STL-03, STL-04
+with loves (nyc): NYC-01, NYC-02, NYC-03, NYC-04
+[claude] claude 2.1.312 (Claude Code)
+[codex] codex-cli 0.164.0, model pinned gpt-5.6-terra
+[claude] 120 asks, 0 already stored, 120 to ask
+[codex] 120 asks, 0 already stored, 120 to ask
+[codex] fresh:stl:-:STL-02:codex ok 6.1s 0 names gpt-5.6-terra
+[claude] fresh:stl:-:STL-02:claude ok 8.0s 0 names claude-sonnet-5-5
+[claude] fresh:stl:-:STL-03:claude ok 8.6s 0 names claude-sonnet-5-5
+[codex] fresh:stl:-:STL-01:codex ok 8.6s 0 names gpt-5.6-terra
+[codex] fresh:stl:-:STL-03:codex ok 4.0s 0 names gpt-5.6-terra
+[claude] fresh:stl:-:STL-04:claude ok 11.7s 0 names claude-sonnet-5-5
+[claude] fresh:stl:-:STL-01:claude ok 12.5s 0 names claude-sonnet-5-5
+[claude] fresh:stl:-:STL-07:claude ok 6.9s 0 names claude-sonnet-5-5
+[claude] fresh:stl:-:STL-05:claude ok 15.9s 0 names claude-sonnet-5-5
+[claude] fresh:stl:-:STL-06:claude ok 15.9s 0 names claude-sonnet-5-5
+[codex] fresh:stl:-:STL-04:codex ok 19.3s 0 names gpt-5.6-terra
+[claude] fresh:stl:-:STL-08:claude ok 17.2s 0 names claude-sonnet-5-5
+[claude] fresh:stl:-:STL-10:claude ok 6.1s 0 names claude-sonnet-5-5
+[claude] fresh:stl:-:STL-11:claude ok 6.8s 0 names claude-sonnet-5-5
+[claude] fresh:stl:-:STL-09:claude ok 13.5s 0 names claude-sonnet-5-5
+[claude] fresh:stl:-:STL-13:claude ok 6.3s 0 names claude-sonnet-5-5
+[claude] fresh:stl:-:STL-12:claude ok 7.1s 0 names claude-sonnet-5-5
+[codex] fresh:stl:-:STL-05:codex ok 30.6s 0 names gpt-5.6-terra
+[claude] fresh:stl:-:STL-15:claude ok 13.7s 0 names claude-sonnet-5-5
+[codex] fresh:stl:-:STL-06:codex ok 18.5s 0 names gpt-5.6-terra
+[claude] fresh:stl:-:STL-14:claude ok 15.8s 0 names claude-sonnet-5-5
+[codex] fresh:stl:-:STL-07:codex ok 7.6s 0 names gpt-5.6-terra
+[claude] fresh:stl:-:STL-17:claude ok 11.8s 0 names claude-sonnet-5-5

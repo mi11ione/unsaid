@@ -23,6 +23,12 @@ sys.path.insert(0, HERE)
 import lanes as L
 import phrasings as P
 
+# v1-subreddit-context (orchestrator, 28 Oct; data/fresh_asks.deviations.md): the posts rely on the subreddit for the
+# city, so exactly one context line goes before the verbatim text. Nothing else changes.
+VARIANT = "v1-subreddit-context"
+PREFIX = {"reddit r/StLouis": "Posted in r/StLouis (St. Louis, Missouri):\n\n",
+          "reddit r/AskNYC": "Posted in r/AskNYC (New York City):\n\n",
+          "reddit r/FoodNYC": "Posted in r/FoodNYC (New York City):\n\n"}
 FRESH = os.environ.get("UNSAID_FRESH") or os.path.join(os.path.dirname(HERE), "data", "fresh_asks.json")
 OUT = os.path.join(L.RUNS, "fresh.jsonl")
 
@@ -35,11 +41,15 @@ def build(d, sets, suffix=False):
     qs = d.get("questions", d) if isinstance(d, dict) else d
     wl = (d.get("with_loves") if isinstance(d, dict) else None) or {}
     out = []
+    unknown = sorted({q.get("source") for q in qs if q.get("source") not in PREFIX})
+    if unknown:
+        sys.exit("refusing: no context line for source(s) %s" % unknown)
     for ck in P.CITY:
         cq = [q for q in qs if q["city"] == ck]
         if not cq:
             continue
-        four = [q for q in cq if q["id"] in set(wl.get(ck, []))] or cq[:4]
+        four = [q for q in cq if q["id"] in set(wl.get(ck, []))] or cq[:4]  # default: the first 4 in file order
+        four_ids = [q["id"] for q in four[:4]]
         for q in cq:
             out.append({"id": "fresh:%s:-:%s" % (ck, q["id"]), "kind": "fresh", "city": ck, "set": None,
                         "phrasing_id": q["id"], "phrasing": q["text"], "url": q.get("url"), "with_loves": False})
@@ -47,9 +57,12 @@ def build(d, sets, suffix=False):
             for q in four[:4]:
                 out.append({"id": "fresh:%s:%s:%s+loves" % (ck, sid, q["id"]), "kind": "fresh", "city": ck, "set": sid,
                             "loves": loves, "phrasing_id": q["id"] + "+loves", "phrasing": q["text"] + love_line(loves),
-                            "url": q.get("url"), "with_loves": True})
+                            "url": q.get("url"), "with_loves": True, "with_loves_ids": four_ids})
+    src = {q["id"]: q["source"] for q in qs}
     for a in out:
-        a.update(prompt=a["phrasing"] + (P.SUFFIX_V2 if suffix else ""), prompt_v="fresh-" + ("v2suffix" if suffix else "verbatim"),
+        qid = a["phrasing_id"].replace("+loves", "")
+        a.update(variant=VARIANT, context_prefix=PREFIX[src[qid]])
+        a.update(prompt=PREFIX[src[qid]] + a["phrasing"] + (P.SUFFIX_V2 if suffix else ""), prompt_v="fresh-" + ("v2suffix" if suffix else "verbatim"),
                  suffix=suffix, verbatim=not suffix)
     return out
 
@@ -69,10 +82,28 @@ def main():
     hoods = json.load(open(os.path.join(HERE, "neighbourhoods.json")))["cities"] if os.path.exists(os.path.join(HERE, "neighbourhoods.json")) else {}
     base = build(d, sets, a.suffix)
     wall = P.all_wall_hashes(sets, hoods)
-    clash = [x["id"] for x in base if P.qhash(x["phrasing"]) in wall]
-    if clash:
-        sys.exit("refusing: %d fresh questions hash-match a wall/census phrasing: %s" % (len(clash), clash[:5]))
-    print("hash check: %d fresh questions, 0 clash with %d wall/census phrasings" % (len(base), len(wall)))
+    clash = [x["id"] for x in base if P.qhash(x["phrasing"]) in wall or P.qhash(x["prompt"]) in wall]
+    # the protocol's own rule too: sha256(text, UTF-8) against sha256 of every wall/census phrasing and prompt, exact
+    import hashlib
+    sh = lambda t: hashlib.sha256(t.encode("utf-8")).hexdigest()  # noqa: E731
+    exact = {sh(a["phrasing"]) for a in json.load(open(os.path.join(HERE, "asks.json")))} | \
+            {sh(a["prompt"]) for a in json.load(open(os.path.join(HERE, "asks.json")))}
+    for ck in P.CITY:
+        exact |= {sh(t) for _, t in P.city_wall(ck)} | {sh(t + P.SUFFIX_V2) for _, t in P.city_wall(ck)}
+        for _, loves in sets.get(ck, []):
+            exact |= {sh(t) for _, t in P.taste(ck, loves)} | {sh(t + P.SUFFIX_V2) for _, t in P.taste(ck, loves)}
+        exact |= {sh(P.street(ck, h)) for h in hoods.get(ck, [])}
+    qs = d.get("questions", d) if isinstance(d, dict) else d
+    bad_sha = [q["id"] for q in qs if q.get("sha256") and q["sha256"] != sh(q["text"])]
+    exact_clash = [q["id"] for q in qs if sh(q["text"]) in exact] + [x["id"] for x in base if sh(x["prompt"]) in exact]
+    if clash or exact_clash or bad_sha:
+        sys.exit("refusing: collisions folded %s, exact %s; sha256 field mismatch %s" % (clash[:5], exact_clash[:5], bad_sha[:5]))
+    print("hash check: %d fresh questions (+%d with loves): 0 collisions against %d wall/census phrasings (folded) and "
+          "%d (exact sha256); every sha256 field matches its text" % (len(qs), len(base) - len(qs), len(wall), len(exact)))
+    for ck in P.CITY:
+        f = [x for x in base if x["city"] == ck and x["with_loves"]]
+        if f:
+            print("with loves (%s): %s" % (ck, ", ".join(f[0]["with_loves_ids"])))
     names = [x for x in (list(L.LANES) if a.lane == "all" else a.lane.split(",")) if x != "gemini"]
     if "gemini" in a.lane or a.lane == "all":
         print("[gemini] not run: free-tier 20/day (orchestrator, 28 Oct)")
