@@ -263,6 +263,12 @@ details.log[open] summary::after { content: ' ⌄'; }
 .maplegend .k { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
 .maplegend .k.g { background: #6a6a6a; } .maplegend .k.r { background: var(--red); } .maplegend .k.w { background: var(--white); box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px rgba(242,239,230,.35); }
 .agentblk { margin-top: 34px; }
+table.k12 { width: 100%; border-collapse: collapse; margin: 8px 0 6px; font-size: 12px; }
+table.k12 th { text-align: left; font-weight: 400; color: var(--dim); font-size: 10.5px; padding: 0 8px 6px 0; border-bottom: 1px solid var(--rule2); vertical-align: bottom; }
+table.k12 td { padding: 7px 8px 7px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+table.k12 td:nth-child(n+2), table.k12 th:nth-child(n+2) { text-align: right; white-space: nowrap; }
+table.k12 th:nth-child(2) { white-space: normal; }
+table.k12 tr.us td { color: var(--white); font-weight: 600; }
 .agentblk .q { font: 400 17px/1.4 var(--serif); margin: 12px 0 8px; }
 .agentblk pre { background: var(--panel); border: 1px solid var(--rule2); padding: 10px 12px; font: 11px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; }
 .agentblk .a { font: 400 22px/1.35 var(--serif); color: var(--white); margin: 14px 0 14px; max-width: 760px; }

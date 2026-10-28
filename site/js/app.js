@@ -473,7 +473,7 @@
       const k = R.picks && R.picks[0] && R.picks[0].fit_rank, SR = new Set((R.diag && R.diag.struck_fit_ranks) || []);
       const above = k > 1 && [...Array(k - 1)].every((_, j) => SR.has(j + 1))
         ? `<p class="above">${k === 2 ? 'Qloo’s top match for your taste was' : `Qloo’s top ${k - 1} for your taste were`} on the AIs’ lists, so ${k === 2 ? 'it is' : 'they are'} crossed out.</p>` : '';
-      // restaurants and bars first (Share.tier), then by how many asks named it
+      // most-named first; names Qloo says are not a restaurant or bar last (Share.tier)
       const top = [...st.wall.values()].filter(w => w.name).sort((a, b) => Share.tier(a) - Share.tier(b) || b.hits.size - a.hits.size).slice(0, 40);
       const W = Share.wallCount(R) ?? st.wall.size;
       const strip = top.length ? `<div class="xstrip"><div class="xnames">${top.map(w => `<span class="xn">${esc(UM.cleanName(w.name))}</span>`).join(' ')}</div>
@@ -821,8 +821,14 @@
       if (K.P != null && K.U != null) T.push(`${K.P} places from Qloo → ${K.U} kept` + [['closed', F.closed], [`rated below ${CFG.floor.rating}`, F.below_43], [`outside ${K.R_mi} mi`, F.outside_R], ['not a restaurant or bar', F.not_venue]]
         .filter(([, v]) => v != null).map(([k, v]) => ` · ${k} ${v}`).join(''));
       const E = WE;
-      // held-out only: the dated asks built the list, so UNSAID's count on them is zero by construction
-      const k12 = E && E.held_out_cards != null ? `<p>On held-out questions, how many of our ${E.sets} preset sets’ ${E.held_out_cards} cards some AI named: Qloo’s plain taste order <b>${E.held_out_plain}</b> → our score without the list <b>${E.held_out_no_strike}</b> → <b>UNSAID ${E.held_out_unsaid}</b>. Held-out = questions never used to build the list.</p>` : '';
+      // held-out only (the dated asks built the list, so UNSAID's count on them is zero by construction): the k12 arms
+      // as the Devpost reports them (data/wall_effect.json from build_wall_effect.py, the source freeze_numbers reads)
+      const A = E && E.arms, row = (label, a, b) => a ? `<tr${b ? ' class="us"' : ''}><td>${label}</td><td>${fmt1(a.named)}</td><td>${a.fit_med != null ? a.fit_med : '–'}</td></tr>` : '';
+      const k12 = A ? `<p>Held-out questions, never used to build the list, over our ${E.sets} preset sets (${A.unsaid ? A.unsaid.cards : 7 * E.sets} cards each way):</p>
+        <table class="k12"><thead><tr><th>Seven chosen by…</th><th>named by held-out questions</th><th>fits you</th></tr></thead><tbody>
+        ${row('Qloo’s plain taste order', A.plain)}${row('our score, nothing crossed out', A.score_only)}${row('seven random places that survive the list', A.random)}${row('UNSAID', A.unsaid, true)}</tbody></table>
+        <p class="dim">“Fits you”: the median card’s fit percentile for your taste (100 = fits you best). Random survivors are named about as rarely but fit you far worse.${E.kappa != null ? ` A blind Claude labeller agrees with our matcher on what counts as named (κ ${Number(E.kappa).toFixed(2)}).` : ''}</p>`
+        : E && E.held_out_cards != null ? `<p>On held-out questions, how many of our ${E.sets} preset sets’ ${E.held_out_cards} cards some AI named: Qloo’s plain taste order <b>${E.held_out_plain}</b> → our score without the list <b>${E.held_out_no_strike}</b> → <b>UNSAID ${E.held_out_unsaid}</b>. Held-out = questions never used to build the list.</p>` : '';
       // similar tastes share places: each cluster's pairwise range, then every other same-city pair (data/overlap.json)
       const rng = C => C.min === C.max ? String(C.min) : `${C.min}–${C.max}`;
       const CL = OV && (OV.clusters || (OV.cluster ? [{ label: OV.cluster, n: OV.cluster_n, min: OV.cluster_min, max: OV.cluster_max }] : []));

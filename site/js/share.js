@@ -27,17 +27,16 @@
     return v == null ? null : v;
   }
 
-  // the struck names as texture, restaurants and bars first: a name that resolved to a Qloo place that passed the
-  // restaurant-or-bar check (qloo_id, and not "not a restaurant or bar"), most-mentioned first; then names Qloo was
-  // never asked about; landmarks Qloo says are not a restaurant or bar last. One entry per place.
-  const tier = w => w.qloo_id && w.reason !== 'not a restaurant or bar' ? 0 : w.reason === 'not a restaurant or bar' ? 2 : 1;
+  // the struck names as texture, most-named first (Mai Lee, Gioia's, Pappy's lead); only the names Qloo says are not a
+  // restaurant or bar (a cemetery, a museum) go to the end. One entry per place.
+  const tier = w => w.reason === 'not a restaurant or bar' ? 1 : 0;
   function wallNames(R) {
     const by = new Map();
     for (const w of (R && R.wall) || []) {
       if (!w.name) continue;
       const k = w.place || w.norm || w.name, o = by.get(k);
-      if (o) { o.n++; if (w.qloo_id && !o.qloo_id) { o.qloo_id = w.qloo_id; o.reason = w.reason; } }
-      else by.set(k, { name: w.name, qloo_id: w.qloo_id, reason: w.reason, n: 1 });
+      if (o) { o.n++; if (w.reason === 'not a restaurant or bar') o.reason = w.reason; }
+      else by.set(k, { name: w.name, reason: w.reason, n: 1 });
     }
     return [...by.values()].sort((a, b) => tier(a) - tier(b) || b.n - a.n || String(a.name).localeCompare(String(b.name)))
       .map(o => (window.UM ? UM.cleanName(o.name) : o.name));
