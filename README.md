@@ -14,10 +14,10 @@ Not an anti-recommender: it removes what the AIs measurably tell everyone, then 
 
 **1. The live demo.** Open ⟦LIVE_URL⟧ and tap **Cedric · St. Louis**. Tap a struck name to see which AI named it and when; tap a card for its two ranks; paste any AI's answer into the box under the seven and a card it names burns. Or type three things you love and pick St. Louis or New York: cards arrive in about 18 seconds (about a minute more if the server is asleep).
 
-**2. From your agent, no Qloo key.** The MCP server runs in remote mode against the hosted API. The token is in the Devpost testing instructions (until 30 Oct 23:45 ET; after that, leave it out).
+**2. From your agent, no Qloo key, one paste.** Add `https://unsaid-ang.pages.dev/mcp?token=<token>` as a custom connector in Claude (Settings → Connectors), or run the line below. The token is in the Devpost testing instructions (until 30 Oct 23:45 ET; after that, leave out `?token=…`).
 
 ```bash
-claude mcp add unsaid -e UNSAID_MODE=remote -e UNSAID_TOKEN=<token> -- python3 -I /path/to/unsaid/agent/unsaid_mcp.py
+claude mcp add --transport http unsaid "https://unsaid-ang.pages.dev/mcp?token=<token>"
 # then ask Claude: "I love Frankie Beverly & Maze, The Original Kings of Comedy and rib tips. Where should I go in St. Louis tonight?"
 ```
 
@@ -191,7 +191,9 @@ The list is not every place an AI could name. Claude's St. Louis census covered 
 
 ## MCP
 
-`agent/unsaid_mcp.py` is a stdio MCP server in one file, standard library only. By default (`UNSAID_MODE=remote`) it calls the hosted API at https://unsaid-ang.pages.dev, so an agent gets the same live Qloo ranks and the same dated AI answers as the site. You don't need a Qloo key or the engine. Until 30 Oct 23:45 ET the API needs the token from the Devpost testing instructions. After that, leave `UNSAID_TOKEN` out.
+**Hosted:** `https://unsaid-ang.pages.dev/mcp` is the same tool over MCP Streamable HTTP (`server/mcp_http.py`: POST JSON-RPC, a JSON reply or an SSE stream for `tools/call`, stateless, no session). It runs every call through the same path as `/api/unsaid`, with the same cache and per-IP limits, and returns the same `structuredContent` as the stdio server. Until 30 Oct 23:45 ET it needs the token, as `?token=` in the URL or `Authorization: Bearer`. Add it as a custom connector in Claude (Settings → Connectors), or `claude mcp add --transport http unsaid "https://unsaid-ang.pages.dev/mcp?token=<token>"`. `python3 -I agent/test_client.py --http <url>` checks it.
+
+**Local (stdio):** `agent/unsaid_mcp.py` is a stdio MCP server in one file, standard library only. By default (`UNSAID_MODE=remote`) it calls the hosted API at https://unsaid-ang.pages.dev, so an agent gets the same live Qloo ranks and the same dated AI answers as the site. You don't need a Qloo key or the engine. Until 30 Oct 23:45 ET the API needs the token from the Devpost testing instructions. After that, leave `UNSAID_TOKEN` out.
 
 Claude Code: the command in *Five minutes* above.
 

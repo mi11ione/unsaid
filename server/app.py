@@ -32,6 +32,7 @@ import cache as C  # noqa: E402
 import limits as L  # noqa: E402
 from timing import Timing  # noqa: E402
 from gemini_live import GeminiLane  # noqa: E402
+import mcp_http  # noqa: E402  the hosted MCP endpoint, POST /mcp
 
 try:
     from zoneinfo import ZoneInfo
@@ -545,12 +546,29 @@ class Handler(BaseHTTPRequestHandler):
     def do_HEAD(self):
         self.do_GET()
 
+    def do_POST(self):
+        self._t0 = time.monotonic()
+        try:
+            if (urllib.parse.urlsplit(self.path).path.rstrip("/") or "/") == "/mcp":
+                return mcp_http.post(self, sys.modules[__name__])
+            return self._json(405, {"status": "method_not_allowed"}, {"Allow": "GET, HEAD"})
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+
+    def do_DELETE(self):
+        self._t0 = time.monotonic()
+        if (urllib.parse.urlsplit(self.path).path.rstrip("/") or "/") == "/mcp":
+            return mcp_http.not_allowed(self)
+        return self._json(405, {"status": "method_not_allowed"}, {"Allow": "GET, HEAD"})
+
     def do_GET(self):
         self._t0 = time.monotonic()
         try:
             u = urllib.parse.urlsplit(self.path)
             qs = urllib.parse.parse_qs(u.query, keep_blank_values=False)
             path = u.path.rstrip("/") or "/"
+            if path == "/mcp":                        # MCP Streamable HTTP: POST only (no server-to-client stream)
+                return mcp_http.not_allowed(self)
             if path == "/api/health":
                 a, w = ADMIT.depth()
                 cur, peak = rss_mb()

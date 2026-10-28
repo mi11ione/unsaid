@@ -50,7 +50,6 @@ TOKEN = (os.environ.get("UNSAID_TOKEN") or "").strip()
 UA = "unsaid-mcp/%s (+https://unsaid-ang.pages.dev/agents.html)" % SERVER_INFO["version"]
 REMOTE_TIMEOUT_S = float(os.environ.get("UNSAID_REMOTE_TIMEOUT_S", "150"))
 OUT = sys.stdout                      # the protocol channel; nothing else may write here
-sys.stdout = sys.stderr               # stray prints from the kit land on stderr
 
 if not REMOTE:                        # the local kit; remote mode needs none of it
     sys.path.insert(0, KIT)
@@ -663,7 +662,9 @@ def call_tool(params):
             "structuredContent": r, "isError": False}
 
 
-def handle(msg, state):
+def handle(msg, state, tools=None, call=None):
+    """One JSON-RPC request -> result. tools/call: the hosted /mcp endpoint (server/mcp_http.py) passes its own
+    tool list and call function; the stdio server uses TOOLS and call_tool."""
     method, params = msg.get("method"), msg.get("params") or {}
     meta = params.get("_meta") or {}
     pv = meta.get("io.modelcontextprotocol/protocolVersion")
@@ -685,9 +686,9 @@ def handle(msg, state):
     elif method == "ping":
         r = {}
     elif method == "tools/list":
-        r = {"tools": TOOLS}
+        r = {"tools": TOOLS if tools is None else tools}
     elif method == "tools/call":
-        r = call_tool(params)
+        r = (call or call_tool)(params)
     else:
         raise RpcError(-32601, "Method not found: %s" % method)
     if modern:
@@ -701,6 +702,7 @@ def send(obj):
 
 
 def main():
+    sys.stdout = sys.stderr               # stray prints from the kit land on stderr
     state = {}
     log("ready (mode=%s, %s)" % (MODE, ("%s, token %s" % (URL, "set" if TOKEN else "not set")) if REMOTE else "kit=" + KIT))
     for line in sys.stdin:

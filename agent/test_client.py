@@ -2,6 +2,8 @@
 """Minimal MCP stdio client: spawns unsaid_mcp.py and drives it like a host would. Standard library only.
   python3 -I test_client.py            -> fake mode checks + a remote smoke test; wire log in out/transcript.jsonl;
                                           exits 1 on any failed check
+  python3 -I test_client.py --http https://unsaid-ang.pages.dev/mcp
+                                       -> only the hosted Streamable HTTP endpoint (UNSAID_TOKEN from the env)
   python3 -I test_client.py --record demo/live_transcript.jsonl
                                        -> also records one live agent session against the hosted API (remote mode)
 Fake mode runs both eras: legacy (initialize -> notifications/initialized -> tools/list -> tools/call) and modern
@@ -287,7 +289,97 @@ def record(path):
     print("\n== recorded %d lines to %s (token redacted)\n%s" % (len(log) + 2, path, tail["text"]))
 
 
+def _http(url, obj=None, method="POST", token=None, accept="application/json, text/event-stream", pv=None):
+    """One request to a Streamable HTTP MCP endpoint -> (status, headers, [JSON-RPC messages])."""
+    import urllib.error
+    import urllib.request
+    headers = {"User-Agent": "unsaid-test-client/0.3", "Accept": accept, "Content-Type": "application/json"}
+    if token:
+        headers["Authorization"] = "Bearer " + token
+    if pv:
+        headers["MCP-Protocol-Version"] = pv
+    data = json.dumps(obj).encode() if obj is not None else None
+    req = urllib.request.Request(url, data=data, headers=headers, method=method)
+    try:
+        resp = urllib.request.urlopen(req, timeout=180)
+    except urllib.error.HTTPError as e:
+        resp = e
+    body = resp.read().decode("utf-8", "replace")
+    ctype = resp.headers.get("Content-Type") or ""
+    msgs = []
+    if "text/event-stream" in ctype:
+        for block in body.split("\n\n"):
+            data_lines = [l[5:].strip() for l in block.splitlines() if l.startswith("data:")]
+            if data_lines:
+                msgs.append(json.loads("\n".join(data_lines)))
+    elif body.strip():
+        msgs.append(json.loads(body))
+    return resp.status if hasattr(resp, "status") else resp.code, ctype, msgs
+
+
+def run_http(url):
+    """The hosted MCP endpoint (MCP Streamable HTTP): handshake, tools, a live call over SSE and over JSON, errors."""
+    print("\n== Streamable HTTP: %s" % url)
+    tok = os.environ.get("UNSAID_TOKEN")
+    pv = "2025-11-25"
+    st, ct, m = _http(url, {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
+        "protocolVersion": pv, "capabilities": {}, "clientInfo": {"name": "unsaid-test-client", "version": "0.3"}}},
+        token=tok)
+    check(st == 200 and "application/json" in ct and m and m[0]["result"]["protocolVersion"] == pv,
+          "http: initialize -> 200 JSON, protocol %s" % (m[0].get("result", {}).get("protocolVersion") if m else None))
+    st, _, m = _http(url, {"jsonrpc": "2.0", "method": "notifications/initialized"}, token=tok, pv=pv)
+    check(st == 202 and not m, "http: notification -> 202, no body")
+    st, _, m = _http(url, {"jsonrpc": "2.0", "id": 2, "method": "tools/list"}, token=tok, pv=pv)
+    tools = m[0]["result"]["tools"] if m and "result" in m[0] else []
+    check([t["name"] for t in tools] == ["unsaid_places"], "http: tools/list -> unsaid_places")
+    t0 = time.monotonic()
+    st, ct, m = _http(url, {"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {
+        "name": "unsaid_places", "arguments": CEDRIC_PAIRS, "_meta": {"progressToken": "p1"}}}, token=tok, pv=pv)
+    final = [x for x in m if x.get("id") == 3]
+    prog = [x for x in m if x.get("method") == "notifications/progress"]
+    res = final[0]["result"] if final and "result" in final[0] else {}
+    sc = res.get("structuredContent") or {}
+    check("text/event-stream" in ct and len(final) == 1, "http: tools/call -> SSE, one response event (%d progress, "
+          "%.0f s)" % (len(prog), time.monotonic() - t0))
+    if sc.get("status") in ("limited", "degraded", "queued", "waking") or res.get("isError"):
+        print("  [SKIP] the engine is busy or rate-limited: %s" % (res.get("content") or [{}])[0].get("text", "")[:160])
+    else:
+        errs = validate(sc, tools[0]["outputSchema"]) if tools else ["no tools"]
+        check(not errs, "http: structuredContent validates against outputSchema" + ("" if not errs else ": %s" % errs[:3]))
+        check(sc.get("status") in ("ok", "partial", "empty_few") and 1 <= len(sc.get("picks", [])) <= 7 and
+              all(p["ai_named"] == 0 for p in sc["picks"]),
+              "http: %s, %d picks, each named by 0 of %s AI answers" % (sc.get("status"), len(sc.get("picks", [])),
+                                                                       sc.get("wall", {}).get("answers")))
+        show_call({"result": res}, "tools/call unsaid_places (Streamable HTTP) -> content[0]")
+    st, ct, m = _http(url, {"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": {
+        "name": "unsaid_places", "arguments": CEDRIC_PAIRS}}, token=tok, pv=pv, accept="application/json")
+    check(st == 200 and "application/json" in ct and m and m[0].get("id") == 4 and "result" in m[0],
+          "http: tools/call with Accept: application/json -> one JSON response (cached: %s)"
+          % ((m[0]["result"].get("structuredContent") or {}).get("host", {}).get("cached") if m and "result" in m[0] else None))
+    st, _, m = _http(url, {"jsonrpc": "2.0", "id": 5, "method": "tools/call", "params": {
+        "name": "unsaid_places", "arguments": {"loves": [["Al Green", "artist"]], "city": "Chicago, IL"}}},
+        token=tok, pv=pv, accept="application/json")
+    check(m and m[0]["result"].get("isError") is True, "http: unsupported city -> isError: %s"
+          % (m[0]["result"]["content"][0]["text"][:90] if m and "result" in m[0] else m))
+    st, _, m = _http(url, {"jsonrpc": "2.0", "id": 6, "method": "nope"}, token=tok, pv=pv)
+    check(m and m[0].get("error", {}).get("code") == -32601, "http: unknown method -> -32601")
+    st, _, _ = _http(url, method="GET", token=tok)
+    check(st == 405, "http: GET -> 405 (no server stream)")
+    st, _, m = _http(url, {"jsonrpc": "2.0", "id": 7, "method": "ping"}, token=tok, pv="1900-01-01")
+    check(st == 400, "http: unknown MCP-Protocol-Version -> 400")
+    if tok:
+        st, _, _ = _http(url, {"jsonrpc": "2.0", "id": 8, "method": "ping"}, token="wrong")
+        check(st == 401, "http: wrong token -> 401")
+        sep = "&" if "?" in url else "?"
+        st, _, m = _http(url + sep + "token=" + tok, {"jsonrpc": "2.0", "id": 9, "method": "ping"})
+        check(st == 200 and m and m[0].get("result") == {}, "http: ?token= in the URL works (the connector form)")
+
+
 if __name__ == "__main__":
+    if "--http" in sys.argv:                  # only the Streamable HTTP endpoint
+        run_http(sys.argv[sys.argv.index("--http") + 1])
+        print("\n%d failed checks" % len(FAILS))
+        sys.exit(1 if FAILS else 0)
     t0 = time.time()
     err = run_legacy()
     run_modern()
