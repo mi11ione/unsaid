@@ -32,7 +32,7 @@ DEFAULT_CACHE = os.path.join(KIT_DIR, ".cache")  # gitignored; Qloo data must ne
 USER_AGENT = "Python-urllib/%d.%d" % sys.version_info[:2]  # generic on purpose
 
 RATE, BURST = 8.0, 10  # live P9 headers: 10/s per key, 50k/month; 8/s steady, bursts of 10
-TIMEOUT_POOL, TIMEOUT_RESCORE, TIMEOUT_DEFAULT = 12.0, 3.0, 12.0
+TIMEOUT_POOL, TIMEOUT_RESCORE, TIMEOUT_DEFAULT = 12.0, 6.0, 12.0   # rescore 3 -> 6 s: concurrent C6′ calls answer in up to 5.6 s live
 HARD_CAP_S = 90.0
 TTL = {"/search": 30 * 86400, "/v2/tags": 30 * 86400, "/v2/insights": 86400, "/entities": 30 * 86400}
 DEFAULT_AFFINITY = 0.7649962877984056   # Qloo's default affinity ("0.765"; field-observed value), compared within 1e-6
