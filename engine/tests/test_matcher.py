@@ -135,6 +135,28 @@ class TestR5BrandContainment(unittest.TestCase):
         self.assertEqual(sorted(M.PoolIndex(pool).r5("La Goulue")), ["c"])
 
 
+class TestContainmentNeedsEvidence(unittest.TestCase):
+    """K4 precision golden cases (28 Oct): weak-word and short-token containment no longer strikes another place,
+    while the exact name (R1) and real one-word brands still do."""
+
+    def strike(self, raw, names):
+        pool = [{"entity_id": str(i), "name": n} for i, n in enumerate(names)]
+        struck, _ = M.match_wall([raw], pool, None)
+        return sorted(pool[int(i)]["name"] for i in struck)
+
+    def test_weak_words_dont_contain(self):
+        self.assertEqual(self.strike("Old Town Bar", ["Old Town Hot Pot", "Old Town Bar NYC"]), ["Old Town Bar NYC"])
+        self.assertEqual(self.strike("Little Branch", ["Little Branch Cafe"]), ["Little Branch Cafe"])   # R1 core
+
+    def test_short_lone_token_doesnt_contain(self):
+        self.assertEqual(self.strike("Pat's Bar & Grill", ["Pat Connolly Tavern", "Pat's Bar and Grill"]),
+                         ["Pat's Bar and Grill"])
+
+    def test_real_one_word_brands_still_contain(self):
+        self.assertEqual(self.strike("Gioia's", ["Gioia's Deli Downtown"]), ["Gioia's Deli Downtown"])
+        self.assertEqual(self.strike("Pappy's", ["Pappy's Smokehouse Midtown"]), ["Pappy's Smokehouse Midtown"])
+
+
 class TestK4Golden(unittest.TestCase):
     def test_zero_false_survivors(self):
         labels = load_labels()

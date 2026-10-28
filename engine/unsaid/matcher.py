@@ -9,6 +9,7 @@ Pipeline for each raw AI-named string r, against the fixed pool U (Qloo places) 
   R3  reverse containment: a pool name's distinctive tokens (>=2) all appear in r (pool name is the shorter brand)
       R2/R3 run when r matched in U or is unresolved. They are skipped when r resolved strongly outside U.
   R4  guard (unresolved only): a pool name sharing >= 60% of r's distinctive tokens is struck ("may be what X meant")
+  R2/R3 need one non-weak distinctive word, and a one-word R2 needs a token of 4+ letters (K4 precision, 28 Oct).
   R5  brand containment (always, even when /search resolved r to a branch outside U): r's brand, i.e. its head with
       city/borough words and generic suffixes dropped, is a whole-word token sequence at the START of a pool name or
       right after "at" in it ("Ippudo NY" -> "IPPUDO Hell's Kitchen"; "La Goulue" -> "Omar's at La Goulue"). It needs
@@ -325,14 +326,18 @@ class PoolIndex:
         hits = []
         if not dr:
             return hits
+        # K4 precision (28 Oct): containment needs real evidence. All-weak words ("Old Town" -> Old Town Hot Pot) or a
+        # lone token under 4 letters ("Pat's" -> Pat Connolly Tavern) never contain alone; R1 still matches the
+        # exact name ("Old Town Bar" == Old Town Bar NYC) and R4/R5 are unchanged.
+        r2_ok = not (all(t in BRAND_WEAK for t in dr) or (len(dr) == 1 and len(dr[0]) < 4))
         for i in self._candidates(list(dr) + list(drf)):
             p = self.pool[i]
             dp = self.d[p["entity_id"] + "#full"]
             if not dp:
                 continue
-            if contained(dr, dp):                       # R2
+            if r2_ok and contained(dr, dp):             # R2
                 hits.append((p["entity_id"], "R2"))
-            elif len(dp) >= 2 and contained(dp, drf):   # R3
+            elif len(dp) >= 2 and not all(t in BRAND_WEAK for t in dp) and contained(dp, drf):   # R3
                 hits.append((p["entity_id"], "R3"))
         return hits
 
