@@ -394,6 +394,24 @@ def numbers(a):
             G["C"]["verdict"], cap, P["CAP_CHANCE"]["value"]), G["C"]["source"] + " + " + src)
     else:
         put("GATE_C", None, G["C"]["source"], "gate C did not report")
+    # gate C by city (the cap catches most of the list in St. Louis, less in New York), and how many of Qloo's
+    # popularity-capped joint-signal top 7 (diag.cap7) are also in UNSAID's seven (diag.cap_shared)
+    for c in ("stl", "nyc"):
+        ov = [d["result"]["diag"]["cap_overlap"] for d in sets.values()
+              if d["city"] == c and (d["result"].get("diag") or {}).get("cap_overlap") is not None]
+        chc = [d["result"]["counts"]["struck_in_U"] / float(d["result"]["counts"]["U"]) for d in sets.values()
+               if d["city"] == c and (d["result"].get("counts") or {}).get("U")
+               and (d["result"]["counts"].get("struck_in_U") or 0) > 0]
+        put("CAP_MED_" + c.upper(), "%.2f" % median(ov) if ov else None,
+            src + " (diag.cap_overlap, median over the city's sets; the same per-set value k3_survivors prints)",
+            "%d sets" % len(ov))
+        put("CAP_CHANCE_" + c.upper(), "%.2f" % median(chc) if chc else None,
+            src + " (median over the city's sets of struck_in_U / U)", "%d sets" % len(chc))
+    cs = [d["result"]["diag"]["cap_shared"] for d in sets.values()
+          if (d["result"].get("diag") or {}).get("cap_shared") is not None]
+    put("CAP_SHARE_MED", num(median(cs)) if cs else None,
+        src + " (diag.cap_shared: Qloo's popularity-capped top 7 by the joint signal, also in UNSAID's seven)",
+        "%d sets, values %s" % (len(cs), sorted(cs)))
 
     # ---- Cedric (the shipped stl-cedric: precompute = run_query's product path)
     ced = sets.get("stl-cedric")
@@ -430,9 +448,18 @@ def numbers(a):
                     "source": "out/freeze/k12_wall_effect.json (engine/k12_wall_effect.py --frozen)"}
         put("U_MED", num(G["k12"]["U_median"]), G["k12"]["source"])
         put("STRUCK_MED", num(G["k12"]["struck_in_U_median"]), G["k12"]["source"])
+        # the held-out chain by city (where crossing out does its part)
+        for c in ("stl", "nyc"):
+            cr = [x for x in rows if x.get("city") == c]
+            for arm in ("PLAIN", "OFF", "ON"):
+                put("K12_%s_FRESH_%s" % (arm, c.upper()), str(sum(x[arm.lower() + "_fresh"] for x in cr)) if cr else None,
+                    G["k12"]["source"] + " (sum of %s_fresh over the city's sets)" % arm.lower(), "%d sets" % len(cr))
     else:
         put("U_MED", None, "engine/k12_wall_effect.py", "k12 did not run")
         put("STRUCK_MED", None, "engine/k12_wall_effect.py", "k12 did not run")
+        for c in ("STL", "NYC"):
+            for arm in ("PLAIN", "OFF", "ON"):
+                put("K12_%s_FRESH_%s" % (arm, c), None, "engine/k12_wall_effect.py", "k12 did not run")
 
     # ---- gate E: the official score on the hashed 28 Oct cards, and the same check on today's cards (printed)
     for key, name in (("E", "03-gateE-frozen.log"), ("E_current", "03-gateE-current.log")):
@@ -472,6 +499,12 @@ def numbers(a):
                                     len(st["unasked"]), st["cards"], st["named_hood_asked"], st["cards_hood_asked"]))
         put("STREET_NAMED", None, "the no-street ablation", why)
         put("STREET_CARDS", None, "the no-street ablation", why)
+    # the scoped version, true whether or not every neighbourhood was asked: of the no-street run's cards, how many
+    # had their neighbourhood asked about, and how many of those the street answers named
+    ok = bool(st.get("ok"))
+    for k_, f_ in (("STREET_POOL", "cards"), ("STREET_ASKED", "cards_hood_asked"), ("STREET_NAMED_ASKED", "named_hood_asked")):
+        put(k_, str(st[f_]) if ok else None, "the no-street ablation vs the full run (out/freeze/03-nostreet.log)",
+            "" if ok else st.get("why", ""))
 
     # ---- walls: ASKS_TOTAL, DATES
     wdir = REGEN_WALLS if os.path.isdir(REGEN_WALLS) else WALLS
