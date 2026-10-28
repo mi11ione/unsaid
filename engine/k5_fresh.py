@@ -114,7 +114,9 @@ print("  questions: %s (%s); hash check vs walls: %d collisions%s" % (
 
 per_set, pooled_named, pooled_total, new_names, all_names = [], 0, 0, 0, 0
 for (city, sid), names in sorted(cards.items()):
-    ans = [a for a in answers if SD.same(a.get("set"), sid) and W._ckey(a.get("city")) == city]
+    # the 20 city questions (set "-") are asked once per city and count for every set there (§4 K5′)
+    ans = [a for a in answers if W._ckey(a.get("city")) == city and
+           (SD.same(a.get("set"), sid) or a.get("set") in (None, "", "-"))]
     if not names:
         continue
     pool = [{"entity_id": n, "name": n} for n in names]
