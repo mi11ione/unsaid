@@ -1,5 +1,5 @@
 /* UNSAID · the share image, 1080×1350, dark, drawn client-side on a canvas (UNSAID.md §2.1).
-   "Asked, the AIs named these WALL places. Not one named these 7."; the loves at 32 px; the struck wall as texture on
+   "The AIs named WALL places. None named these 7."; the loves at 32 px; the struck wall as texture on
    the left, the seven with what each is on the right; footer "ranked by Qloo for what fits you · date" and the site's address.
    data: a result (CONTRACT.md) plus optional wallNames (struck names) and picks override. */
 (function () {
@@ -45,8 +45,8 @@
     // headline
     let y = 210;
     ctx.font = `400 58px ${SERIF}`;
-    // "Asked, the AIs named these WALL places." (counts.wall of this result)
-    const a = 'Asked, the AIs named these ', wtxt = WALL == null ? '' : String(WALL);
+    // "The AIs named WALL places." (counts.wall of this result)
+    const a = 'The AIs named ', wtxt = WALL == null ? '' : String(WALL);
     const l1 = wrap(ctx, a + wtxt + ' places.', W - 2 * pad);
     // draw line 1 with the number in red (the number is at the end of the sentence)
     l1.forEach((line, i) => {
@@ -60,7 +60,7 @@
       ctx.fillStyle = C.ink; ctx.fillText(post, px + ctx.measureText(wtxt).width, yy);
     });
     y += l1.length * 68;
-    ctx.fillStyle = C.white; ctx.fillText(`Not one named these ${N}.`, pad, y);
+    ctx.fillStyle = C.white; ctx.fillText(`None named these ${N}.`, pad, y);
     y += 70;
 
     // the loves, 32 px

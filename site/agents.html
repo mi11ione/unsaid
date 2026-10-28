@@ -19,10 +19,11 @@
     <p class="dim"><code>loves</code> is a JSON array of up to three <code>[text, type]</code> pairs, the form above. Give a type for a dish (<code>"tag"</code>) and for a place (<code>"place"</code>): untyped, <code>"rib tips"</code> can resolve to a restaurant. Types: artist, movie, tv_show, book, podcast, videogame, brand, place, tag. Plain text, <code>{"text": "...", "type": "movie"}</code> and chips from <code>/api/resolve</code> also work. The reply is NDJSON; the last line is <code>{"type":"done","result":{...}}</code>. <code>GET /api/health</code> never needs the token.</p>
 
     <h2>Token</h2>
-    <p><b>Until 30 Oct 23:45 ET the API needs a token.</b> It is in the Devpost testing instructions. After that the token is removed and the API is open, rate-limited to 3 fresh runs per hour per address. Repeat queries are cached and free.</p>
+    <p><b>From 2 Nov, for judging, the bare URL works: no token.</b> Until then the API needs the token from the Devpost testing instructions. Fresh runs are rate-limited per address; repeat queries are cached and free.</p>
     <p class="dim">Send it as <code>Authorization: Bearer …</code>, as <code>X-Unsaid-Token: …</code>, or as <code>&amp;token=…</code>. In a browser, add <code>?token=…</code> to this site’s address and the page passes it on.</p>
 
     <h2>MCP</h2>
+    <div id="mcp-hosted"><p><b>One paste.</b> Add <code>https://unsaid-ang.pages.dev/mcp?token=&lt;token&gt;</code> as a custom connector in Claude (Settings → Connectors), or run <code>claude mcp add --transport http unsaid "https://unsaid-ang.pages.dev/mcp?token=&lt;token&gt;"</code>. After 30 Oct 23:45 ET, leave out <code>?token=…</code>.</p></div>
     <p>The MCP server is one Python file, standard library only. By default it calls this site’s API, so your agent gets the same live Qloo ranks and the same dated AI answers as this page. You don’t need a Qloo key.</p>
     <p class="dim">Claude Code:</p>
     <pre>claude mcp add unsaid -e UNSAID_MODE=remote -e UNSAID_TOKEN=&lt;token&gt; -- python3 -I /path/to/unsaid/agent/unsaid_mcp.py</pre>
@@ -36,7 +37,7 @@
     }
   }
 }</pre>
-    <p class="dim">The token is the one from the Devpost testing instructions. After 30 Oct 23:45 ET, leave it out. In remote mode the server lists one tool, <code>unsaid_places(loves, city)</code>. Pass loves as <code>[text, type]</code> pairs. It covers St. Louis and New York, the cities where we collected what the AIs say. With your own <code>QLOO_API_KEY</code>, <code>UNSAID_MODE=live</code> runs the engine locally and also lists <code>qloo_places(loves, city)</code>: Qloo’s top 50 for the same loves, with nothing crossed out. That tool is the meter’s “with” arm.</p>
+    <p class="dim">Until 2 Nov, use the token from the Devpost testing instructions; from 2 Nov, leave it out. In remote mode the server lists one tool, <code>unsaid_places(loves, city)</code>. Pass loves as <code>[text, type]</code> pairs. It covers St. Louis and New York, the cities where we collected what the AIs say. With your own <code>QLOO_API_KEY</code>, <code>UNSAID_MODE=live</code> runs the engine locally and also lists <code>qloo_places(loves, city)</code>: Qloo’s top 50 for the same loves, with nothing crossed out. That tool is the meter’s “with” arm.</p>
 
     <h2>One real run</h2>
     <pre>claude -p "I love Frankie Beverly &amp; Maze, The Original Kings of Comedy and rib tips. Where should I go in St. Louis tonight?" \

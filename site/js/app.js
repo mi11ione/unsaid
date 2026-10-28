@@ -67,7 +67,10 @@
     topbar({});
     view.innerHTML = `<div class="land"><section class="s1">
       <h1>Everything the AIs tell everyone, <s>crossed out</s>.</h1>
-      <p class="subhead">Three things you love → seven bars and restaurants in ${CITIES.map(c => esc(c.name)).join(' or ')} that ChatGPT and Claude never named when we asked, ranked by Qloo for what fits you, not everyone.</p>
+      <p class="subhead">Seven bars and restaurants the AIs didn’t name when we asked, ranked by Qloo for your taste.</p>
+      <div class="landcard-m" id="landcardm"></div>
+      <div class="presets">${['stl-cedric', 'nyc-taylorswift', 'stl-jason'].map(id => TRY.sets.find(x => x.id === id)).filter(x => x && x.src && !x.mock)
+        .map(x => `<a class="pchip" href="#/r?set=${encodeURIComponent(x.id)}">${esc(x.label)}</a>`).join('')}<a class="pchip more" href="#try">more ↓</a></div>
       ${hookLine()}
       <div class="fields">
         ${FIELDS.map((f, i) => `<div class="fld"><span class="n">0${i + 1}</span><input data-i="${i}" placeholder="${esc(f.ph)}" autocomplete="off" spellcheck="false"><div class="res" id="res${i}"></div></div>`).join('')}
@@ -75,8 +78,8 @@
       <div class="helper">or anything: a bar, a book, a team</div>
       <div class="fields" style="margin-top:18px"><div class="fld"><span class="n">in</span><div class="cityopts" role="radiogroup" aria-label="city">${CITIES.map(c => `<button role="radio" aria-checked="false" data-c="${esc(c.slug)}">${esc(c.name)}</button>`).join('')}</div></div></div>
       <div class="go"><button class="btn solid" id="cross" disabled>Cross out</button></div>
-      ${tryList()}
       <div class="legal">Your three loves go to Qloo and to Gemini’s free tier (Google may use free-tier prompts to improve its products). Don’t type anything personal. 18+.</div>
+      <div id="try">${tryList()}</div>
     </section><aside class="landcard" id="landcard"></aside></div>`;
     view.querySelectorAll('input[data-i]').forEach(inp => {
       const i = +inp.dataset.i;
@@ -95,16 +98,18 @@
   }
   // desktop: the Cedric share card beside the form, opening his set (the same image the share sheet draws)
   async function landCard() {
-    const box = $('#landcard'), set = TRY.sets.find(s => s.id === 'stl-cedric');
-    if (!box || !set || !set.src || set.mock) return;
+    const set = TRY.sets.find(s => s.id === 'stl-cedric');
+    if (!$('#landcard') || !set || !set.src || set.mock) return;
     try {
       const R = await UM.result(set.src);
-      if (!$('#landcard')) return;
-      box.innerHTML = `<a href="#/r?set=stl-cedric" aria-label="Open ${esc(set.label)}"><canvas class="sharecv"></canvas></a><p class="dim">${esc(set.label)}: <a class="link" href="#/r?set=stl-cedric">open his seven →</a></p>`;
       const seen = new Set();
       const wallNames = (R.wall || []).filter(w => w.name && !seen.has(w.place || w.norm) && seen.add(w.place || w.norm)).map(w => UM.cleanName(w.name));
-      Share.draw(box.querySelector('canvas'), { ...R, loves: UM.typedLoves(R, set.loves), wallNames, site: siteHost() });
-    } catch (e) { box.innerHTML = ''; }
+      ['#landcard', '#landcardm'].forEach(sel => {
+        const box = $(sel); if (!box) return;
+        box.innerHTML = `<a href="#/r?set=stl-cedric" aria-label="Open ${esc(set.label)}"><canvas class="sharecv"></canvas></a><p class="dim">${esc(set.label)}: <a class="link" href="#/r?set=stl-cedric">open his seven →</a></p>`;
+        Share.draw(box.querySelector('canvas'), { ...R, loves: UM.typedLoves(R, set.loves), wallNames, site: siteHost() });
+      });
+    } catch (e) { /* the landing works without it */ }
   }
   const siteHost = () => location.protocol.startsWith('http') && !/^(127\.|localhost)/.test(location.host) ? location.host : (CFG.site || '');
 
@@ -279,22 +284,19 @@
       // the server's own §2.2 copy wins when it sends it (status events' text, result.notes); otherwise the same copy is built here
       const SERVER_STATES = ['queued', 'waking', 'dated_only', 'partial', 'degraded', 'limited', 'ranking', 'unsupported_city'];
       if (s === 'unauthorized') return 'needs the token from the testing instructions: add ?token=… to this page’s address';
-      if (R && R.notes && R.notes.length) {
-        const keep = [...new Set(R.notes.map(n => n.text).filter(Boolean))];
-        if (keep.length) return keep.map(esc).join(' · ');
-      }
-      if (!st.done && s && SERVER_STATES.includes(s) && st.status.text) return esc(st.status.text);
+      if (!st.done && s && SERVER_STATES.includes(s) && !['dated_only', 'partial'].includes(s) && st.status.text) return esc(st.status.text);
       if (s === 'waking' && !st.done) return 'waking the ranker up · about a minute';
       if (s === 'queued') { const a = st.status.ahead; return `${a == null ? ph(null, 'n') : word(a, true)} run${a === 1 ? '' : 's'} ahead of yours · about ${ph(st.status.eta_s, 's')} s`; }
       if (API.health === 'waking' && !st.firstServerEvent) return 'waking the ranker up · about a minute';
       const items = [...st.asks.values()];
       const datedAt = items.filter(a => a.lane !== 'live' && a.provider).map(a => a.asked_at).filter(Boolean).sort().pop() || null;
       const fl = (R && R.flags) || [];
-      if (s === 'dated_only' || (R && R.status === 'dated_only') || fl.includes('dated_only')) return `All answers dated ${ph(UM.day(datedAt), 'date')} · no live ask right now`;
+      const span = askDays();
+      const qloo = () => st.done && R && R.counts && st.slots.length ? ` · Qloo ranked your ${R.counts.U != null ? R.counts.U + ' ' : ''}places` : '';
+      if (s === 'dated_only' || (R && R.status === 'dated_only') || fl.includes('dated_only')) return `AI answers collected ${esc(span || '')}, none asked live this time` + qloo();
       if (R && (R.status === 'partial' || fl.includes('partial'))) {
-        const n = R.counts && (R.counts.answers ?? R.counts.asks);
-        const ais = new Set(items.map(a => a.provider)).size;
-        return `${ph(n, 'answers')} answers · ${ais} of ${CFG.lanes.length} AIs`;
+        const ais = new Set(items.map(a => a.provider).filter(Boolean)).size;
+        return `${ais} of ${CFG.lanes.length} AIs answered this time` + (span ? ` (asked ${esc(span)})` : '') + qloo();
       }
       const order = p => { const i = CFG.lanes.indexOf(p); return i < 0 ? 99 : i; };
       const dated = [...new Set(items.filter(a => a.lane !== 'live' && a.provider).map(a => a.provider))].sort((a, b) => order(a) - order(b));
@@ -306,7 +308,7 @@
       const U = (R && R.counts && R.counts.U) ?? st.U;
       // a missing count is left out, never shown as a placeholder
       const calls = D && D.qloo_calls;
-      if (st.done && R && R.counts) parts.push(`Qloo ranked your ${U != null ? U + ' ' : ''}places` + (calls != null ? ` · ${calls} calls` : ''));
+      if (st.done && R && R.counts && st.slots.length) parts.push(`Qloo ranked your ${U != null ? U + ' ' : ''}places` + (calls != null ? ` · ${calls} calls` : ''));
       else if (st.calls) parts.push(`Qloo is ranking your ${U != null ? U + ' ' : ''}places · ${st.calls.done}${st.calls.total != null ? ` of ${st.calls.total}` : ''} calls`);
       else if (!st.done && st.fresh) parts.push('ranking with Qloo · about 20 seconds');
       return parts.join(' · ');
@@ -328,9 +330,11 @@
     }
 
     // one labelled ask count, the same field everywhere (lead line, card back): counts.asks and diag.as_of
+    // one date span for every line that says when the AIs were asked: "27–28 Oct"
+    const askDays = () => UM.days([...st.asks.values()].filter(a => a.lane !== 'live').map(a => a.asked_at));
     function askLine() {
       const R = st.result || {}, n = R.counts && R.counts.asks;
-      const d = UM.day(R.diag && R.diag.as_of);
+      const d = askDays() || UM.day(R.diag && R.diag.as_of);
       return `${n != null ? n + ' ' : ''}asks about ${esc(cityName)}` + (d ? ` (${esc(d)})` : '');
     }
         // ---- burn beat: street checks are DATED (asked in advance), so the line states a result and never moves
@@ -350,7 +354,7 @@
       } else if (st.done && asked.length) {
         // "Asked about all 7 streets · ⟦date⟧. None named."
         const when = asked.map(a => a.asked_at).filter(Boolean).sort().pop() || null;
-        b.innerHTML = `Asked about all ${asked.length} streets · ${ph(et(when), 'date')}. None named.`;
+        b.innerHTML = `We also asked the AIs about each card’s own neighbourhood (${asked.length} asks${when ? ', ' + esc(UM.day(when)) : ''}). None of your cards came up.`;
       } else b.innerHTML = '';
     }
     // one numbering: after the result, a card's number is its position in the list (cards, map dots, placeholders);
@@ -420,7 +424,11 @@
         $('#retry').addEventListener('click', () => route());
         return;
       }
-      if (R.status === 'limited') { body.innerHTML = `<p class="empty">Fresh runs are limited so everyone gets through. These open instantly:</p>${tryList('')}`; return; }
+      if (R.status === 'limited') {
+        const ra = R.retry_after ?? (R.diag && R.diag.retry_after) ?? (st.status && st.status.retry_after);
+        const min = ra != null ? Math.max(1, Math.ceil(+ra / 60)) : null;
+        body.innerHTML = `<p class="empty">Busy: ${min ? `try again in ${min} min` : 'try again in a few minutes'}. These open instantly:</p>${tryList('')}`; return;
+      }
       if (R.status === 'degraded' && !n) {
         body.innerHTML = `<p class="empty">Qloo isn’t answering right now. Your three are saved in this link; try in a minute, or open one of these.</p>${tryList('')}`; return;
       }
@@ -440,7 +448,11 @@
       const k = R.picks && R.picks[0] && R.picks[0].fit_rank, SR = new Set((R.diag && R.diag.struck_fit_ranks) || []);
       const above = k > 1 && [...Array(k - 1)].every((_, j) => SR.has(j + 1))
         ? `<p class="above">${k === 2 ? 'Your #1 was' : `Your #1–#${k - 1} were`} on the AIs’ lists.</p>` : '';
-      body.innerHTML = lead + above + hint + `<div class="cards" id="cards"></div>
+      const top = [...st.wall.values()].filter(w => w.name).sort((a, b) => b.hits.size - a.hits.size).slice(0, 40);
+      const W = (R.counts && R.counts.wall) ?? st.wall.size;
+      const strip = top.length ? `<div class="xstrip"><div class="xnames">${top.map(w => `<span class="xn">${esc(UM.cleanName(w.name))}</span>`).join(' ')}</div>
+        <button class="link" id="xall">all ${W} the AIs named, crossed out ↓</button></div>` : '';
+      body.innerHTML = strip + lead + above + hint + `<div class="cards" id="cards"></div>
         <div class="dare"><label for="dare" id="darelabel">${dareLabel()}</label>
           <div class="copyrow"><button class="link" id="copyask">copy an ask</button><span class="dim" id="askq">“hidden gems to eat and drink in ${esc(cityName)}”</span></div>
           <textarea id="dare" placeholder="paste an answer here" spellcheck="false"></textarea><div class="out" id="dareout"></div></div>
@@ -448,6 +460,8 @@
         <div id="agentblk"></div>`;
       drawCards();
       agentBlock();
+      const xa = $('#xall');
+      if (xa) xa.addEventListener('click', () => { $('#fw').classList.remove('collapsed', 'clipped'); $('#s-wall').scrollIntoView({ behavior: 'smooth' }); });
       $('#cards').after($('#burn'));          // the burn line sits after the seven, never before cards not yet seen
       $('#copyask').addEventListener('click', () => {
         const q = `hidden gems to eat and drink in ${cityName}`, b = $('#copyask');
@@ -490,17 +504,17 @@
     function cardHTML(c, i, known) {
       const R = st.result || {}, flags = R.flags || [];
       const flat = flags.includes('flat');
-      const rank = c.tied || c.fit_rank == null ? '' : `<b>#${c.fit_rank}</b>for you`;
+      // the face carries one taste reason and the popularity rank; the for-you rank lives on the card's sheet
       const any = flat || c.any_rank == null ? '' : `<span class="any">#${c.any_rank} for anyone</span>`;
       const tag = st.struck.get(c.id), rose = st.risen.get(c.id);
-      const meta = [c.rating != null ? Number(c.rating).toFixed(1) : null, c.open == null ? null : (c.open ? 'open' : 'closed'), price(c)].filter(Boolean).join(' · ');
+      const meta = [c.rating != null ? `★ ${Number(c.rating).toFixed(1)}` : null, c.open === false ? 'closed' : null, price(c)].filter(Boolean).join(' · ');
       return `<div class="card${tag ? ' struck' : ''}${tag && tag.human ? ' byyou' : ''}${rose ? ' risen' : ''}" data-id="${esc(c.id)}">
         <div class="row1"><span>${String(i + 1).padStart(2, '0')}</span><span>${esc(meta)}${known || tag ? '' : `<button class="xbtn" data-x="1" aria-label="strike ${esc(c.name || 'this card')}" title="I know it: strike it">✕</button>`}</span></div>
         ${c.neighbourhood ? `<div class="hood">${esc(c.neighbourhood)}</div>` : ''}
         <div class="name">${known ? (c.name ? esc(c.name) : '') : placeName(c, c.id)}</div>
         ${c.what ? `<div class="what">${esc(c.what)}</div>` : ''}
-        ${known ? '' : `<div class="rk">${rank}${any}${c.why ? `<span class="whyl">${esc(c.why)}</span>` : ''}</div>
-        <div class="because">because you love<b>${c.because == null ? '' : esc(tName(c.because))}</b>${c.because_detail ? `<span class="why">${esc(typedText(c.because_detail))}</span>` : ''}</div>`}
+        ${known ? '' : `<div class="because">because you love<b>${c.because == null ? '' : esc(tName(c.because))}</b>${c.because_detail ? `<span class="why">${esc(typedText(c.because_detail))}</span>` : ''}</div>
+        <div class="rk">${any}</div>`}
         ${street(c) ? `<div class="addr">${esc(street(c))}${hours(c) ? ` · ${esc(hours(c))}` : ''}<span class="maps">${mapsLinks(c)}</span></div>` : ''}
         <div class="tag${rose && !tag ? ' rose' : ''}">${tag ? esc(tag.text) : (rose ? esc(rose) : '')}</div>
       </div>`;
@@ -572,20 +586,33 @@
       n.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
       n.classList.remove('flash'); void n.offsetWidth; n.classList.add('flash');
     }
+    // the paste: what it named from the wall (already crossed out), and whether it named any of the seven
     function dare(text) {
       const out = $('#dareout');
       if (!text.trim()) { out.innerHTML = ''; return; }
       const ids = liveIds();
       const hits = Matcher.find(text, ids.map(id => st.cards.get(id).name));
-      if (!hits.length) { out.innerHTML = `None of these ${ids.length} named.`; return; }
+      const wallList = [...st.wall.values()].filter(w => w.name).sort((a, b) => b.hits.size - a.hits.size);
+      let wallHits = [...new Set(Matcher.find(text, wallList.map(w => UM.cleanName(w.name)), { phraseOnly: true }).map(h => h.index))].map(i => UM.cleanName(wallList[i].name));
+      // "The Hill" inside "Blueberry Hill": a hit whose words all sit inside a longer hit is not a separate place
+      const toks = n => Matcher.norm(n).split(' ').filter(t => t && t !== 'the');
+      const all = wallHits.concat(hits.map(h => h.name));
+      wallHits = wallHits.filter(n => !all.some(m => m !== n && toks(m).length > toks(n).length && toks(n).every(t => toks(m).includes(t))));
+      const named = wallHits.length + hits.length;
+      const list = xs => xs.length <= 5 ? xs.map(esc).join(', ') : xs.slice(0, 4).map(esc).join(', ') + ` and ${xs.length - 4} more`;
+      let html = named ? `It named ${named} place${named === 1 ? '' : 's'} we know.` : 'It named none of the places we know.';
+      if (wallHits.length) html += ` ${wallHits.length === named ? (named === 1 ? 'It was' : 'All were') : `${wallHits.length} ${wallHits.length === 1 ? 'was' : 'were'}`} already crossed out: <span class="red">${list(wallHits)}</span>.`;
       const burned = [];
-      out.innerHTML = hits.map(h => {
-        const id = ids[h.index], c = st.cards.get(id);
-        const rid = strike(id, `named in your paste · ${hhmm()}`);
-        burned.push(id);
-        const r = rid && st.cards.get(rid);
-        return `<span class="red">It named ${esc(c.name)} · burned.</span>` + (r ? ` ${placeName(r, rid)} takes its place.` : '');
-      }).join('<br>');
+      if (hits.length) {
+        html += ' ' + hits.map(h => {
+          const id = ids[h.index], c = st.cards.get(id);
+          const rid = strike(id, `named in your paste · ${hhmm()}`);
+          burned.push(id);
+          const r = rid && st.cards.get(rid);
+          return `<span class="red">It named ${esc(c.name)}, one of your ${ids.length}: burned.</span>` + (r ? ` ${placeName(r, rid)} takes its place.` : '');
+        }).join(' ');
+      } else html += ` None of your ${ids.length}.`;
+      out.innerHTML = html;
       if (burned.length) flash(burned[0]);
     }
 
@@ -596,8 +623,8 @@
       const U = c.U ?? (R.counts && R.counts.U), Rmi = R.counts && R.counts.R_mi;
       const ns = c.never_said || {};
       const fit = c.tied ? null : c.fit_rank;
-      const head = fit == null ? (c.name ? esc(c.name) : ph(null, `place ${cardNo(id)}`)) + '.'
-        : `#${fit} for you.` + (flat || c.any_rank == null ? '' : ` <span class="any">#${c.any_rank} for anyone.</span>`);
+      const head = esc(c.name || '');
+      const ranks = [fit != null ? `#${fit} for you` : null, flat || c.any_rank == null ? null : `#${c.any_rank} for anyone`].filter(Boolean).join(' · ');
       const pct = r => Math.max(0, Math.min(100, ((r - 1) / Math.max(1, (U || 1) - 1)) * 100));
       const pos = r => `${pct(r)}%`;
       // a label near either end hangs inward, so it never leaves the sheet
@@ -610,8 +637,11 @@
         : c.holds_without ? `It stays a pick without ${[].concat(c.holds_without).map(x => esc(tName(x))).join(' or ')}.` : '';
       const st3 = st.struck.get(id);
       openSheet(`
-        <div class="cap">${esc(cityName)} · card ${cardNo(id)} · ${esc(c.name || '')}${c.neighbourhood ? ' · ' + esc(c.neighbourhood) : ''}</div>
+        <div class="cap">${esc(cityName)} · card ${cardNo(id)}${c.neighbourhood ? ' · ' + esc(c.neighbourhood) : ''}</div>
         <h1>${head}</h1>
+        <p class="sheetsub">${[c.what ? esc(c.what) : null, c.rating != null ? `★ ${Number(c.rating).toFixed(1)} on Qloo` : null, ranks ? `<span class="dim">${ranks}</span>` : null].filter(Boolean).join(' · ')}</p>
+        ${c.description ? `<p>${esc(c.description)}</p>` : ''}
+        ${httpUrl(c.image) ? `<img class="placeimg" src="${esc(c.image)}" alt="" loading="lazy">` : ''}
         ${st3 ? `<div class="red">${esc(st3.text)}</div>` : ''}
         ${flat ? '<div class="sub">your loves barely move this city’s order</div>' : ''}
         ${thin && U != null ? `<div class="sub">out of ${U}; many places tie for you here</div>` : ''}
@@ -619,14 +649,13 @@
           <p>Named 0 times in ${askLine()}.</p></div>
         <div class="blk"><div class="sh"><h2>Fits you</h2></div>${slider}
           ${c.why ? `<p>${esc(cap1(c.why))}.</p>` : ''}
-          <p class="dim">${U != null ? `Out of ${U} places` : 'Out of the places'}${Rmi != null ? ` within ${Rmi} mi` : ''}, rated ${CFG.floor.rating}+ and open. “For anyone” is Qloo’s popularity order of the same places.</p>
-          <p class="dim">${EXPLAIN}</p></div>
+          <p class="dim">${fit != null && U != null ? `#${fit} for you is Qloo’s taste rank among the ${U} places${Rmi != null ? ` within ${Rmi} mi` : ''}, rated ${CFG.floor.rating}+; we pick by how much more a place fits you than everyone else. ` : ''}“For anyone” is Qloo’s popularity order of the same places.</p></div>
         <div class="blk"><div class="sh"><h2>Because</h2></div>
           <div class="big1">${c.because == null ? '' : 'You love ' + esc(tName(c.because)) + '.'}</div>${c.because_detail ? `<p>${esc(cap1(typedText(c.because_detail)))}.</p>` : ''}<p class="dim">${holds}</p></div>
         <div class="blk"><div class="sh"><h2>Go</h2></div>
           ${c.address ? `<p>${esc(c.address)}${hours(c) ? `<br><span class="dim">today ${esc(hours(c))}</span>` : ''}${price(c) ? ` <span class="dim">· ${esc(price(c))}</span>` : ''}</p>` : ''}
+          ${c.open === false ? '<p class="red">Qloo marks it closed.</p>' : ''}
           <div class="links">${httpUrl(c.url) ? `<a class="btn" href="${esc(c.url)}" target="_blank" rel="noopener">Website ↗</a>` : ''}${mapsLinks(c).replace(/<a /g, '<a class="btn solid" ').replace(/<\/a>/g, ' ↗</a>')}</div>
-          ${c.last_seen && UM.day(c.last_seen.checked_at) ? `<p class="dim">Hours and address listed in Qloo · checked ${esc(UM.day(c.last_seen.checked_at))}</p>` : ''}
           <p class="dim">No place can pay to be picked.</p></div>
         <details class="log"><summary>Raw log</summary><div class="logbody">${rawLog(c)}</div></details>`);
     }
@@ -698,14 +727,23 @@
 
     // ---- share
     function shareSheet() {
+      const link = set ? `${location.origin}${location.pathname}#/r?set=${encodeURIComponent(set.id)}` : location.href;
+      const W = (st.result.counts && st.result.counts.wall) ?? st.wall.size, N = liveIds().length;
+      const text = `The AIs named ${W} places. None named these ${N}.`;
       openSheet(`<div class="cap">share</div><canvas class="sharecv" id="sharecv"></canvas>
-        <div class="links"><a class="btn solid" id="dl" download="unsaid.png" href="#">Save image</a>${navigator.share ? '<button class="btn" id="sh">Share</button>' : ''}</div>`);
+        <p>${esc(text)}<br><span class="dim">${esc(link)}</span></p>
+        <div class="links">${navigator.share ? '<button class="btn solid" id="sh">Share</button>' : ''}<a class="btn" id="dl" download="unsaid.png" href="#">Save image</a><button class="btn" id="cp">Copy link</button></div>`);
       const cv = $('#sharecv');
       Share.draw(cv, { ...shareData(), site: siteHost() });
+      $('#cp').addEventListener('click', () => { const b = $('#cp'); (navigator.clipboard ? navigator.clipboard.writeText(link) : Promise.reject()).then(() => { b.textContent = 'Copied'; }, () => { b.textContent = 'Select the link above'; }); });
       cv.toBlob(b => {
         const u = URL.createObjectURL(b); $('#dl').href = u;
         const sb = $('#sh');
-        if (sb) sb.addEventListener('click', () => navigator.share({ files: [new File([b], 'unsaid.png', { type: 'image/png' })] }).catch(() => {}));
+        if (sb) sb.addEventListener('click', () => {
+          const file = new File([b], 'unsaid.png', { type: 'image/png' });
+          const full = { files: [file], url: link, text };
+          (navigator.canShare && !navigator.canShare(full) ? navigator.share({ url: link, text }) : navigator.share(full)).catch(() => {});
+        });
       });
     }
     function shareData() {
