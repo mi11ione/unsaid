@@ -31,7 +31,7 @@ KIT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_CACHE = os.path.join(KIT_DIR, ".cache")  # gitignored; Qloo data must never go in a public repo
 USER_AGENT = "Python-urllib/%d.%d" % sys.version_info[:2]  # generic on purpose
 
-RATE, BURST = 3.0, 5
+RATE, BURST = 5.0, 8   # live P9 headers: 10/s per key, 50k/month; half the per-second limit
 TIMEOUT_POOL, TIMEOUT_RESCORE, TIMEOUT_DEFAULT = 12.0, 3.0, 12.0
 HARD_CAP_S = 90.0
 TTL = {"/search": 30 * 86400, "/v2/tags": 30 * 86400, "/v2/insights": 86400, "/entities": 30 * 86400}

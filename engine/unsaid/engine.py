@@ -35,7 +35,7 @@ CFG = {
     "RATING_SERVER": 4,          # filter.properties.business_rating.min is an integer enum
     "RATING_CLIENT": 4.3, "RATING_EPS": 1e-4,   # client floor 4.3 - 1e-4 (float32 values like 4.1999998)
     "TAKE": 50, "OFFSETS": [0, 50],
-    "EXTRA_OFFSETS": [],         # spec: none. R may set [100] if gate B shows |U| < U_MIN with two entity loves
+    "EXTRA_OFFSETS": [100, 150],  # live 28 Oct: gate B left Cedric at 7+0 (U 28); the 50k/month key affords it
     "U_MIN": 150,
     "CHUNK": 48, "ANCHORS": 2,   # 48 of U + 2 anchors = 50 = take
     "RRF_K": 60, "HOLD_FRAC": 1.0 / 3,

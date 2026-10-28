@@ -80,7 +80,8 @@ class TestRunUnsaid(Tmp):
         calls = r["diag"]["calls"]
         self.assertEqual(set(calls), {"pool", "rescore", "ids", "cap", "total"})
         self.assertEqual(calls["total"], r["diag"]["qloo_calls"])
-        self.assertEqual((calls["pool"], calls["cap"]), (4, 1))         # 2 entity loves x offsets 0, 50; one CAP
+        self.assertIn(calls["pool"], (4, 4 + 2 * len(E.CFG["EXTRA_OFFSETS"])))   # 2 entity loves x offsets 0, 50 (+ extra pages when U is small)
+        self.assertEqual(calls["cap"], 1)
         self.assertGreaterEqual(calls["rescore"], 3)
         self.assertLessEqual(calls["pool"] + calls["rescore"] + calls["ids"] + calls["cap"], calls["total"])
         self.assertEqual(r["diag"]["obscure_names"], [x["name"] for x in r["diag"]["obscure"]])
@@ -322,7 +323,7 @@ class TestClientRules(Tmp):
             del os.environ["QLOO_API_KEY"]
 
     def test_bucket_and_point(self):
-        self.assertEqual((QL.BUCKET.rate, QL.BUCKET.capacity), (3.0, 5.0))
+        self.assertEqual((QL.BUCKET.rate, QL.BUCKET.capacity), (QL.RATE, float(QL.BURST)))
         p = C.location_params(E.resolve_city(None, "St. Louis"))
         self.assertEqual(p, {"filter.location": "POINT(-90.1994 38.627)",
                              "filter.location.radius": C.CITIES["stl"]["radius_m"]})   # R is a set point (§4 widen R)
