@@ -93,7 +93,7 @@
 
   // ---- the trace: "⟦QLOO_CALLS⟧ Qloo calls · your pool ×⟦6⟧ → same places, each love alone ×⟦15⟧ → names → IDs ×⟦5⟧ → popularity cap ×1"
   const D = R.diag || {}, CL = D.calls || {};
-  const loves = UM.typedLoves(R, TY).filter(l => !l.dead).map(l => JSON.stringify(l.label)).join(', ');
+  const loves = UM.typedLoves(R, TY).map(l => JSON.stringify(l.label)).join(", ");   // the call carries every typed love; dead ones drop out inside the engine
   const tr = el(S, 'div', ''); tr.className = 'trace';
   // the trace sums to its total, from the same run: any calls the parts don't name are shown as "other"
   const parts = [['your pool', CL.pool, '6'], ['same places, each love alone', CL.rescore, '15'], ['names → IDs', CL.ids, '5'], ['popularity cap', CL.cap, '1']];
