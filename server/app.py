@@ -285,7 +285,7 @@ def stream_unsaid(city_text, loves, ip, country, emit, bench=False):
         return done(shell("unsupported_city", note=adapter.CITY_NOT_COVERED))
 
     def wall_names(answers):                  # each dated name once, whichever step streams it first
-        for it in adapter.wall_items(answers):
+        for it in adapter.iter_wall_items(answers):
             k = (it.get("provider"), it.get("phrasing_id"), it.get("asked_at"), it.get("name"))
             if k not in sent:
                 sent.add(k)

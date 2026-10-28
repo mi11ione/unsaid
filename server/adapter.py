@@ -339,7 +339,11 @@ def _wall_from(city, chips, path):
 
 
 def wall_items(answers, per=None):
-    out = []
+    return list(iter_wall_items(answers, per))
+
+
+def iter_wall_items(answers, per=None):
+    """Wall items one at a time, so the server streams the first name before building the other ~2,700."""
     for a in answers:
         for n in a.get("names", []):
             name = n["name"] if isinstance(n, dict) else n
@@ -356,8 +360,7 @@ def wall_items(answers, per=None):
                     it.update(outcome="dimmed", reason="not in pool", qloo_id=info.get("resolved_id"))
                 else:
                     it.update(outcome="dimmed", reason="not found in Qloo")
-            out.append(it)
-    return out
+            yield it
 
 
 # ---------------------------------------------------------------- run
