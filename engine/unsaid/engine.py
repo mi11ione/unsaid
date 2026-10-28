@@ -1497,8 +1497,14 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
         scored = [i for i in ids if i not in tied[l["text"]]]     # ties carry no order: rho over scored members
         rs_diag[l["text"]]["rho_pop"] = ST.spearman({i: orders[l["text"]][i] for i in scored}, pop_rank_avg)
         l["_aff"] = rs["aff"]
-        if rs["failed"] or rs["coverage"] < CFG["COVERAGE_MIN"]:
-            lanes_failed.append("C6' %s coverage %.2f" % (l["text"], rs["coverage"]))
+        # coverage over the places the rescoring can return at all: a dish-only member (tagged with the dish but
+        # not with the restaurant/bar kinds the base filter asks for) is ranked by its dish, never a failed lane
+        visible = [i for i in ids if any((t.get("id") or "") in CFG["CAT_TAGS"] for t in byid[i].get("tags") or []
+                                         if isinstance(t, dict))]
+        vis_cov = (sum(1 for i in visible if i in rs["aff"]) / float(len(visible))) if visible else 1.0
+        rs_diag[l["text"]]["coverage_visible"] = round(vis_cov, 4)
+        if rs["failed"] or vis_cov < CFG["COVERAGE_MIN"]:
+            lanes_failed.append("C6' %s coverage %.2f" % (l["text"], vis_cov))
     base_label = "anyone = Qloo popularity order of these %d places" % N
     ns_rank = None          # the city's no-signal rank over U: only when P12 said it is NOT popularity (C5 branch)
     if (baseline or CFG["BASELINE"]) == "nosignal":
