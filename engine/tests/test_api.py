@@ -632,10 +632,9 @@ class TestCardLines(unittest.TestCase):
         r = api.run_unsaid("St. Louis", CEDRIC, mode="fake", qloo=QL.Qloo(fake=True, cache_dir=tempfile.mkdtemp()),
                            gemini=False, street_check=False)
         for c in r["picks"] + r["reserves"]:
-            self.assertTrue(c["because_detail"], c["name"])                               # never without a reason
+            self.assertIsNone(c["because_detail"])              # 30 Oct: no generated "like the places X fans" line
+            self.assertTrue(c["because"])                       # the card states only the love
             self.assertIsNotNone(c["distance_mi"])
-        details = [c["because_detail"] for c in r["picks"] if not c["because_detail"].startswith(("on Qloo", "Qloo ranks"))]
-        self.assertEqual(len(details), len(set(details)))                               # no tag twice in the seven
         self.assertLessEqual(r["counts"]["named_food_count"], r["counts"]["wall"])
 
     def test_rich_card_fields(self):
@@ -664,6 +663,22 @@ class TestCardLines(unittest.TestCase):
         self.assertEqual(E.order_line({"properties": {"keywords": [{"name": "crowd"}]}}, vocab), [])
         long = {"properties": {"short_description": "word " * 40}}
         self.assertLessEqual(len(E.blurb_line(long)), 111)
+
+    def test_dish_must_be_in_the_places_text(self):
+        e = {"name": "Ampersand", "properties": {"short_description": "Cocktail bar with small plates.",
+                                                 "keywords": [{"name": "martini"}]}}
+        self.assertFalse(E.dish_in_text(e, "tacos"))
+        e["properties"]["cuisine_description"] = "Known for birria tacos and margaritas."
+        self.assertTrue(E.dish_in_text(e, "tacos"))
+        self.assertTrue(E.dish_in_text({"name": "Pappy's Smokehouse", "properties": {}}, "barbecue"))
+        self.assertTrue(E.dish_in_text({"name": "X", "properties": {"keywords": [{"name": "catfish"}]}},
+                                       "fried catfish"))
+        tag = lambda tid, name: {"id": tid, "name": name}  # noqa: E731
+        pickles = {"tags": [tag("urn:tag:category:place:restaurant", "Restaurant"),
+                            tag("urn:tag:activity_type:place:shopping", "Shopping"),
+                            tag("urn:tag:offerings:place:gift_items", "Gift items"),
+                            tag("urn:tag:service_options:place:takeout", "Takeout")]}
+        self.assertIsNotNone(E.excluded_kind(pickles))                                  # Pearlie's Pickles
 
     def test_kind_of_and_variety(self):
         tag = lambda k: {"id": "urn:tag:category:place:" + k, "name": k}  # noqa: E731

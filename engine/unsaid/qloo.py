@@ -381,6 +381,14 @@ class Qloo:
         key = self.cache_key(path, q)
         fpath = os.path.join(self.cache_dir, key[:2], key + ".json")
         t0 = time.monotonic()
+        if self.use_cache and not self.refresh and not os.path.exists(fpath) and path == "/v2/insights" and \
+                "filter.properties.business_rating.min" not in params and not self.fake:
+            # 30 Oct: business_rating.min is no longer sent (Qloo ignores it, probe P2); a response cached when it
+            # was sent (=4, the only value ever used) answers the same request without it
+            lk = self.cache_key(path, canonical_query(dict(params, **{"filter.properties.business_rating.min": 4})))
+            lp = os.path.join(self.cache_dir, lk[:2], lk + ".json")
+            if os.path.exists(lp):
+                fpath = lp
         if self.use_cache and not self.refresh and os.path.exists(fpath) and self._fresh(fpath, path):
             try:
                 with open(fpath) as f:

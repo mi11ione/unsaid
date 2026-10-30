@@ -6,6 +6,7 @@ engine/out/
 *.live.json
 data/private/
 data/lines/
+data/namemap/
 # secrets
 .env
 .env.*

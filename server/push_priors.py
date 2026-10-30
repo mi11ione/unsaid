@@ -41,6 +41,9 @@ def main():
     for p in sorted(glob.glob(os.path.join(ROOT, "data", "lines", "*.json"))):   # card lines -> lines-<city>.json
         with open(p) as fh:
             keep["lines-" + os.path.basename(p)] = fh.read()
+    for p in sorted(glob.glob(os.path.join(ROOT, "data", "namemap", "*.json"))):   # C7 name map -> namemap-<city>
+        with open(p) as fh:
+            keep["namemap-" + os.path.basename(p)] = fh.read()
     status, _ = call("PUT", [{"name": n, "content": c} for n, c in sorted(keep.items())])
     print("PUT secret-files -> HTTP %s: %s" % (status, ", ".join("%s (%d KB)" % (n, len(c) // 1024)
                                                                  for n, c in sorted(keep.items()))))
