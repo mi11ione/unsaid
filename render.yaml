@@ -13,7 +13,7 @@ services:
     envVars:
       - key: UNSAID_MODE            # fake | live
         sync: false
-      - key: UNSAID_TOKEN           # REST/MCP token until Thu 30 Oct 23:45 ET
+      - key: UNSAID_TOKEN           # optional REST/MCP token (its own 60/h bucket); not required
         sync: false
       - key: UNSAID_PROXY_SECRET    # same value as the Pages secret PROXY_SECRET
         sync: false
@@ -27,7 +27,7 @@ services:
         sync: false
       - key: UNSAID_MAX_ACTIVE      # optional, default 2 concurrent fresh runs
         sync: false
-      - key: UNSAID_TOKEN_REQUIRED  # 1 until 30 Oct 23:45 ET; the flip sets 0 and KEEPS UNSAID_TOKEN (its 60/h bucket)
+      - key: UNSAID_TOKEN_REQUIRED  # 0: no token needed (was 1 until 30 Oct 23:45 ET)
         sync: false
       - key: UNSAID_TOKEN_PER_HOUR  # optional, default 60 fresh runs/h for the token holder (connectors share an IP)
         sync: false

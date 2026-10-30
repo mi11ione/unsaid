@@ -3,7 +3,7 @@
     "unsaid": {
       "command": "python3",
       "args": ["-I", "/path/to/unsaid/agent/unsaid_mcp.py"],
-      "env": { "UNSAID_MODE": "remote", "UNSAID_TOKEN": "<token from the Devpost testing instructions>" }
+      "env": { "UNSAID_MODE": "remote" }
     }
   }
 }

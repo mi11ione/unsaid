@@ -1,8 +1,8 @@
 """The hosted MCP endpoint: POST /mcp, MCP Streamable HTTP, standard library only.
 
 One paste for an agent: add https://unsaid-ang.pages.dev/mcp as a custom connector (Claude: Settings -> Connectors) or
-`claude mcp add --transport http unsaid <url>`. Until 30 Oct 23:45 ET it needs the UNSAID token, as `?token=` in the
-URL or `Authorization: Bearer`; with the token off it is open, under the same per-IP limits as /api/unsaid.
+`claude mcp add --transport http unsaid <url>`. No token is needed: it is open, under the same per-IP limits as
+/api/unsaid (an optional UNSAID token, as `?token=` or `Authorization: Bearer`, gets its own bucket).
 
 Transport (MCP Streamable HTTP, protocol 2025-11-25, also 2025-06-18 / 2025-03-26 and the stateless 2026-07-28):
   POST /mcp     one JSON-RPC message per request. A request gets application/json, or for tools/call, when the client

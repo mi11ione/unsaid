@@ -14,10 +14,10 @@ On 40 public questions never used to build the list, the AIs named ⟦K12_PLAIN_
 
 **1. The live demo.** Open ⟦LIVE_URL⟧ and tap **Frankie Beverly & Maze · The Original Kings of Comedy · rib tips**. Tap a card for its detail; tap ✕ to strike one you know and a reserve takes its place; paste any AI's answer and anything it names is already crossed out. Or type three things you love. Cards arrive in about ⟦P50⟧ seconds.
 
-**2. From your agent, no Qloo key, one paste.** Add `https://unsaid-ang.pages.dev/mcp?token=<token>` as a custom connector in Claude (Settings → Connectors), or run the line below. The token is in the Devpost testing instructions (until 30 Oct 23:45 ET; after that, leave out `?token=…`).
+**2. From your agent, no Qloo key, one paste.** Add `https://unsaid-ang.pages.dev/mcp` as a custom connector in Claude (Settings → Connectors), or run the line below.
 
 ```bash
-claude mcp add --transport http unsaid "https://unsaid-ang.pages.dev/mcp?token=<token>"
+claude mcp add --transport http unsaid "https://unsaid-ang.pages.dev/mcp"
 # then ask Claude: "I love Frankie Beverly & Maze, The Original Kings of Comedy and rib tips. Where should I go in St. Louis tonight?"
 ```
 
@@ -259,9 +259,9 @@ The gist postdates both censuses (Claude's from 27 Oct 12:05 UTC), so the census
 
 ## MCP
 
-**Hosted:** `https://unsaid-ang.pages.dev/mcp` is the same tool over MCP Streamable HTTP (`server/mcp_http.py`: POST JSON-RPC, a JSON reply or an SSE stream for `tools/call`, stateless, no session). It runs every call through the same path as `/api/unsaid`, with the same cache and limits (a token holder gets its own bucket of 60 an hour; without a token, 15 an hour per IP through 6 Nov), and returns the same `structuredContent` as the stdio server. Until 30 Oct 23:45 ET it needs the token, as `?token=` in the URL or `Authorization: Bearer`. Add it as a custom connector in Claude (Settings → Connectors), or `claude mcp add --transport http unsaid "https://unsaid-ang.pages.dev/mcp?token=<token>"`. `python3 -I agent/test_client.py --http <url>` checks it.
+**Hosted:** `https://unsaid-ang.pages.dev/mcp` is the same tool over MCP Streamable HTTP (`server/mcp_http.py`: POST JSON-RPC, a JSON reply or an SSE stream for `tools/call`, stateless, no session). It runs every call through the same path as `/api/unsaid`, with the same cache and limits (15 fresh runs an hour per IP through 6 Nov), and returns the same `structuredContent` as the stdio server. Add it as a custom connector in Claude (Settings → Connectors), or `claude mcp add --transport http unsaid "https://unsaid-ang.pages.dev/mcp"`. `python3 -I agent/test_client.py --http <url>` checks it.
 
-**Local (stdio):** `agent/unsaid_mcp.py` is a stdio MCP server in one file, standard library only. By default (`UNSAID_MODE=remote`) it calls the hosted API at https://unsaid-ang.pages.dev, so an agent gets the same live Qloo ranks and the same dated AI answers as the site. You don't need a Qloo key or the engine. Until 30 Oct 23:45 ET the API needs the token from the Devpost testing instructions. After that, leave `UNSAID_TOKEN` out.
+**Local (stdio):** `agent/unsaid_mcp.py` is a stdio MCP server in one file, standard library only. By default (`UNSAID_MODE=remote`) it calls the hosted API at https://unsaid-ang.pages.dev, so an agent gets the same live Qloo ranks and the same dated AI answers as the site. You don't need a Qloo key or the engine. No token is needed.
 
 Claude Code: the command in *Five minutes* above.
 
@@ -273,16 +273,15 @@ Claude Desktop (`claude_desktop_config.json`; the same block is in `agent/claude
     "unsaid": {
       "command": "python3",
       "args": ["-I", "/path/to/unsaid/agent/unsaid_mcp.py"],
-      "env": { "UNSAID_MODE": "remote", "UNSAID_TOKEN": "<token>" }
+      "env": { "UNSAID_MODE": "remote" }
     }
   }
 }
 ```
 
-`agent/mcp.json` is the same config for `claude --mcp-config`. It reads `${UNSAID_TOKEN}` from your shell, so the token never goes in a file. Replace `/path/to/unsaid` with the path to your clone first:
+`agent/mcp.json` is the same config for `claude --mcp-config`. Replace `/path/to/unsaid` with the path to your clone first:
 
 ```bash
-export UNSAID_TOKEN=<token>
 claude -p "I love Frankie Beverly & Maze, The Original Kings of Comedy and rib tips. Where should I go in St. Louis tonight?" \
   --mcp-config agent/mcp.json --allowedTools mcp__unsaid__unsaid_places
 ```
