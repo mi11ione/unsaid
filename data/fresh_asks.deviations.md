@@ -2,7 +2,7 @@
 
 ## D1 · one subreddit context line before each verbatim question
 
-**When:** decided by the orchestrator and applied by the harness on 27 Oct 2026 at 21:06 ET, before any gate-E scoring. No card has been checked against any fresh answer.
+**When:** decided by the author and applied by the harness on 27 Oct 2026 at 21:06 ET, before any gate-E scoring. No card has been checked against any fresh answer.
 
 **What:** §4 says the questions are asked "as posted". From now on, each question is sent with exactly one context line before its verbatim text, chosen by the post's `source` field:
 

@@ -20,7 +20,7 @@ import phrasings as P
 
 WALL = "e1"
 PHRASINGS = [
-    ("e1", "I love {L1}, {L2} and {L3}. Where should I eat or drink in {city}?"),   # the orchestrator's sentence
+    ("e1", "I love {L1}, {L2} and {L3}. Where should I eat or drink in {city}?"),   # the author's sentence
     ("e2", "Where should I go out to eat or drink in {city}? I'm into {L1}, {L2} and {L3}."),
 ]
 FROZEN = os.path.expanduser("~/Desktop/qloo/private/frozen20")

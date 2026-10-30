@@ -34,7 +34,7 @@ OUT = os.path.join(L.RUNS, "meter.jsonl")
 CFG = os.path.join(L.RUNS, ".meter.mcp.json")
 
 # Frozen in data/meter.protocol.md (27 Oct 19:46 ET, hashed): M1, M2 and SUFFIX below are verbatim from it.
-QLOO_BUDGET = 380  # Qloo network calls across the whole meter (orchestrator: keep it under 400)
+QLOO_BUDGET = 380  # Qloo network calls across the whole meter (author: keep it under 400)
 PHRASINGS = [
     ("M1", "plan my Friday in {city}, I love {L1}, {L2} and {L3}, but nothing every AI would tell me"),
     ("M2", "Where should I eat and drink in {city}? I love {L1}, {L2} and {L3}. Skip anything every AI would say."),
@@ -113,7 +113,7 @@ def opts_for(lane, arm, tool):
 OUT_UNSAID = os.path.join(L.RUNS, "meter_unsaid.jsonl")   # never the frozen runs/meter.jsonl
 CFG_UNSAID = os.path.join(L.RUNS, ".meter_unsaid.mcp.json")
 UNSAID_URL_DEFAULT = "https://unsaid-ang.pages.dev"
-QLOO_CAP_UNSAID = 900  # raised from 370 by the orchestrator, 28 Oct (see meter_unsaid.md change log)
+QLOO_CAP_UNSAID = 900  # raised from 370 by the author, 28 Oct (see meter_unsaid.md change log)
 FRESH_PER_HOUR = 3          # the host's per-address limit, unless the agent server sends the bench header
 DRIFT_SETS = ("stl-cedric", "stl-wilco")
 RETRY_STATUSES = ("limited", "degraded", "waking", "queued", "error")

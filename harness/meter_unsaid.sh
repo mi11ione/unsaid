@@ -1,5 +1,5 @@
 #!/bin/bash
-# Post-hoc meter arm (harness/meter_unsaid.md). Released by the orchestrator 28 Oct (Render at 469d34a, priors live).
+# Post-hoc meter arm (harness/meter_unsaid.md). Released by the author 28 Oct (Render at 469d34a, priors live).
 # bench_proxy.py (a free localhost port) adds X-Unsaid-Bench; the agent and the CLIs never see the secret.
 cd "$(dirname "$0")" || exit 1
 set -a; . ~/.config/unsaid/env; set +a

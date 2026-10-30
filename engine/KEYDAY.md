@@ -105,7 +105,7 @@ python3 -I run_query.py --city stl --set stl-cedric --walls $W --budget 60     #
 python3 -I k10_meter.py --city stl --meter ../harness/runs/meter.jsonl --walls $W
 ```
 - **Read:** `D meter: … -> PASS|FAIL` and ``M_ALONE` … `M_QLOO``. It makes 0 Qloo calls, and each run is graded by the other AIs' generic answers.
-- **§4 rule:** featured only on PASS. Either way it is printed in Shown and the README; on FAIL, Elias gets the residual line.
+- **§4 rule:** featured only on PASS. Either way it is printed in Shown and the README; on FAIL,
 
 ## 10 · Gate E, fresh asks (K+6:00, after the 20 sets' cards are frozen)
 

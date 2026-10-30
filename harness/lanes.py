@@ -20,7 +20,7 @@ MIN_FREE_GB = float(os.environ.get("UNSAID_MIN_FREE_GB") or 3)  # abort cleanly 
 def disk_low():
     free = shutil.disk_usage(HERE).free / 1e9
     return "disk: %.1f GB free < %.0f GB floor" % (free, MIN_FREE_GB) if free < MIN_FREE_GB else None
-CODEX_MODEL_DEFAULT = "gpt-5.6-terra"  # orchestrator decision 27 Oct; env CODEX_MODEL overrides
+CODEX_MODEL_DEFAULT = "gpt-5.6-terra"  # author decision 27 Oct; env CODEX_MODEL overrides
 
 
 def now():

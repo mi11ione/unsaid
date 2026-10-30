@@ -1,5 +1,5 @@
 {
-  "status": "DRAFT for Roman to freeze (UNSAID.md §4: 20 frozen sets, 10 NYC + 10 STL; §2.1: 10 try-these). Not frozen, not hashed.",
+  "status": "DRAFT for the author to freeze (UNSAID.md §4: 20 frozen sets, 10 NYC + 10 STL; §2.1: 10 try-these). Not frozen, not hashed.",
   "drafted": "2026-10-27",
   "drafted_by": "Agent E",
   "format": "loves are [text, type hint]; type hints follow engine/unsaid/seeds.py (/search `types`; 'tag' goes to /v2/tags; 'place' also feeds filter.exclude.entities). city uses the seeds.py key; city_slug uses site/data/try.json.",

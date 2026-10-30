@@ -12,7 +12,7 @@ suffix stripped) and checked against every wall, taste, street and census phrasi
 Expected file (UNSAID_FRESH overrides the path):
   {"frozen_at": "...", "questions": [{"id": "stl-q01", "city": "stl", "text": "<verbatim>", "url": "...", "posted": "2025-03-02"}, ...],
    "with_loves": {"stl": ["stl-q03", ...4 ids], "nyc": [...]}}        # optional; default: each city's first 4 in file order
-Questions go out VERBATIM (orchestrator decision 27 Oct): no JSON suffix, and codex runs without --output-schema,
+Questions go out VERBATIM (author decision 27 Oct): no JSON suffix, and codex runs without --output-schema,
 Gemini without JSON mode. The raw text is stored; k5 measures naming on it (matcher + reverse check). Each record
 stores verbatim/suffix. --suffix opts back into the v2 JSON suffix and the schemas (not the pre-registered default).
 """

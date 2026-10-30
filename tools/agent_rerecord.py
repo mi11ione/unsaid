@@ -141,7 +141,7 @@ def check():
     if FN.QUOTE_CARD not in tp:
         print("!" * 100)
         print("!!! WARN: %s is NOT in the recorded agent run: ⟦AGENT_QUOTE⟧ gets deleted from devpost.final.md; "
-              "Roman decides" % FN.QUOTE_CARD)
+              "the author decides" % FN.QUOTE_CARD)
         print("!" * 100)
     d = json.load(open(DEMO)) if os.path.exists(DEMO) else {}
     print("agent_demo.json (%s): The Spot %s in the answer" % (d.get("recorded_at"),

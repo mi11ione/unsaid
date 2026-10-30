@@ -34,7 +34,7 @@ The *alone* and *with Qloo* arms are **not asked again**. Their stored runs in `
 - MCP config: `env = {"UNSAID_MODE": "remote", "UNSAID_TOKEN": "${UNSAID_TOKEN:-}", "UNSAID_URL": "${UNSAID_URL:-}"}`. No Qloo key goes in the agent env.
   - claude: `--allowedTools mcp__unsaid__unsaid_places`.
   - codex: `enabled_tools=["unsaid_places"]`, with `UNSAID_TOKEN` in `env_vars`.
-- The hosted API allows 3 fresh runs per hour per address. Repeats are cached: a set costs one fresh run when the agent's loves resolve to the same Qloo IDs. Use the bench header (`X-Unsaid-Bench`, the server's secret, held by the orchestrator), or pace at 3 fresh sets per hour. A tool result of `limited`, `degraded` or `waking` is retried once after 60 s. If it fails again, the run is kept and marked `tool_failed`.
+- The hosted API allows 3 fresh runs per hour per address. Repeats are cached: a set costs one fresh run when the agent's loves resolve to the same Qloo IDs. Use the bench header (`X-Unsaid-Bench`, the server's secret, held by the author), or pace at 3 fresh sets per hour. A tool result of `limited`, `degraded` or `waking` is retried once after 60 s. If it fails again, the run is kept and marked `tool_failed`.
 - Run order: after Agent D's ranking change is **deployed** to the host, so that every unsaid-arm call uses one engine version. Record `engine_v` and the wall snapshot per run. A run whose engine version differs from the first run's is reported separately.
 - Requests from this Mac are geo-gated for the live Gemini lane, so the host answers `dated_only`. Every run sees the same dated wall, and this is recorded.
 
@@ -52,7 +52,7 @@ The prediction is that *with UNSAID* < *with Qloo* < *alone*, with the UNSAID ar
 ## Cost
 
 - AI asks: 48 (40 + 8 drift), on the Claude and ChatGPT subscriptions ($0 marginal).
-- Qloo: up to 10 fresh hosted runs (one per set). Each is about 37 calls, so at most about 370, fewer where the host's Qloo cache is warm. Needs the orchestrator's OK against the key's budget. If the host's cache key changes with the engine version, every set is fresh once.
+- Qloo: up to 10 fresh hosted runs (one per set). Each is about 37 calls, so at most about 370, fewer where the host's Qloo cache is warm. Needs the author's OK against the key's budget. If the host's cache key changes with the engine version, every set is fresh once.
 - Wall clock: about 1 h with the bench header, about 4 h paced.
 
 ## Change log (after the first ask)
