@@ -1829,14 +1829,15 @@ specials deals entertainment comedy""".split())
 _ORDER_LEAD = ("for ", "with ", "a ", "an ", "the ", "of ", "in ", "on ", "at ", "to ", "and ", "or ", "&")
 
 
-def clean_order(items, e, vocab, n=3, line=None, loves=()):
+def clean_order(items, e, vocab, n=3, line=None, loves=(), extra=()):
     """The card's "people order" list, whatever its source (30 Oct, QA): apostrophe splits mended ("bernie s" ->
     "bernie's"); never an item that starts with a preposition or article ("for ramen"), never a non-food word
     (jazz, arcade games, healthy options); an item another, more specific item contains goes ("cheesecake" beside
     "matcha cheesecake"); items of the place's own cuisine first; at most n. Empty beats junk.
     Card audit, 30 Oct: spelled-out initials joined ("N Y P D sandwich" -> "NYPD sandwich"), "Fish An Chips" ->
     "Fish And Chips"; never one of the query's loves ("Korean Fried Chicken" at a kosher steakhouse); items that
-    share a word with the card's own line first (its oysters, its fried chicken), then the cuisine's."""
+    share a word with the card's own line first (its oysters, its fried chicken), then the cuisine's; `extra`
+    items (order_line's) join only when they share a word with the line."""
     cuisine = set()
     for t in e.get("tags") or []:
         if isinstance(t, dict) and (t.get("id") or "").startswith(("urn:tag:cuisine:", "urn:tag:category:place:",
@@ -1844,8 +1845,10 @@ def clean_order(items, e, vocab, n=3, line=None, loves=()):
             cuisine.update(w for w in M.norm(_what_label(t)).split() if len(w) > 3)
     love_keys = {" ".join(_sing_word(w) for w in M.norm(l).split()) for l in loves or () if l}
     line_words = {_sing_word(w) for w in M.norm(line or "").split() if len(w) > 3} - ORDER_NONFOOD - ORDER_GENERIC
+    items = list(items or []) + [x for x in extra or ()
+                                  if any(_sing_word(w) in line_words for w in M.norm(x or "").split())]
     out = []
-    for x in items or []:
+    for x in items:
         x = re.sub(r"\b[A-Za-z](?: [A-Za-z]\b)+", lambda m: m.group(0).replace(" ", "").upper(), (x or "").strip())
         x = re.sub(r"(?<=\w) ([Aa])n (?=[b-df-gj-np-tv-zB-DF-GJ-NP-TV-Z])", r" \1nd ", x)   # "Fish An Chips"
         x = re.sub(r"\b(\w+) s\b", r"\1's", x)
@@ -1863,7 +1866,7 @@ def clean_order(items, e, vocab, n=3, line=None, loves=()):
                                       for y in out)]
     seen, uniq = set(), []
     for x in keep:
-        k = " ".join(_sing_word(w) for w in x.lower().split())
+        k = " ".join(_sing_word(w) for w in x.lower().split() if w not in ("and", "&"))   # "Avocado And Toast"
         if k not in seen:
             seen.add(k)
             uniq.append(x)
@@ -2860,8 +2863,9 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
                 if ll[0] is not None else None, "distance_from": CENTER_LABEL.get(city.get("key")),
                 "kind": kind(i)[0], "kind_family": kind(i)[1], "image": image_url(e), "blurb": blurb,
                 "line_src": "claude" if (cl.get(i) or {}).get("line") else "rules",
-                "order": clean_order(((cl.get(i) or {}).get("dishes") or []) + order_line(e, vocab, 6), e, vocab,
-                                     line=blurb, loves=[l.get("label") or l.get("text") for l in loves]),
+                "order": clean_order((cl.get(i) or {}).get("dishes") or order_line(e, vocab), e, vocab, line=blurb,
+                                     loves=[l.get("label") or l.get("text") for l in loves],
+                                     extra=order_line(e, vocab, 6) if (cl.get(i) or {}).get("dishes") else ()),
                 "price": price_line(e),
                 "hours": prop(e, "hours") or None, "tz": CITY_TZ.get(city.get("key")),
                 "last_seen": seen_info.get(i),

@@ -688,6 +688,9 @@ class TestCardLines(unittest.TestCase):
                                        set(), n=4, line="East Coast oysters at a dim bar",
                                        loves=["Korean fried chicken"]),
                          ["oysters", "NYPD sandwich", "Fish And Chips"])
+        self.assertEqual(E.clean_order(["Glinda"], k, set(), line="Craft cocktails and mocktails, outside food welcome",
+                                       extra=["street tacos", "mocktails"]), ["mocktails", "Glinda"])
+        self.assertEqual(E.clean_order(["Avocado And Toast", "avocado toast"], k, set()), ["Avocado And Toast"])
         closed = {d: [{"opens": None, "closed": True, "closes": None}] for d in
                   ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")}
         self.assertTrue(E.closed_all_week({"properties": {"hours": closed}}))
