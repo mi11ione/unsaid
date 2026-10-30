@@ -817,8 +817,8 @@
     // ---- S3 · card back
     // the sheet's one fit line: "Fits you better than 28 of the 30 places more popular than it. No AI named it in 888 asks."
     // the sheet's one fit line states the taste signal without ever reading as mediocre:
-    // top quarter -> "#13 of 77 for your taste · last of 77 by popularity."; top half -> "In the top half for your taste ·
-    // 41st of 77 by popularity."; otherwise the "fits you better than N of the M more popular" line. Then the AI count.
+    // top quarter -> "#13 of 77 for your taste · last of 77 by popularity."; otherwise the "fits you better than N of
+    // the M more popular" line, or the popularity rank alone. Then the AI count.
     function fitLine(c) {
       const R = st.result || {}, n = R.counts && R.counts.asks;
       const U = c.U ?? (R.counts && R.counts.U), f = c.tied ? null : c.fit_rank, a = c.any_rank;
@@ -827,7 +827,6 @@
       const better = m ? (m[1] === 'all' ? `Fits you better than all ${m[2]} places more popular than it.` : `Fits you better than ${m[1]} of the ${m[2]} places more popular than it.`)
         : /one more popular place/i.test(c.why || '') ? 'Fits you better than the one place more popular than it.' : null;
       const fit = f != null && U != null && f <= U / 4 ? [`#${f} of ${U} for your taste`, pop].filter(Boolean).join(' · ') + '.'
-        : f != null && U != null && f <= U / 2 ? ['In the top half for your taste', pop].filter(Boolean).join(' · ') + '.'
         : better || (pop ? cap1(pop) + '.' : '');
       return [fit, `No AI named it${n != null ? ` in ${n.toLocaleString('en-US')} asks` : ''}.`].filter(Boolean).join(' ');
     }
