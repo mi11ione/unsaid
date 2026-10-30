@@ -146,7 +146,7 @@
       const yy = top + i * rowH;
       ctx.font = `14px ${MONO}`; ctx.fillStyle = C.faint; ctx.fillText(String(i + 1).padStart(2, '0'), rx, yy);
       ctx.font = `400 30px ${SERIF}`;
-      if (c.name) { ctx.fillStyle = C.white; ctx.fillText(wrap(ctx, c.name, rw - 40)[0], rx + 36, yy + 4); }
+      if (c.name) { const nm = window.UM && UM.shortName ? UM.shortName(c.name, c.neighbourhood) : c.name; ctx.fillStyle = C.white; ctx.fillText(wrap(ctx, nm, rw - 40)[0], rx + 36, yy + 4); }
       else { ctx.fillStyle = C.faint; ctx.fillText('–', rx + 36, yy + 4); }
       ctx.font = `16px ${MONO}`; ctx.fillStyle = C.dim;
       const what = c.what == null ? '' : c.what;

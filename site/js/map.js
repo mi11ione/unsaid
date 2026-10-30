@@ -221,5 +221,15 @@
   // "openai" -> "ChatGPT"; "gemini (live)" -> "Gemini (live)"
   const provider = p => { if (p == null) return p; const m = String(p).match(/^([A-Za-z]+)(.*)$/); const n = m && PROVIDERS[m[1].toLowerCase()]; return n ? n + m[2] : (PROVIDERS[String(p).toLowerCase()] || p); };
 
-  window.UM = { typedLoves, typedName, deadLine, day, days, cleanName, frame, hull, inHull, cityLine, firstOf, provider, C, canvas, projection, discD, dots, disc, seven, ring, stack, leader, el, esc, fmt, ph, param, et, hhmm, json, result };
+  // "Zushi Sushi and Ramen - S Laclede" -> "Zushi Sushi and Ramen": a trailing " - <street or area>" is dropped for display
+  // when it starts with a compass letter, names a street type, or is the card's own neighbourhood. Matching keeps the raw name.
+  const STREETY = /\b(st|street|ave|avenue|blvd|boulevard|rd|road|dr|drive|pkwy|parkway|hwy|highway|ln|lane|way|pl|place|ct|sq)\b\.?/i;
+  function shortName(name, hood) {
+    const s = String(name || ''), m = s.match(/^(.+?)\s+[-–—]\s+([^-–—]+)$/);
+    if (!m) return s;
+    const tail = m[2].trim();
+    const area = /^[NSEW]\.?\s/.test(tail) || STREETY.test(tail) || (hood && tail.toLowerCase() === String(hood).toLowerCase());
+    return area && m[1].trim().length >= 3 ? m[1].trim() : s;
+  }
+  window.UM = { shortName, typedLoves, typedName, deadLine, day, days, cleanName, frame, hull, inHull, cityLine, firstOf, provider, C, canvas, projection, discD, dots, disc, seven, ring, stack, leader, el, esc, fmt, ph, param, et, hhmm, json, result };
 })();

@@ -39,8 +39,10 @@
   // (the middle love truncates on a phone)
   const lovesLabel = s => { const L = (s.loves || []).filter(Boolean); return L.map((l, i) => `<span class="${i === 1 && L.length > 2 ? 'lmid' : 'l'}">${esc(l)}</span>`).join(' · '); };
   // the presets as two chips ("Or open one:"): each city's first set in data/try.json
-  function presetChips(head = 'Or open one:') {
-    const ok = TRY.sets.filter(s => s.src && !s.mock);
+  function presetChips(head = 'Or open one:', skip = null) {
+    // skip: the set the landing's photo strip already opens; its city's chip is dropped (one way in per city)
+    const sk = skip && TRY.sets.find(s => s.id === skip);
+    const ok = TRY.sets.filter(s => s.src && !s.mock && !(sk && s.city === sk.city));
     const pick = [...new Set(ok.map(s => s.city))].map(c => ok.find(s => s.city === c));
     return `<div class="try"><span class="dim">${esc(head)}</span> ${pick.map(x => `<a class="pchip" href="#/r?set=${encodeURIComponent(x.id)}">${lovesLabel(x)}</a>`).join('')}</div>`;
   }
@@ -60,7 +62,7 @@
   // the hero (one idea, said once): "AI sends everyone to ~~Mai Lee~~." + its receipt, from census.json (Share.hero)
   function heroBlock() {
     const H = Share.hero(CEN, 'stl'); if (!H) return '';
-    return `<h1>AI sends everyone to <span class="gx">${esc(H.gem)}</span>.</h1><p class="receipt">${esc(H.receipt)}</p>
+    return `<h1>AI sends everyone to <span class="gx">${esc(H.gem)}</span>.</h1><p class="receipt">${H.receipt.split(' · ').map(x => `<span class="ri">${esc(x)}</span>`).join(' · ')}</p>
       <p class="subline">Tell us an artist, a show and a dish you love. We’ll send you where it didn’t.</p>`;
   }
 
@@ -74,7 +76,7 @@
       </div>
       <div class="fields"><div class="fld"><span class="n">in</span><div class="cityopts" role="radiogroup" aria-label="city">${CITIES.map(c => `<button role="radio" aria-checked="false" data-c="${esc(c.slug)}">${esc(c.name)}</button>`).join('')}</div></div></div>
       <div class="go"><button class="btn solid" id="cross" disabled>Find my seven</button></div>
-      ${presetChips()}
+      ${presetChips('Or open one:', 'stl-cedric')}
       <div class="thumbs" id="thumbs"></div>
     </section></div>`;
     view.querySelectorAll('input[data-i]').forEach(inp => {
@@ -101,7 +103,7 @@
       const ph = (R.picks || []).filter(c => httpUrl(c.image));
       if (ph.length < 4) return;
       $('#thumbs').innerHTML = `<a class="thead" href="#/r?set=stl-cedric"><span class="tl">${lovesLabel(set)}</span><span class="dim">seven in ${esc((CFG.cities[set.city] || {}).name || '')} →</span></a>
-        <a class="trow" href="#/r?set=stl-cedric" aria-label="Open the seven for ${esc(set.loves.filter(Boolean).join(', '))}">${ph.map(c => `<figure><img src="${esc(c.image)}" alt="" loading="eager" onerror="this.parentNode.remove()" onload="if(this.naturalWidth<100)this.parentNode.remove()"><figcaption>${esc(c.name)}</figcaption></figure>`).join('')}</a>`;
+        <a class="trow" href="#/r?set=stl-cedric" aria-label="Open the seven for ${esc(set.loves.filter(Boolean).join(', '))}">${ph.map(c => `<figure><img src="${esc(c.image)}" alt="" loading="eager" onerror="this.parentNode.remove()" onload="if(this.naturalWidth<100)this.parentNode.remove()"><figcaption>${esc(UM.shortName(c.name, c.neighbourhood))}</figcaption></figure>`).join('')}</a>`;
     } catch (e) { /* the landing works without it */ }
   }
   // a link we share or copy never carries the API token (it lives only in the visitor's own address bar)
@@ -380,7 +382,7 @@
     // one numbering: after the result, a card's number is its position in the list (cards, map dots, placeholders);
     // while streaming, the order cards arrived in. A burned card has left the list and has no number.
     const cardNo = id => { const L = st.done ? st.slots : st.order; const i = L.indexOf(id); return i < 0 ? null : i + 1; };
-    const placeName = (c, id) => c.name ? esc(c.name) : (cardNo(id) ? ph(null, `place ${cardNo(id)}`) : ph(null, 'burned card'));
+    const placeName = (c, id) => c.name ? esc(UM.shortName(c.name, c.neighbourhood)) : (cardNo(id) ? ph(null, `place ${cardNo(id)}`) : ph(null, 'burned card'));
 
     // ---- events
     function onEvent(e) {
@@ -506,9 +508,36 @@
       return `<div class="pic${httpUrl(c.image) ? '' : ' none'}">${httpUrl(c.image) ? `<img src="${esc(c.image)}"${set} alt="" ${i < 3 ? 'fetchpriority="high"' : 'loading="lazy"'} onerror="this.parentNode.classList.add('none');this.remove()" onload="if(this.naturalWidth<100){this.parentNode.classList.add('none');this.remove()}">` : ''}${fb}` +
         `<span class="no">${String(i + 1).padStart(2, '0')}</span>${x || ''}</div>`;
     }
+    // the area: in St. Louis, a place whose address is in another municipality ("8017 Airport Rd Berkeley, MO") shows that
+    // municipality; otherwise Qloo's neighbourhood
+    const STREET_T = /^(st|street|ave|avenue|blvd|boulevard|rd|road|dr|drive|pkwy|parkway|hwy|highway|ln|lane|way|pl|place|ct|ter|trl|cir|plz|sq|\d+\w*)\.?$/i;
+    function municipality(addr) {
+      const m = String(addr || '').match(/^(.*?),\s*[A-Z]{2}\s+\d{5}/); if (!m) return null;
+      const head = m[1].trim();
+      if (/\bst\.?\s+louis$/i.test(head)) return 'St. Louis';
+      const t = head.split(/\s+/); let k = t.length;
+      while (k > 0 && !STREET_T.test(t[k - 1])) k--;
+      const city = t.slice(k).join(' ');
+      return k > 0 && city ? city : null;
+    }
+    function areaOf(c) {
+      const mu = slug === 'st-louis' ? municipality(c.address) : null;
+      return mu && mu !== 'St. Louis' ? mu : (c.neighbourhood || c.area || null);
+    }
+    // the reason line: "Fits all three of your loves" when it fits each; a dish love by name; another love only when the
+    // place holds for at least two; otherwise none (the card's own line says what it is)
+    function loveOf(label) { return ((st.result && st.result.loves) || []).find(l => l.label === label) || null; }
+    function reasonLine(c) {
+      const n = c.n_loves, h = c.holds;
+      if (n >= 2 && h != null && h >= n) return n === 2 ? 'Fits both of your loves' : `Fits all ${word(n)} of your loves`;
+      if (c.because == null) return '';
+      const l = loveOf(c.because), tag = l && (l.kind === 'tag' || /^urn:tag/.test(l.type || ''));
+      if (tag || (h != null && h >= 2)) return `Because you love ${tName(c.because)}`;
+      return '';
+    }
     function metaLine(c) {
       // no distance: there is no visitor location, so "6 mi" would only read as far
-      return [c.neighbourhood || c.area, price(c), c.open === false ? 'Closed' : openState(c)].filter(Boolean).map(esc).join(' · ');
+      return [areaOf(c), price(c), c.open === false ? 'Closed' : openState(c)].filter(Boolean).map(esc).join(' · ');
     }
     // one casing for what to order: lower case, except a word that is all caps or has a capital after its first
     // letter ("BBQ", "McDonald's"): "Traditional Wings And Fries" -> "traditional wings and fries"
@@ -522,7 +551,7 @@
         ${photo(c, i, x)}
         <div class="body">
           <div class="name">${known ? (c.name ? esc(c.name) : '') : placeName(c, c.id)}</div>
-          ${known || c.because == null ? '' : `<div class="because">Because you love ${esc(tName(c.because))}</div>`}
+          ${known || !reasonLine(c) ? '' : `<div class="because">${esc(reasonLine(c))}</div>`}
           <div class="meta">${metaLine(c)}</div>
           ${blurb ? `<p class="blurb">${esc(blurb)}</p>` : ''}
           ${order.length ? `<div class="order">Order: ${order.map(dish).map(esc).join(', ')}</div>` : ''}
@@ -544,8 +573,14 @@
       const x = h[DAYS[d]] || h[DAYS[d].slice(0, 3)] || [];
       return (Array.isArray(x) ? x : [x]).filter(t => t && !t.closed && mins(t.opens) != null && mins(t.closes) != null).map(t => ({ o: mins(t.opens), c: mins(t.closes) }));
     }
+    function hoursOk(c) {
+      const h = c.hours; if (!h || typeof h !== 'object' || Array.isArray(h)) return false;
+      if (/24\s*\/\s*7|24 hours/i.test([c.blurb, c.line, c.what].filter(Boolean).join(' '))) return false;
+      const shut = DAYS.filter((_, d) => !slots(h, d).length);
+      return !(shut.length === 7 || (shut.length === 2 && shut.includes('friday') && shut.includes('saturday')));
+    }
     function openState(c) {
-      const h = c.hours; if (!h || typeof h !== 'object' || Array.isArray(h)) return '';
+      const h = c.hours; if (!hoursOk(c)) return '';
       const { d, m } = nowIn(c.tz); if (d < 0) return '';
       const now = slots(h, d).find(t => m >= t.o && m < (t.c <= t.o ? t.c + 1440 : t.c))
         || slots(h, (d + 6) % 7).find(t => t.c <= t.o && m < t.c);      // last night's hours, past midnight
@@ -584,6 +619,7 @@
     function hours(c) {
       const h = c.hours_today || c.hours; if (!h) return '';
       if (typeof h === 'string') return h;
+      if (!hoursOk(c)) return '';
       const { d } = nowIn(c.tz); if (d < 0) return '';
       const t = slots(h, d);
       return t.length ? t.map(x => `${clock(x.o)}–${clock(x.c)}`).join(', ') : 'closed';
@@ -620,6 +656,13 @@
       const el2 = $('#cards'); if (!el2) return;
       el2.innerHTML = '';
       st.slots.forEach(id => el2.appendChild(cardEl(id)));
+      watchPhotos(el2);
+    }
+    function watchPhotos(root) {
+      const give = img => { if (img.isConnected && (!img.complete || img.naturalWidth < 100)) { img.parentNode.classList.add('none'); img.remove(); } };
+      const io = 'IntersectionObserver' in window ? new IntersectionObserver(es => es.forEach(e => {
+        if (e.isIntersecting) { io.unobserve(e.target); setTimeout(() => give(e.target), 4000); } }), { rootMargin: '200px' }) : null;
+      root.querySelectorAll('.pic img').forEach(img => io ? io.observe(img) : setTimeout(() => give(img), 4000));
     }
     // a struck card stays where it was, struck (in ink if you struck it, red if an AI named it); the next reserve rises
     // in under it, and every number after it moves down one, on the cards and the map alike
@@ -628,7 +671,7 @@
       if (human) { try { localStorage.setItem('unsaid.hint', '1'); } catch (e) { /* */ } const h = $('#hint'); if (h) h.remove(); }
       const rid = st.reserves.shift();
       if (rid) {
-        st.risen.set(rid, 'rose in its place · a reserve no AI named');
+        st.risen.set(rid, 'rose in its place · another place no AI named');
         st.slots.splice(st.slots.indexOf(id) + 1, 0, rid);
       }
       drawCards(); counter(); mapDraw();
@@ -751,7 +794,7 @@
       const U = c.U ?? (R.counts && R.counts.U), Rmi = R.counts && R.counts.R_mi;
       const ns = c.never_said || {};
       const fit = c.tied ? null : c.fit_rank;
-      const head = esc(c.name || '');
+      const head = esc(UM.shortName(c.name || '', c.neighbourhood));
       const pct = r => Math.max(0, Math.min(100, ((r - 1) / Math.max(1, (U || 1) - 1)) * 100));
       const pos = r => `${pct(r)}%`;
       // a label near either end hangs inward, so it never leaves the sheet
@@ -760,8 +803,7 @@
       const slider = flat || U == null || c.any_rank == null ? '' : `<div class="slider"><div class="track"></div>
           ${c.any_rank != null ? `<div class="tick any" style="left:${pos(c.any_rank)}"></div><div class="tl any" style="${lab(c.any_rank)}">${esc(popWords(c, true))}</div>` : ''}
           <div class="end" style="left:0">#1</div><div class="end" style="right:0">#${U}</div></div>`;
-      const holds = c.holds != null && c.n_loves != null && c.holds >= c.n_loves ? 'It stays a pick even if you drop any one love.'
-        : c.holds_without ? `It stays a pick without ${[].concat(c.holds_without).map(x => esc(tName(x))).join(' or ')}.` : '';
+      const holds = '';
       const st3 = st.struck.get(id);
       const order = Array.isArray(c.order) ? c.order.filter(Boolean) : c.order ? [c.order] : [];
       openSheet(`
@@ -773,8 +815,8 @@
         ${c.what ? `<p class="dim">${esc(c.what)}</p>` : ''}
         ${order.length ? `<p>Order: ${order.map(dish).map(esc).join(', ')}</p>` : ''}
         ${st3 ? `<div class="red">${esc(st3.text)}</div>` : ''}
-        <div class="blk"><div class="sh"><h2>Because</h2></div>
-          <div class="big1">${c.because == null ? '' : 'You love ' + esc(tName(c.because)) + '.'}</div>${c.because_detail ? `<p>${esc(cap1(typedText(c.because_detail)))}.</p>` : ''}${holds ? `<p class="dim">${holds}</p>` : ''}</div>
+        ${reasonLine(c) ? `<div class="blk"><div class="sh"><h2>Because</h2></div>
+          <div class="big1">${esc(reasonLine(c))}.</div>${c.because_detail ? `<p>${esc(cap1(typedText(c.because_detail)))}.</p>` : ''}</div>` : ''}
         <div class="blk"><div class="sh"><h2>Fits you</h2></div>
           <p>${esc(fitLine(c))}</p></div>
         <div class="blk"><div class="sh"><h2>Go</h2></div>
