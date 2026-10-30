@@ -1,5 +1,5 @@
 {
- "_": "Shared cards between preset sets in the same city (7 cards each), from fresh20-28oct via media/tools/build_overlap.py; other_* = every same-city pair outside both clusters",
+ "_": "Shared cards between preset sets in the same city (7 cards each), from fresh20-freeze via media/tools/build_overlap.py; other_* = every same-city pair outside both clusters",
  "city": "St. Louis",
  "sets": 20,
  "clusters": [
