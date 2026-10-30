@@ -2,16 +2,16 @@
 
 **AI sends everyone to Mai Lee. Your taste sends you elsewhere.**
 
-Ask Claude for a hidden gem in St. Louis and it says Mai Lee, on 13 of 16 tries; ChatGPT says it 10 times. Tell UNSAID three things you love. It crosses out every place Claude, ChatGPT and Gemini named in ⟦ASKS_STL⟧ dated asks about the city, and Qloo ranks what's left for your taste: seven places, each with Qloo's photo, what people order there, and why.
+Ask Claude for a hidden gem in St. Louis and it says Mai Lee, on 13 of 16 tries; ChatGPT says it 10 times. Tell UNSAID three things you love. It crosses out every place Claude, ChatGPT and Gemini named in 942 dated asks about the city, and Qloo ranks what's left for your taste: seven places, each with Qloo's photo, what people order there, and why.
 
-On 40 public questions never used to build the list, the AIs named ⟦K12_PLAIN_FRESH_U⟧ of 140 cards from Qloo's plain taste order and ⟦K12_UNSAID_FRESH_U⟧ of UNSAID's; seven random leftovers are named about as rarely but fit far worse (⟦K12_RANDOM_FIT_MED⟧th vs ⟦K12_UNSAID_FIT_MED⟧th fit percentile). Method and every gate, pass or fail: [Gates](#gates).
+On 40 public questions never used to build the list, the AIs named 32 of 140 cards from Qloo's plain taste order and 0 of UNSAID's; seven random leftovers are named about as rarely but fit far worse (47th vs 75th fit percentile). Method and every gate, pass or fail: [Gates](#gates).
 
-**Live:** ⟦LIVE_URL⟧ · **Agents:** [MCP](#mcp) · **License:** MIT ([LICENSE](LICENSE)); map data © OpenStreetMap contributors, ODbL 1.0.
+**Live:** https://unsaid-ang.pages.dev · **Agents:** [MCP](#mcp) · **License:** MIT ([LICENSE](LICENSE)); map data © OpenStreetMap contributors, ODbL 1.0.
 
 
 ## Five minutes
 
-**1. The live demo.** Open ⟦LIVE_URL⟧ and tap **Frankie Beverly & Maze · The Original Kings of Comedy · rib tips**. Tap a card for its detail; tap ✕ to strike one you know and a reserve takes its place; paste any AI's answer and anything it names is already crossed out. Or type three things you love. Cards arrive in about ⟦P50⟧ seconds.
+**1. The live demo.** Open https://unsaid-ang.pages.dev and tap **Frankie Beverly & Maze · The Original Kings of Comedy · rib tips**. Tap a card for its detail; tap ✕ to strike one you know and a reserve takes its place; paste any AI's answer and anything it names is already crossed out. Or type three things you love. Cards arrive in about 33.1 seconds.
 
 **2. From your agent, no Qloo key, one paste.** Add `https://unsaid-ang.pages.dev/mcp` as a custom connector in Claude (Settings → Connectors), or run the line below.
 
@@ -103,14 +103,14 @@ Every gate is printed as measured, pass or fail, with its script. The bars were 
 |---|---|---|---|---|
 | P · probes | 12 checks of how Qloo behaves | `probes.py` | **PASS**: 12 of 12 ran. `business_rating.min` is ignored server side; no-signal order ≡ popularity | client floor 4.3; "anyone" = popularity rank |
 | K1 · density | 150+ places in the pool | `k1_density.py` | **FAIL**: \|U\| ≥ 150 in 0/10 NYC and 0/10 STL at 8 and 10 mi; 2/10 and 2/10 after widening | widen R: STL 15 mi, NYC 10 mi |
-| A · taste moves | ρ(taste, popularity) ≤ 0.90 in 8+ of 10 sets per city; two strangers' sevens (Cedric, Jason) share ≤ 2 | `k2a_lift.py` | ⟦GATE_A⟧. All pairs in a city: median ⟦PAIRS_MED⟧ | none |
+| A · taste moves | ρ(taste, popularity) ≤ 0.90 in 8+ of 10 sets per city; two strangers' sevens (Cedric, Jason) share ≤ 2 | `k2a_lift.py` | **PASS**: New York 10/10, St. Louis 10/10; strangers share 0. All pairs in a city: median 0 | none |
 | K8 · closed | Qloo's `is_closed` catches known closures | `k8_closed.py` | **FAIL**: 2 of 3 known closures | a last-seen check on every card (hours and address in Qloo; the venue's site when Qloo has one) |
 | K4 · matcher | 0 AI-named places slip through | `tests/test_matcher.py`, `k4_relabel.py` | **PASS after pivot**: 1,345 AI names on 2 real pools; 3 false survivors, each a branch of a named place, then 0 after R5. Labels by the build agent, not held out | raise the guard (R5 brand containment) |
-| B · survivors | 7 cards + 3 reserves, no junk, in 8+ of 10 (NYC) and 6+ of 10 (STL) | `k3_survivors.py` | ⟦GATE_B⟧ | widen R; extra pool pages |
-| C · not a cap | overlap with a popularity cut of the same size ≤ 0.80 | `k3_survivors.py`, `run_query.py` | ⟦GATE_C⟧; by city below | none |
+| B · survivors | 7 cards + 3 reserves, no junk, in 8+ of 10 (NYC) and 6+ of 10 (STL) | `k3_survivors.py` | **PASS**: New York 10/10, St. Louis 9/10 | widen R; extra pool pages |
+| C · not a cap | overlap with a popularity cut of the same size ≤ 0.80 | `k3_survivors.py`, `run_query.py` | **PASS**: median 0.67; a random cut of the same size: 0.51; by city below | none |
 | D · meter | with Qloo as a tool, 4+ fewer everyone-list picks than alone in 7+ of 10 sets | `k10_meter.py` | **FAIL**: alone a median 6.0 of 12 picks land on the other AIs' lists (the pre-registered grading list: census + wall 1); with Qloo as the tool 4.0; 4+ below alone in 5 of 10 sets. Final re-grade on the rebuilt walls | printed here, not featured |
 | E · fresh asks | median 1 or fewer of 7 cards named | `k5_fresh.py` | **PASS**: 1 of 140 (on the frozen cards; k12's stricter check on today's cards finds 3), median 0; the one hit is a false match (below) | none |
-| F · speed | cards p50 20 s or less; first name 1 s or less | `k11_latency.py` | ⟦GATE_F⟧, through the Pages proxy on Render's free tier, at the freeze | none |
+| F · speed | cards p50 20 s or less; first name 1 s or less | `k11_latency.py` | **FAIL**: p50 33.1 s, p90 41.8 s, first name 0.58 s (10 cold runs), through the Pages proxy on Render's free tier, at the freeze | none |
 
 - **Gate D's "with Qloo" tool** (`qloo_places`) ordered places by the first love's pool order, not a joint signal, and built its pool the older way at meter time (2 pages, no distance check; 101 places vs the engine's 183 for the same set). It still returned what the frozen protocol asks for, Qloo's top 50 with nothing crossed out, so D stands as measured and was not re-run. Meter protocol: `data/meter.protocol.md`.
 - **Gate F** is measured from a home broadband line, not a phone on cellular as the build doc says. The number above is the freeze run's, after the last engine deploy; an earlier pass on 28 Oct predates the ranking change. If the first crossed-out name takes more than 1 s, the cell says FAIL. A fresh query costs about 40–50 Qloo calls and $0 in AI API fees.
@@ -126,17 +126,17 @@ Every gate is printed as measured, pass or fail, with its script. The bars were 
 
 ### Two strangers (gate A)
 
-Asked 12 times each about their tastes, Claude's answers for Cedric (*The Original Kings of Comedy*, Frankie Beverly & Maze, rib tips; 51 places in all) and Jason (Sinatra, *Rounders*, Carbone; 61 places) overlapped on 9 places in total, though two single answers shared fewer than one place on average. Their UNSAID sevens share ⟦STRANGERS⟧. Cedric and Jason are two of the 20 taste sets.
+Asked 12 times each about their tastes, Claude's answers for Cedric (*The Original Kings of Comedy*, Frankie Beverly & Maze, rib tips; 51 places in all) and Jason (Sinatra, *Rounders*, Carbone; 61 places) overlapped on 9 places in total, though two single answers shared fewer than one place on average. Their UNSAID sevens share 0. Cedric and Jason are two of the 20 taste sets.
 
-Over all 20 sets, the ⟦CARDS⟧ cards are ⟦DISTINCT⟧ distinct places; no place appears more than ⟦MAXREP⟧ times in a city; two sets in a city share a median ⟦PAIRS_MED⟧. Similar tastes do share: St. Louis's soul and hip-hop sets, and Wilco with Big Thief, share up to ⟦CLUSTER_MAX⟧ places pair by pair; any other two sets, at most ⟦OTHER_MAX⟧.
+Over all 20 sets, the 140 cards are 108 distinct places; no place appears more than 5 times in a city; two sets in a city share a median 0. Similar tastes do share: St. Louis's soul and hip-hop sets, and Wilco with Big Thief, share up to 3 places pair by pair; any other two sets, at most 4.
 
 ### Is this just `filter.popularity.max`?
 
 No, though it does lean to less-known places, on purpose, and so do the AIs. Gate C cuts as many places by Qloo's popularity order as the AIs' list cuts, and measures how much the two cuts overlap (`k3_survivors.py`):
 
-- **It differs by city.** In St. Louis a popularity cap catches most of the AIs' list: a median ⟦CAP_MED_STL⟧ over 10 sets, against ⟦CAP_CHANCE_STL⟧ for a random cut of the same size. In New York it catches less: ⟦CAP_MED_NYC⟧, against ⟦CAP_CHANCE_NYC⟧. Over all 20 sets, ⟦CAP_MED⟧ against ⟦CAP_CHANCE⟧.
-- **The cards still differ.** Qloo's popularity-capped top 7 (your loves as one joint signal + `filter.popularity.max`) shares a median ⟦CAP_SHARE_MED⟧ of 7 places with UNSAID's seven.
-- **How much is crossed out.** For Cedric, the AIs named ⟦WALL⟧ St. Louis places; ⟦STRUCK_U⟧ were in his ⟦U⟧-place pool, ⟦S⟧ were left (`run_query.py --city stl --set stl-cedric`). Across 20 sets, a median ⟦STRUCK_MED⟧ of ⟦U_MED⟧.
+- **It differs by city.** In St. Louis a popularity cap catches most of the AIs' list: a median 0.82 over 10 sets, against 0.65 for a random cut of the same size. In New York it catches less: 0.59, against 0.41. Over all 20 sets, 0.67 against 0.51.
+- **The cards still differ.** Qloo's popularity-capped top 7 (your loves as one joint signal + `filter.popularity.max`) shares a median 1 of 7 places with UNSAID's seven.
+- **How much is crossed out.** For Cedric, the AIs named 1210 St. Louis places; 28 were in his 75-place pool, 47 were left (`run_query.py --city stl --set stl-cedric`). Across 20 sets, a median 100.5 of 187.5.
 - **k12, below.** On held-out questions, the score alone (no list) does most of the avoiding; the list does the rest.
 
 Probe P12 found that Qloo's no-signal order *is* the popularity order (ρ = 1.00 in New York, St. Louis and LA), so "for anyone" on a card is Qloo's popularity rank of the same pool (`probes.py`).
@@ -145,7 +145,7 @@ Probe P12 found that Qloo's no-signal order *is* the popularity order (ρ = 1.00
 
 `engine/k12_wall_effect.py` runs the same pipeline twice per set, with the real list and with an empty one, and also takes Qloo's plain top 7 by taste (the loves' ranks fused, nothing else). The evidence is the held-out fresh questions: on the dated answers the list is built from, "named" is scored by the same matcher that strikes, so UNSAID's count there is zero by construction.
 
-Held-out, cards the answers named, pooled over 20 sets of 7: **Qloo's plain taste top 7 ⟦K12_PLAIN_FRESH_POOLED⟧ → our score with no list ⟦K12_OFF_FRESH_POOLED⟧ → UNSAID ⟦K12_ON_FRESH_POOLED⟧** (per-set medians ⟦K12_PLAIN_FRESH⟧ / ⟦K12_OFF_FRESH⟧ / ⟦K12_ON_FRESH⟧). By city: St. Louis ⟦K12_PLAIN_FRESH_STL⟧ → ⟦K12_OFF_FRESH_STL⟧ → ⟦K12_ON_FRESH_STL⟧; New York ⟦K12_PLAIN_FRESH_NYC⟧ → ⟦K12_OFF_FRESH_NYC⟧ → ⟦K12_ON_FRESH_NYC⟧.
+Held-out, cards the answers named, pooled over 20 sets of 7: **Qloo's plain taste top 7 32 → our score with no list 12 → UNSAID 0** (per-set medians 1 / 0 / 0). By city: St. Louis 24 → 10 → 0; New York 8 → 2 → 0.
 
 Most of the drop comes from our ranking, which also drops generic venues (Ballpark Village, Little Italy spots) that Qloo's plain order keeps; crossing out does the rest, mostly in St. Louis. Counts only; the table with names stays in `engine/out/` (gitignored). Full table: [engine/k12_wall_effect.md](engine/k12_wall_effect.md).
 
@@ -164,7 +164,7 @@ The main lanes run without web search. A separate lane (`harness/search_on.py`, 
 
 ### Each card's own neighbourhood
 
-Two street lanes asked Claude and ChatGPT for the best places to eat and drink in a card's neighbourhood. Of the ⟦STREET_POOL⟧ cards a run without those answers would show, ⟦STREET_ASKED⟧ had their neighbourhood asked about, and ⟦STREET_NAMED_ASKED⟧ of those came up; each was struck and replaced. The freeze tops up the street asks until every card's neighbourhood has been asked (`harness/street_catchup.sh`).
+Two street lanes asked Claude and ChatGPT for the best places to eat and drink in a card's neighbourhood. Of the 140 cards a run without those answers would show, 138 had their neighbourhood asked about, and 11 of those came up; each was struck and replaced. The freeze tops up the street asks until every card's neighbourhood has been asked (`harness/street_catchup.sh`).
 
 ### Matching
 
@@ -184,20 +184,20 @@ Mostly name rules (exact, alias, brand containment: "Ippudo NY" strikes IPPUDO H
 
 ### Live and dated
 
-The ChatGPT and Claude answers are **dated**: asked through each vendor's command-line tool between ⟦DATES⟧, and stamped on every name: ⟦ASKS_STL⟧ dated asks about St. Louis and ⟦ASKS_NYC⟧ about New York, across every lane (Gemini's and the labelled search-on lane included). The census ran on 27 Oct 2026; 8 of ChatGPT's census answers were re-asked on 28 Oct after the search leak, and 24 other ChatGPT answers after the shell leak (*$0 AI side*). Gemini is asked **live** once per fresh run (one taste ask on the free tier, `gemini-3-flash-preview`). Cards don't wait for it: a live Gemini name that hits a card burns it afterwards. When Gemini's daily quota is used up, everything on screen is dated and the page says so. Each answer in `data/walls/` carries `asked_at` and `lane: dated | live`.
+The ChatGPT and Claude answers are **dated**: asked through each vendor's command-line tool between 27–30 Oct 2026, and stamped on every name: 942 dated asks about St. Louis and 932 about New York, across every lane (Gemini's and the labelled search-on lane included). The census ran on 27 Oct 2026; 8 of ChatGPT's census answers were re-asked on 28 Oct after the search leak, and 24 other ChatGPT answers after the shell leak (*$0 AI side*). Gemini is asked **live** once per fresh run (one taste ask on the free tier, `gemini-3-flash-preview`). Cards don't wait for it: a live Gemini name that hits a card burns it afterwards. When Gemini's daily quota is used up, everything on screen is dated and the page says so. Each answer in `data/walls/` carries `asked_at` and `lane: dated | live`.
 
 A place is struck if any answer named it once: 28% of the struck places in the pools were named in exactly one answer.
 
-The list is not every place an AI could name. Against the Chao2 estimate of each AI's full list, the saturation lane (960 extra asks) moved Claude in St. Louis from 46.6% to ⟦COVERAGE⟧ and in New York from 43.9% to ⟦COVERAGE_NYC⟧ (ChatGPT at the lane's end on 28 Oct: St. Louis 53.6% → 61.3%, New York 47.1% → 46.2%, as its estimate grew). In St. Louis, Claude's new-name rate fell to ⟦NEWRATE_STL⟧ over its last 40 asks (our bar for flat was 2%); in New York it is ⟦NEWRATE_NYC⟧. Neither city is flat. The paste box is there for the rest. `harness/census_stats.py`, `harness/saturation.py`.
+The list is not every place an AI could name. Against the Chao2 estimate of each AI's full list, the saturation lane (960 extra asks) moved Claude in St. Louis from 46.6% to 51% and in New York from 43.9% to 44% (ChatGPT at the lane's end on 28 Oct: St. Louis 53.6% → 61.3%, New York 47.1% → 46.2%, as its estimate grew). In St. Louis, Claude's new-name rate fell to 8% over its last 40 asks (our bar for flat was 2%); in New York it is 28%. Neither city is flat. The paste box is there for the rest. `harness/census_stats.py`, `harness/saturation.py`.
 
 ### FAQ
 
-- **Didn't the same place turn up in every St. Louis set?** It did (Warehouse West in 10 of 10). The ranking now weighs what fits you against what fits 97 sample tastes on Qloo: ⟦DISTINCT⟧ distinct places in ⟦CARDS⟧ cards, at most ⟦MAXREP⟧ per city. Similar tastes still share up to ⟦CLUSTER_MAX⟧ places.
-- **How many crossed-out places were even in his pool?** ⟦STRUCK_U⟧ of Cedric's ⟦U⟧; a median ⟦STRUCK_MED⟧ of ⟦U_MED⟧ over 20 sets (*Is this just `filter.popularity.max`?*).
-- **Isn't the ranking just a popularity filter?** It leans to less-known places on purpose, and that (with the fit-for-everyone term) does most of the avoiding: on held-out questions, ⟦K12_PLAIN_FRESH_POOLED⟧ AI-named cards in Qloo's plain taste order, ⟦K12_OFF_FRESH_POOLED⟧ with our score alone, ⟦K12_ON_FRESH_POOLED⟧ with the list. A popularity cap catches most of the AIs' list in St. Louis and less in New York, and its top 7 shares a median ⟦CAP_SHARE_MED⟧ of 7 with UNSAID's.
+- **Didn't the same place turn up in every St. Louis set?** It did (Warehouse West in 10 of 10). The ranking now weighs what fits you against what fits 97 sample tastes on Qloo: 108 distinct places in 140 cards, at most 5 per city. Similar tastes still share up to 3 places.
+- **How many crossed-out places were even in his pool?** 28 of Cedric's 75; a median 100.5 of 187.5 over 20 sets (*Is this just `filter.popularity.max`?*).
+- **Isn't the ranking just a popularity filter?** It leans to less-known places on purpose, and that (with the fit-for-everyone term) does most of the avoiding: on held-out questions, 32 AI-named cards in Qloo's plain taste order, 12 with our score alone, 0 with the list. A popularity cap catches most of the AIs' list in St. Louis and less in New York, and its top 7 shares a median 1 of 7 with UNSAID's.
 - **Is Cedric typical?** He's the example. Every number here is a 20-set median or total unless it names him.
 - **Real ChatGPT searches the web.** So we asked with search on: it scatters, and those answers named 0 of the 140 frozen cards (*With web search on*). They're on the list now.
-- **Does the list cover everything the AIs say?** No: about ⟦COVERAGE⟧ of Claude's estimated St. Louis list and ⟦COVERAGE_NYC⟧ in New York, and neither is flat. Paste any answer and a named card burns.
+- **Does the list cover everything the AIs say?** No: about 51% of Claude's estimated St. Louis list and 44% in New York, and neither is flat. Paste any answer and a named card burns.
 - **Who labelled the matcher test?** The build agent, on 2 sets, not held out. The golden set is scored against a synthetic pool.
 - **What's gate E's baseline?** k12, on the same held-out questions.
 - **Why fuse a rank per love instead of Qloo's joint signal?** k13 above: the joint call can't carry a dish love, and its explainability can't say which love put a card there.
@@ -227,7 +227,7 @@ The gist postdates both censuses (Claude's from 27 Oct 12:05 UTC), so the census
 
 - **Wider radius:** K1 failed at 10 mi (STL) and 8 mi (NYC), so the radius is now 15 mi (STL) and 10 mi (NYC). This is the documented pivot.
 - **Extra pool pages:** offsets 100 and 150 are fetched, but only when the floored pool has fewer than 150 places.
-- **Ranking (28 Oct):** the first ranking put the same place on most sets' cards (Warehouse West in 10 of 10 St. Louis sets). The score now subtracts what fits everyone (above). Over 20 sets: ⟦DISTINCT⟧ distinct places in ⟦CARDS⟧ cards (before: 68), at most ⟦MAXREP⟧ per place per city (before: 10); two sets in a city share a median ⟦PAIRS_MED⟧. Similar tastes share most: St. Louis's soul and hip-hop sets, and Wilco with Big Thief, up to ⟦CLUSTER_MAX⟧ places pair by pair; any other two sets, at most ⟦OTHER_MAX⟧.
+- **Ranking (28 Oct):** the first ranking put the same place on most sets' cards (Warehouse West in 10 of 10 St. Louis sets). The score now subtracts what fits everyone (above). Over 20 sets: 108 distinct places in 140 cards (before: 68), at most 5 per place per city (before: 10); two sets in a city share a median 0. Similar tastes share most: St. Louis's soul and hip-hop sets, and Wilco with Big Thief, up to 3 places pair by pair; any other two sets, at most 4.
 - **Fit-for-everyone prior (28 Oct):** it was first built from the city's other nine preset sets. That made the diversity numbers circular (measured on the sets the prior came from), and a place outside those sets' pools got no penalty at all (in 5 of 10 New York sets only 1–2 of 7 cards had a prior). It now comes from a Qloo-sampled anchor panel (97 live anchors per city, `build_priors.py`) over each city's whole candidate universe, with the median for any place no anchor scored. On the 20 sets that day: cards with a prior value 100 → 136 of 140 (the other 4 get the median; pool places 82% → 95%); distinct places 118 → 105; at most 4 repeats per place per city (was 3); gates A and B still pass; held-out AI-named cards, plain → our score with no list → UNSAID: 32 → 11 → 1 (was 32 → 7 → 1).
 - **Picks rules (28 Oct, after the new prior):** at most 3 cards per love while the other loves have places to give (it can't hold when they have none); chains off the cards; generic places cut (60% or more of the sample tastes put them in their top 30%); the matcher normalises corporate suffixes and apostrophes. The diversity targets were missed rather than the rules bent; similar tastes share the most (above).
 - **Dish loves:** a dish counts through a `filter.tags` sub-pool of places Qloo tags with it. A dish no place is tagged with (Dry Martini) stays dead: it shows the dead-love line and leaves the ranking.
