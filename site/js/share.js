@@ -153,7 +153,9 @@
       // what to order reads like a critic; the category tags only when Qloo lists no dishes
       const what = c.order && c.order.length ? c.order.slice(0, 2).join(', ') : c.what == null ? '' : c.what;
       const ar = window.UM && UM.area ? UM.area(c, R.city && R.city.slug) : c.neighbourhood;   // the same area as the site's card
-      ctx.fillText(wrap(ctx, what + (ar ? ' · ' + ar : ''), rw - 44)[0], rx + 44, yy + 32);
+      // the area only when the whole line fits: a cut area ("· Mark") reads broken
+      const full = what + (ar ? ' · ' + ar : '');
+      ctx.fillText(wrap(ctx, ctx.measureText(full).width <= rw - 44 ? full : what, rw - 44)[0], rx + 44, yy + 32);
     });
 
     // footer
