@@ -126,6 +126,7 @@ code { font: 400 .88em/1 var(--mono); background: var(--paper2); padding: 2px 5p
 .tmore:hover { text-decoration: underline; }
 
 /* ---------- results: header ---------- */
+#view { display: block; min-height: 100svh; }   /* the footer waits below the fold while the page builds: no shift */
 .res { min-height: 100svh; }
 .maphead { position: relative; margin-top: 24px; }
 @media (min-width: 600px) { .res .maphead { min-height: 420px; } }
@@ -202,18 +203,19 @@ code { font: 400 .88em/1 var(--mono); background: var(--paper2); padding: 2px 5p
 /* desktop: card 01 leads its own row, the photo on the same column as every other card and its words across the
    other two; then two rows of three. Photos keep one size, so none is blown up past what Qloo serves. */
 @media (min-width: 1000px) {
-  .cards > .card:first-child:not(:last-child) { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: var(--gap); }
-  .cards > .card:first-child:not(:last-child) .idx { grid-column: 1 / -1; }
-  .cards > .card:first-child:not(:last-child) .pic { grid-column: 1; }
-  .cards > .card:first-child:not(:last-child) .body { grid-column: 2 / span 2; padding-top: 0; gap: 12px; max-width: 40em; }
+  .cards > .card:first-child:not(:last-child), .cards > .card:nth-child(3n+2):last-child { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: var(--gap); }
+  .cards > .card:first-child:not(:last-child) .idx, .cards > .card:nth-child(3n+2):last-child .idx { grid-column: 1 / -1; }
+  .cards > .card:first-child:not(:last-child) .pic, .cards > .card:nth-child(3n+2):last-child .pic { grid-column: 1; }
+  .cards > .card:first-child:not(:last-child) .body, .cards > .card:nth-child(3n+2):last-child .body { grid-column: 2 / span 2; padding-top: 0; gap: 12px; max-width: 40em; }
   .cards > .card:first-child:not(:last-child) .name { font-size: 56px; line-height: 1; letter-spacing: -.04em; }
   .cards > .card:first-child:not(:last-child) .because { font-size: 22px; letter-spacing: -.015em; }
   .cards > .card:first-child:not(:last-child) .blurb { font-size: 17px; }
-  .cards > .card:first-child:not(:last-child) .pic.none + .body { grid-column: 1 / -1; }
+  .cards > .card:nth-child(3n+2):last-child .name { font-size: 36px; letter-spacing: -.03em; }
+  .cards > .card .pic.none + .body { grid-column: 1 / -1; }
 }
 @media (min-width: 721px) and (max-width: 999px) {
   .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .cards > .card:first-child:not(:last-child) { grid-column: 1 / -1; }
+  .cards > .card:first-child:not(:last-child), .cards > .card:nth-child(2n+2):last-child { grid-column: 1 / -1; }
 }
 .burnline { margin-top: 20px; min-height: 0; font-size: 12px; color: var(--grey); line-height: 1.6; }
 .burnline .red { color: var(--red); }
@@ -308,7 +310,7 @@ details.log[open] summary::after { content: '−'; }
 .foot span { margin-left: auto; }
 
 /* ---------- how it works, /agents ---------- */
-.doc { max-width: 880px; padding: clamp(40px, 6vw, 88px) 0 0; }
+.doc { max-width: 800px; padding: clamp(40px, 6vw, 88px) 0 0; }
 .doc h1 { font: 600 clamp(44px, 6vw, 80px)/.96 var(--sans); letter-spacing: -.045em; margin: 0 0 28px; }
 .doc h2 { font-size: 11px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; margin: 64px 0 16px; padding-bottom: 10px; border-bottom: 1px solid var(--ink); }
 .doc p { max-width: 640px; font-size: 17px; line-height: 1.55; color: #2c2c2a; }
@@ -319,12 +321,12 @@ details.log[open] summary::after { content: '−'; }
 .how .census { min-height: 196px; }
 .how .census .big { font: 600 clamp(28px, 3.4vw, 44px)/1.05 var(--sans); letter-spacing: -.035em; color: var(--ink); margin: 0; max-width: none; }
 .doc p.receipt { margin-top: 14px; font: 13px/1.5 var(--mono); color: var(--red); }
-.how .steps { list-style: none; counter-reset: s; padding: 0; margin: 0; max-width: 760px; }
+.how .steps { list-style: none; counter-reset: s; padding: 0; margin: 0; }
 .how .steps li { counter-increment: s; position: relative; padding: 16px 0 16px 52px; border-bottom: 1px solid var(--line); font-size: 17px; line-height: 1.5; color: #2c2c2a; }
 .how .steps li::before { content: '0' counter(s); position: absolute; left: 0; top: 16px; font: 500 11px/2.3 var(--mono); color: var(--mute); letter-spacing: .08em; }
 .how .steps li:first-child { border-top: 0; }
 .how .steps b { color: var(--ink); font-weight: 600; }
-table.k12 { width: 100%; max-width: 760px; border-collapse: collapse; margin: 18px 0 6px; font: 13px/1.4 var(--mono); }
+table.k12 { width: 100%; border-collapse: collapse; margin: 18px 0 6px; font: 13px/1.4 var(--mono); }
 table.k12 th { text-align: left; font-weight: 400; color: var(--grey); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; padding: 0 12px 10px 0; border-bottom: 1px solid var(--ink); vertical-align: bottom; }
 table.k12 td { padding: 14px 12px 14px 0; border-bottom: 1px solid var(--line); vertical-align: baseline; font-variant-numeric: tabular-nums; }
 table.k12 td:first-child { font: 400 16px/1.35 var(--sans); }
