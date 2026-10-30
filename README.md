@@ -1,6 +1,6 @@
 # UNSAID
 
-**Everything the AIs tell everyone, crossed out.**
+**AI sends everyone to Mai Lee. Your taste sends you elsewhere.**
 
 Ask Claude for a hidden gem in St. Louis and it says Mai Lee, on 13 of 16 tries; ChatGPT says it 10 times. Tell UNSAID three things you love. It crosses out every place Claude, ChatGPT and Gemini named in ⟦ASKS_STL⟧ dated asks about the city, and Qloo ranks what's left for your taste: seven places, each with Qloo's photo, what people order there, and why.
 
