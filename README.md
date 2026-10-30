@@ -116,7 +116,7 @@ One query (St. Louis; Frankie Beverly & Maze, *The Original Kings of Comedy*, ri
 
 ## Gates
 
-Every gate is printed as measured, pass or fail, with its script. The bars were set before the measurement; the pivot column is what the build doc says to do on a fail.
+Every gate is printed as measured, pass or fail, with its script. The bars were set before the measurement; the pivot column is what the build doc says to do on a fail. The build doc (`UNSAID.md`, hashed in `data/prereg/SHA256SUMS`) is private, disclosed on request.
 
 | gate | bar | script | result | pivot applied |
 |---|---|---|---|---|
