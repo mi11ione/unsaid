@@ -7,8 +7,8 @@ short_description), then checked twice:
      kept only if it passes the word check too; otherwise the line is marked failed and the engine uses its rules
      fallback (engine.blurb_line).
 Lines lead with the food, drink or thing to do and never name ownership or identity (Black-owned, women-owned,
-family-run, LGBTQ+, gay bar ...; card audit 30 Oct): such a line is rewritten (names_identity). Food facts (halal,
-kosher, vegan) stay. --must <dir of result files>: every card and reserve there gets extra rounds (with the last
+family-run, LGBTQ+-owned, LGBTQ+-friendly ...; card audit 30 Oct): such a line is rewritten (names_identity). The
+venue type ("gay bar", "lesbian bar", "queer nightclub") and food facts (halal, kosher, vegan) stay. --must <dir of result files>: every card and reserve there gets extra rounds (with the last
 attempt and its reason as feedback) until it has a checked line.
 Dishes must appear verbatim in the source.
 
@@ -43,9 +43,11 @@ after before about up down out off both each every also just you yourself""".spl
 # Food facts (halal, kosher, vegan) and "dog-friendly" / "family-friendly" stay.
 _IDW = (r"(?:black|brown|women|woman|female|family|lgbtq\+?|lgbt|queer|gay|lesbian|latin[oax]|latine|hispanic|"
         r"veteran|minority|immigrant|asian|indigenous|native|chef|artist|owner|mom|mother|father|husband|wife|couple)")
-IDENTITY = re.compile(r"\b%s(?:-|\s)*(?:owned|run|operated)\b|\b(?:owned|run|operated)\s+by\b|\blgbtq|\blgbt\b|"
-                      r"\bqueer\b|\bgay\b|\blesbian\b|\bafrican[- ]american\b|\b(?:black|women|woman)[- ]led\b" % _IDW,
-                      re.I)
+IDENTITY = re.compile(r"\b%s(?:-|\s)*(?:owned|run|operated)\b|\b(?:owned|run|operated)\s+by\b|"
+                      r"\b(?:lgbtq\+?|lgbt|queer|gay|lesbian)(?!\w)%s|\bafrican[- ]american\b|"
+                      r"\b(?:black|women|woman)[- ]led\b" % (_IDW, r"(?!\+?\s+(?:(?:sports|dance|piano|karaoke|"
+                      r"neighborhood|cocktail|dive)\s+)?(?:bar|bars|nightclub|club|lounge|pub|cabaret|disco)\b)"),
+                      re.I)   # the venue type stays: "gay bar", "lesbian bar", "queer nightclub" (30 Oct)
 
 SCHEMA = {"type": "object", "required": ["lines"], "properties": {"lines": {"type": "array", "items": {
     "type": "object", "required": ["id", "line", "dishes"], "properties": {
@@ -60,9 +62,9 @@ RULES = """no new adjectives, claims, prices, dates or history beyond the text; 
   (vibrant, destination, establishment, experience, nestled, venue, unique, boasts, offers, iconic, beloved, premier,
   elevated, gem, hidden); no trailing period; do not start with the place's name.
   LEAD WITH WHAT YOU EAT, DRINK OR DO THERE (the dish, the drinks, the music, the game, the dancing). NEVER mention
-  ownership or identity anywhere in the line (Black-owned, women-owned, family-run, LGBTQ+, LGBTQ+-friendly, gay,
-  lesbian, queer, veteran-owned ...): say what happens there instead (drag shows, dancing, karaoke). Food facts such
-  as halal, kosher or vegan are fine."""
+  ownership or identity anywhere in the line (Black-owned, women-owned, family-run, LGBTQ+-owned, LGBTQ+-friendly,
+  veteran-owned ...): say what happens there instead (drag shows, dancing, karaoke). The kind of venue is fine when
+  the text says so ("a gay bar", "a lesbian bar", "a queer nightclub"); so are food facts (halal, kosher, vegan)."""
 
 PROMPT = """You write the one-line description on a restaurant/bar card. For EACH place below, return:
 - line: at most 9 words. Name the one thing you eat, drink or do there that makes this place itself, using ONLY
@@ -82,8 +84,9 @@ VERIFY = """You check the one-line descriptions on restaurant/bar cards. Each it
 from `source` (the place's own text). For EACH item return:
 - ok: true only if ALL hold: (1) the line is fluent, natural English a person would write (no garbled or stitched
   phrases, no broken grammar: "Sushi and bluefin tuna rib diners scrape themselves" is NOT ok); (2) every fact in it
-  is fully supported by the source; (3) it leads with what you eat, drink or do there and names no ownership or
-  identity anywhere ("Black-owned", "women-owned", "family-run", "LGBTQ+", "gay bar" ... are NOT ok).
+  is fully supported by the source; (3) it leads with what you eat, drink or do there and names no
+  ownership or identity anywhere ("Black-owned", "women-owned", "family-run", "LGBTQ+-friendly" ... are NOT ok;
+  the venue type "gay bar" / "lesbian bar" / "queer nightclub" is ok).
 - fix: only when ok is false, a corrected line of at most 9 words. Rules: %s
   Omit fix if you cannot write a good one.
 Return every id given, once.
@@ -106,8 +109,8 @@ def words(text):
 
 
 def names_identity(line):
-    """True when the line names ownership or identity anywhere ("Black-owned bar ...", "... at a gay bar",
-    "LGBTQ+ friendly sports bar", "queer and women-owned")."""
+    """True when the line names ownership or identity anywhere ("Black-owned bar ...", "LGBTQ+ friendly sports
+    bar", "queer and women-owned"); the venue type ("a gay bar", "a lesbian bar", "a queer nightclub") is not."""
     return bool(IDENTITY.search(line or ""))
 
 

@@ -1814,9 +1814,11 @@ _CLAUSE_END = re.compile(r"\s*(?:;|\s[—–-]\s|,\s+(?:where|which|while|whose|
 # Ownership / identity is never named on a card line (juror + card audit, 30 Oct); build_lines.IDENTITY is the same
 _IDW = (r"(?:black|brown|women|woman|female|family|lgbtq\+?|lgbt|queer|gay|lesbian|latin[oax]|latine|hispanic|"
         r"veteran|minority|immigrant|asian|indigenous|native|chef|artist|owner|mom|mother|father|husband|wife|couple)")
-_IDENTITY = re.compile(r"\b%s(?:-|\s)*(?:owned|run|operated)\b|\b(?:owned|run|operated)\s+by\b|\blgbtq|\blgbt\b|"
-                       r"\bqueer\b|\bgay\b|\blesbian\b|\bafrican[- ]american\b|\b(?:black|women|woman)[- ]led\b" % _IDW,
-                       re.I)
+_IDENTITY = re.compile(r"\b%s(?:-|\s)*(?:owned|run|operated)\b|\b(?:owned|run|operated)\s+by\b|"
+                       r"\b(?:lgbtq\+?|lgbt|queer|gay|lesbian)(?!\w)%s|\bafrican[- ]american\b|"
+                       r"\b(?:black|women|woman)[- ]led\b" % (_IDW, r"(?!\+?\s+(?:(?:sports|dance|piano|karaoke|"
+                       r"neighborhood|cocktail|dive)\s+)?(?:bar|bars|nightclub|club|lounge|pub|cabaret|disco)\b)"),
+                       re.I)   # the venue type stays: "gay bar", "lesbian bar", "queer nightclub" (30 Oct)
 _BOILERPLATE = re.compile(r"^(?:the|this|it)\s+(?:establishment|location|venue|restaurant|bar|place|spot|business|"
                           r"cafe|café)?\b|\bestablishment\b", re.I)   # an opener the USP strip left in: say the kind
 _HOOD_THE_LAST = {"district", "side", "end", "bowery"}
@@ -1829,15 +1831,17 @@ specials deals entertainment comedy""".split())
 _ORDER_LEAD = ("for ", "with ", "a ", "an ", "the ", "of ", "in ", "on ", "at ", "to ", "and ", "or ", "&")
 
 
-def clean_order(items, e, vocab, n=3, line=None, loves=(), extra=()):
+def clean_order(items, e, vocab, n=3, line=None, loves=(), extra=(), credit=None):
     """The card's "people order" list, whatever its source (30 Oct, QA): apostrophe splits mended ("bernie s" ->
     "bernie's"); never an item that starts with a preposition or article ("for ramen"), never a non-food word
     (jazz, arcade games, healthy options); an item another, more specific item contains goes ("cheesecake" beside
     "matcha cheesecake"); items of the place's own cuisine first; at most n. Empty beats junk.
     Card audit, 30 Oct: spelled-out initials joined ("N Y P D sandwich" -> "NYPD sandwich"), "Fish An Chips" ->
-    "Fish And Chips"; never one of the query's loves ("Korean Fried Chicken" at a kosher steakhouse); items that
-    share a word with the card's own line first (its oysters, its fried chicken), then the cuisine's; `extra`
-    items (order_line's) join only when they share a word with the line."""
+    "Fish And Chips"; a love-matching item stays only when the place's own text names it ("Korean Fried Chicken"
+    at a kosher steakhouse goes, rib tips at Jody B's stays) and then goes FIRST, as does `credit` (the dish love the
+    card is credited to, verified by the engine); then items that share a word with the card's own line (its
+    oysters, its fried chicken), then the cuisine's; `extra` items (order_line's) join only when they share a word
+    with the line."""
     cuisine = set()
     for t in e.get("tags") or []:
         if isinstance(t, dict) and (t.get("id") or "").startswith(("urn:tag:cuisine:", "urn:tag:category:place:",
@@ -1847,6 +1851,14 @@ def clean_order(items, e, vocab, n=3, line=None, loves=(), extra=()):
     line_words = {_sing_word(w) for w in M.norm(line or "").split() if len(w) > 3} - ORDER_NONFOOD - ORDER_GENERIC
     items = list(items or []) + [x for x in extra or ()
                                   if any(_sing_word(w) in line_words for w in M.norm(x or "").split())]
+    key = lambda x: " ".join(_sing_word(w) for w in M.norm(x or "").split())  # noqa: E731
+    own = " %s " % " ".join(key(prop(e, f) or "") for f in ("unique_selling_points", "overall_description",
+                                                            "cuisine_description", "short_description"))
+    first = set()
+    if credit:
+        first.add(key(credit))
+        if not any(key(x) == key(credit) for x in items):
+            items = [credit] + items
     out = []
     for x in items:
         x = re.sub(r"\b[A-Za-z](?: [A-Za-z]\b)+", lambda m: m.group(0).replace(" ", "").upper(), (x or "").strip())
@@ -1855,8 +1867,10 @@ def clean_order(items, e, vocab, n=3, line=None, loves=(), extra=()):
         lx = x.lower()
         if not x or lx.startswith(_ORDER_LEAD) or len(x) > 40:
             continue
-        if " ".join(_sing_word(w) for w in M.norm(x).split()) in love_keys:
-            continue
+        if key(x) in love_keys and key(x) not in first:
+            if " %s " % key(x) not in own:            # a love the place's own text does not name
+                continue
+            first.add(key(x))
         ws = re.findall(r"[a-z]+", lx)
         if not ws or any(w in ORDER_NONFOOD for w in ws) or lx in ORDER_GENERIC:
             continue
@@ -1871,13 +1885,13 @@ def clean_order(items, e, vocab, n=3, line=None, loves=(), extra=()):
             seen.add(k)
             uniq.append(x)
     pos = {x: k for k, x in enumerate(uniq)}
-    uniq.sort(key=lambda x: (not any(_sing_word(w) in line_words for w in M.norm(x).split()),
+    uniq.sort(key=lambda x: (key(x) not in first, not any(_sing_word(w) in line_words for w in M.norm(x).split()),
                              not any(w in cuisine for w in M.norm(x).split()), pos[x]))
     special = {M.norm((d.get("name") if isinstance(d, dict) else str(d)) or "") for d in prop(e, "specialty_dishes") or []}
 
     def strong(x):   # tied to the place: its line, its cuisine, Qloo's dish vocabulary or its specialty dishes
         ws = M.norm(x).split()
-        return (any(_sing_word(w) in line_words or w in cuisine for w in ws) or M.norm(x) in special
+        return (any(_sing_word(w) in line_words or w in cuisine for w in ws) or M.norm(x) in special or key(x) in first
                 or M.norm(x) in vocab or " ".join(_sing_word(w) for w in ws) in vocab)
     if sum(1 for x in uniq if strong(x)) >= 2:          # "Rooty Tooty" at a Thai noodle shop goes
         uniq = [x for x in uniq if strong(x)]
@@ -2865,7 +2879,10 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
                 "line_src": "claude" if (cl.get(i) or {}).get("line") else "rules",
                 "order": clean_order((cl.get(i) or {}).get("dishes") or order_line(e, vocab), e, vocab, line=blurb,
                                      loves=[l.get("label") or l.get("text") for l in loves],
-                                     extra=order_line(e, vocab, 6) if (cl.get(i) or {}).get("dishes") else ()),
+                                     extra=order_line(e, vocab, 6) if (cl.get(i) or {}).get("dishes") else (),
+                                     credit=(b.get("text") or b.get("label")) if b and i in credit_of and (
+                                         "specialty_dish" in (b.get("type") or b.get("id") or "")
+                                         or b.get("type_label") == "dish") else None),
                 "price": price_line(e),
                 "hours": prop(e, "hours") or None, "tz": CITY_TZ.get(city.get("key")),
                 "last_seen": seen_info.get(i),

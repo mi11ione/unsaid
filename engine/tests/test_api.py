@@ -691,6 +691,16 @@ class TestCardLines(unittest.TestCase):
         self.assertEqual(E.clean_order(["Glinda"], k, set(), line="Craft cocktails and mocktails, outside food welcome",
                                        extra=["street tacos", "mocktails"]), ["mocktails", "Glinda"])
         self.assertEqual(E.clean_order(["Avocado And Toast", "avocado toast"], k, set()), ["Avocado And Toast"])
+        # a love the place's own text names stays, first (Jody B's rib tips); one it doesn't goes (KFC at a steakhouse)
+        jb = {"name": "Jody B's", "tags": [], "properties": {"unique_selling_points": "Famous for tender, smoky rib "
+                                                               "tips and highly seasoned burgers."}}
+        self.assertEqual(E.clean_order(["pork steaks", "rib tips", "Korean Fried Chicken"], jb, set(),
+                                       line="Tender, smoky rib tips", loves=["Rib Tips", "Korean fried chicken"]),
+                         ["rib tips", "pork steaks"])
+        self.assertEqual(E.clean_order(["pork steaks"], jb, set(), loves=["rib tips"], credit="rib tips"),
+                         ["rib tips", "pork steaks"])                              # the credited dish love, first
+        self.assertFalse(E._IDENTITY.search("Dancing, drinks and pool at a long-running lesbian bar"))  # venue type
+        self.assertTrue(E._IDENTITY.search("Cocktails at an LGBTQ+-friendly lounge"))
         closed = {d: [{"opens": None, "closed": True, "closes": None}] for d in
                   ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")}
         self.assertTrue(E.closed_all_week({"properties": {"hours": closed}}))
