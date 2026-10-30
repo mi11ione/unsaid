@@ -1,6 +1,6 @@
-# Internal contract between engine (D), server (A) and site (C)
+# API contract: engine, server, site
 
-UNSAID.md wins over this file. The orchestrator owns this file. Agents propose changes in their report and don't edit it.
+UNSAID.md wins over this file.
 
 ## Engine entry point (D owns `engine/unsaid/api.py`)
 
