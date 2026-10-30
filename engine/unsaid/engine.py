@@ -1855,7 +1855,7 @@ def clean_order(items, e, vocab, n=3, line=None, loves=(), extra=(), credit=None
     own = " %s " % " ".join(key(prop(e, f) or "") for f in ("unique_selling_points", "overall_description",
                                                             "cuisine_description", "short_description"))
     first = set()
-    if credit:
+    if credit and " %s " % key(credit) in own:      # credited by tag only (KFC at a kosher steakhouse): not first
         first.add(key(credit))
         if not any(key(x) == key(credit) for x in items):
             items = [credit] + items

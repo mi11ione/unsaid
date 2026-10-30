@@ -699,6 +699,9 @@ class TestCardLines(unittest.TestCase):
                          ["rib tips", "pork steaks"])
         self.assertEqual(E.clean_order(["pork steaks"], jb, set(), loves=["rib tips"], credit="rib tips"),
                          ["rib tips", "pork steaks"])                              # the credited dish love, first
+        self.assertEqual(E.clean_order(["Tomahawk Prime Ribeye", "Korean Fried Chicken"], jb, set(),
+                                       loves=["Korean fried chicken"], credit="Korean fried chicken"),
+                         ["Tomahawk Prime Ribeye"])                # credited by tag but not in the place's own text
         self.assertFalse(E._IDENTITY.search("Dancing, drinks and pool at a long-running lesbian bar"))  # venue type
         self.assertTrue(E._IDENTITY.search("Cocktails at an LGBTQ+-friendly lounge"))
         closed = {d: [{"opens": None, "closed": True, "closes": None}] for d in
