@@ -49,7 +49,7 @@ Any `web_search` item in the event stream labels the answer `search: "on"`. `COD
 - The ledger (`runs/.gemini_ledger.json`) counts per model per Pacific day, and each model is capped at 16, because the free-tier limits are per model per project.
 - **A second gem model:** `walls_cli.py queue gemini-gems --model gemini-3.6-flash` asks only the 32 census hidden-gem asks, on a free-tier flash model that is neither the dated lane's 3.8-flash nor the live lane's model. Its answers go to `gemini-3.6-flash_answers.jsonl` and are reported separately (`census_stats.py --gems` prints `GEM_GEM[gemini-3.6-flash]`). `gemini_batch.sh` runs both queues each day. Every attempt counts in the ledger, erring low because the live lane shares the quota. A 503 that outlasts the retries is stored `failed` with `transient: true`: it is asked again later and is no strike toward the 3-in-a-row stop.
 
-### Gemini on the free tier (orchestrator, 28 Oct): 20 RPD, 5 RPM, harness cap 16/day
+### Gemini on the free tier (28 Oct): 20 RPD, 5 RPM, harness cap 16/day
 
 The console shows 20 requests a day and 5 a minute per model per project. Credentials load from `~/.config/unsaid/env` (mode 0600, never printed, never copied): `set -a; . ~/.config/unsaid/env; set +a`.
 

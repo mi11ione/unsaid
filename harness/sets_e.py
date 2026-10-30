@@ -1,4 +1,4 @@
-"""E-style taste asks for every frozen set (orchestrator, 28 Oct): the set's own three loves plus the city, two unhinted
+"""E-style taste asks for every frozen set (28 Oct): the set's own three loves plus the city, two unhinted
 phrasings, Claude and ChatGPT, sent verbatim (no JSON suffix, no codex schema) like the fresh asks. Stored as dated wall
 "e1" (runs/wall-e1.jsonl, kind "taste", one entry per set), so `walls_cli.py build --walls e1` serves them; the engine's
 reverse check reads their raw text.

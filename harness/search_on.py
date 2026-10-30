@@ -1,4 +1,4 @@
-"""The SEARCH-ON lane (orchestrator, 28 Oct): "real ChatGPT and Claude search the web; does the wall hold?"
+"""The SEARCH-ON lane (28 Oct): "real ChatGPT and Claude search the web; does the wall hold?"
 
 Per city: the 16 census hidden-gem phrasings (verbatim from prompts.py) + 8 plain ones (the 4 city-wall phrasings w00-w03
 and census GENERIC 1, 2, 3, 5), prompt v2 JSON suffix, asked to

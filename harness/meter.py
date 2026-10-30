@@ -263,7 +263,7 @@ def main():
                 x["fake"] = True
     names = [x for x in (list(L.LANES) if a.lane == "all" else a.lane.split(",")) if x != "gemini"]
     if "gemini" in a.lane or a.lane == "all":
-        print("[gemini] not run: free-tier 20/day (orchestrator, 28 Oct)")
+        print("[gemini] not run: free-tier 20/day (28 Oct)")
     lanes = L.lanes_from(",".join(names)) if names else []
 
     spent = {"network": sum(((r.get("qloo") or {}).get("network") or 0) for r in L.load(OUT).values())}

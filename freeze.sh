@@ -199,7 +199,7 @@ step2() {
   if [ ! -d "$FRESH" ] && [ -d "$SEED_FRESH" ]; then cp -Rp "$SEED_FRESH" "$FRESH"; echo "seeded $FRESH from $SEED_FRESH"; fi
   : > "$LOGS/02-street.txt"
   regen_once
-  # Street catch-up (orchestrator, 28 Oct): the cards' own neighbourhoods must all have been asked, or ⟦STREET_*⟧
+  # Street catch-up (28 Oct): the cards' own neighbourhoods must all have been asked, or ⟦STREET_*⟧
   # stays unfilled. harness/street_catchup.sh (B) asks only the unasked card and reserve neighbourhoods, rebuilds the
   # walls and audits; the walls are committed and the sets regenerated. Repeat until nothing is unasked, max 3 passes.
   local pass n

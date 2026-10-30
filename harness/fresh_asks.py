@@ -23,7 +23,7 @@ sys.path.insert(0, HERE)
 import lanes as L
 import phrasings as P
 
-# v1-subreddit-context (orchestrator, 28 Oct; data/fresh_asks.deviations.md): the posts rely on the subreddit for the
+# v1-subreddit-context (28 Oct; data/fresh_asks.deviations.md): the posts rely on the subreddit for the
 # city, so exactly one context line goes before the verbatim text. Nothing else changes.
 VARIANT = "v1-subreddit-context"
 PREFIX = {"reddit r/StLouis": "Posted in r/StLouis (St. Louis, Missouri):\n\n",
@@ -106,7 +106,7 @@ def main():
             print("with loves (%s): %s" % (ck, ", ".join(f[0]["with_loves_ids"])))
     names = [x for x in (list(L.LANES) if a.lane == "all" else a.lane.split(",")) if x != "gemini"]
     if "gemini" in a.lane or a.lane == "all":
-        print("[gemini] not run: free-tier 20/day (orchestrator, 28 Oct)")
+        print("[gemini] not run: free-tier 20/day (28 Oct)")
     lanes = L.lanes_from(",".join(names)) if names else []
     opts = {} if a.suffix else {"schema": None, "json_mode": False}  # verbatim: no codex schema, no Gemini JSON mode
     L.run_lanes(lanes, lambda l: [dict(x, id=x["id"] + ":" + l.name) for x in base], lambda l: OUT, a.limit, a.go, opts)

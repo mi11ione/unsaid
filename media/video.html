@@ -117,7 +117,7 @@
   const AIS = Object.keys(PV).filter(k => CD.asks_by[k]).map(k => PV[k]);
   const AIS_TXT = AIS.length > 1 ? AIS.slice(0, -1).join(', ') + ' and ' + AIS[AIS.length - 1] : AIS.join('');
   const nb = s => String(s).replace(/ (\S+)$/, '&nbsp;$1');            // no lone last word on a caption line
-  // the ranking's wording (orchestrator, 28 Oct, after D's 93987d4: lift = fit for you − max(popularity, fit for everyone))
+  // the ranking's wording (28 Oct, after D's 93987d4: lift = fit for you − max(popularity, fit for everyone))
   const COPY = {
     rankCap: 'What’s left, ranked by Qloo for what fits him, not everyone.',
     cardsCap: n => `${n} for you.`,

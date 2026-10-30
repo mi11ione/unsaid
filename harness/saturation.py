@@ -1,4 +1,4 @@
-"""SATURATION (orchestrator, 28 Oct): push each AI's census coverage with a varied, deterministic phrase grid,
+"""SATURATION (28 Oct): push each AI's census coverage with a varied, deterministic phrase grid,
 neighbourhood (neighbourhoods.json, from hoods.py) x occasion x cuisine x template, prompt = phrase + the census v1
 suffix (so it extends the census like for like). No web search (the walls lines).
 

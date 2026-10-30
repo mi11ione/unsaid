@@ -28,7 +28,7 @@ That is 10 sets × 2 phrasings × 2 assistants × 1 rep = **40 asks**. Gemini is
 
 The *alone* and *with Qloo* arms are **not asked again**. Their stored runs in `harness/runs/meter.jsonl` are the comparison. **Drift check:** because the models may have drifted since 28 Oct 02:00 ET, *alone* is asked again for 2 sets (stl-cedric, stl-wilco) × 2 phrasings × 2 assistants = 8 asks. The drift is reported as the mean absolute change in the score. If it is above 2 of 12, the three-arm comparison is printed with that caveat.
 
-## Instruments (for Agent B, via the orchestrator)
+## Instruments (for Agent B)
 
 - `harness/meter.py` gains an arm `unsaid`. Every record goes to **`runs/meter_unsaid.jsonl`**, never to the frozen `runs/meter.jsonl`. Each record carries `arm: "unsaid"`, `posthoc: true`, the raw answer, the parsed 12 picks, and the tool's result (`structuredContent`: the picks' names and Qloo IDs, `flags`, `host.key`, `diag` engine version, wall snapshot). Adherence is scored from the stored tool result, with no extra call.
 - MCP config: `env = {"UNSAID_MODE": "remote", "UNSAID_TOKEN": "${UNSAID_TOKEN:-}", "UNSAID_URL": "${UNSAID_URL:-}"}`. No Qloo key goes in the agent env.
@@ -57,7 +57,7 @@ The prediction is that *with UNSAID* < *with Qloo* < *alone*, with the UNSAID ar
 
 ## Change log (after the first ask)
 
-- **28 Oct 2026, 07:28 ET · Qloo cap 370 → 900 hosted calls** (Agent B, approved by the orchestrator).
+- **28 Oct 2026, 07:28 ET · Qloo cap 370 → 900 hosted calls** (Agent B).
   - Real spend is about 40 to 90 calls per set. Claude's first call per set is fresh, and ChatGPT calls the tool up to 5 times with different love variants, each a new host cache key. At 370, about 4 to 7 of the 10 sets would complete.
   - Nothing else changed: sets, phrasings, instruments, grading.
   - Two infrastructure faults before this, both fixed and logged:

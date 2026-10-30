@@ -132,7 +132,7 @@ def deploy_once(timeout_s):
 
 
 def deploy(if_unchanged, timeout_s):
-    """The order matters (orchestrator, 28 Oct): the priors file format changed in PRIORS_MIN (547ab11), and an engine
+    """The order matters (28 Oct): the priors file format changed in PRIORS_MIN (547ab11), and an engine
     older than that cannot read new priors. So: 1. deploy HEAD; 2. check the live commit contains PRIORS_MIN;
     3. push the priors (only if they differ); 4. redeploy so the engine reads them."""
     d, dep, head, changed, pri = status()

@@ -11,7 +11,7 @@ walls.json in the kit's contract (engine/unsaid/walls.py).
   python3 -I walls_cli.py build --walls smoke --out runs/walls.smoke.json   # smoke never goes in data/walls/
   python3 -I walls_cli.py status
 
-Taste sets per wall (orchestrator, 27 Oct): wall 1 asks all 20 sets; every other wall asks only the sets marked
+Taste sets per wall (27 Oct): wall 1 asks all 20 sets; every other wall asks only the sets marked
 try_these in the sets file (data/sets.json, else data/sets.draft.json). --sets a,b or --all-sets overrides.
 Answers append to runs/wall-<N>.jsonl, one line per attempt; an id already stored ok is never asked again, so a run
 that stops on a plan limit resumes by running the same line again. Nothing is asked without --go.
@@ -122,7 +122,7 @@ def gemini_file(model=None):
 
 
 def gemini_priority(sets, try_these, model=None, gems_only=False):
-    """The Gemini dated lane's order (orchestrator, 28 Oct; free tier 20 RPD, 5 RPM, one project, one key):
+    """The Gemini dated lane's order (28 Oct; free tier 20 RPD, 5 RPM, one project, one key):
     (a) the 16 census hidden-gem asks, STL then NYC, verbatim from asks.json (prompt v1), stored ONCE in
         gemini_answers.jsonl: census_stats reads them for GEM_GEM, and build puts them in census.json, which joins
         every wall (so they are also the gem part of wall #1);
