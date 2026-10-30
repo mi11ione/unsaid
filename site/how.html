@@ -18,9 +18,9 @@
 
     <h2>Four steps</h2>
     <ol class="steps">
-      <li><b>We asked the AIs.</b> ChatGPT, Claude and Gemini, the questions people ask about a city: hidden gems, date nights, where locals go. Every answer is stored with its model and date.</li>
+      <li><b>We asked the AIs.</b> ChatGPT, Claude and Gemini, the questions people ask about a city: hidden gems, date nights, where locals go.</li>
       <li><b>We crossed out every place they named.</b> Famous or tiny, if an AI named it, it’s out.</li>
-      <li><b>Qloo ranks the rest for your loves.</b> Qloo scores every place left for each of your three loves: an artist, a film, a dish.</li>
+      <li><b>Qloo ranks the rest for your loves.</b> Qloo scores every place left for each of your three loves: an artist, a show, a dish.</li>
       <li><b>We keep what fits you, not everyone.</b> The seven fit you far better than they fit everyone else. Rated <span id="floor">4.3</span>+, nearby. No place can pay to be picked.</li>
     </ol>
 
@@ -62,7 +62,7 @@
     const row = (label, a, us) => a ? `<tr${us ? ' class="us"' : ''}><td>${label}</td><td>${fmt1(a.named)}</td><td>${a.fit_med != null ? a.fit_med : '–'}</td></tr>` : '';
     document.getElementById('table').innerHTML =
       `<p>We held back questions the list was never built from, then counted how many cards they name. Over our ${WE.sets} preset taste sets (${A.unsaid ? A.unsaid.cards : ''} cards each way):</p>
-       <table class="k12"><thead><tr><th>Seven chosen by…</th><th>named by held-out questions</th><th>fits you</th></tr></thead><tbody>
+       <table class="k12"><thead><tr><th>Seven chosen by…</th><th>named by the AIs</th><th>fits you</th></tr></thead><tbody>
        ${row('Qloo’s plain taste order', A.plain)}${row('UNSAID', A.unsaid, true)}${row('seven random places that survive the list', A.random)}</tbody></table>
        <p class="dim">“Fits you” is the median card’s fit percentile for that taste (100 = fits best).</p>`;
   }

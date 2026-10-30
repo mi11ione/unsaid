@@ -104,7 +104,7 @@
       const six = ph.slice(0, ph.length >= 6 ? 6 : 3);
       $('#thumbs').innerHTML = `<a class="thead" href="#/r?set=stl-cedric"><span class="tl">${lovesLabel(set)}</span></a>
         <a class="trow" href="#/r?set=stl-cedric" aria-label="Open the seven for ${esc(set.loves.filter(Boolean).join(', '))}">${six.map((c, i) => `<figure><div class="ti"><img src="${esc(c.image)}" alt="" loading="eager" onerror="this.parentNode.classList.add('none');this.remove()" onload="if(this.naturalWidth<100){this.parentNode.classList.add('none');this.remove()}"></div><figcaption><span class="no">${String(i + 1).padStart(2, '0')}</span>${esc(UM.shortName(c.name, c.neighbourhood))}</figcaption></figure>`).join('')}</a>
-        <a class="tmore" href="#/r?set=stl-cedric">Seven in ${esc((CFG.cities[set.city] || {}).name || '')} →</a>`;
+        <a class="tmore" href="#/r?set=stl-cedric">See all seven →</a>`;
     } catch (e) { /* the landing works without it */ }
   }
   // a link we share or copy never carries the API token (it lives only in the visitor's own address bar)
@@ -858,7 +858,7 @@
         <p class="sheetsub">${metaLine(c)}</p>
         ${c.blurb_long || c.description || c.blurb ? `<p class="lede">${esc(c.blurb_long || c.description || c.blurb)}</p>` : ''}
         ${c.what ? `<p class="dim">${esc(c.what)}</p>` : ''}
-        ${order.length ? `<p>Order: ${order.map(dish).map(esc).join(', ')}</p>` : ''}
+        ${order.length ? `<p class="order">Order: ${order.map(dish).map(esc).join(', ')}</p>` : ''}
         ${st3 ? `<div class="red">${esc(st3.text)}</div>` : ''}
         <div class="blk"><div class="sh"><h2>${/^#/.test(fitLine(c)) ? 'Fits you' : 'Unsaid'}</h2></div>
           <p>${esc(fitLine(c))}</p></div>

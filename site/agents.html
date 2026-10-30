@@ -14,7 +14,7 @@
   <header class="top"><a class="mark" href="./"><s>UN</s>SAID</a><span class="slug">for agents</span></header>
   <main class="doc">
     <h1>Call it from your agent.</h1>
-    <p><b>One paste.</b> Add <code>https://unsaid.mi11ion.io/mcp</code> as a custom connector in Claude (Settings → Connectors), or run <code>claude mcp add --transport http unsaid https://unsaid.mi11ion.io/mcp</code>.</p>
+    <p><b>One paste.</b> Add <code>https://unsaid.mi11ion.io/mcp</code> as a custom connector in Claude (Settings → Connectors), or run <code class="cmd">claude mcp add --transport http unsaid https://unsaid.mi11ion.io/mcp</code></p>
 
     <h2>One real run</h2>
     <div id="run"></div>
@@ -31,7 +31,7 @@
     const p = (cls, text) => { const e = document.createElement(cls === 'pre' ? 'pre' : 'p'); if (cls !== 'pre') e.className = cls; e.textContent = text; run.appendChild(e); return e; };
     p('dim', `Recorded ${String(d.recorded_at).slice(0, 10)} with Claude Code (${d.model}), UNSAID as its only tool. Asked:`);
     p('q', `“${d.question}”`);
-    p('dim', 'Its answer, unedited:');
+    p('dim', 'Its answer:');
     // the answer as Claude wrote it: everything escaped, then only **bold** rendered; line breaks kept
     const ans = document.createElement('div'); ans.className = 'answer';
     const esc = x => String(x).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));

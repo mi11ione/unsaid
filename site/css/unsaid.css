@@ -77,7 +77,8 @@ code { font: 400 .88em/1 var(--mono); background: var(--paper2); padding: 2px 5p
 
 /* ---------- landing ---------- */
 .hero { padding: clamp(40px, 7vw, 104px) 0 clamp(8px, 1.5vw, 24px); }
-.hero h1 { font: 600 clamp(44px, 6.4vw, 96px)/.98 var(--sans); letter-spacing: -.042em; margin: 0; max-width: 13em; }
+.hero h1 { font: 600 clamp(44px, 6.4vw, 96px)/.98 var(--sans); letter-spacing: -.042em; margin: 0; max-width: 13em; text-wrap: balance; }
+.doc code.cmd { display: block; width: fit-content; max-width: 100%; white-space: nowrap; overflow-x: auto; margin: 8px 0; }
 .herosub { font: 400 clamp(22px, 2.3vw, 34px)/1.25 var(--sans); letter-spacing: -.015em; margin: clamp(18px, 2vw, 28px) 0 0; }
 .gx { position: relative; color: var(--red); white-space: nowrap; }
 .gx::after { content: ''; position: absolute; left: -.03em; right: -.03em; top: 53%; height: .075em; min-height: 2px; background: var(--red); }
@@ -355,6 +356,11 @@ table.k12 tr.us td:first-child { font-weight: 600; }
   .thumbs { grid-column: 9 / span 4; }
   .trow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .maplead .lead2 .n { font-size: 150px; }
+}
+@media (max-width: 720px) {
+  /* the loves stack on a phone: no separator left hanging at a line end */
+  .top .chips { flex-direction: column; align-items: flex-start; gap: 2px; }
+  .top .chip:not(:last-child)::after { content: none; }
 }
 @media (max-width: 860px) {
   /* stacked: the example seven come right after the button, the other city's preset after them */
