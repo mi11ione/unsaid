@@ -121,5 +121,5 @@ print("  ⟦M_ALONE⟧ = %s · ⟦M_QLOO⟧ = %s (median of 12, %d sets, %d assi
     cli.f(m_alone, 1), cli.f(m_qloo, 1), n_sets, len({r["provider"] for r in runs}), T))
 print("D meter: median with Qloo %s (gate <=6), >=4 below alone in %d of %d sets (gate >=7 of 10) -> %s%s" % (
     cli.f(m_qloo, 1), drops, n_sets, cli.verdict(featured), T),
-      "| FAIL = printed in Shown and the README, not featured; Elias gets the residual line")
+      "| FAIL = printed in Shown and the README, not featured")
 print("QLOO_NETWORK_CALLS=0%s" % T)

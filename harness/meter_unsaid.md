@@ -38,7 +38,7 @@ The *alone* and *with Qloo* arms are **not asked again**. Their stored runs in `
 - Run order: after Agent D's ranking change is **deployed** to the host, so that every unsaid-arm call uses one engine version. Record `engine_v` and the wall snapshot per run. A run whose engine version differs from the first run's is reported separately.
 - Requests from this Mac are geo-gated for the live Gemini lane, so the host answers `dated_only`. Every run sees the same dated wall, and this is recorded.
 
-## Measures (`engine/k13_meter_unsaid.py`, written by E, 0 Qloo calls)
+## Measures (0 Qloo calls)
 
 1. **Primary:** the score per run, out of 12 picks on the other assistants' everyone-list, by k10's grader. Per set, the median over the runs. Across sets, the median for each arm: *alone*, *with Qloo* (stored) and *with UNSAID* (this arm).
 2. **Leakage split:** for each everyone-list pick in this arm, whether it is one of the tool's picks (expected never: that would be a strike/grader inconsistency, reported as a bug) or one the agent added.
