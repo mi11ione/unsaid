@@ -12,37 +12,39 @@
   [PASS] no pick is on the wall's top names
 
 --- tools/call unsaid_places (legacy) -> content[0] ---
-ok · St. Louis: AIs named 1320 distinct places in 808 answers (41 were in this taste pool, all struck). 7 left for these loves, ranked by Qloo:
-1. Osktor Smokehouse (Downtown) · soul food · barbecue · #4 for you · #170 for anyone · holds 3 of 3 · because you love Rib Tips · fits you better than 166 of the 169 more popular places · named by 0 of 808 AI answers · qloo:8FD06827-81EC-5FFB-9529-4738658F3DE3
-2. Ravcael Wine Bar (Central West End) · restaurant · bar · #6 for you · #137 for anyone · holds 3 of 3 · because you love Maze Featuring Frankie Beverly · fits you better than 132 of the 136 more popular places · named by 0 of 808 AI answers · qloo:87980350-0772-5E7D-A9EB-8817BD781D3D
-3. Ravthu Trattoria (Downtown) · italian · restaurant · #13 for you · #123 for anyone · holds 3 of 3 · because you love Maze Featuring Frankie Beverly · fits you better than 113 of the 122 more popular places · named by 0 of 808 AI answers · qloo:D9183238-755A-5CA7-A727-39A4B09C5A9E
-4. Dranyr Noodle Bar (Midtown) · restaurant · bar · #22 for you · #164 for anyone · holds 3 of 3 · because you love Maze Featuring Frankie Beverly · fits you better than 143 of the 163 more popular places · named by 0 of 808 AI answers · qloo:2BD1F0A1-DF6B-56EB-A317-26CDF2BB1450
-5. Phil's BBQ (North City) · soul food · barbecue · #30 for you · #124 for anyone · holds 2 of 3 · because you love Rib Tips · fits you better than 98 of the 123 more popular places · named by 0 of 808 AI answers · qloo:68568B7E-B72D-57D5-A8F2-99F24CFB3973
-6. Oskcorb Room (Cherokee Street) · restaurant · #43 for you · #169 for anyone · holds 2 of 3 · because you love Maze Featuring Frankie Beverly · fits you better than 127 of the 168 more popular places · named by 0 of 808 AI answers · qloo:2E1B31B1-AF81-5A2D-94B9-A645149E9F17
-7. Vashesk Smokehouse (Lafayette Square) · barbecue · restaurant · #54 for you · #172 for anyone · holds 2 of 3 · because you love Rib Tips · fits you better than 118 of the 171 more popular places · named by 0 of 808 AI answers · qloo:72273497-26DB-50C7-B83A-7451B0D745D1
-Everyone else gets: Mai Lee, Pappy's Smokehouse, Gioia's Deli, Sugarfire Smoke House, Lona's Lil Eats, Salt + Smoke, Nudo House, Charlie Gitto's On The Hill
-FAKE MODE: pick names and ranks come from the kit's synthetic Qloo world and prove the code path only. The wall is real saved AI answers (walls (stl: census, city, city, city, city)).
-  wall: {"distinct_names": 1320, "answers": 808, "struck_in_pool": 41, "top_names": ["Mai Lee", "Pappy's Smokehouse", "Gioia's Deli", "Sugarfire Smoke House", "Lona's Lil Eats", "Salt + Smoke", "Nudo House", "Charlie Gitto's On The Hill"], "source": "walls (stl: census, city, city, city, city)"}
-  qloo_calls: {"pool": 10, "rescore": 12, "ids": 20, "cap": 1, "loves": 3, "city": 0, "total": 46, "network": 1}
+ok · St. Louis: AIs named 1414 distinct places in 882 answers (25 were in this taste pool, all struck). 7 left for these loves, ranked by Qloo:
+1. Ilobel Smokehouse (Delmar Loop) · barbecue · restaurant · #1 for you · #77 for anyone · holds 3 of 3 · fits all three of your loves · fits you better than all 76 more popular places · named by 0 of 882 AI answers · qloo:74B95474-0A97-5165-A7C5-CB76E159970E
+   Barbecue restaurant in Delmar Loop
+2. Fenrav Room (Benton Park) · restaurant · #3 for you · #73 for anyone · holds 3 of 3 · fits all three of your loves · fits you better than 71 of the 72 more popular places · named by 0 of 882 AI answers · qloo:7BEB9F72-D902-5713-B635-81C5DE8B471F
+   Restaurant in Benton Park
+3. Osktor Smokehouse (Downtown) · soul food · barbecue · #4 for you · #142 for anyone · holds 3 of 3 · fits all three of your loves · fits you better than 138 of the 141 more popular places · named by 0 of 882 AI answers · qloo:8FD06827-81EC-5FFB-9529-4738658F3DE3
+   Soul Food restaurant in Downtown
+4. Ilovash Smokehouse (Benton Park) · barbecue · restaurant · #11 for you · #87 for anyone · holds 3 of 3 · fits all three of your loves · fits you better than 79 of the 86 more popular places · named by 0 of 882 AI answers · qloo:DA6C96E9-1BB6-5F22-9191-D30B0785F8B1
+   Barbecue restaurant in Benton Park
+5. Ravthu Trattoria (Downtown) · italian · restaurant · #14 for you · #102 for anyone · holds 3 of 3 · fits all three of your loves · fits you better than 91 of the 101 more popular places · named by 0 of 882 AI answers · qloo:D9183238-755A-5CA7-A727-39A4B09C5A9E
+   Italian restaurant in Downtown
+6. Sorhollo Tavern (North City) · restaurant · bar · #34 for you · #94 for anyone · holds 2 of 3 · because you love Kings of Comedy · fits you better than 66 of the 93 more popular places · named by 0 of 882 AI answers · qloo:CD8A03D0-BA81-5D5A-8171-8A502E1EA956
+  wall: {"distinct_names": 1414, "answers": 882, "struck_in_pool": 25, "top_names": ["Mai Lee", "Pappy's Smokehouse", "Gioia's Deli", "Sugarfire Smoke House", "Lona's Lil Eats", "Salt + Smoke", "Nudo House", "Pho Grand"], "source": "walls (stl: census, city, city, city, city, city)"}
+  qloo_calls: {"pool": 10, "rescore": 12, "ids": 9, "cap": 1, "loves": 3, "city": 0, "total": 35, "network": 0}
   loves resolved: [["Frankie Beverly & Maze", "entity", "ok"], ["Kings of Comedy", "entity", "ok"], ["rib tips", "tag", "ok"]]
   [PASS] qloo_places: isError=false, validates against its outputSchema
   [PASS] qloo_places: top 50 of the taste pool, ranked 1..n
-  [PASS] qloo_places: nothing subtracted (same pool U=183 that unsaid_places strikes down to 142)
+  [PASS] qloo_places: nothing subtracted (same pool U=155 that unsaid_places strikes down to 130)
   [PASS] qloo_places never calls unsaid_places, the engine run, the wall or the matcher
 
 --- tools/call qloo_places (legacy) -> content[0], first lines ---
-ok · St. Louis: the top 50 of Qloo's taste pool for these loves (183 places after the quality floor). Nothing removed.
-1. Velilo Wine Bar (Central West End) · Restaurant, Restaurant, Bar · qloo:AAD3A5F1-37FD-5B75-AE1A-4A91B114A5CE
-2. Ilobel Smokehouse (Delmar Loop) · Restaurant, Restaurant, Barbecue · qloo:74B95474-0A97-5165-A7C5-CB76E159970E
+ok · St. Louis: the top 50 of Qloo's taste pool for these loves (155 places after the quality floor). Nothing removed.
+1. Ilobel Smokehouse (Delmar Loop) · Restaurant, Restaurant, Barbecue · qloo:74B95474-0A97-5165-A7C5-CB76E159970E
+2. Brinosk Bar (The Hill) · Restaurant, Restaurant, Bar · qloo:D2BCB290-4181-54DF-8DAD-3972BF7227F2
 3. Caelsor House (Delmar Loop) · Restaurant, Restaurant · qloo:18250BEF-46EB-5F7A-814E-E9830370BC72
-4. Ravcael Wine Bar (Central West End) · Restaurant, Restaurant, Bar · qloo:87980350-0772-5E7D-A9EB-8817BD781D3D
-5. Brindun Oyster Bar (Lafayette Square) · Restaurant, Restaurant, Bar · qloo:9472018F-5992-5C81-B076-102CD71054AC
-6. Lona's Lil Eats (Central West End) · Restaurant, Restaurant, Live Music · qloo:A897A185-22D1-5AB2-8286-EA75071ED9B3
-7. Pelljun Tavern (Cherokee Street) · Restaurant, Restaurant, Bar · qloo:E2A02D11-E398-5B30-946B-805E3F94FAD8
-8. Lomvel Tavern (Midtown) · Restaurant, Restaurant, Bar · qloo:9CF94CEA-812C-528D-818D-CA5A6EF27504
-9. Vashcorb Wine Bar (The Hill) · Restaurant, Restaurant, Bar · qloo:1281B323-0F45-5230-9F25-8B48942257B7
-10. Markess House (The Hill) · Restaurant, Restaurant · qloo:728DFFE9-9F3C-5B17-92EA-847D51181E6B
-11. Fenzan Wine Bar (Delmar Loop) · Restaurant, Restaurant, Bar · qloo:372239FE-1BA9-5678-96EB-CCBD0C65CE66
+4. Fensor Tavern (Downtown) · Restaurant, Restaurant, Bar · qloo:03C507F1-13C9-5B8E-9499-EDBDB78A710F
+5. Ravcael Wine Bar (Central West End) · Restaurant, Restaurant, Bar · qloo:87980350-0772-5E7D-A9EB-8817BD781D3D
+6. Phil's BBQ (North City) · Restaurant, Restaurant, Barbecue · qloo:68568B7E-B72D-57D5-A8F2-99F24CFB3973
+7. Brindun Oyster Bar (Lafayette Square) · Restaurant, Restaurant, Bar · qloo:9472018F-5992-5C81-B076-102CD71054AC
+8. Thujun Kitchen (Delmar Loop) · Restaurant, Restaurant · qloo:55B6FE78-C8D3-5E76-80C9-C2F530AA1260
+9. Lona's Lil Eats (Central West End) · Restaurant, Restaurant, Live Music · qloo:A897A185-22D1-5AB2-8286-EA75071ED9B3
+10. Ravprae Cafe (The Hill) · Restaurant, Restaurant · qloo:67C0ECE0-3AF1-55FB-9C72-15A14CDC8102
+11. Ravtor Provisions (Cherokee Street) · Restaurant, Restaurant · qloo:E2DC500D-C95D-5A86-8DF3-88AF00C6A91E
   [PASS] [text, type] pairs accepted; 'rib tips' with type tag resolves to a tag (Rib Tips)
   [PASS] untyped ambiguous love -> ok (FAKE MODE: pick names and ranks come from the kit's synthetic Qloo world and prove the cod)
   [PASS] ambiguous city -> needs_input: city: 'Richmond' is ambiguous: Richmond (Staten Island, New York); Richmond (Richmond, Virginia); love 'Al Gre
@@ -63,4 +65,4 @@ ok · St. Louis: the top 50 of Qloo's taste pool for these loves (183 places aft
   [SKIP] UNSAID_TOKEN is not set (it is in the Devpost testing instructions)
 
 server stderr (first lines): [unsaid] ready (mode=fake, kit=/Users/mi11ion/Desktop/qloo/unsaid/engine)
-33 fake-mode messages, 15.6 s, 0 failed checks; wire log: out/transcript.jsonl
+33 fake-mode messages, 2.8 s, 0 failed checks; wire log: out/transcript.jsonl

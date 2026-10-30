@@ -78,7 +78,8 @@ TOOL = {
         "TV, books, brands, a place, or a dish/cuisine/vibe) and a city (the hosted API serves St. Louis and New "
         "York City). Returns up to 7 picks, each with its Qloo id, '#k for you' (rank among the same N places with the person's taste) and "
         "'#j for anyone' (rank among the same N with no taste signal), whether it holds if any one love is "
-        "dropped, the love that drives it, and how many of the AI answers on file named it (0: those were crossed "
+        "dropped, a reason (\"fits all three of your loves\"; else \"because you love <love>\" when a dish love "
+        "credits it or it holds for two loves; none when it rests on one love alone), and how many of the AI answers on file named it (0: those were crossed "
         "out). Also returns the wall: how many distinct places those answers named and the most-named ones. Use it for 'not the usual list' asks. "
         "For where to eat and drink, use only these picks, in the order given; keep your own non-venue color "
         "(neighbourhoods, history, music, what to order). Say once that the usual places (wall.top_names) are "
@@ -271,7 +272,37 @@ def _fill_hints(spec, city_text):
 
 
 # ---------------------------------------------------------------- the CONTRACT result -> the tool's output
-def _pick(c):
+NUM_WORD = {2: "both", 3: "all three"}
+
+
+def _love_name(l):
+    """A love's display name, the site's rule: typed text equal to Qloo's label but for case -> Qloo's label; typed
+    text with any capital -> as typed ("Frankie Beverly & Maze"); all lower case and different -> Qloo's label."""
+    t, q = (l.get("text") or "").strip(), (l.get("resolved") or "").strip()
+    if not t or not q:
+        return q or t
+    if t.lower() == q.lower():
+        return q
+    return t if any(ch.isupper() for ch in t) else q
+
+
+def reason(c, loves):
+    """The site's reason rule: holds for every live love -> "fits all three of your loves" ("both"); a dish or tag
+    love credits it -> "because you love <dish>"; holds >= 2 (or a single live love) -> "because you love <love>";
+    holds 1 with an entity credit -> no reason (None)."""
+    holds, nl, b = c.get("holds"), c.get("n_loves") or 0, c.get("because")
+    if holds is not None and nl >= 2 and holds == nl:
+        return "fits %s of your loves" % NUM_WORD.get(nl, "all %d" % nl)
+    if not b:
+        return None
+    love = next((l for l in loves if b in (l.get("resolved"), l.get("text"))), None)
+    name = _love_name(love) if love else b
+    if (love and love.get("kind") == "tag") or holds is None or holds >= 2:
+        return "because you love %s" % name
+    return None
+
+
+def _pick(c, loves=()):
     fy, fa, n = c.get("fit_rank"), c.get("any_rank"), c.get("U")
     holds, nl = c.get("holds"), c.get("n_loves") or 0
     lift = c.get("lift")
@@ -285,7 +316,7 @@ def _pick(c):
         "holds": ("%d of %d" % (holds, nl)) if holds is not None else "n/a (1 love)",
         "because": {"love": c.get("because"), "share": None, "source": "best per-love rank (C6')",
                     "detail": c.get("because_detail"),
-                    "line": ("because you love %s" % c["because"]) if c.get("because") else None},
+                    "line": reason(c, loves)},
         "why": c.get("why"),
         # what Qloo knows about the place itself (the same insights responses; 0 extra calls)
         "blurb": c.get("blurb"), "order": list(c.get("order") or []), "price": c.get("price"),
@@ -365,7 +396,7 @@ def from_contract(r, mode, spec, city_text, city_res=None, host=None):
     if out["status"] == "needs_input":
         out["message"] = _needs_message(r, city_res)
         return out
-    out["picks"] = [_pick(c) for c in sorted(r.get("picks") or [], key=lambda c: c.get("fit_rank") or 0)]
+    out["picks"] = [_pick(c, loves) for c in sorted(r.get("picks") or [], key=lambda c: c.get("fit_rank") or 0)]
     out["pool"] = {"P": cn.get("P"), "U": cn.get("U"), "after_strike": cn.get("S"), "held": d.get("kept"),
                    "rho_taste_vs_anyone": d.get("rho_tp")}
     if r.get("fallback"):
@@ -598,10 +629,10 @@ def summary(r):
                  "%d left for these loves, ranked by Qloo:" % (r["status"], r["city"]["name"], w["distinct_names"],
                                                               w["answers"], w["struck_in_pool"], len(r["picks"]))]
     for i, p in enumerate(r["picks"], 1):
-        lines.append("%d. %s (%s) · %s · %s · holds %s · %s%s · named by %d of %d AI answers · qloo:%s" % (
+        lines.append("%d. %s (%s) · %s · %s · holds %s%s%s · named by %d of %d AI answers · qloo:%s" % (
             i, p["name"], p["neighbourhood"] or "-", " · ".join(p["what"]) or "-", p["ranks"], p["holds"],
-            p["because"].get("line"), (" · " + p["why"]) if p.get("why") else "", p["ai_named"], p["ai_asked"],
-            p["qloo_id"]))
+            (" · " + p["because"]["line"]) if p["because"].get("line") else "",
+            (" · " + p["why"]) if p.get("why") else "", p["ai_named"], p["ai_asked"], p["qloo_id"]))
         extra = [x for x in (p.get("price"), p.get("blurb"),
                              ("people order " + ", ".join(p["order"])) if p.get("order") else None) if x]
         if extra:
