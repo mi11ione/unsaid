@@ -81,6 +81,8 @@ def hood_norm(s):
 # ----------------------------------------------------------------------------------------------------------- provenance
 REGEN_WALLS = os.path.join(LOGS, "walls.regen")      # the exact walls the regeneration read (copied at stamp time)
 ENGINE_PATHS = ["engine/unsaid", "engine/precompute.py"]
+_TT = os.path.join(ROOT, "data", "try_these.json")
+TRY_THESE = json.load(open(_TT)) if os.path.exists(_TT) else {}
 
 
 def git_out(*a, cwd=ROOT):
@@ -126,6 +128,55 @@ def prereg(a=None):
         print("prereg %-24s %s" % (name, "ok" if got == h else "MISMATCH (now %s, gist %s)" % (got[:8], h[:8])))
         bad += got != h
     return 1 if bad else 0
+
+
+def tracecheck(a):
+    """The README call trace must come from this freeze's run_query on the final engine: no business_rating.min
+    (gone since 3e95f14), its "N requests" line = its table rows = the run's own Qloo call count."""
+    t = open(a.readme).read()
+    block = t.split("<!-- trace:start -->", 1)[1].split("<!-- trace:end -->", 1)[0]
+    rows = len(re.findall(r"^\| \d+ \|", block, re.M))
+    said = rx(block, r"^(\d+) requests, in order", int)
+    run = json.load(open(a.run_json))
+    run = run.get("result", run)
+    calls = (run.get("diag") or {}).get("qloo_calls")
+    probs = []
+    if "business_rating.min" in block:
+        probs.append("the trace still sends filter.properties.business_rating.min (an engine before 3e95f14)")
+    if not (said == rows == calls):
+        probs.append("rows %s, 'N requests' %s, run's qloo_calls %s disagree" % (rows, said, calls))
+    print("README call trace: %d rows, '%s requests', run %s calls, business_rating.min %s -> %s" % (
+        rows, said, calls, "PRESENT" if "business_rating.min" in block else "absent", "FAIL" if probs else "ok"))
+    for pr in probs:
+        print("FAIL trace: " + pr)
+    return 1 if probs else 0
+
+
+def asks_surfaces(fresh):
+    """The St. Louis 'N asks' on every surface. One source: the walls the freeze commits -> the presets (step 2), the
+    live engine (Render redeployed in step 5 at the same commit; read from the MCP recording of step 7), the agents
+    page (agent_demo.json, the Claude run of step 7), and ⟦ASKS_STL⟧ (= Cedric's preset count)."""
+    out = {}
+    live = os.path.join(ROOT, "site", "data", "live")
+    for f in sorted(glob.glob(os.path.join(live, "stl_*.json"))):
+        d = json.load(open(f))
+        out["site preset " + d["id"]] = ((d.get("result") or {}).get("counts") or {}).get("asks")
+    for sid, d in load_sets(fresh).items():
+        if d["city"] == "stl" and sid in TRY_THESE.get("stl", [sid]):
+            out["regenerated " + sid] = d["result"]["counts"].get("asks")
+    if os.path.exists(TRANSCRIPT):
+        for line in open(TRANSCRIPT):
+            r = json.loads(line)
+            res = (r.get("msg") or {}).get("result")
+            if isinstance(res, dict) and (res.get("structuredContent") or {}).get("picks"):
+                sc = res["structuredContent"]
+                out["live engine (MCP recording %s)" % (sc.get("as_of") or "")[:16]] = (sc.get("wall") or {}).get("answers")
+    if os.path.exists(AGENT_DEMO):
+        d = json.load(open(AGENT_DEMO))
+        out["agents page (agent_demo.json %s)" % (d.get("recorded_at") or "")[:16]] = d.get("wall_answers")
+        for n in re.findall(r"(\d{3,4}) (?:stored |dated )?(?:[A-Za-z/,+ ]{0,40})?(?:answers|asks)", d.get("answer") or ""):
+            out["agents page answer text"] = int(n)
+    return out
 
 
 def provenance(fresh):
@@ -513,9 +564,15 @@ def numbers(a):
     put("ASKS_TOTAL", "{:,}".format(ws["claude_chatgpt_dated_no_search"]),
         wsrc + ": dated Claude + ChatGPT answers, search-on lane excluded, both cities",
         "plus %d other dated answers (Gemini census) and the search-on lane" % ws["other_dated_no_search"])
+    # ⟦ASKS_STL⟧/⟦ASKS_NYC⟧ = the 'N asks' the site and the engine show for a preset in that city (counts.asks of the
+    # regenerated sets: the city's dated wall + the set's own taste asks), so Devpost, presets, live and agent agree
     for c in ("stl", "nyc"):
-        put("ASKS_" + c.upper(), "{:,}".format(ws["claude_chatgpt_dated_no_search_by_city"].get(c, 0)),
-            wsrc + ": the same count, %s only" % c.upper())
+        vals = sorted({d["result"]["counts"].get("asks") for d in sets.values() if d["city"] == c
+                       and d["id"] in TRY_THESE.get(c, [d["id"]])})
+        vals = [v for v in vals if v is not None]
+        put("ASKS_" + c.upper(), "{:,}".format(vals[0]) if len(vals) == 1 else None,
+            "%s: counts.asks of the %s presets (what the site and the engine show)" % (fresh, c.upper()),
+            "" if len(vals) == 1 else "the %s presets disagree: %s" % (c.upper(), vals))
     put("DATES", date_range(ws["first_asked_at"], ws["last_asked_at"]) if ws["first_asked_at"] else None,
         wsrc + ": first and last asked_at (ET)", "%s .. %s" % (ws["first_asked_at"], ws["last_asked_at"]))
 
@@ -589,7 +646,7 @@ def numbers(a):
     doc = {"generated_at": dt.datetime.now().astimezone().strftime("%Y-%m-%dT%H:%M:%S%z"), "git_head": head,
            "dry_run": bool(a.dry_run), "fresh_dir": fresh, "provenance": provenance(fresh), "placeholders": P, "gates": G,
            "cedric": cedric_of(os.path.join(fresh, "stl_stl-cedric.json")) if ced else None,
-           "street": st, "walls": {k: v for k, v in ws.items() if k != "by_file"},
+           "street": st, "walls": {k: v for k, v in ws.items() if k != "by_file"}, "asks_stl_surfaces": asks_surfaces(fresh),
            "qloo_calls": {"by_log": qc, "total": sum(qc.values())}}
     json.dump(doc, open(NUMBERS, "w"), indent=1, ensure_ascii=False, default=str)
     print("numbers: %s" % NUMBERS)
@@ -776,6 +833,19 @@ def report(a):
         w("!" * 100)
     w("⟦AGENT_QUOTE⟧ (The Spot Sports Bar): %s" % ("still a Cedric card at #13 / #78 of 78: usable" if q.get("value")
                                                    else "NOT usable: " + q.get("note", "")))
+    w("")
+    surf = N.get("asks_stl_surfaces") or {}
+    want = (N["placeholders"].get("ASKS_STL") or {}).get("value")
+    vals = {v for v in surf.values() if v is not None}
+    w("St. Louis 'N asks' on every surface (⟦ASKS_STL⟧ = %s):" % want)
+    for kk, v in surf.items():
+        w("  %-48s %s%s" % (kk, v, "" if v is None or str(v) == str(want).replace(",", "") else "   <-- MISMATCH"))
+    if len(vals) > 1 or (want and vals and {str(v) for v in vals} != {str(want).replace(",", "")}):
+        w("!" * 100)
+        w("!!! ASKS MISMATCH across surfaces: %s (Devpost %s). Same walls everywhere: regen (2), Render (5), agent (7)."
+          % (sorted(vals), want))
+        w("!" * 100)
+    w("")
     ac = log("07-agentcheck.log").strip()
     w("Video agent shot: %s" % (ac.splitlines()[-1] if ac else "not checked (step 7 not run)"))
     for name, label in (("05-render.log", "Render"), ("08-site.log", "Site deploy")):
@@ -800,6 +870,9 @@ def main():
     n.add_argument("--nostreet")
     n.add_argument("--dry-run", action="store_true")
     sp.add_parser("prereg")
+    tc = sp.add_parser("tracecheck")
+    tc.add_argument("--readme", required=True)
+    tc.add_argument("--run-json", required=True)
     t = sp.add_parser("stamp")
     t.add_argument("--fresh", required=True)
     t.add_argument("--wt", required=True)
@@ -817,6 +890,8 @@ def main():
         snapshot_cedric(a.src, a.out)
     elif a.cmd == "numbers":
         numbers(a)
+    elif a.cmd == "tracecheck":
+        return tracecheck(a)
     elif a.cmd == "prereg":
         return prereg(a)
     elif a.cmd == "stamp":

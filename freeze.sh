@@ -300,6 +300,9 @@ PY
   python3 -I readme_trace.py --trace out/query_stl-cedric.md --readme "$MAIN/README.md" > "$LOGS/03-readme_trace.txt" 2>&1 \
     || { cat "$LOGS/03-readme_trace.txt"; die "readme_trace"; }
   tail -1 "$LOGS/03-readme_trace.txt" || true
+  # the trace must be this run's, on the final engine (no business_rating.min; rows = 'N requests' = the run's calls)
+  python3 -I "$MAIN/tools/freeze_numbers.py" tracecheck --readme "$MAIN/README.md" --run-json "$LOGS/query_stl-cedric.json" \
+    || die "README call trace check"
   echo "street ablation: the 20 sets without the street walls (budget $B_NS)"
   rm -rf out/walls-no-street out/fresh20-no-street; mkdir -p out/walls-no-street
   python3 -I - "$WT/data/walls" out/walls-no-street <<'PY'

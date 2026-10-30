@@ -124,6 +124,12 @@ def record_claude(env):
            "claude_code": ver[0] if ver else None, "model": init.get("model"), "mode": "remote", "api": API, "host": h,
            "tool": "unsaid_places", "input": use.get("input"), "answer": res.get("result"),
            "turns": res.get("num_turns"), "duration_ms": res.get("duration_ms") or int((time.time() - t0) * 1000)}
+    # the wall size the tool reported ("... in N answers"): the agents page's St. Louis count, checked in the report
+    import re
+    tr = " ".join(str(c.get("content")) for r in rows if r.get("type") == "user"
+                  for c in (r.get("message") or {}).get("content") or [] if isinstance(c, dict) and c.get("type") == "tool_result")
+    m = re.search(r"in (\d+) answers", tr)
+    doc["wall_answers"] = int(m.group(1)) if m else None
     json.dump(doc, open(DEMO, "w"), indent=1, ensure_ascii=False)
     print("Claude run: %d turns, %.0f s, host %s -> %s" % (doc["turns"] or 0, time.time() - t0, h, DEMO))
     return True
