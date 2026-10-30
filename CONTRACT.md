@@ -1,7 +1,5 @@
 # API contract: engine, server, site
 
-UNSAID.md wins over this file.
-
 ## Engine entry point (D owns `engine/unsaid/api.py`)
 
 ```python

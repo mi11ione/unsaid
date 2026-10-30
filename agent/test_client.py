@@ -224,9 +224,6 @@ QUESTION = ("I love Frankie Beverly & Maze, The Original Kings of Comedy and rib
 def run_remote():
     """Smoke test of remote mode: the hosted API, real Qloo. Skipped without UNSAID_TOKEN."""
     print("\n== remote mode (the hosted API, %s)" % (os.environ.get("UNSAID_URL") or "https://unsaid.mi11ion.io"))
-    if not os.environ.get("UNSAID_TOKEN"):
-        print("  [SKIP] UNSAID_TOKEN is not set (it is in the Devpost testing instructions)")
-        return
     c = Client("remote", [])
     r = c.req("initialize", {"protocolVersion": "2025-11-25", "capabilities": {},
                              "clientInfo": {"name": "unsaid-test-client", "version": "0.2"}})

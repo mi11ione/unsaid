@@ -11,7 +11,7 @@ On 40 public questions never used to build the list, the AIs named 32 of 140 car
 
 ## Five minutes
 
-**1. The live demo.** Open https://unsaid.mi11ion.io and tap **Frankie Beverly & Maze · The Original Kings of Comedy · rib tips**. Tap a card for its detail; tap ✕ to strike one you know and a reserve takes its place; paste any AI's answer and anything it names is already crossed out. Or type three things you love. Cards arrive in about 33.1 seconds.
+**1. The live demo.** Open https://unsaid.mi11ion.io and tap **Frankie Beverly & Maze · The Original Kings of Comedy · rib tips**. Tap a card for its detail; tap ✕ to strike one you know and a reserve takes its place; paste any AI's answer and anything it names is already crossed out. Or type three things you love. Your seven arrive in about half a minute.
 
 **2. From your agent, no Qloo key, one paste.** Add `https://unsaid.mi11ion.io/mcp` as a custom connector in Claude (Settings → Connectors), or run the line below.
 
@@ -109,7 +109,7 @@ Every gate is printed as measured, pass or fail, with its script. The bars were 
 | B · survivors | 7 cards + 3 reserves, no junk, in 8+ of 10 (NYC) and 6+ of 10 (STL) | `k3_survivors.py` | **PASS**: New York 10/10, St. Louis 9/10 | widen R; extra pool pages |
 | C · not a cap | overlap with a popularity cut of the same size ≤ 0.80 | `k3_survivors.py`, `run_query.py` | **PASS**: median 0.67; a random cut of the same size: 0.51; by city below | none |
 | D · meter | with Qloo as a tool, 4+ fewer everyone-list picks than alone in 7+ of 10 sets | `k10_meter.py` | **FAIL**: alone a median 6.0 of 12 picks land on the other AIs' lists (the pre-registered grading list: census + wall 1); with Qloo as the tool 4.0; 4+ below alone in 5 of 10 sets. Final re-grade on the rebuilt walls | printed here, not featured |
-| E · fresh asks | median 1 or fewer of 7 cards named | `k5_fresh.py` | **PASS**: 1 of 140 (on the frozen cards; k12's stricter check on today's cards finds 3), median 0; the one hit is a false match (below) | none |
+| E · fresh asks | median 1 or fewer of 7 cards named | `k5_fresh.py` | **PASS**: 1 of 140 on the frozen cards (0 on today's cards, k12), median 0; the one hit is a false match (below) | none |
 | F · speed | cards p50 20 s or less; first name 1 s or less | `k11_latency.py` | **FAIL**: p50 33.1 s, p90 41.8 s, first name 0.58 s (10 cold runs), through the Pages proxy on Render's free tier, at the freeze | none |
 
 - **Gate D's "with Qloo" tool** (`qloo_places`) ordered places by the first love's pool order, not a joint signal, and built its pool the older way at meter time (2 pages, no distance check; 101 places vs the engine's 183 for the same set). It still returned what the frozen protocol asks for, Qloo's top 50 with nothing crossed out, so D stands as measured and was not re-run. Meter protocol: `data/meter.protocol.md`.
@@ -202,7 +202,7 @@ The list is not every place an AI could name. Against the Chao2 estimate of each
 - **What's gate E's baseline?** k12, on the same held-out questions.
 - **Why fuse a rank per love instead of Qloo's joint signal?** k13 above: the joint call can't carry a dish love, and its explainability can't say which love put a card there.
 - **Do people like these places?** Not shown. Only Qloo's taste score says they fit; nobody has walked in, and nobody has paid.
-- **Who pays?** The model we'd test, with no partner yet: card dining programmes already pay to put diners in seats, so a programme pays per seated diner, only after Qloo has picked the place. No restaurant can buy a card.
+- **Who pays?** The model we'd test, with no partner yet: agents, per MCP call, for the one answer no other assistant gives; tourism boards and business districts, per diner UNSAID sends somewhere AI didn't name. Restaurants never pay, so no spot is for sale.
 - **When was it pre-registered?** Below: after the census, before the Qloo key and any card.
 
 ### Pre-registration
@@ -217,7 +217,7 @@ The gist postdates both censuses (Claude's from 27 Oct 12:05 UTC), so the census
 - **ChatGPT:** GPT-5.6 (`gpt-5.6-terra`) via Codex CLI (`codex exec -m gpt-5.6-terra`) on the author's subscription.
 - Census and saturation asks end with the same request for a JSON list of 8–12 places (`harness/prompts.py`), wall asks with a list of up to 12 (`harness/phrasings.py`); fresh questions go out verbatim.
 - Both run on the author's machine and never on the server.
-- **Gemini:** the free API tier. Dated asks use `gemini-3.8-flash`, which allows 20 requests a day, so the Gemini lane covers the hidden-gem asks only. Live asks use `gemini-3-flash-preview`.
+- **Gemini:** the free API tier. Dated asks use `gemini-3.6-flash` and `gemini-3.8-flash` (20 requests a day), so the Gemini lane covers the hidden-gem asks only. Live asks use `gemini-3-flash-preview`.
 - **No web search** in any lane except the labelled search-on lane. No paid AI API key.
 - **Search leak:** Codex's built-in apps connector ran web searches in 8 of 128 census answers and 41 of 120 wall answers even with search disabled. It was found, switched off with `--disable apps`, and every affected answer was asked again.
 - **Shell leak:** Codex could also run shell commands, and 6 street answers ran `curl`. The shell is now off too (`--disable shell_tool`), and every answer that used it (24) was asked again.
@@ -271,7 +271,11 @@ claude -p "I love Frankie Beverly & Maze, The Original Kings of Comedy and rib t
 - `qloo_places(loves, city)` returns the top 50 of the same pool with nothing crossed out. It is the meter's "with" arm. Only the local modes list it. It orders places by the first love's pool order, not a joint signal; at meter time it also built a shallower pool than the engine (see *Gates*), and the pool now matches.
 - A real agent run is public on the site: https://unsaid.mi11ion.io/data/live/agent_demo.json (Claude Code, remote mode, the call and the answer verbatim).
 
-Other modes: `UNSAID_MODE=fake` runs the engine offline on a synthetic Qloo world, and every result is tagged FAKE. `UNSAID_MODE=live` with `QLOO_API_KEY` runs the engine locally, using the walls in `data/walls` (override with `UNSAID_WALLS`). Both local modes call `run_unsaid` in `engine/unsaid/api.py`, as the server does. `python3 -I agent/test_client.py` checks fake mode in both protocol eras, then runs a smoke test against the hosted API. The smoke test is skipped when `UNSAID_TOKEN` isn't set.
+Other modes: `UNSAID_MODE=fake` runs the engine offline on a synthetic Qloo world, and every result is tagged FAKE. `UNSAID_MODE=live` with `QLOO_API_KEY` runs the engine locally, using the walls in `data/walls` (override with `UNSAID_WALLS`). Both local modes call `run_unsaid` in `engine/unsaid/api.py`, as the server does. `python3 -I agent/test_client.py` checks fake mode in both protocol eras, then runs a smoke test against the hosted API.
+
+## Limits and privacy
+
+Qloo predicts fit; it can't promise you'll love a given place. The crossed-out list is a dated snapshot of what Claude, ChatGPT and Gemini said, with and without web search, in St. Louis and New York; pasting any AI's answer under your seven catches anything newer. Only your three loves leave your browser, to Qloo and, where available, one live Gemini check: no names, no accounts, keys stay on the server. No Qloo results are kept in this repository's files.
 
 ## Credits
 

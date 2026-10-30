@@ -58,7 +58,7 @@
   const S = document.getElementById('stage');
   el(S, 'div', '', `<span class="mark"><s>UN</s>SAID</span><span class="slug">${esc(city)} · without and with</span><span class="grow"></span>` +
     (fake ? '<span class="mock">mock data · the 7 are not real cards yet</span>' : '')).className = 'top';
-  el(S, 'h1', '', 'Everything the AIs tell everyone, <s>crossed out</s>.').className = 'hl';
+  el(S, 'h1', '', 'Every place the AIs named, <s>crossed out</s>.').className = 'hl';
   const g = el(S, 'div', ''); g.className = 'cols3';
 
   // ---- left: the answer. The strikes come from the engine's own matcher (match_wall, run by build_data.py against the

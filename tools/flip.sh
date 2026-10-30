@@ -20,7 +20,7 @@ SERVICE="${RENDER_SERVICE:-srv-dbgr3fuc6qcc73ce5p3g}"
 RAPI="https://api.render.com/v1/services/$SERVICE"
 SITE="https://unsaid.mi11ion.io"
 ENVF="$HOME/.config/unsaid/env"
-DEVPOST="$(dirname "$ROOT")/devpost.final.md"
+DEVPOST="$(dirname "$ROOT")/devpost.paste.md"
 UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
 # the fresh query: St. Louis, three typed loves (the hero set, as typed text with type hints, not the static preset)
 LOVES='[["Frankie Beverly & Maze","artist"],["The Original Kings of Comedy","movie"],["rib tips","tag"]]'
