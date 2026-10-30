@@ -3,12 +3,12 @@
 # final walls, and the Devpost placeholders are filled into a NEW file (~/Desktop/qloo/devpost.final.md).
 #
 #   ./freeze.sh                     the freeze: steps 1-9
-#   ./freeze.sh --dry-run           steps 1-9 without gate F (--skip-f) and without Render (--skip-render: today's new
-#                                   priors need the 547ab11 engine first), Qloo budgets that sum to <= 150 calls
+#   ./freeze.sh --dry-run           steps 1-9 without gate F, Render, the agent re-record, commits or the site deploy
+#                                   (step 8 only checks); no wait for wall #3; Qloo budgets that sum to <= 145 calls
 #   ./freeze.sh --from 5            resume at step 5 (each step re-runs from scratch: all steps are idempotent)
 #   ./freeze.sh --only 4            one step
 #   flags: --skip-f  --render-if-unchanged  --skip-render  --skip-media  --skip-site  --allow-dirty  --to N
-#          --no-street-catchup  --skip-agent  --skip-k14
+#          --no-street-catchup  --skip-agent  --with-video (Roman's rule: no video render unless he asks)  --skip-k14
 #          --numbers-only  step 3 runs only k12, k14 and numbers (no gate E, run_query, street ablation, census); a missing
 #                          regen worktree is recreated clean at origin/main (cache-only reruns of the k12/k14 keys)
 #
@@ -50,7 +50,7 @@ WT="$REGEN_WT"; FRESH="$REGEN_FRESH"
 CO="Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 SKIP_K14=0; NUMBERS_ONLY=0
-FROM=1; TO=9; SKIP_F=0; DRY=0; ALLOW_DIRTY=0; STREET_CATCHUP=1; SKIP_AGENT=0; RENDER=deploy; SKIP_MEDIA=0; SKIP_SITE=0
+FROM=1; TO=9; SKIP_F=0; DRY=0; ALLOW_DIRTY=0; STREET_CATCHUP=1; SKIP_AGENT=0; WITH_VIDEO=0; WALL3_DEADLINE=${WALL3_DEADLINE:-12:30}; RENDER=deploy; SKIP_MEDIA=0; SKIP_SITE=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --from) FROM=$2; shift;;
@@ -65,6 +65,7 @@ while [ $# -gt 0 ]; do
     --allow-dirty) ALLOW_DIRTY=1;;
     --no-street-catchup) STREET_CATCHUP=0;;
     --skip-agent) SKIP_AGENT=1;;
+    --with-video) WITH_VIDEO=1;;
     --skip-k14) SKIP_K14=1;;
     --numbers-only) NUMBERS_ONLY=1;;
     -h|--help) sed -n '2,32p' "$0"; exit 0;;
@@ -97,6 +98,15 @@ commit_paths() {
   local p have=()
   for p in "$@"; do [ -e "$MAIN/$p" ] || git -C "$MAIN" ls-files --error-unmatch -- "$p" >/dev/null 2>&1 && have+=("$p"); done
   [ ${#have[@]} -gt 0 ] || { echo "commit: nothing to commit"; return 0; }
+  if [ $DRY = 1 ]; then   # a dry run never commits or pushes; the files it regenerated go back to HEAD (only the
+    # freeze's own outputs: never harness answers, which other agents write)
+    echo "commit (dry run, not committed): $(git -C "$MAIN" status --porcelain -- "${have[@]}" | wc -l | tr -d ' ') changed paths in ${have[*]}"
+    for p in "${have[@]}"; do
+      case "$p" in README.md|engine/k12_wall_effect.md|site/data/*|media/data/*|data/walls)
+        git -C "$MAIN" ls-files --error-unmatch -- "$p" >/dev/null 2>&1 && git -C "$MAIN" checkout -q -- "$p";; esac
+    done
+    return 0
+  fi
   git -C "$MAIN" add -A -- "${have[@]}"
   if git -C "$MAIN" diff --cached --quiet -- "${have[@]}"; then echo "commit: no changes in ${have[*]}"; return 0; fi
   git -C "$MAIN" commit -q -m "$msg" -m "$CO" -- "${have[@]}"
@@ -116,9 +126,24 @@ step1() {
   local avail; avail=$(df -g "$MAIN" | awk 'NR==2{print $4}')
   [ "$avail" -ge 10 ] || die "disk: ${avail} GB free (need >= 10 GB: the video's frames are ~2 GB)"
   echo "disk: ${avail} GB free"
-  for j in gem-30 wall-3; do
-    [ -e "$MAIN/harness/runs/done/$j" ] && echo "scheduled job $j: done" || warn "scheduled job $j has not finished (harness/runs/done/$j missing)"
-  done
+  [ -e "$MAIN/harness/runs/done/gem-30" ] && echo "scheduled job gem-30: done" || warn "scheduled job gem-30 has not finished"
+  # dated wall #2 failed offline on 29 Oct (its done marker is false): warn on the wall file itself, never stop
+  [ -f "$MAIN/data/walls/wall-2.json" ] && echo "dated wall #2: data/walls/wall-2.json present" \
+    || warn "dated wall #2 is missing (data/walls/wall-2.json): the freeze goes on with the walls that exist"
+  # dated wall #3 runs at 09:00 ET (~1-2 h): wait for its done marker, or until $WALL3_DEADLINE ET, whichever is first
+  local et now
+  if [ $DRY = 1 ]; then
+    [ -e "$MAIN/harness/runs/done/wall-3" ] && echo "dated wall #3: done" || warn "dated wall #3 not done (dry run: no wait)"
+  else
+    while [ ! -e "$MAIN/harness/runs/done/wall-3" ]; do
+      now=$(TZ=America/New_York date +%H%M)
+      [ "$now" -ge "${WALL3_DEADLINE/:/}" ] && { warn "dated wall #3 not done by $WALL3_DEADLINE ET: going on with the walls that exist"; break; }
+      [ $(( $(date +%s) / 60 % 10 )) = 0 ] && echo "waiting for dated wall #3 (runs/done/wall-3) until $WALL3_DEADLINE ET; now $(TZ=America/New_York date +%H:%M) ET"
+      sleep 60
+    done
+  fi
+  [ -f "$MAIN/data/walls/wall-3.json" ] && echo "dated wall #3: data/walls/wall-3.json present" \
+    || warn "dated wall #3 is missing (data/walls/wall-3.json)"
   [ "$(git -C "$MAIN" rev-parse --abbrev-ref HEAD)" = main ] || die "git: not on main"
   # tracked changes allowed only where the harness writes (its logs, answers, walls); anything else stops the freeze
   local dirty
@@ -155,7 +180,7 @@ step1() {
 regen_once() {   # one engine/regen_try.sh pass; the gate logs are copied for numbers.json
   # a rerun keeps the earlier attempt's log (02-regen.prev-*.log): its Qloo calls still count toward this freeze
   [ -f "$LOGS/02-regen.log" ] && mv "$LOGS/02-regen.log" "$LOGS/02-regen.prev-$(date +%H%M%S).log"
-  REGEN_BUDGET=$B_PRE REGEN_GATE_BUDGET=$B_GATE bash "$MAIN/engine/regen_try.sh" 2>&1 | tee "$LOGS/02-regen.log"
+  REGEN_BUDGET=$B_PRE REGEN_GATE_BUDGET=$B_GATE REGEN_ABLATION_BUDGET=$B_NS bash "$MAIN/engine/regen_try.sh" 2>&1 | tee "$LOGS/02-regen.log"
   [ "${PIPESTATUS[0]}" = 0 ] || die "regen_try.sh"
   cp "$WT/engine/out/regen_gateA.log" "$LOGS/02-gateA.txt"
   cp "$WT/engine/out/regen_gateB.log" "$LOGS/02-gateB.txt"
@@ -370,7 +395,7 @@ step6() {
 }
 
 step7() {
-  say "7 agent re-record, then media (render.sh all, video URL=$LIVE_URL)"
+  say "7 agent re-record, then media (render.sh data images site$([ $WITH_VIDEO = 1 ] && echo " clip video, URL=$LIVE_URL"))"
   if [ $SKIP_AGENT = 1 ]; then
     warn "agent re-record skipped (--skip-agent): the video and the site show the earlier recording"
   else
@@ -380,7 +405,13 @@ step7() {
       || warn "agent re-record failed: see $LOGS/07-agent.txt"
   fi
   if [ $SKIP_MEDIA = 1 ]; then echo "media: SKIPPED (--skip-media)" | tee "$LOGS/07-media.log"; return 0; fi
-  (cd "$MAIN/media" && URL=$LIVE_URL zsh render.sh all) > "$LOGS/07-media.log" 2>&1 || { tail -8 "$LOGS/07-media.log"; die "render.sh"; }
+  # Roman's rule (30 Oct): no video render unless he asks (--with-video renders the clip and the 60 s video too)
+  local targets="data images site"; [ $WITH_VIDEO = 1 ] && targets="data images clip video site"
+  : > "$LOGS/07-media.log"
+  for t in $targets; do
+    (cd "$MAIN/media" && URL=$LIVE_URL zsh render.sh $t) >> "$LOGS/07-media.log" 2>&1 || { tail -8 "$LOGS/07-media.log"; die "render.sh $t"; }
+  done
+  [ $WITH_VIDEO = 1 ] || echo "video and clip: not rendered (no --with-video; Roman's rule)"
   grep -E "\.png$|\.mp4$|video\.json|note:" "$LOGS/07-media.log" | tail -25 || true
   python3 -I "$MAIN/tools/freeze_numbers.py" agentcheck --fresh "$FRESH" | tee "$LOGS/07-agentcheck.log"
   cd "$MAIN"
@@ -391,7 +422,10 @@ step7() {
 step8() {
   say "8 site deploy (media/tools/deploy-site.sh)"
   if [ $SKIP_SITE = 1 ]; then echo "site: SKIPPED (--skip-site)" | tee "$LOGS/08-site.log"; return 0; fi
-  zsh "$MAIN/media/tools/deploy-site.sh" > "$LOGS/08-site.log" 2>&1 || { tail -8 "$LOGS/08-site.log"; die "deploy-site.sh"; }
+  # a dry run checks (OG image + the ⟦ check at both widths) without deploying
+  CHECK_ONLY=$([ $DRY = 1 ] && echo 1) zsh "$MAIN/media/tools/deploy-site.sh" > "$LOGS/08-site.log" 2>&1 \
+    || { tail -8 "$LOGS/08-site.log"; die "deploy-site.sh"; }
+  [ $DRY = 1 ] && echo "site: checked, not deployed (dry run)"
   grep -E "placeholder check|og image|Deployment complete|https://" "$LOGS/08-site.log" | tail -4 || true
 }
 

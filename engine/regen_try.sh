@@ -101,7 +101,7 @@ grep -E "^B survivors|sets pass|QLOO_NETWORK_CALLS" out/regen_gateB.log || tail 
 
 say "ablation: the same 20 sets without the search-on walls (cache only)"
 python3 -I precompute.py --walls out/walls-no-search-on --sets-file out/sets20.json --accept-top --out "$NOSO" \
-  --no-cap --budget 10 > out/regen_nosearch.log 2>&1 || true
+  --no-cap --budget "${REGEN_ABLATION_BUDGET:-10}" > out/regen_nosearch.log 2>&1 || true
 tail -2 out/regen_nosearch.log
 
 say "summary"
