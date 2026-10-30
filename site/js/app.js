@@ -37,7 +37,7 @@
 
   // a preset is named by its loves, never by a person: "Frankie Beverly & Maze · The Original Kings of Comedy · rib tips"
   // (the middle love truncates on a phone)
-  const lovesLabel = s => { const L = (s.loves || []).filter(Boolean); return L.map((l, i) => `<span class="${i === 1 && L.length > 2 ? 'lmid' : 'l'}">${esc(l)}</span>`).join(' · '); };
+  const lovesLabel = s => { const L = (s.loves || []).filter(Boolean); return L.map((l, i) => `<span class="l">${esc(l)}</span>`).join('&nbsp;· '); };   // wraps between loves, never inside "· X"
   // the presets as two chips ("Or open one:"): each city's first set in data/try.json
   function presetChips(head = 'Or open one:', skip = null) {
     // skip: the set the landing's photo strip already opens; its city's chip is dropped (one way in per city)
@@ -74,7 +74,7 @@
         ${FIELDS.map((f, i) => `<div class="fld"><span class="n">0${i + 1}</span><input data-i="${i}" placeholder="${esc(f.ph)}" aria-label="${esc(f.aria)}" autocomplete="off" spellcheck="false"><div class="res" id="res${i}"></div></div>`).join('')}
       </div>
       <div class="fields"><div class="fld city"><span class="n">in</span><div class="cityopts" role="radiogroup" aria-label="city">${CITIES.map(c => `<button role="radio" aria-checked="false" data-c="${esc(c.slug)}">${esc(c.name)}</button>`).join('')}</div></div></div>
-      <div class="go"><button class="btn solid big" id="cross" disabled>Find my seven <span aria-hidden="true">→</span></button></div>
+      <div class="go"><button class="btn solid big" id="cross">Find my seven <span aria-hidden="true">→</span></button></div>
       ${presetChips('Or open one:', 'stl-cedric')}
     </section><aside class="thumbs" id="thumbs"></aside></div></div>`;
     view.querySelectorAll('input[data-i]').forEach(inp => {
@@ -91,6 +91,7 @@
     $('#cross').addEventListener('click', go);
     gate();
     thumbStrip();
+    document.body.classList.add('ready');   // the footer appears once the page has its content (an insertion, not a shift)
   }
   // one visual: Cedric's seven as photos with names, opening his set (only the cards that have a photo)
   async function thumbStrip() {
@@ -118,7 +119,9 @@
   }
   const siteHost = () => location.protocol.startsWith('http') && !/^(127\.|localhost)/.test(location.host) ? location.host : (CFG.site || '');
 
-  async function resolveLove(i, text) {
+  const pend = [null, null, null];   // each field's lookup in flight, so the button can wait for it
+  function resolveLove(i, text) { return (pend[i] = resolveLove1(i, text)); }
+  async function resolveLove1(i, text) {
     text = text.trim();
     if (!text) { s1.loves[i] = null; return drawLove(i); }
     if (s1.loves[i] && s1.loves[i].text === text) return;
@@ -160,17 +163,39 @@
     gate();
   }
 
+  // the field that needs you: its rule turns amber for a moment
+  function nudge(f) {
+    if (!f) return;
+    f.classList.add('nudge');
+    const off = () => f.classList.remove('nudge');
+    f.addEventListener('input', off, { once: true }); f.addEventListener('click', off, { once: true });
+  }
   function httpUrl(u) { return typeof u === 'string' && /^https?:\/\//i.test(u.trim()); }   // never javascript:, data:, …
 
   function drawCity() {
     view.querySelectorAll('.cityopts button').forEach(b => { const on = !!(s1.city && s1.city.city && s1.city.city.slug === b.dataset.c); b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
     gate();
   }
+  // the button is always the next step: when something is missing, it takes you there instead of going
+  const ready = () => s1.loves.every(l => l && l.chip) && s1.city && s1.city.city;
   function gate() {
     const b = $('#cross'); if (!b) return;
-    b.disabled = !(s1.loves.every(l => l && l.chip) && s1.city && s1.city.city);
+    b.setAttribute('aria-disabled', String(!ready()));
   }
-  function go() {
+  async function go() {
+    // a love typed but not looked up yet (the click came before its blur finished): look it up, then decide
+    const ins = [...view.querySelectorAll('input[data-i]')];
+    ins.forEach((inp, i) => { if (inp.value.trim() && (!s1.loves[i] || s1.loves[i].text !== inp.value.trim())) resolveLove(i, inp.value); });
+    await Promise.all(pend.map(p => p || null));
+    if (!ready()) {
+      const k = s1.loves.findIndex(l => !(l && l.chip));
+      if (k >= 0) {
+        const L = s1.loves[k], box = $('#res' + k), btn = box && box.querySelector('button');
+        (L && btn ? btn : ins[k]).focus();
+        nudge(ins[k].closest('.fld'));
+      } else { const c = view.querySelector('.cityopts button'); if (c) c.focus(); nudge(view.querySelector('.fld.city')); }
+      return;
+    }
     const loves = s1.loves.map(l => ({ ...l.chip, typed: l.text }));
     const c = s1.city.city;
     location.hash = `#/r?city=${encodeURIComponent(c.slug || c.disamb || c.name)}&cn=${encodeURIComponent(c.name)}&l=${encodeURIComponent(JSON.stringify(loves))}`;
@@ -429,6 +454,7 @@
       const ids = st.order.filter(id => !st.burned.some(b => b.card_id === id));
       if (!ids.length) return;
       $('#s-left').hidden = false; $('#res').classList.add('hascards');
+      st.namer = namerOf(ids);
       $('#leftbody').innerHTML = `<h2 class="lead2"><span class="n">${ids.length}</span> for you so far</h2>
         <p class="leadsub">Ranked by Qloo for what fits you, not everyone. Still checking that no AI names them…</p>
         <div class="cards prov" id="cards">${ids.map((id, i) => cardHTML(st.cards.get(id), i, false, true)).join('')}</div>`;
@@ -447,6 +473,7 @@
       st.reserves = (R.reserves || []).map(c => c.id);
       burnLine(); notes(); left(); counter(); status(); mapDraw();
       $('#res').classList.add('done');
+      document.body.classList.add('ready');
       clearTimeout(st.failT);
     }
 
@@ -527,43 +554,26 @@
       return `<div class="idx"><span class="no">${String(i + 1).padStart(2, '0')}</span>${x || ''}</div>` +
         `<div class="pic${httpUrl(c.image) ? '' : ' none'}">${httpUrl(c.image) ? `<img src="${esc(c.image)}"${set} alt="" ${i < 3 ? 'fetchpriority="high"' : 'loading="lazy"'} onerror="this.parentNode.classList.add('none');this.remove()" onload="if(this.naturalWidth<100){this.parentNode.classList.add('none');this.remove()}">` : ''}${fb}</div>`;
     }
-    // the area: in St. Louis, a place whose address is in another municipality ("8017 Airport Rd Berkeley, MO") shows that
-    // municipality; otherwise Qloo's neighbourhood
-    const STREET_T = /^(st|street|ave|avenue|blvd|boulevard|rd|road|dr|drive|pkwy|parkway|hwy|highway|ln|lane|way|pl|place|ct|ter|trl|cir|plz|plaza|sq|center|ctr|mall|\d+\w*)\.?$/i;
-    // an address as people read it: Qloo sometimes repeats a place type in short form ("Shopping Center Shop Ctr") or a
-    // word ("St. Louis St. Louis"); the repeat goes, the street and the town stay
-    function cleanAddr(a) {
-      let s = String(a || '').replace(/\s+/g, ' ').trim();
-      [[/Shopping Cent(?:er|re)/i, /\s+Shop(?:ping)?\.? Ctr\.?(?=[\s,])/i], [/\bPlaza\b/i, /\s+Plz\.?(?=[\s,])/i], [/\bCent(?:er|re)\b/i, /\s+Ctr\.?(?=[\s,])/i]]
-        .forEach(([full, short]) => { if (full.test(s)) s = s.replace(short, ''); });
-      return s.replace(/\b([A-Z][\w.']+(?: [A-Z][\w.']+)?) \1(?=[\s,]|$)/g, '$1');
-    }
-    function municipality(addr) {
-      const m = cleanAddr(addr).match(/^(.*?),\s*[A-Z]{2}\s+\d{5}/); if (!m) return null;
-      const head = m[1].trim();
-      if (/\bst\.?\s+louis$/i.test(head)) return 'St. Louis';
-      const t = head.split(/\s+/); let k = t.length;
-      while (k > 0 && !STREET_T.test(t[k - 1])) k--;
-      const city = t.slice(k).join(' ');
-      return k > 0 && city ? city : null;
-    }
-    function areaOf(c) {
-      const mu = slug === 'st-louis' ? municipality(c.address) : null;
-      return mu && mu !== 'St. Louis' ? mu : (c.neighbourhood || c.area || null);
-    }
-    // the reason line: "Fits all three of your loves" when it fits each; a dish love by name; another love only when the
-    // place holds for at least two; otherwise none (the card's own line says what it is)
+    // the area (UM.area, shared with the share image): another municipality in St. Louis ("Berkeley"), else Qloo's neighbourhood
+    const cleanAddr = UM.cleanAddr;
+    const areaOf = c => UM.area(c, slug);
+    // the reason line, said once: the first card in the list that fits every love names them all ("Because you love X, Y
+    // and Z"); a later one that fits every love says "Because you love all three"; the card's sheet stands alone and
+    // always names them. A dish love by name; another love only when the place holds for at least two; otherwise none.
     function loveOf(label) { return ((st.result && st.result.loves) || []).find(l => l.label === label) || null; }
-    function reasonLine(c) {
-      const n = c.n_loves, h = c.holds;
-      // fits every love: name them all, "Because you love X, Y and Z"
-      if (n >= 2 && h != null && h >= n) {
-        const L = tLoves().filter(l => !l.dead).map(l => l.label).filter(Boolean);
-        if (L.length >= 2) return `Because you love ${L.length === 2 ? L.join(' and ') : L.slice(0, -1).join(', ') + ' and ' + L[L.length - 1]}`;
+    const liveLoves = () => tLoves().filter(l => !l.dead).map(l => l.label).filter(Boolean);
+    const fitsAll = c => c && c.n_loves >= 2 && c.holds != null && c.holds >= c.n_loves && liveLoves().length >= 2;
+    // the card that names them: the first one, not struck, that fits every love, in the order on screen
+    const namerOf = ids => ids.find(id => !st.struck.has(id) && fitsAll(st.cards.get(id))) || null;
+    function reasonLine(c, full) {
+      if (fitsAll(c)) {
+        const L = liveLoves();
+        if (full || c.id === st.namer) return `Because you love ${L.length === 2 ? L.join(' and ') : L.slice(0, -1).join(', ') + ' and ' + L[L.length - 1]}`;
+        return `Because you love ${L.length === 2 ? 'both' : 'all ' + word(L.length)}`;
       }
       if (c.because == null) return '';
       const l = loveOf(c.because), tag = l && (l.kind === 'tag' || /^urn:tag/.test(l.type || ''));
-      if (tag || (h != null && h >= 2)) return `Because you love ${tName(c.because)}`;
+      if (tag || (c.holds != null && c.holds >= 2)) return `Because you love ${tName(c.because)}`;
       return '';
     }
     function metaLine(c) {
@@ -685,6 +695,7 @@
     }
     function drawCards() {
       const el2 = $('#cards'); if (!el2) return;
+      st.namer = namerOf(st.slots);
       el2.innerHTML = '';
       st.slots.forEach(id => el2.appendChild(cardEl(id)));
       watchPhotos(el2);
@@ -846,8 +857,8 @@
         ${c.what ? `<p class="dim">${esc(c.what)}</p>` : ''}
         ${order.length ? `<p>Order: ${order.map(dish).map(esc).join(', ')}</p>` : ''}
         ${st3 ? `<div class="red">${esc(st3.text)}</div>` : ''}
-        ${reasonLine(c) ? `<div class="blk">
-          <div class="big1">${esc(reasonLine(c))}.</div>${c.because_detail ? `<p>${esc(cap1(typedText(c.because_detail)))}.</p>` : ''}</div>` : ''}
+        ${reasonLine(c, true) ? `<div class="blk">
+          <div class="big1">${esc(reasonLine(c, true))}.</div>${c.because_detail ? `<p>${esc(cap1(typedText(c.because_detail)))}.</p>` : ''}</div>` : ''}
         <div class="blk"><div class="sh"><h2>Fits you</h2></div>
           <p>${esc(fitLine(c))}</p></div>
         <div class="blk"><div class="sh"><h2>Go</h2></div>
@@ -922,7 +933,7 @@
     }
     function shareData() {
       const R = st.result;
-      return { ...R, hero: cc && Share.hero(CEN, cc.census), loves: tLoves(), picks: liveIds().map(id => ({ ...st.cards.get(id), _ph: cardNo(id) ? `place ${cardNo(id)}` : 'burned card' })), wallNames: Share.wallNames(R) };
+      return { ...R, city: { ...(R.city && typeof R.city === 'object' ? R.city : {}), slug }, hero: cc && Share.hero(CEN, cc.census), loves: tLoves(), picks: liveIds().map(id => ({ ...st.cards.get(id), _ph: cardNo(id) ? `place ${cardNo(id)}` : 'burned card' })), wallNames: Share.wallNames(R) };
     }
     window.__shareData = shareData;
 
@@ -932,6 +943,7 @@
     function fail() {
       if (st.done || st.failed || window.__st !== st) return;   // a later page owns the screen now
       st.failed = true; clearTimeout(st.failT); if (ctl) ctl.abort();
+      document.body.classList.add('ready');
       $('#status').classList.remove('busy');
       $('#s-left').hidden = false; $('#res').classList.add('done');
       $('#leftbody').innerHTML = `<p class="empty">That run didn’t finish. The ranker may be waking up or busy; your three loves are saved in this link.</p>
@@ -965,14 +977,14 @@
       story.className = 'maplead';
       story.innerHTML = st.lead || '';
       if (resEl) resEl.classList.toggle('leadmap', !!st.lead);
-      const H = 380, mw = W * .56;
+      const H = 440, mw = W * .56;
       const holder = el(box, 'div', `position:absolute;left:0;top:0;height:${H}px;width:${Math.round(mw)}px`);
       holder.className = 'mapfade';      // the dots fade out at the edges instead of stopping at a hard line
       box.style.height = H + 'px';
       const ctx = UM.canvas(holder, mw, H);
       // the frame takes in every card (the pool reaches past the city, e.g. North County) and the gem; a dot is never moved
       const cardsXY = [...st.cards.values()].filter(c => c.lat != null).concat(gemXY ? [gemXY] : []);
-      const P = UM.projection(UM.frame(M, cardsXY), { x: mw * .22, y: 10, w: mw * .7, h: H - 20 });
+      const P = UM.projection(UM.frame(M, cardsXY), { x: mw * .16, y: 10, w: mw * .8, h: H - 20 });
       const ai = M.ai, cmax = Math.max(...ai.map(a => a.count)), dmax = 28;
       const dense = M.places.length > 3000;   // New York: ~20k dots, smaller and without the haze
       const paper = document.documentElement.dataset.ground === 'paper';   // on paper: plain dots, no haze
@@ -1031,6 +1043,7 @@
   // ------------------------------------------------------------------ routes
   function route() {
     closeSheet();
+    document.body.classList.remove('ready');
     const h = location.hash || '#/';
     if (h.startsWith('#/r')) resultView(new URLSearchParams(h.split('?')[1] || ''));
     else inputView();

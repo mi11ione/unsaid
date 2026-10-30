@@ -237,5 +237,30 @@
     const area = /^[NSEW]\.?\s/.test(tail) || STREETY.test(tail) || (hood && tail.toLowerCase() === String(hood).toLowerCase());
     return area && m[1].trim().length >= 3 ? m[1].trim() : s;
   }
-  window.UM = { shortName, typedLoves, typedName, deadLine, day, days, cleanName, frame, hull, inHull, cityLine, firstOf, provider, C, canvas, projection, discD, dots, disc, seven, ring, stack, leader, el, esc, fmt, ph, param, et, hhmm, json, result };
+  // the area: in St. Louis, a place whose address is in another municipality ("8017 Airport Rd Berkeley, MO") shows that
+  // municipality; otherwise Qloo's neighbourhood. One function for the site's cards and the share image.
+  const STREET_T = /^(st|street|ave|avenue|blvd|boulevard|rd|road|dr|drive|pkwy|parkway|hwy|highway|ln|lane|way|pl|place|ct|ter|trl|cir|plz|plaza|sq|center|ctr|mall|\d+\w*)\.?$/i;
+  // an address as people read it: Qloo sometimes repeats a place type in short form ("Shopping Center Shop Ctr") or a
+  // word ("St. Louis St. Louis"); the repeat goes, the street and the town stay
+  function cleanAddr(a) {
+    let s = String(a || '').replace(/\s+/g, ' ').trim();
+    [[/Shopping Cent(?:er|re)/i, /\s+Shop(?:ping)?\.? Ctr\.?(?=[\s,])/i], [/\bPlaza\b/i, /\s+Plz\.?(?=[\s,])/i], [/\bCent(?:er|re)\b/i, /\s+Ctr\.?(?=[\s,])/i]]
+      .forEach(([full, short]) => { if (full.test(s)) s = s.replace(short, ''); });
+    return s.replace(/\b([A-Z][\w.']+(?: [A-Z][\w.']+)?) \1(?=[\s,]|$)/g, '$1');
+  }
+  function municipality(addr) {
+    const m = cleanAddr(addr).match(/^(.*?),\s*[A-Z]{2}\s+\d{5}/); if (!m) return null;
+    const head = m[1].trim();
+    if (/\bst\.?\s+louis$/i.test(head)) return 'St. Louis';
+    const t = head.split(/\s+/); let k = t.length;
+    while (k > 0 && !STREET_T.test(t[k - 1])) k--;
+    const city = t.slice(k).join(' ');
+    return k > 0 && city ? city : null;
+  }
+  function area(c, citySlug) {
+    const mu = citySlug === 'st-louis' ? municipality(c.address) : null;
+    return mu && mu !== 'St. Louis' ? mu : (c.neighbourhood || c.area || null);
+  }
+
+  window.UM = { area, cleanAddr, shortName, typedLoves, typedName, deadLine, day, days, cleanName, frame, hull, inHull, cityLine, firstOf, provider, C, canvas, projection, discD, dots, disc, seven, ring, stack, leader, el, esc, fmt, ph, param, et, hhmm, json, result };
 })();

@@ -62,7 +62,7 @@ for (let attempt = 0; attempt < 3; attempt++) {
 const err = await evalp('window.__error || null'); if (err) console.error('page error:', err);
 await sleep(300);
 if (mode !== 'frames' && a6) { await Promise.race([evalp(a6), sleep(40000).then(() => console.error('pre-capture script timed out'))]); await sleep(400); }
-if (!h) { h = await evalp(`(document.getElementById("stage") ? document.getElementById("stage").offsetHeight : Math.max(document.body.scrollHeight, document.documentElement.scrollHeight))`); await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: dpr, mobile: false }); await sleep(200); }
+if (!h) { h = await evalp(`(document.getElementById("stage") ? document.getElementById("stage").offsetHeight : (Math.ceil(document.body.getBoundingClientRect().height) || document.documentElement.scrollHeight))`); await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: dpr, mobile: false }); await sleep(200); }
 const cap = async () => Buffer.from((await send('Page.captureScreenshot', { format: 'png', clip: { x: 0, y: 0, width: w, height: h, scale: 1 }, captureBeyondViewport: false })).data, 'base64');
 
 if (mode === 'eval') {

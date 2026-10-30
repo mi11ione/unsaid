@@ -151,7 +151,8 @@
       ls('0px');
       ctx.font = `400 16px ${MONO}`; ctx.fillStyle = C.dim;
       const what = c.what == null ? '' : c.what;
-      ctx.fillText(wrap(ctx, what + (c.neighbourhood ? ' · ' + c.neighbourhood : ''), rw - 44)[0], rx + 44, yy + 32);
+      const ar = window.UM && UM.area ? UM.area(c, R.city && R.city.slug) : c.neighbourhood;   // the same area as the site's card
+      ctx.fillText(wrap(ctx, what + (ar ? ' · ' + ar : ''), rw - 44)[0], rx + 44, yy + 32);
     });
 
     // footer
