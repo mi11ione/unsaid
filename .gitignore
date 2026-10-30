@@ -31,3 +31,7 @@ agent/demo/*live*.jsonl
 
 # the freeze runbook's logs and numbers (they name cards: Qloo output)
 /out/
+
+# harness run outputs that hold Qloo IDs and place names, and the raw run logs
+harness/runs/meter_unsaid.jsonl
+harness/runs/logs/

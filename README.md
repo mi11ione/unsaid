@@ -296,7 +296,7 @@ Other modes: `UNSAID_MODE=fake` runs the engine offline on a synthetic Qloo worl
 ## Credits
 
 - Map dots and neighbourhood centroids: © OpenStreetMap contributors, ODbL 1.0.
-- Rankings: the Qloo Insights API. No Qloo results are in this repository; only the Qloo IDs of the preset loves.
+- Rankings: the Qloo Insights API. No Qloo results are kept in this repository's files; only the Qloo IDs of the preset loves.
 
 ## License
 
