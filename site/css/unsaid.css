@@ -422,7 +422,7 @@ details.dare .out { margin-bottom: 14px; }
 
 /* ---------- round 6 (judge cuts) ---------- */
 /* Cedric's seven: whole tiles only, one row (rows that don't fit collapse to nothing) */
-.thumbs .trow { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); grid-auto-rows: 0; grid-template-rows: auto; row-gap: 0; column-gap: 8px; overflow: hidden; }
+.thumbs .trow { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 8px; }
 .thumbs figure { flex: none; min-width: 0; overflow: hidden; }
 .thumbs img { width: 100%; }
 .tagline { font: 400 16px/1.4 var(--serif); color: #cfccc3; margin-top: 14px; max-width: 560px; }
@@ -482,7 +482,7 @@ details.dare .out { margin-bottom: 14px; }
 .receipt .ri { white-space: nowrap; }
 
 /* ---------- accessibility and layout stability (audit, 30 Oct) ---------- */
-main#view { min-height: 100svh; }
+.res { min-height: 100svh; }   /* the results only: the landing ends at its content */
 :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .fld:focus-within { border-bottom-color: var(--ink); }
 .card .xbtn { width: 44px; height: 44px; }

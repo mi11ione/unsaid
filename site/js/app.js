@@ -105,6 +105,8 @@
       if (ph.length < 4) return;
       $('#thumbs').innerHTML = `<a class="thead" href="#/r?set=stl-cedric"><span class="tl">${lovesLabel(set)}</span><span class="dim">seven in ${esc((CFG.cities[set.city] || {}).name || '')} →</span></a>
         <a class="trow" href="#/r?set=stl-cedric" aria-label="Open the seven for ${esc(set.loves.filter(Boolean).join(', '))}">${ph.map(c => `<figure><img src="${esc(c.image)}" alt="" loading="eager" onerror="this.parentNode.remove()" onload="if(this.naturalWidth<100)this.parentNode.remove()"><figcaption>${esc(UM.shortName(c.name, c.neighbourhood))}</figcaption></figure>`).join('')}</a>`;
+      const row = $('#thumbs .trow'), figs = row ? [...row.querySelectorAll('figure')] : [];
+      requestAnimationFrame(() => { const top = figs.length ? figs[0].offsetTop : 0; figs.forEach(f => { if (f.offsetTop > top) f.remove(); }); });
     } catch (e) { /* the landing works without it */ }
   }
   // a link we share or copy never carries the API token (it lives only in the visitor's own address bar)
@@ -554,7 +556,11 @@
     function loveOf(label) { return ((st.result && st.result.loves) || []).find(l => l.label === label) || null; }
     function reasonLine(c) {
       const n = c.n_loves, h = c.holds;
-      if (n >= 2 && h != null && h >= n) return n === 2 ? 'Fits both of your loves' : `Fits all ${word(n)} of your loves`;
+      // fits every love: name them all, "Because you love X, Y and Z"
+      if (n >= 2 && h != null && h >= n) {
+        const L = tLoves().filter(l => !l.dead).map(l => l.label).filter(Boolean);
+        if (L.length >= 2) return `Because you love ${L.length === 2 ? L.join(' and ') : L.slice(0, -1).join(', ') + ' and ' + L[L.length - 1]}`;
+      }
       if (c.because == null) return '';
       const l = loveOf(c.because), tag = l && (l.kind === 'tag' || /^urn:tag/.test(l.type || ''));
       if (tag || (h != null && h >= 2)) return `Because you love ${tName(c.because)}`;
@@ -840,7 +846,7 @@
         ${c.what ? `<p class="dim">${esc(c.what)}</p>` : ''}
         ${order.length ? `<p>Order: ${order.map(dish).map(esc).join(', ')}</p>` : ''}
         ${st3 ? `<div class="red">${esc(st3.text)}</div>` : ''}
-        ${reasonLine(c) ? `<div class="blk"><div class="sh"><h2>Because</h2></div>
+        ${reasonLine(c) ? `<div class="blk">
           <div class="big1">${esc(reasonLine(c))}.</div>${c.because_detail ? `<p>${esc(cap1(typedText(c.because_detail)))}.</p>` : ''}</div>` : ''}
         <div class="blk"><div class="sh"><h2>Fits you</h2></div>
           <p>${esc(fitLine(c))}</p></div>
