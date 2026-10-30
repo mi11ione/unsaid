@@ -1,22 +1,34 @@
-"""Card lines (29 Oct): one line of <= 9 words per place, plus up to 3 dishes or drinks, condensed by Claude from
+"""Card lines (29-30 Oct): one line of <= 9 words per place, plus up to 3 dishes or drinks, condensed by Claude from
 Qloo's OWN text for that place (unique_selling_points, overall_description, cuisine_description, specialty_dishes,
-short_description), then checked word for word in code. No new facts: a line whose content words are not all in the
-source (a stem of each), that runs past 9 words, or that uses a marketing word is rejected and the engine falls back
-to its rule-based blurb. Dishes must appear verbatim in the source.
+short_description), then checked twice:
+  1. word check (code): every content word (a stem of it) is in the source, <= 9 words, no marketing word;
+  2. read check (Claude, 30 Oct): every line goes back to `claude -p` with its source: "is this fluent, natural English,
+     fully supported by the source, and does it lead with what you eat, drink or do there?" -> {ok, fix?}. A fix is
+     kept only if it passes the word check too; otherwise the line is marked failed and the engine uses its rules
+     fallback (engine.blurb_line).
+Lines lead with the food, drink or thing to do. Ownership identity (Black-owned, women-owned, LGBTQ+, family-run ...)
+may follow, only when it is the place's defining fact; a line that STARTS with one is regenerated (identity_first).
+Dishes must appear verbatim in the source.
 
-  python3 -I build_lines.py                       # both cities: the prior universe + every card/reserve in --cards
+  python3 -I build_lines.py                       # both cities: every place in the Qloo cache + the prior universe
   python3 -I build_lines.py --city stl --max-calls 10 --dry-run
 
-Places: data/priors/<city>.json "scored" (the anchor panel's universe) plus the cards and reserves of the result
-files in --cards (default ~/Desktop/qloo/private/fresh20-28oct). Their text comes from the Qloo cache (engine/.cache,
-0 Qloo calls). Claude runs as `claude -p` (no tools, structured JSON output), ~40 places a call, <= --max-calls.
-Output: data/lines/<city>.json (Qloo-derived: gitignored, pushed to Render by server/push_priors.py as
-lines-<city>.json). Raw replies are kept in data/lines/.raw/ so a rerun only asks for places it has no line for."""
+Places (30 Oct): every place entity with Qloo text in ANY cached response under engine/.cache/live (insights for
+every query run so far), assigned to the nearest configured city within --within-mi of its centre, plus
+data/priors/<city>.json "scored". So fresh queries rarely meet a place without a line. 0 Qloo calls.
+Claude runs as `claude -p` (no tools, structured JSON output): ~50 places a write call, ~80 lines a read call,
+<= --max-calls in all. Output: data/lines/<city>.json (Qloo-derived: gitignored, pushed to Render by
+server/push_priors.py as lines-<city>.json). Raw replies are kept in data/lines/.raw/; a rerun only asks for places
+with no line and only reads lines not yet read ("checked")."""
 import argparse, glob, json, os, re, subprocess, sys, tempfile, time
 from concurrent.futures import ThreadPoolExecutor
+from multiprocessing import Pool
 
 KIT = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(KIT)
+sys.path.insert(0, KIT)
+from unsaid.cities import CITIES, haversine_mi  # noqa: E402
+
 FIELDS = ("unique_selling_points", "overall_description", "cuisine_description", "short_description")
 MAX_WORDS = 9
 BANNED = {"vibrant", "destination", "establishment", "experience", "nestled", "hidden", "gem", "must-visit",
@@ -24,26 +36,51 @@ BANNED = {"vibrant", "destination", "establishment", "experience", "nestled", "h
 FUNC = set("""a an the and or nor but of for with in on at to by from into onto over under than as is are was were be
 been being its it's it their there this that these those his her our your who whom which what where when while plus
 via per & + - — – ; , . : ' " ( ) / since around within inside near beside behind along across through
-after before about up down out off both each every also just""".split())
+after before about up down out off both each every also just you yourself""".split())
+# Ownership / identity phrases that must never open a line (juror, 30 Oct: "5 of my 14 cards say Black-owned")
+IDENTITY = re.compile(r"(?:[\w+]+-(?:owned|run|operated)\b|\b(?:owned|run|operated)\s+by\b|\blgbtq|\blgbt\b|"
+                      r"\bqueer\b|\bgay\b|\blesbian\b|\bblack[- ]owned|\bfamily[- ](?:owned|run)\b)", re.I)
 
 SCHEMA = {"type": "object", "required": ["lines"], "properties": {"lines": {"type": "array", "items": {
     "type": "object", "required": ["id", "line", "dishes"], "properties": {
         "id": {"type": "string"}, "line": {"type": "string"},
         "dishes": {"type": "array", "items": {"type": "string"}, "maxItems": 3}}}}}}
+VSCHEMA = {"type": "object", "required": ["results"], "properties": {"results": {"type": "array", "items": {
+    "type": "object", "required": ["id", "ok"], "properties": {
+        "id": {"type": "string"}, "ok": {"type": "boolean"}, "fix": {"type": "string"}}}}}}
+
+RULES = """no new adjectives, claims, prices, dates or history beyond the text; reuse the text's own words; plain,
+  specific, fluent English a local would say (never stitched fragments or word salad); never use marketing words
+  (vibrant, destination, establishment, experience, nestled, venue, unique, boasts, offers, iconic, beloved, premier,
+  elevated, gem, hidden); no trailing period; do not start with the place's name.
+  LEAD WITH WHAT YOU EAT, DRINK OR DO THERE (the dish, the drinks, the music, the game, the dancing). Ownership or
+  identity (Black-owned, women-owned, LGBTQ+, family-run, veteran-owned ...) NEVER comes first: it may follow the
+  food or experience only when the text makes it the place's defining fact; usually leave it out."""
 
 PROMPT = """You write the one-line description on a restaurant/bar card. For EACH place below, return:
-- line: at most 9 words. Name the one thing that makes this place itself, using ONLY facts stated in its text.
-  Examples of the register: "Missouri's most historic African American bar"; "Famous for tender, smoky rib tips";
-  "Italian in a Victorian house; legendary vocalists on the stereo".
-  Rules: no new adjectives, claims, prices, dates or history beyond the text; reuse the text's own words; plain and
-  specific; never use marketing words (vibrant, destination, establishment, experience, nestled, venue, unique,
-  boasts, offers, iconic, beloved, premier, elevated, gem); no trailing period; do not start with the place's name.
+- line: at most 9 words. Name the one thing you eat, drink or do there that makes this place itself, using ONLY
+  facts stated in its text. Examples of the register: "Famous for tender, smoky rib tips"; "Soul food and dancing
+  at a neighborhood bar and grill"; "Italian in a Victorian house; legendary vocalists on the stereo".
+  Rules: %s
 - dishes: up to 3 dishes or drinks people order there, copied EXACTLY as written in the text (same words); [] if
   the text names none. Never generic words like food, drinks, cocktails, beer, wine.
 Return every id given, once.
 
 PLACES (JSON):
-"""
+""" % RULES
+
+VERIFY = """You check the one-line descriptions on restaurant/bar cards. Each item has a `line` that was condensed
+from `source` (the place's own text). For EACH item return:
+- ok: true only if ALL hold: (1) the line is fluent, natural English a person would write (no garbled or stitched
+  phrases, no broken grammar: "Sushi and bluefin tuna rib diners scrape themselves" is NOT ok); (2) every fact in it
+  is fully supported by the source; (3) it leads with what you eat, drink or do there, not with ownership or
+  identity (a line starting "Black-owned", "Women-owned", "LGBTQ+", "Family-run" ... is NOT ok).
+- fix: only when ok is false, a corrected line of at most 9 words. Rules: %s
+  Omit fix if you cannot write a good one.
+Return every id given, once.
+
+ITEMS (JSON):
+""" % RULES
 
 
 def stem(w):
@@ -59,6 +96,12 @@ def words(text):
     return re.findall(r"[A-Za-z0-9À-ɏ][A-Za-z0-9À-ɏ'’+&-]*", text or "")
 
 
+def identity_first(line):
+    """True when an ownership/identity phrase is in the line's first three words ("Black-owned bar ...",
+    "Intimate, owner-operated lounge", "LGBTQ+ friendly sports bar")."""
+    return bool(IDENTITY.search(" ".join((line or "").split()[:3])))
+
+
 def source_text(p):
     parts = [p.get("name") or ""] + [p.get(k) or "" for k in FIELDS]
     parts += [(d.get("name") if isinstance(d, dict) else str(d)) for d in p.get("specialty_dishes") or []]
@@ -72,6 +115,8 @@ def check_line(line, src):
         return "empty"
     if len(line.split()) > MAX_WORDS:
         return "over %d words" % MAX_WORDS
+    if identity_first(line):
+        return "identity first"
     low = src.lower()
     stems = set()
     for w in words(src):
@@ -106,132 +151,230 @@ def check_dishes(dishes, src):
     return out[:3]
 
 
-def gather(cities, cards_dir):
-    want = {}
+def _richness(p):
+    return sum(bool(p.get(k)) for k in FIELDS)
+
+
+def _scan(f):
+    """One cache file -> {entity_id: place record} for every place entity carrying properties."""
+    out = {}
+    try:
+        with open(f) as fh:
+            s = fh.read()
+    except OSError:
+        return out
+    if '"urn:entity:place"' not in s or '"properties"' not in s:
+        return out
+    try:
+        stack = [json.loads(s)]
+    except ValueError:
+        return out
+    while stack:
+        x = stack.pop()
+        if isinstance(x, dict):
+            if x.get("subtype") == "urn:entity:place" and x.get("entity_id") and isinstance(x.get("properties"), dict):
+                p, loc = x["properties"], x.get("location") or {}
+                rec = dict({k: p.get(k) for k in FIELDS}, name=x.get("name"), specialty_dishes=p.get("specialty_dishes"),
+                           lat=loc.get("lat"), lon=loc.get("lon"))
+                if _richness(rec) > _richness(out.get(x["entity_id"]) or {}):
+                    out[x["entity_id"]] = rec
+            stack.extend(x.values())
+        elif isinstance(x, list):
+            stack.extend(x)
+    return out
+
+
+def gather(cities, within_mi):
+    """Every place in the cached Qloo responses, by nearest city centre (<= within_mi), plus each prior's scored ids
+    (kept even if they have no coordinates). -> ({city: {id: record}}, n prior ids missing from the cache)."""
+    files = glob.glob(os.path.join(KIT, ".cache", "live", "*", "*.json"))
+    got = {}
+    with Pool(8) as pool:
+        for r in pool.imap_unordered(_scan, files, chunksize=20):
+            for i, rec in r.items():
+                if _richness(rec) > _richness(got.get(i) or {}):
+                    got[i] = rec
+    prior = {}
     for c in cities:
         try:
-            d = json.load(open(os.path.join(ROOT, "data", "priors", "%s.json" % c)))
-            for i in d.get("scored") or []:
-                want[i] = c
+            for i in json.load(open(os.path.join(ROOT, "data", "priors", "%s.json" % c))).get("scored") or []:
+                prior[i] = c
         except (OSError, ValueError):
             pass
-    if cards_dir and os.path.exists(os.path.join(cards_dir, "index.json")):
-        for s in json.load(open(os.path.join(cards_dir, "index.json")))["sets"]:
-            if s["city"] in cities:
-                r = json.load(open(os.path.join(cards_dir, s["file"])))["result"]
-                for x in r["picks"] + r["reserves"]:
-                    want[x["id"]] = s["city"]
-    got = {}
+    out = {c: {} for c in cities}
+    for i, p in got.items():
+        c = prior.get(i)
+        if not c and p.get("lat") is not None:
+            d, k = min((haversine_mi((p["lat"], p["lon"]), CITIES[k]["center"]), k) for k in CITIES)
+            c = k if d <= within_mi else None
+        if c in out:
+            out[c][i] = p
+    return out, sum(1 for i in prior if i not in got)
 
-    def walk(x):
-        if isinstance(x, dict):
-            i = x.get("entity_id")
-            if i in want and isinstance(x.get("properties"), dict) and not (got.get(i) or {}).get(FIELDS[0]):
-                p = x["properties"]
-                got[i] = dict({k: p.get(k) for k in FIELDS}, name=x.get("name"),
-                              specialty_dishes=p.get("specialty_dishes"))
-            for v in x.values():
-                walk(v)
-        elif isinstance(x, list):
-            for v in x:
-                walk(v)
 
-    for f in glob.glob(os.path.join(KIT, ".cache", "live", "*", "*.json")):
-        try:
-            with open(f) as fh:
-                s = fh.read()
-            if '"properties"' in s:
-                walk(json.loads(s))
-        except (OSError, ValueError):
-            continue
-    return {c: {i: got[i] for i in got if want[i] == c} for c in cities}, len(want) - len(got)
+def claude_json(prompt, payload, schema, rawdir, tag):
+    with tempfile.TemporaryDirectory() as tmp:          # no project context: an empty working directory
+        r = subprocess.run(["claude", "-p", "--no-session-persistence", "--tools", "", "--output-format", "json",
+                            "--json-schema", json.dumps(schema)], input=prompt + json.dumps(payload, ensure_ascii=False),
+                           cwd=tmp, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True,
+                           timeout=1200)
+    try:
+        out = json.loads(r.stdout).get("structured_output") or {}
+    except ValueError:
+        out = {}
+    with open(os.path.join(rawdir, "%s-%d.json" % (tag, int(time.time() * 1000))), "w") as fh:
+        json.dump({"ids": [x["id"] for x in payload], "reply": out, "rc": r.returncode,
+                   "stderr": r.stderr[-500:]}, fh, ensure_ascii=False, indent=1)
+    return out
 
 
 def ask(batch, rawdir, k):
     items = [{"id": i, "name": p.get("name"), "text": {f: p.get(f) for f in FIELDS if p.get(f)},
               "specialty_dishes": [(d.get("name") if isinstance(d, dict) else str(d))
                                    for d in p.get("specialty_dishes") or []]} for i, p in batch]
-    with tempfile.TemporaryDirectory() as tmp:          # no project context: an empty working directory
-        r = subprocess.run(["claude", "-p", "--no-session-persistence", "--tools", "", "--output-format", "json",
-                            "--json-schema", json.dumps(SCHEMA)], input=PROMPT + json.dumps(items, ensure_ascii=False),
-                           cwd=tmp, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True,
-                           timeout=900)
-    try:
-        out = json.loads(r.stdout).get("structured_output") or {}
-    except ValueError:
-        out = {}
-    with open(os.path.join(rawdir, "batch-%d-%d.json" % (int(time.time()), k)), "w") as fh:
-        json.dump({"ids": [i for i, _ in batch], "reply": out, "rc": r.returncode,
-                   "stderr": r.stderr[-500:]}, fh, ensure_ascii=False, indent=1)
-    return out.get("lines") or []
+    return claude_json(PROMPT, items, SCHEMA, rawdir, "write-%d" % k).get("lines") or []
+
+
+def read_check(batch, rawdir, k):
+    items = [{"id": i, "line": line, "source": {f: p.get(f) for f in FIELDS if p.get(f)}}
+             for i, line, p in batch]
+    return claude_json(VERIFY, items, VSCHEMA, rawdir, "read-%d" % k).get("results") or []
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--city", choices=["nyc", "stl", "both"], default="both")
-    ap.add_argument("--cards", default=os.path.expanduser("~/Desktop/qloo/private/fresh20-28oct"))
     ap.add_argument("--out", default=os.environ.get("UNSAID_LINES_DIR") or os.path.join(ROOT, "data", "lines"))
-    ap.add_argument("--batch", type=int, default=40)
-    ap.add_argument("--max-calls", type=int, default=60)
+    ap.add_argument("--within-mi", type=float, default=30.0, help="a cached place belongs to the nearest city centre "
+                    "within this distance (NYC's boroughs reach ~25 mi from the Manhattan centroid)")
+    ap.add_argument("--batch", type=int, default=50)
+    ap.add_argument("--read-batch", type=int, default=80)
+    ap.add_argument("--max-calls", type=int, default=120, help="claude -p calls in all (write + read)")
+    ap.add_argument("--rounds", type=int, default=2, help="write/read rounds; round 2+ rewrites the failed lines")
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--force", action="store_true", help="ask again for places that already have a line")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
     cities = ["nyc", "stl"] if args.city == "both" else [args.city]
-    os.makedirs(os.path.join(args.out, ".raw"), exist_ok=True)
-    places, missing = gather(cities, args.cards)
-    print("places with Qloo text: %s (%d wanted ids not in the cache)" % (
+    rawdir = os.path.join(args.out, ".raw")
+    os.makedirs(rawdir, exist_ok=True)
+    places, missing = gather(cities, args.within_mi)
+    places = {c: {i: p for i, p in v.items() if any(p.get(f) for f in FIELDS)} for c, v in places.items()}
+    print("places with Qloo text: %s (%d prior ids not in the cache)" % (
         {c: len(v) for c, v in places.items()}, missing), flush=True)
-    docs, todo = {}, []
+    docs, stats = {}, {"calls": 0, "written": 0, "word_rejected": 0, "no_reply": 0, "identity_regen": 0,
+                       "read": 0, "read_ok": 0, "read_fixed": 0, "read_failed": 0, "reasons": {}}
     for c in cities:
         fp = os.path.join(args.out, "%s.json" % c)
         docs[c] = json.load(open(fp)) if os.path.exists(fp) and not args.force else {"lines": {}}
-        docs[c].setdefault("lines", {})
-        todo += [(c, i, p) for i, p in sorted(places[c].items())
-                 if i not in docs[c]["lines"] and any(p.get(f) for f in FIELDS)]
-    batches = [todo[k:k + args.batch] for k in range(0, len(todo), args.batch)][:args.max_calls]
-    print("to ask: %d places in %d calls (cap %d)" % (len(todo), len(batches), args.max_calls), flush=True)
+        for k in ("lines", "failed", "rejected"):
+            docs[c].setdefault(k, {})
+        for i, x in list(docs[c]["lines"].items()):            # identity-first lines are written again
+            if identity_first(x.get("line")):
+                docs[c]["lines"].pop(i)
+                stats["identity_regen"] += 1
+    budget = lambda: args.max_calls - stats["calls"]  # noqa: E731
+
+    def write_round(rnd):
+        todo = []
+        for c in cities:
+            for i, p in sorted(places[c].items()):
+                if i in docs[c]["lines"]:
+                    continue
+                f = docs[c]["failed"].get(i) or {}
+                if f.get("round", 0) >= rnd:                     # already tried in this round
+                    continue
+                todo.append((c, i, p))
+        n = -(-len(todo) // args.batch)
+        batches = [todo[k:k + args.batch] for k in range(0, len(todo), args.batch)][:max(0, min(n, budget()))]
+        print("round %d write: %d places in %d calls (%d left in the budget)" % (rnd, len(todo), len(batches),
+                                                                                budget()), flush=True)
+        if args.dry_run or not batches:
+            return
+        stats["calls"] += len(batches)
+        with ThreadPoolExecutor(max_workers=args.workers) as ex:
+            for b, reply in ex.map(lambda kb: (kb[1], ask([(i, p) for _, i, p in kb[1]], rawdir, kb[0])),
+                                   enumerate(batches)):
+                by = {x.get("id"): x for x in reply if isinstance(x, dict)}
+                for c, i, p in b:
+                    x = by.get(i)
+                    if not x:
+                        stats["no_reply"] += 1
+                        docs[c]["failed"][i] = {"line": None, "why": "no reply", "round": rnd, "name": p.get("name")}
+                        continue
+                    src = source_text(p)
+                    line = (x.get("line") or "").strip().rstrip(".")
+                    why = check_line(line, src)
+                    if why:
+                        stats["word_rejected"] += 1
+                        key = why.split(":")[0]
+                        stats["reasons"][key] = stats["reasons"].get(key, 0) + 1
+                        docs[c]["failed"][i] = {"line": line, "why": "word check: " + why, "round": rnd,
+                                                "name": p.get("name")}
+                        continue
+                    docs[c]["failed"].pop(i, None)
+                    docs[c]["lines"][i] = {"line": line[:1].upper() + line[1:], "name": p.get("name"),
+                                           "dishes": check_dishes(x.get("dishes"), src), "round": rnd}
+                    stats["written"] += 1
+                print("  write batch done: %d written, %d word-rejected, %d no reply" % (
+                    stats["written"], stats["word_rejected"], stats["no_reply"]), flush=True)
+
+    def read_round(rnd):
+        todo = [(c, i, x["line"], places[c].get(i)) for c in cities for i, x in sorted(docs[c]["lines"].items())
+                if not x.get("checked") and places[c].get(i)]
+        n = -(-len(todo) // args.read_batch)
+        batches = [todo[k:k + args.read_batch] for k in range(0, len(todo), args.read_batch)][:max(0, min(n, budget()))]
+        print("round %d read: %d lines in %d calls (%d left in the budget)" % (rnd, len(todo), len(batches),
+                                                                              budget()), flush=True)
+        if args.dry_run or not batches:
+            return
+        stats["calls"] += len(batches)
+        with ThreadPoolExecutor(max_workers=args.workers) as ex:
+            for b, reply in ex.map(lambda kb: (kb[1], read_check([(i, l, p) for _, i, l, p in kb[1]], rawdir, kb[0])),
+                                   enumerate(batches)):
+                by = {x.get("id"): x for x in reply if isinstance(x, dict)}
+                for c, i, line, p in b:
+                    x = by.get(i)
+                    if not x:                                    # unread: stays unchecked for a rerun
+                        continue
+                    stats["read"] += 1
+                    rec = docs[c]["lines"][i]
+                    if x.get("ok") is True:
+                        rec["checked"] = "ok"
+                        stats["read_ok"] += 1
+                        continue
+                    fix = (x.get("fix") or "").strip().rstrip(".")
+                    why = check_line(fix, source_text(p)) if fix else "no fix"
+                    if not why:
+                        rec.update(was=line, line=fix[:1].upper() + fix[1:], checked="fixed")
+                        stats["read_fixed"] += 1
+                        continue
+                    stats["read_failed"] += 1
+                    docs[c]["lines"].pop(i)
+                    docs[c]["failed"][i] = {"line": line, "fix": fix or None, "why": "read check: " + why,
+                                            "round": rnd, "name": p.get("name")}
+                print("  read batch done: %d read, %d ok, %d fixed, %d failed" % (
+                    stats["read"], stats["read_ok"], stats["read_fixed"], stats["read_failed"]), flush=True)
+
+    for rnd in range(1, args.rounds + 1):
+        write_round(rnd)
+        read_round(rnd)
     if args.dry_run:
         return
-    stats = {"asked": 0, "kept": 0, "rejected": 0, "missing": 0, "reasons": {}}
-
-    def run(kb):
-        k, b = kb
-        return b, ask([(i, p) for _, i, p in b], os.path.join(args.out, ".raw"), k)
-
-    with ThreadPoolExecutor(max_workers=args.workers) as ex:
-        for b, reply in ex.map(run, enumerate(batches)):
-            by = {x.get("id"): x for x in reply if isinstance(x, dict)}
-            for c, i, p in b:
-                stats["asked"] += 1
-                x = by.get(i)
-                if not x:
-                    stats["missing"] += 1
-                    continue
-                src = source_text(p)
-                line = (x.get("line") or "").strip().rstrip(".")
-                why = check_line(line, src)
-                if why:
-                    stats["rejected"] += 1
-                    key = why.split(":")[0]
-                    stats["reasons"][key] = stats["reasons"].get(key, 0) + 1
-                    docs[c].setdefault("rejected", {})[i] = {"line": line, "why": why}
-                    continue
-                docs[c]["lines"][i] = {"line": line[:1].upper() + line[1:], "dishes": check_dishes(x.get("dishes"), src),
-                                       "name": p.get("name")}
-                stats["kept"] += 1
-            print("  batch done: %d asked so far, %d kept, %d rejected, %d missing" % (
-                stats["asked"], stats["kept"], stats["rejected"], stats["missing"]), flush=True)
     for c in cities:
+        docs[c].pop("rejected", None)                       # pre-30 Oct word-check log; now in "failed"
         docs[c].update({"city": c, "built_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "method": (
             "condensed by Claude (claude -p) from Qloo's own text fields %s; every content word checked against the "
-            "source; dishes verbatim" % ", ".join(FIELDS + ("specialty_dishes",)))})
+            "source; each line then read back by Claude with its source (fluent, supported, leads with what you "
+            "eat/drink/do; fixes word-checked too); dishes verbatim; failed -> the engine's rules line"
+            % ", ".join(FIELDS + ("specialty_dishes",))),
+            "coverage": {"places": len(places[c]), "lines": len(docs[c]["lines"]),
+                         "checked": sum(1 for x in docs[c]["lines"].values() if x.get("checked")),
+                         "failed": sum(1 for i in docs[c]["failed"] if i in places[c])}})
         with open(os.path.join(args.out, "%s.json" % c), "w") as fh:
             json.dump(docs[c], fh, ensure_ascii=False, indent=1)
-    rate = stats["rejected"] / float(max(1, stats["kept"] + stats["rejected"]))
-    print("build_lines: asked %d, kept %d, rejected %d (%.1f%%: %s), no reply %d; calls %d -> %s" % (
-        stats["asked"], stats["kept"], stats["rejected"], 100 * rate, stats["reasons"], stats["missing"],
-        len(batches), ", ".join("%s %d lines" % (c, len(docs[c]["lines"])) for c in cities)))
+    print("build_lines: %s; calls %d -> %s" % (json.dumps(stats), stats["calls"], ", ".join(
+        "%s %s" % (c, docs[c]["coverage"]) for c in cities)))
 
 
 if __name__ == "__main__":

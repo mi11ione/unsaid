@@ -1795,15 +1795,19 @@ def _first_sentence(d):
     return d
 
 
-def _trim(d, limit):
-    """<= limit chars: at the last clause boundary (, ; - --) past 60% of the limit, else at a word."""
-    if len(d) <= limit:
-        return d
-    cut = d[:limit]
-    k = max(cut.rfind(", "), cut.rfind("; "), cut.rfind(" - "), cut.rfind(" — "))
-    if k >= 0.6 * limit:
-        return cut[:k].rstrip(" ,;:-—") + "…"
-    return d[:limit + 1].rsplit(" ", 1)[0].rstrip(" ,;:-—") + "…"
+FALLBACK_WORDS = 12
+# Where a sentence's first complete clause ends: ";", a spaced dash, or a comma before a subordinate/participle lead
+_CLAUSE_END = re.compile(r"\s*(?:;|\s[—–-]\s|,\s+(?:where|which|while|whose|with|offering|featuring|serving|making|"
+                         r"alongside|thanks\s+to|earning|creating|providing|giving|combining|blending|set\s+in|"
+                         r"located|housed|situated|but|as\s+well\s+as|plus|including|complemented|drawing|"
+                         r"attracting|catering|and\s+its|and\s+their|and\s+it|and\s+is)\b)", re.I)
+# Ownership identity never opens a card line (juror, 30 Oct); build_lines.IDENTITY is the same pattern
+_IDENTITY_HEAD = re.compile(r"(?:[\w+]+-(?:owned|run|operated)\b|\b(?:owned|run|operated)\s+by\b|\blgbtq|\blgbt\b|"
+                            r"\bqueer\b|\bgay\b|\blesbian\b|\bblack[- ]owned|\bfamily[- ](?:owned|run)\b)", re.I)
+_BOILERPLATE = re.compile(r"^(?:the|this|it)\s+(?:establishment|location|venue|restaurant|bar|place|spot|business|"
+                          r"cafe|café)?\b|\bestablishment\b", re.I)   # an opener the USP strip left in: say the kind
+_HOOD_THE_LAST = {"district", "side", "end", "bowery"}
+_HOOD_THE_DIR = ({"east", "west", "north", "south"}, {"village", "bronx", "slope"})
 
 
 ORDER_NONFOOD = set("""jazz music live dj karaoke dancing dance trivia arcade games game pool darts billiards options
@@ -1846,21 +1850,92 @@ def clean_order(items, e, vocab, n=3):
     return uniq[:n]
 
 
-def blurb_line(e, limit=110):
-    """Qloo's own words on what makes the place special: the first sentence of unique_selling_points with a
-    boilerplate opener stripped and the first letter capitalised, trimmed to <= limit at a clause or word boundary.
-    No words are added. Falls back to short_description."""
+def _first_clause(d):
+    """d's first sentence when it is <= FALLBACK_WORDS words, else its first complete clause (up to ';', a spaced
+    dash, or ', where / which / with / offering ...') when that is 4..FALLBACK_WORDS words; else None. Never cut
+    mid-thought."""
+    s = _first_sentence(d).strip()
+    n = len(s.split())
+    if n <= FALLBACK_WORDS:
+        return s if n >= 3 else None
+    m = _CLAUSE_END.search(s)
+    if not m:
+        return None
+    head = s[:m.start()].rstrip(" ,;:")
+    if not 4 <= len(head.split()) <= FALLBACK_WORDS or head.count("(") != head.count(")") or head.count('"') % 2:
+        return None
+    return head
+
+
+def _hood_phrase(h):
+    """'East Village' -> 'the East Village', 'Financial District' -> 'the Financial District', 'SoHo' -> 'SoHo'."""
+    ws = h.split()
+    if not ws or ws[0].lower() == "the":
+        return h
+    first, last = ws[0].lower(), ws[-1].lower()
+    if last in _HOOD_THE_LAST or (len(ws) > 1 and first in _HOOD_THE_DIR[0] and last in _HOOD_THE_DIR[1]) \
+            or h.lower() in ("bronx", "bowery"):
+        return "the " + h
+    return h
+
+
+def kind_in_hood(e, hood=None):
+    """'<cuisine or kind> in <neighbourhood>' from Qloo's tags ("Japanese restaurant in the East Village"): a specific
+    category tag, else a restaurant genre or cuisine tag + 'restaurant', else 'Bar' / 'Restaurant'; the area is the
+    card's (hood) or Qloo's neighborhood property. None when the place has no kind tag."""
+    spec, bland = [], []
+    for t in e.get("tags") or []:
+        if not isinstance(t, dict) or not t.get("name"):
+            continue
+        tid = (t.get("id") or "").lower()
+        lab = _what_label(t)
+        if lab in WHAT_SERVICE or (t.get("name") or "").strip().lower() in WHAT_SERVICE or lab in ("place", "food"):
+            continue
+        name = re.sub(r"\s+us$", "", t["name"].strip(), flags=re.I).replace(" + ", " & ")
+        if tid.startswith("urn:tag:category:place:"):
+            tier = 0
+        elif tid.startswith(("urn:tag:genre:place:restaurant:", "urn:tag:cuisine:")):
+            tier = 1
+            if not re.search(r"\b(?:restaurant|bar|pub|cafe|café|shop|house|diner|bakery|grill|steakhouse|lounge|"
+                             r"tavern|brewery|bistro|deli|pizzeria|taqueria|joint|hall|club)$", name, re.I):
+                name += " restaurant"
+        else:
+            continue
+        pref = next((k for k, w in enumerate(WHAT_CUISINE_FIRST) if w == lab), len(WHAT_CUISINE_FIRST))
+        named = 0 if re.search(r"\b%s\b" % re.escape(lab), (e.get("name") or "").lower()) else 1   # "LongHorn Steakhouse"
+        (bland if lab in WHAT_BLAND else spec).append((named, tier, pref, len(spec) + len(bland), name))
+    pick = min(spec or bland or [None], key=lambda x: x or ())
+    if not pick:
+        return None
+    kind = pick[-1][:1].upper() + pick[-1][1:]
+    hood = (hood or prop(e, "neighborhood") or "").strip()
+    return "%s in %s" % (kind, _hood_phrase(hood)) if hood else kind
+
+
+def blurb_line(e, hood=None):
+    """The rules line when Claude has no checked line (30 Oct: never truncated, never '…'): Qloo's own words, the
+    first sentence of unique_selling_points (boilerplate opener stripped, first letter capitalised) when it is <= 12
+    words, else its first complete clause of <= 12 words; then the same for short_description; else
+    kind_in_hood ("Japanese restaurant in the East Village"). A candidate that opens with ownership identity
+    ("Black-owned ...") is skipped."""
+    cands = []
     usp = (prop(e, "unique_selling_points") or "").strip()
     if usp:
         d = _first_sentence(usp)
         t = _USP_OPENER.sub("", d, count=1)
         t = _USP_LEAD.sub("", t, count=1) if t == d else t
         t = re.sub(r"^being\s+", "", t, flags=re.I) if t != d else t     # "... by being a rare dive bar" -> "A rare ..."
-        if len(t) >= 25:
-            d = t[:1].upper() + t[1:]
-        return _trim(d, limit)
-    d = (prop(e, "short_description") or "").strip()
-    return _trim(_first_sentence(d), limit) if d else None
+        cands.append(t[:1].upper() + t[1:] if len(t) >= 25 else d)
+    sd = (prop(e, "short_description") or "").strip()
+    if sd:
+        cands.append(sd)
+    for d in cands:
+        c = _first_clause(d)
+        if c and not _IDENTITY_HEAD.search(" ".join(c.split()[:3])) and not _BOILERPLATE.search(c):
+            if c.endswith(".") and not re.search(r"(?:\b(?:%s)|\b[A-Za-z])\.$" % "|".join(_ABBREV), c, re.I):
+                c = c[:-1]                                       # no full stop, like the Claude lines ("St." stays)
+            return c[:1].upper() + c[1:]
+    return kind_in_hood(e, hood)
 
 
 # Card lines condensed by Claude from Qloo's own text (engine/build_lines.py, checked word for word against the
@@ -2751,7 +2826,7 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
                 "neighbourhood_src": hood_src, "area": hood or None,
                 "distance_mi": round(C.haversine_mi((ll[0], ll[1]), city["center_latlon"]), 1)
                 if ll[0] is not None else None, "distance_from": CENTER_LABEL.get(city.get("key")),
-                "kind": kind(i)[0], "kind_family": kind(i)[1], "image": image_url(e), "blurb": (cl.get(i) or {}).get("line") or blurb_line(e),
+                "kind": kind(i)[0], "kind_family": kind(i)[1], "image": image_url(e), "blurb": (cl.get(i) or {}).get("line") or blurb_line(e, hood),
                 "line_src": "claude" if (cl.get(i) or {}).get("line") else "rules",
                 "order": clean_order((cl.get(i) or {}).get("dishes") or order_line(e, vocab), e, vocab)
                 or clean_order(order_line(e, vocab), e, vocab), "price": price_line(e),

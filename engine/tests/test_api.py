@@ -643,7 +643,7 @@ class TestCardLines(unittest.TestCase):
             "price_level": 2, "image": {"url": "https://images.qloo.com/i/x.jpg"},
             "keywords": [{"name": "atmosphere"}, {"name": "dive bar"}, {"name": "rib tips"}, {"name": "security"},
                          {"name": "peach cobbler"}, {"name": "party"}]}}
-        self.assertEqual(E.blurb_line(e), "Casual bar on Dr. Martin Luther King Dr. in North St. Louis.")
+        self.assertEqual(E.blurb_line(e), "Casual bar on Dr. Martin Luther King Dr. in North St. Louis")
         self.assertEqual(E.price_line(e), "$$")
         self.assertEqual(E.image_url(e), "https://images.qloo.com/i/x.jpg")
         vocab = {"rib tips", "peach cobbler", "dive bar"}
@@ -657,12 +657,30 @@ class TestCardLines(unittest.TestCase):
                          ["rib tips", "pork steaks", "honey hot wings"])
         u = {"properties": {"unique_selling_points": "The establishment is distinguished by its signature house-made "
                             "sourdough tartines and handcrafted coffee. More text.", "short_description": "x."}}
-        self.assertEqual(E.blurb_line(u), "Signature house-made sourdough tartines and handcrafted coffee.")
+        self.assertEqual(E.blurb_line(u), "Signature house-made sourdough tartines and handcrafted coffee")
         u["properties"]["unique_selling_points"] = "Famous for their tender, smoky rib tips and highly seasoned burgers."
-        self.assertEqual(E.blurb_line(u), "Famous for their tender, smoky rib tips and highly seasoned burgers.")
+        self.assertEqual(E.blurb_line(u), "Famous for their tender, smoky rib tips and highly seasoned burgers")
         self.assertEqual(E.order_line({"properties": {"keywords": [{"name": "crowd"}]}}, vocab), [])
         long = {"properties": {"short_description": "word " * 40}}
-        self.assertLessEqual(len(E.blurb_line(long)), 111)
+        self.assertIsNone(E.blurb_line(long))                 # never cut mid-thought; no kind tag -> no line
+        # 30 Oct fallback: first complete clause <= 12 words, else "<kind> in <neighbourhood>", never "..."
+        tags = [{"id": "urn:tag:category:place:restaurant", "name": "Restaurant"},
+                {"id": "urn:tag:category:place:japanese_restaurant", "name": "Japanese restaurant"},
+                {"id": "urn:tag:category:place:takeout_restaurant", "name": "Takeout restaurant"}]
+        k = {"name": "Kanoyama", "tags": tags, "properties": {"neighborhood": "East Village", "unique_selling_points":
+             "The restaurant is famous for its creative and rare menu items, most notably the bluefin tuna rib "
+             "which diners scrape themselves, alongside a highly regarded omakase."}}
+        self.assertEqual(E.blurb_line(k), "Japanese restaurant in the East Village")
+        self.assertEqual(E.blurb_line(k, "SoHo"), "Japanese restaurant in SoHo")
+        k["properties"]["unique_selling_points"] = ("Hand-pulled noodles in a rich pork broth with chili oil; the "
+                                                    "line forms at noon and runs out the door most days.")
+        self.assertEqual(E.blurb_line(k), "Hand-pulled noodles in a rich pork broth with chili oil")
+        k["properties"]["unique_selling_points"] = "Black-owned bar with soul food and dancing every Friday night."
+        self.assertEqual(E.blurb_line(k), "Japanese restaurant in the East Village")   # identity never first
+        self.assertEqual(E._hood_phrase("Financial District"), "the Financial District")
+        self.assertEqual(E._hood_phrase("East Harlem"), "East Harlem")
+        self.assertEqual(E._hood_phrase("West Village"), "the West Village")
+        self.assertEqual(E._hood_phrase("The Hill"), "The Hill")
 
     def test_dish_must_be_in_the_places_text(self):
         e = {"name": "Ampersand", "properties": {"short_description": "Cocktail bar with small plates.",
