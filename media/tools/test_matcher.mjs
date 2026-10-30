@@ -1,5 +1,5 @@
 // Parity of site/js/matcher.js with engine/unsaid/matcher.py (norm, distinctive, head, tok_eq), plus dare-box cases.
-//   node media/tools/test_matcher.mjs        (from /Users/mi11ion/Desktop/qloo/unsaid)
+//   node media/tools/test_matcher.mjs        (from the repo root)
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';

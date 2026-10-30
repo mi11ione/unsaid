@@ -1,6 +1,6 @@
 """Builds the static data that the site and the media templates read.
 
-    python3 -I media/tools/build_data.py        (from /Users/mi11ion/Desktop/qloo/unsaid)
+    python3 -I media/tools/build_data.py        (from the repo root)
 
 Reads (never writes) the round-4 research data:
     research/round4/exp/claude_answers.jsonl     the real Claude census (64 + 64 asks, 27 Oct 2026)

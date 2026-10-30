@@ -3,7 +3,7 @@
 The steps run in UNSAID.md §5 order. UNSAID.md wins over this file. Run everything from `engine/`. Each line to read is the script's last verdict line. Every script prints `QLOO_NETWORK_CALLS=n`, and with `--budget N` it stops before the (N+1)-th network call (cache hits cost 0). Results and Qloo data stay in `out/` and `.cache/`, which git ignores.
 
 ```bash
-cd /Users/mi11ion/Desktop/qloo/unsaid/engine
+cd engine
 export QLOO_API_KEY=…                 # sent only in the X-Api-Key header
 W=../data/walls                       # dir or one file; dir = every *.json merged (wall-N + census), like the server
 ```
