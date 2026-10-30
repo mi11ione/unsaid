@@ -350,7 +350,7 @@
       const calls = D && D.qloo_calls;
       if (st.done && R && R.counts && st.slots.length) parts.push(`Qloo ranked your ${U != null ? U + ' ' : ''}places` + (calls != null ? ` · ${calls} calls` : ''));
       else if (st.calls) parts.push(`Qloo is ranking your ${U != null ? U + ' ' : ''}places · ${st.calls.done}${st.calls.total != null ? ` of ${st.calls.total}` : ''} calls`);
-      else if (!st.done && st.fresh) parts.push('ranking with Qloo · about 20 seconds');
+      else if (!st.done && st.fresh) parts.push('ranking with Qloo · about half a minute');
       return parts.join(' · ');
     }
     function status() {
@@ -527,9 +527,17 @@
     }
     // the area: in St. Louis, a place whose address is in another municipality ("8017 Airport Rd Berkeley, MO") shows that
     // municipality; otherwise Qloo's neighbourhood
-    const STREET_T = /^(st|street|ave|avenue|blvd|boulevard|rd|road|dr|drive|pkwy|parkway|hwy|highway|ln|lane|way|pl|place|ct|ter|trl|cir|plz|sq|\d+\w*)\.?$/i;
+    const STREET_T = /^(st|street|ave|avenue|blvd|boulevard|rd|road|dr|drive|pkwy|parkway|hwy|highway|ln|lane|way|pl|place|ct|ter|trl|cir|plz|plaza|sq|center|ctr|mall|\d+\w*)\.?$/i;
+    // an address as people read it: Qloo sometimes repeats a place type in short form ("Shopping Center Shop Ctr") or a
+    // word ("St. Louis St. Louis"); the repeat goes, the street and the town stay
+    function cleanAddr(a) {
+      let s = String(a || '').replace(/\s+/g, ' ').trim();
+      [[/Shopping Cent(?:er|re)/i, /\s+Shop(?:ping)?\.? Ctr\.?(?=[\s,])/i], [/\bPlaza\b/i, /\s+Plz\.?(?=[\s,])/i], [/\bCent(?:er|re)\b/i, /\s+Ctr\.?(?=[\s,])/i]]
+        .forEach(([full, short]) => { if (full.test(s)) s = s.replace(short, ''); });
+      return s.replace(/\b([A-Z][\w.']+(?: [A-Z][\w.']+)?) \1(?=[\s,]|$)/g, '$1');
+    }
     function municipality(addr) {
-      const m = String(addr || '').match(/^(.*?),\s*[A-Z]{2}\s+\d{5}/); if (!m) return null;
+      const m = cleanAddr(addr).match(/^(.*?),\s*[A-Z]{2}\s+\d{5}/); if (!m) return null;
       const head = m[1].trim();
       if (/\bst\.?\s+louis$/i.test(head)) return 'St. Louis';
       const t = head.split(/\s+/); let k = t.length;
@@ -837,7 +845,7 @@
         <div class="blk"><div class="sh"><h2>Fits you</h2></div>
           <p>${esc(fitLine(c))}</p></div>
         <div class="blk"><div class="sh"><h2>Go</h2></div>
-          ${c.address ? `<p>${esc(c.address)}${hours(c) ? `<br><span class="dim">${hours(c) === 'closed' ? 'Closed today' : `Today ${esc(hours(c))}`}</span>` : ''}</p>` : ''}
+          ${c.address ? `<p>${esc(cleanAddr(c.address))}${hours(c) ? `<br><span class="dim">${hours(c) === 'closed' ? 'Closed today' : `Today ${esc(hours(c))}`}</span>` : ''}</p>` : ''}
           ${c.open === false ? '<p class="red">Qloo marks it closed.</p>' : ''}
           <div class="links">${mapsLinks(c).replace(/<a /g, '<a class="btn solid" ').replace(/<\/a>/g, ' ↗</a>')}${httpUrl(c.url) ? `<a class="btn" href="${esc(c.url)}" target="_blank" rel="noopener">Website ↗</a>` : ''}</div></div>
         <details class="log" id="rawlog"><summary>Raw log</summary><div class="logbody"></div></details>`);

@@ -17,7 +17,7 @@
     <h2>One real run</h2>
     <div id="run"></div>
   </main>
-  <footer class="foot"><a class="link" href="./">UNSAID</a><a class="link" href="how">How it works</a><span>ranks by Qloo</span></footer>
+  <footer class="foot"><a class="link" href="./">UNSAID</a><a class="link" href="how">How it works</a><span>ranked by Qloo</span></footer>
 </div>
 <script src="js/map.js"></script>
 <script>
@@ -33,7 +33,7 @@
     // the answer as Claude wrote it: everything escaped, then only **bold** rendered; line breaks kept
     const ans = document.createElement('div'); ans.className = 'answer';
     const esc = x => String(x).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
-    ans.innerHTML = esc(d.answer).replace(/\*\*([^*\n]+?)\*\*/g, '<b>$1</b>');
+    ans.innerHTML = esc(d.answer).replace(/\*\*([^*\n]+?)\*\*/g, '<b>$1</b>').replace(/\*([^*\n]+?)\*/g, '<i>$1</i>');
     run.appendChild(ans);
   } else run.previousElementSibling.remove(), run.remove();
   window.__ready = true;
