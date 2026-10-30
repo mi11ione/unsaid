@@ -6,8 +6,10 @@ short_description), then checked twice:
      fully supported by the source, and does it lead with what you eat, drink or do there?" -> {ok, fix?}. A fix is
      kept only if it passes the word check too; otherwise the line is marked failed and the engine uses its rules
      fallback (engine.blurb_line).
-Lines lead with the food, drink or thing to do. Ownership identity (Black-owned, women-owned, LGBTQ+, family-run ...)
-may follow, only when it is the place's defining fact; a line that STARTS with one is regenerated (identity_first).
+Lines lead with the food, drink or thing to do and never name ownership or identity (Black-owned, women-owned,
+family-run, LGBTQ+, gay bar ...; card audit 30 Oct): such a line is rewritten (names_identity). Food facts (halal,
+kosher, vegan) stay. --must <dir of result files>: every card and reserve there gets extra rounds (with the last
+attempt and its reason as feedback) until it has a checked line.
 Dishes must appear verbatim in the source.
 
   python3 -I build_lines.py                       # both cities: every place in the Qloo cache + the prior universe
@@ -37,9 +39,13 @@ FUNC = set("""a an the and or nor but of for with in on at to by from into onto 
 been being its it's it their there this that these those his her our your who whom which what where when while plus
 via per & + - — – ; , . : ' " ( ) / since around within inside near beside behind along across through
 after before about up down out off both each every also just you yourself""".split())
-# Ownership / identity phrases that must never open a line (juror, 30 Oct: "5 of my 14 cards say Black-owned")
-IDENTITY = re.compile(r"(?:[\w+]+-(?:owned|run|operated)\b|\b(?:owned|run|operated)\s+by\b|\blgbtq|\blgbt\b|"
-                      r"\bqueer\b|\bgay\b|\blesbian\b|\bblack[- ]owned|\bfamily[- ](?:owned|run)\b)", re.I)
+# Ownership / identity: never in a line at all (juror, 30 Oct: "5 of my 14 cards say Black-owned"; card audit, 30 Oct).
+# Food facts (halal, kosher, vegan) and "dog-friendly" / "family-friendly" stay.
+_IDW = (r"(?:black|brown|women|woman|female|family|lgbtq\+?|lgbt|queer|gay|lesbian|latin[oax]|latine|hispanic|"
+        r"veteran|minority|immigrant|asian|indigenous|native|chef|artist|owner|mom|mother|father|husband|wife|couple)")
+IDENTITY = re.compile(r"\b%s(?:-|\s)*(?:owned|run|operated)\b|\b(?:owned|run|operated)\s+by\b|\blgbtq|\blgbt\b|"
+                      r"\bqueer\b|\bgay\b|\blesbian\b|\bafrican[- ]american\b|\b(?:black|women|woman)[- ]led\b" % _IDW,
+                      re.I)
 
 SCHEMA = {"type": "object", "required": ["lines"], "properties": {"lines": {"type": "array", "items": {
     "type": "object", "required": ["id", "line", "dishes"], "properties": {
@@ -53,9 +59,10 @@ RULES = """no new adjectives, claims, prices, dates or history beyond the text; 
   specific, fluent English a local would say (never stitched fragments or word salad); never use marketing words
   (vibrant, destination, establishment, experience, nestled, venue, unique, boasts, offers, iconic, beloved, premier,
   elevated, gem, hidden); no trailing period; do not start with the place's name.
-  LEAD WITH WHAT YOU EAT, DRINK OR DO THERE (the dish, the drinks, the music, the game, the dancing). Ownership or
-  identity (Black-owned, women-owned, LGBTQ+, family-run, veteran-owned ...) NEVER comes first: it may follow the
-  food or experience only when the text makes it the place's defining fact; usually leave it out."""
+  LEAD WITH WHAT YOU EAT, DRINK OR DO THERE (the dish, the drinks, the music, the game, the dancing). NEVER mention
+  ownership or identity anywhere in the line (Black-owned, women-owned, family-run, LGBTQ+, LGBTQ+-friendly, gay,
+  lesbian, queer, veteran-owned ...): say what happens there instead (drag shows, dancing, karaoke). Food facts such
+  as halal, kosher or vegan are fine."""
 
 PROMPT = """You write the one-line description on a restaurant/bar card. For EACH place below, return:
 - line: at most 9 words. Name the one thing you eat, drink or do there that makes this place itself, using ONLY
@@ -64,6 +71,8 @@ PROMPT = """You write the one-line description on a restaurant/bar card. For EAC
   Rules: %s
 - dishes: up to 3 dishes or drinks people order there, copied EXACTLY as written in the text (same words); [] if
   the text names none. Never generic words like food, drinks, cocktails, beer, wine.
+If an item has previous_attempt, that line was rejected for the reason given: write a different line that fixes it
+(fewer words, only the text's own words, no marketing word, no identity).
 Return every id given, once.
 
 PLACES (JSON):
@@ -73,8 +82,8 @@ VERIFY = """You check the one-line descriptions on restaurant/bar cards. Each it
 from `source` (the place's own text). For EACH item return:
 - ok: true only if ALL hold: (1) the line is fluent, natural English a person would write (no garbled or stitched
   phrases, no broken grammar: "Sushi and bluefin tuna rib diners scrape themselves" is NOT ok); (2) every fact in it
-  is fully supported by the source; (3) it leads with what you eat, drink or do there, not with ownership or
-  identity (a line starting "Black-owned", "Women-owned", "LGBTQ+", "Family-run" ... is NOT ok).
+  is fully supported by the source; (3) it leads with what you eat, drink or do there and names no ownership or
+  identity anywhere ("Black-owned", "women-owned", "family-run", "LGBTQ+", "gay bar" ... are NOT ok).
 - fix: only when ok is false, a corrected line of at most 9 words. Rules: %s
   Omit fix if you cannot write a good one.
 Return every id given, once.
@@ -96,10 +105,10 @@ def words(text):
     return re.findall(r"[A-Za-z0-9À-ɏ][A-Za-z0-9À-ɏ'’+&-]*", text or "")
 
 
-def identity_first(line):
-    """True when an ownership/identity phrase is in the line's first three words ("Black-owned bar ...",
-    "Intimate, owner-operated lounge", "LGBTQ+ friendly sports bar")."""
-    return bool(IDENTITY.search(" ".join((line or "").split()[:3])))
+def names_identity(line):
+    """True when the line names ownership or identity anywhere ("Black-owned bar ...", "... at a gay bar",
+    "LGBTQ+ friendly sports bar", "queer and women-owned")."""
+    return bool(IDENTITY.search(line or ""))
 
 
 def source_text(p):
@@ -115,8 +124,8 @@ def check_line(line, src):
         return "empty"
     if len(line.split()) > MAX_WORDS:
         return "over %d words" % MAX_WORDS
-    if identity_first(line):
-        return "identity first"
+    if names_identity(line):
+        return "names identity"
     low = src.lower()
     stems = set()
     for w in words(src):
@@ -229,9 +238,15 @@ def claude_json(prompt, payload, schema, rawdir, tag):
 
 
 def ask(batch, rawdir, k):
-    items = [{"id": i, "name": p.get("name"), "text": {f: p.get(f) for f in FIELDS if p.get(f)},
+    """batch: [(id, place, failed record or None)]; a failed record's line and reason go back as feedback."""
+    items = []
+    for i, p, prev in batch:
+        it = {"id": i, "name": p.get("name"), "text": {f: p.get(f) for f in FIELDS if p.get(f)},
               "specialty_dishes": [(d.get("name") if isinstance(d, dict) else str(d))
-                                   for d in p.get("specialty_dishes") or []]} for i, p in batch]
+                                   for d in p.get("specialty_dishes") or []]}
+        if prev and (prev.get("fix") or prev.get("line")):
+            it["previous_attempt"] = {"line": prev.get("fix") or prev.get("line"), "rejected_because": prev.get("why")}
+        items.append(it)
     return claude_json(PROMPT, items, SCHEMA, rawdir, "write-%d" % k).get("lines") or []
 
 
@@ -251,6 +266,10 @@ def main():
     ap.add_argument("--read-batch", type=int, default=80)
     ap.add_argument("--max-calls", type=int, default=120, help="claude -p calls in all (write + read)")
     ap.add_argument("--rounds", type=int, default=2, help="write/read rounds; round 2+ rewrites the failed lines")
+    ap.add_argument("--max-tries", type=int, default=2, help="writes per place in all (across runs)")
+    ap.add_argument("--must", help="a directory of result files (e.g. site/data/live): every card and reserve in "
+                    "them gets extra rounds until it has a checked line")
+    ap.add_argument("--must-tries", type=int, default=6)
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--force", action="store_true", help="ask again for places that already have a line")
     ap.add_argument("--dry-run", action="store_true")
@@ -269,20 +288,35 @@ def main():
         docs[c] = json.load(open(fp)) if os.path.exists(fp) and not args.force else {"lines": {}}
         for k in ("lines", "failed", "rejected"):
             docs[c].setdefault(k, {})
-        for i, x in list(docs[c]["lines"].items()):            # identity-first lines are written again
-            if identity_first(x.get("line")):
+        for i, x in list(docs[c]["lines"].items()):            # lines that name identity are written again
+            if names_identity(x.get("line")):
+                docs[c]["failed"][i] = {"line": x.get("line"), "why": "names identity", "tries": 0,
+                                        "name": x.get("name")}
                 docs[c]["lines"].pop(i)
                 stats["identity_regen"] += 1
     budget = lambda: args.max_calls - stats["calls"]  # noqa: E731
 
-    def write_round(rnd):
+    tries = lambda f: f.get("tries", f.get("round", 0)) if f else 0  # noqa: E731
+    must = set()
+    for f in sorted(glob.glob(os.path.join(args.must, "*.json"))) if args.must else []:
+        try:
+            r = (json.load(open(f)) or {}).get("result") or {}
+        except (OSError, ValueError, AttributeError):
+            continue
+        must |= {x["id"] for x in (r.get("picks") or []) + (r.get("reserves") or []) if x.get("id")}
+    if args.must:
+        print("must: %d preset cards and reserves (%d without a line, %d not in the cache)" % (
+            len(must), sum(1 for i in must if not any(i in docs[c]["lines"] for c in cities)),
+            sum(1 for i in must if not any(i in places[c] for c in cities))), flush=True)
+
+    def write_round(rnd, only=None):
         todo = []
         for c in cities:
             for i, p in sorted(places[c].items()):
-                if i in docs[c]["lines"]:
+                if i in docs[c]["lines"] or (only is not None and i not in only):
                     continue
-                f = docs[c]["failed"].get(i) or {}
-                if f.get("round", 0) >= rnd:                     # already tried in this round
+                f = docs[c]["failed"].get(i)
+                if tries(f) >= (args.must_tries if i in must else args.max_tries):
                     continue
                 todo.append((c, i, p))
         n = -(-len(todo) // args.batch)
@@ -293,14 +327,15 @@ def main():
             return
         stats["calls"] += len(batches)
         with ThreadPoolExecutor(max_workers=args.workers) as ex:
-            for b, reply in ex.map(lambda kb: (kb[1], ask([(i, p) for _, i, p in kb[1]], rawdir, kb[0])),
-                                   enumerate(batches)):
+            for b, reply in ex.map(lambda kb: (kb[1], ask([(i, p, docs[c]["failed"].get(i)) for c, i, p in kb[1]],
+                                                          rawdir, kb[0])), enumerate(batches)):
                 by = {x.get("id"): x for x in reply if isinstance(x, dict)}
                 for c, i, p in b:
                     x = by.get(i)
+                    n_try = tries(docs[c]["failed"].get(i)) + 1
                     if not x:
                         stats["no_reply"] += 1
-                        docs[c]["failed"][i] = {"line": None, "why": "no reply", "round": rnd, "name": p.get("name")}
+                        docs[c]["failed"][i] = {"line": None, "why": "no reply", "tries": n_try, "name": p.get("name")}
                         continue
                     src = source_text(p)
                     line = (x.get("line") or "").strip().rstrip(".")
@@ -309,12 +344,12 @@ def main():
                         stats["word_rejected"] += 1
                         key = why.split(":")[0]
                         stats["reasons"][key] = stats["reasons"].get(key, 0) + 1
-                        docs[c]["failed"][i] = {"line": line, "why": "word check: " + why, "round": rnd,
+                        docs[c]["failed"][i] = {"line": line, "why": "word check: " + why, "tries": n_try,
                                                 "name": p.get("name")}
                         continue
                     docs[c]["failed"].pop(i, None)
                     docs[c]["lines"][i] = {"line": line[:1].upper() + line[1:], "name": p.get("name"),
-                                           "dishes": check_dishes(x.get("dishes"), src), "round": rnd}
+                                           "dishes": check_dishes(x.get("dishes"), src), "tries": n_try}
                     stats["written"] += 1
                 print("  write batch done: %d written, %d word-rejected, %d no reply" % (
                     stats["written"], stats["word_rejected"], stats["no_reply"]), flush=True)
@@ -352,13 +387,22 @@ def main():
                     stats["read_failed"] += 1
                     docs[c]["lines"].pop(i)
                     docs[c]["failed"][i] = {"line": line, "fix": fix or None, "why": "read check: " + why,
-                                            "round": rnd, "name": p.get("name")}
+                                            "tries": rec.get("tries", rec.get("round", 1)), "name": p.get("name")}
                 print("  read batch done: %d read, %d ok, %d fixed, %d failed" % (
                     stats["read"], stats["read_ok"], stats["read_fixed"], stats["read_failed"]), flush=True)
 
     for rnd in range(1, args.rounds + 1):
         write_round(rnd)
         read_round(rnd)
+    for rnd in range(args.rounds + 1, args.rounds + 1 + args.must_tries) if must else []:
+        if not any(i in places[c] and i not in docs[c]["lines"] for c in cities for i in must):
+            break
+        write_round(rnd, only=must)
+        read_round(rnd)
+    if must:
+        left = [(docs[c]["failed"].get(i) or {}).get("name") or i for c in cities for i in must
+                if i in places[c] and i not in docs[c]["lines"]]
+        print("must: %d of %d with a checked line; still without: %s" % (len(must) - len(left), len(must), left))
     if args.dry_run:
         return
     for c in cities:

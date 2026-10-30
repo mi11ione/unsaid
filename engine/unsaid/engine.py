@@ -774,6 +774,16 @@ def is_music(e):
     return False
 
 
+def closed_all_week(e):
+    """Qloo's hours mark every day of the week closed (card audit, 30 Oct: Anthony's Famous Deli, Club Vision).
+    No hours data -> False (the place stays eligible)."""
+    h = prop(e, "hours")
+    if not isinstance(h, dict) or len(h) < 7:
+        return False
+    return all(isinstance(v, list) and v and all(isinstance(x, dict) and x.get("closed") is True for x in v)
+               for v in h.values())
+
+
 def floor(pool, city=None):
     """UNSAID.md §3.1 client floor. Returns (U, drops) with drops = {closed, below_43, outside_R, not_venue,
     no_rating, no_location} and the dropped IDs by reason (for the wall's 'closed (Qloo)' lines)."""
@@ -783,7 +793,7 @@ def floor(pool, city=None):
             "ids": {"closed": [], "below_43": [], "outside_R": [], "not_venue": []}}
     thr = CFG["RATING_CLIENT"] - CFG["RATING_EPS"]
     for e in pool:
-        if prop(e, "is_closed") is True:
+        if prop(e, "is_closed") is True or closed_all_week(e):
             drop["closed"] += 1
             drop["ids"]["closed"].append(e["entity_id"])
             continue
@@ -1801,9 +1811,12 @@ _CLAUSE_END = re.compile(r"\s*(?:;|\s[—–-]\s|,\s+(?:where|which|while|whose|
                          r"alongside|thanks\s+to|earning|creating|providing|giving|combining|blending|set\s+in|"
                          r"located|housed|situated|but|as\s+well\s+as|plus|including|complemented|drawing|"
                          r"attracting|catering|and\s+its|and\s+their|and\s+it|and\s+is)\b)", re.I)
-# Ownership identity never opens a card line (juror, 30 Oct); build_lines.IDENTITY is the same pattern
-_IDENTITY_HEAD = re.compile(r"(?:[\w+]+-(?:owned|run|operated)\b|\b(?:owned|run|operated)\s+by\b|\blgbtq|\blgbt\b|"
-                            r"\bqueer\b|\bgay\b|\blesbian\b|\bblack[- ]owned|\bfamily[- ](?:owned|run)\b)", re.I)
+# Ownership / identity is never named on a card line (juror + card audit, 30 Oct); build_lines.IDENTITY is the same
+_IDW = (r"(?:black|brown|women|woman|female|family|lgbtq\+?|lgbt|queer|gay|lesbian|latin[oax]|latine|hispanic|"
+        r"veteran|minority|immigrant|asian|indigenous|native|chef|artist|owner|mom|mother|father|husband|wife|couple)")
+_IDENTITY = re.compile(r"\b%s(?:-|\s)*(?:owned|run|operated)\b|\b(?:owned|run|operated)\s+by\b|\blgbtq|\blgbt\b|"
+                       r"\bqueer\b|\bgay\b|\blesbian\b|\bafrican[- ]american\b|\b(?:black|women|woman)[- ]led\b" % _IDW,
+                       re.I)
 _BOILERPLATE = re.compile(r"^(?:the|this|it)\s+(?:establishment|location|venue|restaurant|bar|place|spot|business|"
                           r"cafe|café)?\b|\bestablishment\b", re.I)   # an opener the USP strip left in: say the kind
 _HOOD_THE_LAST = {"district", "side", "end", "bowery"}
@@ -1816,21 +1829,30 @@ specials deals entertainment comedy""".split())
 _ORDER_LEAD = ("for ", "with ", "a ", "an ", "the ", "of ", "in ", "on ", "at ", "to ", "and ", "or ", "&")
 
 
-def clean_order(items, e, vocab, n=3):
+def clean_order(items, e, vocab, n=3, line=None, loves=()):
     """The card's "people order" list, whatever its source (30 Oct, QA): apostrophe splits mended ("bernie s" ->
     "bernie's"); never an item that starts with a preposition or article ("for ramen"), never a non-food word
     (jazz, arcade games, healthy options); an item another, more specific item contains goes ("cheesecake" beside
-    "matcha cheesecake"); items of the place's own cuisine first; at most n. Empty beats junk."""
+    "matcha cheesecake"); items of the place's own cuisine first; at most n. Empty beats junk.
+    Card audit, 30 Oct: spelled-out initials joined ("N Y P D sandwich" -> "NYPD sandwich"), "Fish An Chips" ->
+    "Fish And Chips"; never one of the query's loves ("Korean Fried Chicken" at a kosher steakhouse); items that
+    share a word with the card's own line first (its oysters, its fried chicken), then the cuisine's."""
     cuisine = set()
     for t in e.get("tags") or []:
         if isinstance(t, dict) and (t.get("id") or "").startswith(("urn:tag:cuisine:", "urn:tag:category:place:",
                                                                    "urn:tag:genre:place:restaurant:")):
             cuisine.update(w for w in M.norm(_what_label(t)).split() if len(w) > 3)
+    love_keys = {" ".join(_sing_word(w) for w in M.norm(l).split()) for l in loves or () if l}
+    line_words = {_sing_word(w) for w in M.norm(line or "").split() if len(w) > 3} - ORDER_NONFOOD - ORDER_GENERIC
     out = []
     for x in items or []:
-        x = re.sub(r"\b(\w+) s\b", r"\1's", (x or "").strip())
+        x = re.sub(r"\b[A-Za-z](?: [A-Za-z]\b)+", lambda m: m.group(0).replace(" ", "").upper(), (x or "").strip())
+        x = re.sub(r"(?<=\w) ([Aa])n (?=[b-df-gj-np-tv-zB-DF-GJ-NP-TV-Z])", r" \1nd ", x)   # "Fish An Chips"
+        x = re.sub(r"\b(\w+) s\b", r"\1's", x)
         lx = x.lower()
         if not x or lx.startswith(_ORDER_LEAD) or len(x) > 40:
+            continue
+        if " ".join(_sing_word(w) for w in M.norm(x).split()) in love_keys:
             continue
         ws = re.findall(r"[a-z]+", lx)
         if not ws or any(w in ORDER_NONFOOD for w in ws) or lx in ORDER_GENERIC:
@@ -1846,7 +1868,8 @@ def clean_order(items, e, vocab, n=3):
             seen.add(k)
             uniq.append(x)
     pos = {x: k for k, x in enumerate(uniq)}
-    uniq.sort(key=lambda x: (not any(w in cuisine for w in M.norm(x).split()), pos[x]))
+    uniq.sort(key=lambda x: (not any(_sing_word(w) in line_words for w in M.norm(x).split()),
+                             not any(w in cuisine for w in M.norm(x).split()), pos[x]))
     return uniq[:n]
 
 
@@ -1916,7 +1939,7 @@ def blurb_line(e, hood=None):
     """The rules line when Claude has no checked line (30 Oct: never truncated, never '…'): Qloo's own words, the
     first sentence of unique_selling_points (boilerplate opener stripped, first letter capitalised) when it is <= 12
     words, else its first complete clause of <= 12 words; then the same for short_description; else
-    kind_in_hood ("Japanese restaurant in the East Village"). A candidate that opens with ownership identity
+    kind_in_hood ("Japanese restaurant in the East Village"). A candidate that names ownership or identity
     ("Black-owned ...") is skipped."""
     cands = []
     usp = (prop(e, "unique_selling_points") or "").strip()
@@ -1931,7 +1954,7 @@ def blurb_line(e, hood=None):
         cands.append(sd)
     for d in cands:
         c = _first_clause(d)
-        if c and not _IDENTITY_HEAD.search(" ".join(c.split()[:3])) and not _BOILERPLATE.search(c):
+        if c and not _IDENTITY.search(c) and not _BOILERPLATE.search(c):
             if c.endswith(".") and not re.search(r"(?:\b(?:%s)|\b[A-Za-z])\.$" % "|".join(_ABBREV), c, re.I):
                 c = c[:-1]                                       # no full stop, like the Claude lines ("St." stays)
             return c[:1].upper() + c[1:]
@@ -2818,6 +2841,7 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
         n_street = len(asked_hoods.get(hood, []))
         is_tied = bool(live) and all(i in tied[l["text"]] for l in live)     # never true for a card
         ll = latlon(e) or (None, None)
+        blurb = (cl.get(i) or {}).get("line") or blurb_line(e, hood)
         return {"id": i, "name": card_name(e.get("name")), "name_qloo": e.get("name"), "what": what_line(e),
                 "score": score[i],
                 "why": why_line(i, fit, pop_ord, ids, everyone, ev_counts, flat,
@@ -2826,10 +2850,11 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
                 "neighbourhood_src": hood_src, "area": hood or None,
                 "distance_mi": round(C.haversine_mi((ll[0], ll[1]), city["center_latlon"]), 1)
                 if ll[0] is not None else None, "distance_from": CENTER_LABEL.get(city.get("key")),
-                "kind": kind(i)[0], "kind_family": kind(i)[1], "image": image_url(e), "blurb": (cl.get(i) or {}).get("line") or blurb_line(e, hood),
+                "kind": kind(i)[0], "kind_family": kind(i)[1], "image": image_url(e), "blurb": blurb,
                 "line_src": "claude" if (cl.get(i) or {}).get("line") else "rules",
-                "order": clean_order((cl.get(i) or {}).get("dishes") or order_line(e, vocab), e, vocab)
-                or clean_order(order_line(e, vocab), e, vocab), "price": price_line(e),
+                "order": clean_order(((cl.get(i) or {}).get("dishes") or []) + order_line(e, vocab, 6), e, vocab,
+                                     line=blurb, loves=[l.get("label") or l.get("text") for l in loves]),
+                "price": price_line(e),
                 "hours": prop(e, "hours") or None, "tz": CITY_TZ.get(city.get("key")),
                 "last_seen": seen_info.get(i),
                 "because": b["text"] if b else None, "because_label": (b.get("name") or b["text"]) if b else None,

@@ -681,6 +681,19 @@ class TestCardLines(unittest.TestCase):
         self.assertEqual(E._hood_phrase("East Harlem"), "East Harlem")
         self.assertEqual(E._hood_phrase("West Village"), "the West Village")
         self.assertEqual(E._hood_phrase("The Hill"), "The Hill")
+        k["properties"]["unique_selling_points"] = "Soul food and dancing every Friday night at a Black-owned bar."
+        self.assertEqual(E.blurb_line(k), "Japanese restaurant in the East Village")   # identity never named
+        # card audit, 30 Oct: order list normalised, no love repeated, the line's own dishes first
+        self.assertEqual(E.clean_order(["N Y P D sandwich", "Fish An Chips", "Korean Fried Chicken", "oysters"], k,
+                                       set(), n=4, line="East Coast oysters at a dim bar",
+                                       loves=["Korean fried chicken"]),
+                         ["oysters", "NYPD sandwich", "Fish And Chips"])
+        closed = {d: [{"opens": None, "closed": True, "closes": None}] for d in
+                  ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")}
+        self.assertTrue(E.closed_all_week({"properties": {"hours": closed}}))
+        closed["friday"] = [{"opens": "T17:00", "closed": False, "closes": "T02:00"}]
+        self.assertFalse(E.closed_all_week({"properties": {"hours": closed}}))
+        self.assertFalse(E.closed_all_week({"properties": {}}))                    # no hours data: stays eligible
 
     def test_dish_must_be_in_the_places_text(self):
         e = {"name": "Ampersand", "properties": {"short_description": "Cocktail bar with small plates.",
