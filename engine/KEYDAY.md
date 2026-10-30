@@ -36,7 +36,7 @@ python3 -I probes.py --city both --budget 80
 - **On FAIL** (a probe errored): read its `ERROR` line, fix the parameter, and rerun. The other probes come from the cache for free.
 - **§4 pivot:** if P12 is not popularity → `BASELINE="nosignal"` (C5, +~5 calls per query), then run `python3 -I k9_baseline.py --budget 30`. P2 decides the floor.
 
-## 2 · CFG set points (K+0:45, Roman). Edit `unsaid/engine.py` CFG and `unsaid/cities.py` CITIES
+## 2 · CFG set points (K+0:45, the author). Edit `unsaid/engine.py` CFG and `unsaid/cities.py` CITIES
 
 | set point | where | decided by | rule |
 |---|---|---|---|
@@ -88,7 +88,7 @@ python3 -I k4_relabel.py --score
 python3 -I k3_survivors.py --city both --walls $W --budget 350
 ```
 - **Read:** `B survivors: PASS|FAIL`. A set passes with |U| ≥ 150, 7 + 3 cards, no junk and tie < 0.30. The gate needs ≥ 8/10 in NYC and ≥ 6/10 in STL. Each set's floor line includes `not_venue_music`.
-- **§4 pivot on FAIL:** the same as K1. Roman makes the STL-or-NYC hero call here.
+- **§4 pivot on FAIL:** the same as K1. The author makes the STL-or-NYC hero call here.
 
 ## 7–8 · Gate C + the first run_query (K+4:30 / K+5:00)
 

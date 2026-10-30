@@ -1,4 +1,4 @@
-"""The held-out fresh-ask runner (UNSAID.md §4, K5'). Waits for data/fresh_asks.json, which agent D collects and Roman
+"""The held-out fresh-ask runner (UNSAID.md §4, K5'). Waits for data/fresh_asks.json, which agent D collects and the author
 freezes into the public hash. Writes runs/fresh.jsonl; k5_fresh.py scores it (matcher + reverse check on raw text).
 
 Per city: its 20 public questions, verbatim, asked once per lane and shared by every set in that city. Per set: 4 of
@@ -76,7 +76,7 @@ def main():
     ap.add_argument("--go", action="store_true")
     a = ap.parse_args()
     if not os.path.exists(FRESH):
-        sys.exit("needs %s (agent D collects it, Roman freezes it into the public hash). Nothing asked." % FRESH)
+        sys.exit("needs %s (agent D collects it, the author freezes it into the public hash). Nothing asked." % FRESH)
     d = json.load(open(FRESH))
     sets = P.load_sets(a.sets_file)
     hoods = json.load(open(os.path.join(HERE, "neighbourhoods.json")))["cities"] if os.path.exists(os.path.join(HERE, "neighbourhoods.json")) else {}

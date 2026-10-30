@@ -1,4 +1,4 @@
-# Deploying UNSAID (for Roman)
+# Deploying UNSAID
 
 **Deployed (28 Oct 2026).** Engine: Render free web service `unsaid-engine` (srv-dbgr3fuc6qcc73ce5p3g), https://unsaid-a1wy.onrender.com, Python 3.11, quota 0.15 CPU (read from its cgroup). Site and the `/api/*` proxy: Cloudflare Pages project `unsaid`, https://unsaid-ang.pages.dev, deployed by direct upload, never through git. Secrets live in `~/.config/unsaid/env` (never printed) and in each host's own settings.
 

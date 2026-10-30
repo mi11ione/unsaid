@@ -43,7 +43,7 @@ def load_questions():
         qs = {c: [{"id": "%s-q%02d" % (c, i), "text": "[FAKE] question %d about eating in %s" % (i, c), "url": None}
                   for i in range(1, 21)] for c in ("nyc", "stl")}
         return qs, "[FAKE] generated"
-    raise SystemExit("no %s yet (agent D collects, Roman freezes). Run with --fake to exercise the code path." % args.fresh)
+    raise SystemExit("no %s yet (agent D collects, the author freezes). Run with --fake to exercise the code path." % args.fresh)
 
 
 def load_answers():

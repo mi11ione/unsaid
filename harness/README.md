@@ -1,6 +1,6 @@
 # harness: the $0 AI side (UNSAID.md §3.6)
 
-Walls, censuses, fresh asks and meter runs, asked on Roman's Mac only, through each vendor's own tool. Nothing here is
+Walls, censuses, fresh asks and meter runs, asked on the author's Mac only, through each vendor's own tool. Nothing here is
 callable from a server path. No paid API key, no name or email in any request or header, and no web search except in the
 labelled search-on lane (below), which is stored apart.
 
@@ -23,7 +23,7 @@ Nothing is asked without `--go`. Every command prints what it would ask first.
 
 Every ask runs once, from a fresh empty temp dir, with stdin closed (`codex exec` would otherwise append piped stdin).
 
-**claude** (Claude Code 2.1.311, Roman's plan, 4 workers): §3.6's line, unchanged.
+**claude** (Claude Code 2.1.311, the author's plan, 4 workers): §3.6's line, unchanged.
 ```
 claude -p "<ask>" --output-format json --model sonnet --tools "" --safe-mode --strict-mcp-config \
   --no-session-persistence --system-prompt "You are Claude, a helpful assistant chatting with a user in a consumer chat app."
@@ -65,7 +65,7 @@ The console shows 20 requests a day and 5 a minute per model per project. Creden
 
 ## Deviations from §3.6, and why
 
-1. **codex `--ignore-user-config -c web_search="disabled"`.** Roman's `~/.codex/config.toml` loads a browser plugin and MCP servers, and codex's own `web_search` tool is on (`"cached"`) by default. Either one would break the no-web-search rule. Auth still comes from `CODEX_HOME`.
+1. **codex `--ignore-user-config -c web_search="disabled"`.** The author's `~/.codex/config.toml` loads a browser plugin and MCP servers, and codex's own `web_search` tool is on (`"cached"`) by default. Either one would break the no-web-search rule. Auth still comes from `CODEX_HOME`.
 1b. **codex `--disable apps`** (added 28 Oct). The built-in `codex_apps` connector exposes `search_service.web_run`, a web search that arrives as an `mcp_tool_call`, not a `web_search` item. It ran in 8 of the 128 census answers and in the first meter "with" ask. Those 8 were re-asked with apps disabled (`run_census.py --provider codex --redo-foreign`): the new records supersede the old ones, which stay in the file for audit. The meter record is in `runs/quarantine.jsonl`. Any tool call outside the `unsaid` server is now recorded in `foreign_tools`, and a search-like one labels the answer `search: "on"`.
 2. **codex model pinned with `-m`.** The `--json` stream in 0.164.0 carries no model id: its events are `thread.started`, `turn.*`, `item.*` and `error`, with `thread_id`, `items` and `usage`, as checked in the binary and in a real ask on 27 Oct. Answers are recorded as `model: "gpt-5.6-terra"`, `model_source: "pinned (-m)"`. If an event ever carries a `model` field, that value wins and `model_source` becomes `"event stream"`.
 3. **Meter, claude, both arms: `--safe-mode` is replaced by `--setting-sources local --disable-slash-commands`.**
@@ -123,6 +123,6 @@ The console shows 20 requests a day and 5 a minute per model per project. Creden
 - A non-numeric label writes `<label>.json`. `--out FILE` writes one combined file instead.
 - `--census-only` writes only `census.json`. Smoke answers never go in `data/walls/`: `build` refuses a `smoke` label without `--out`.
 
-## Credentials (Roman only)
+## Credentials (the author only)
 
 `codex login` (ChatGPT plan; already signed in on 27 Oct). `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_RPM` and `GEMINI_RPD` come from an AI Studio project with no billing account. `claude` signed in to the plan.

@@ -8,7 +8,7 @@
 #   ./freeze.sh --from 5            resume at step 5 (each step re-runs from scratch: all steps are idempotent)
 #   ./freeze.sh --only 4            one step
 #   flags: --skip-f  --render-if-unchanged  --skip-render  --skip-media  --skip-site  --allow-dirty  --to N
-#          --no-street-catchup  --skip-agent  --with-video (Roman's rule: no video render unless he asks)  --skip-k14
+#          --no-street-catchup  --skip-agent  --with-video (the author's rule: no video render unless he asks)  --skip-k14
 #          --numbers-only  step 3 runs only k12, k14 and numbers (no gate E, run_query, street ablation, census); a missing
 #                          regen worktree is recreated clean at origin/main (cache-only reruns of the k12/k14 keys)
 #
@@ -408,13 +408,13 @@ step7() {
       || warn "agent re-record failed: see $LOGS/07-agent.txt"
   fi
   if [ $SKIP_MEDIA = 1 ]; then echo "media: SKIPPED (--skip-media)" | tee "$LOGS/07-media.log"; return 0; fi
-  # Roman's rule (30 Oct): no video render unless he asks (--with-video renders the clip and the 60 s video too)
+  # The author's rule (30 Oct): no video render unless he asks (--with-video renders the clip and the 60 s video too)
   local targets="data images site"; [ $WITH_VIDEO = 1 ] && targets="data images clip video site"
   : > "$LOGS/07-media.log"
   for t in $targets; do
     (cd "$MAIN/media" && URL=$LIVE_URL zsh render.sh $t) >> "$LOGS/07-media.log" 2>&1 || { tail -8 "$LOGS/07-media.log"; die "render.sh $t"; }
   done
-  [ $WITH_VIDEO = 1 ] || echo "video and clip: not rendered (no --with-video; Roman's rule)"
+  [ $WITH_VIDEO = 1 ] || echo "video and clip: not rendered (no --with-video; the author's rule)"
   grep -E "\.png$|\.mp4$|video\.json|note:" "$LOGS/07-media.log" | tail -25 || true
   python3 -I "$MAIN/tools/freeze_numbers.py" agentcheck --fresh "$FRESH" | tee "$LOGS/07-agentcheck.log"
   cd "$MAIN"

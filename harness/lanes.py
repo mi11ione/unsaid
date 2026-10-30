@@ -1,7 +1,7 @@
 """The three $0 lanes (UNSAID.md §3.6), the answer store and the resumable runner.
 
 Every ask runs one official tool once, from a fresh empty temp dir, with stdin closed. Nothing here is callable from a
-server path: claude and codex use Roman's subscriptions on this Mac only; gemini uses a free-tier key from the env.
+server path: claude and codex use the author's subscriptions on this Mac only; gemini uses a free-tier key from the env.
 Kept from each answer: venue names, neighbourhoods, timestamps, the raw answer text (for the reverse check) and the
 instrument metadata (provider, model id, tool version, search on/off). No name or email goes in any request or header.
 """
@@ -92,7 +92,7 @@ class ClaudeLane(Lane):
 
     def check(self):
         if not shutil.which("claude"):
-            return False, "needs the claude CLI (Claude Code) on PATH, signed in to Roman's plan"
+            return False, "needs the claude CLI (Claude Code) on PATH, signed in to the author's plan"
         return True, "claude " + self.version
 
     def cmd(self, prompt, meter=False, mcp_config=None, search=False, system=None, tool="qloo_places"):
@@ -184,7 +184,7 @@ class CodexLane(Lane):
             return False, "needs the codex CLI: npm i -g @openai/codex"
         st = subprocess.run(["codex", "login", "status"], capture_output=True, text=True, stdin=subprocess.DEVNULL)
         if st.returncode or "Logged in" not in (st.stdout + st.stderr):
-            return False, "needs credential: Roman runs `codex login` (ChatGPT plan) on this Mac"
+            return False, "needs credential: the author runs `codex login` (ChatGPT plan) on this Mac"
         if "API key" in (st.stdout + st.stderr):
             return False, "codex is signed in with an API key (paid). $0 rule: sign in with the ChatGPT plan instead"
         if not self.model:
