@@ -11,9 +11,9 @@ grading list: ['census.json', 'wall-1.json']
     STL/stl-sza  on the generic wall, of 12: alone [5, 8, 7, 9] (median 7.5) · with Qloo [2, 3, 3, 6] (median 3.0) · >=4 below
     STL/stl-taylorswift on the generic wall, of 12: alone [2, 5, 5, 7] (median 5.0) · with Qloo [4, 3, 3, 7] (median 3.5)
     STL/stl-wilco on the generic wall, of 12: alone [4, 8, 6, 4] (median 5.0) · with Qloo [4, 4, 5, 6] (median 4.5)
-  generic wall: STL 544 names (/var/folders/_z/fns5h0m936b6l60m64prg0t40000gp/T/tmp_9xzzwbz.jsonl; each run graded by the other AIs' answers)
+  generic wall: STL 544 names (each run graded by the other AIs' answers)
   ⟦M_ALONE⟧ = 6.0 · ⟦M_QLOO⟧ = 4.0 (median of 12, 10 sets, 2 assistants)
-D meter: median with Qloo 4.0 (gate <=6), >=4 below alone in 5 of 10 sets (gate >=7 of 10) -> FAIL | FAIL = printed in Shown and the README, not featured; Elias gets the residual line
+D meter: median with Qloo 4.0 (gate <=6), >=4 below alone in 5 of 10 sets (gate >=7 of 10) -> FAIL | FAIL = printed in Shown and the README, not featured
 QLOO_NETWORK_CALLS=0
 
 == POST-HOC, NOT PRE-REGISTERED: meter arm 3, an agent with unsaid_places as its only tool
