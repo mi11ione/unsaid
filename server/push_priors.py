@@ -51,9 +51,8 @@ def main():
             keep[os.path.basename(p)] = fh.read()
     for p in sorted(glob.glob(os.path.join(ROOT, "data", "lines", "*.json"))):   # card lines -> lines-<city>.json
         keep["lines-" + os.path.basename(p)] = slim_lines(p)
-    for p in sorted(glob.glob(os.path.join(ROOT, "data", "namemap", "*.json"))):   # C7 name map -> namemap-<city>
-        with open(p) as fh:
-            keep["namemap-" + os.path.basename(p)] = fh.read()
+    # data/namemap (C7 name map, ~46 MB) is not pushed: Render caps all secret files at 1 MiB, so the host keeps
+    # resolving AI names with live /search (its cache warms per process). regen_try.sh uses the map locally.
     status, _ = call("PUT", [{"name": n, "content": c} for n, c in sorted(keep.items())])
     print("PUT secret-files -> HTTP %s: %s" % (status, ", ".join("%s (%d KB)" % (n, len(c) // 1024)
                                                                  for n, c in sorted(keep.items()))))
