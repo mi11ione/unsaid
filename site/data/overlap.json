@@ -22,15 +22,15 @@
     "stl-bigthief"
    ],
    "n": 2,
-   "min": 3,
-   "max": 3
+   "min": 2,
+   "max": 2
   }
  ],
  "other_pairs": 83,
  "other_median": 0,
- "other_max": 3,
+ "other_max": 4,
  "other_max_pair": [
-  "stl-bigthief",
-  "stl-chuckberry"
+  "stl-jason",
+  "stl-taylorswift"
  ]
 }
