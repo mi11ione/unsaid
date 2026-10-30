@@ -77,7 +77,8 @@ code { font: 400 .88em/1 var(--mono); background: var(--paper2); padding: 2px 5p
 
 /* ---------- landing ---------- */
 .hero { padding: clamp(40px, 7vw, 104px) 0 clamp(28px, 4vw, 56px); border-bottom: 1px solid var(--line); }
-.hero h1 { font: 600 clamp(46px, 8.2vw, 124px)/.94 var(--sans); letter-spacing: -.045em; margin: 0; max-width: 11.5em; }
+.hero h1 { font: 600 clamp(44px, 6.4vw, 96px)/.98 var(--sans); letter-spacing: -.042em; margin: 0; max-width: 13em; }
+.herosub { font: 400 clamp(22px, 2.3vw, 34px)/1.25 var(--sans); letter-spacing: -.015em; margin: clamp(18px, 2vw, 28px) 0 0; }
 .gx { position: relative; color: var(--red); white-space: nowrap; }
 .gx::after { content: ''; position: absolute; left: -.03em; right: -.03em; top: 53%; height: .075em; min-height: 2px; background: var(--red); }
 .receipt { font-size: 13px; letter-spacing: .02em; color: var(--red); margin: clamp(18px, 2.2vw, 30px) 0 0; }
@@ -356,8 +357,11 @@ table.k12 tr.us td:first-child { font-weight: 600; }
   .maplead .lead2 .n { font-size: 150px; }
 }
 @media (max-width: 860px) {
-  .landgrid { display: block; }
-  .thumbs { margin-top: 56px; }
+  /* stacked: the example seven come right after the button, the other city's preset after them */
+  .landgrid { display: flex; flex-direction: column; }
+  .landgrid .s1 { display: contents; }
+  .landgrid .try { order: 2; margin-top: 32px; }
+  .thumbs { margin-top: 56px; order: 1; }
   .trow { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media (max-width: 720px) {
@@ -369,7 +373,7 @@ table.k12 tr.us td:first-child { font-weight: 600; }
   .top .chip { font-size: 11px; }
   .top .chip i { display: none; }
   .hero { padding: 36px 0 26px; }
-  .hero h1 { font-size: clamp(42px, 12.4vw, 60px); line-height: .96; letter-spacing: -.045em; }
+  .hero h1 { font-size: clamp(36px, 10.4vw, 52px); line-height: 1; letter-spacing: -.04em; }
   .receipt { font-size: 12px; line-height: 1.7; }
   .receipt .sep { display: none; }
   .receipt .ri { display: block; }

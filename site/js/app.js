@@ -59,17 +59,15 @@
   // how the seven are chosen, in one line (D's selection score, 28 Oct): the card sheet and the popularity sheet carry it
   const EXPLAIN = 'Qloo scores every place for each of your loves. We keep the places that fit you much more than they fit most people’s taste, or than their popularity alone would say.';
   const CITIES = Object.entries(CFG.cities).map(([slug, c]) => ({ slug, name: c.name }));
-  // the hero (one idea, said once): "AI sends everyone to ~~Mai Lee~~." + its receipt, from census.json (Share.hero)
   function heroBlock() {
-    const H = Share.hero(CEN, 'stl'); if (!H) return '';
-    return `<h1>AI sends everyone to <span class="gx">${esc(H.gem)}</span>.</h1><p class="receipt">${H.receipt.split(' · ').map(x => `<span class="ri">${esc(x)}</span>`).join('<span class="sep"> · </span>')}</p>`;
+    // the product first: what you give, then what you get (the Mai Lee argument lives on How, the share card and Devpost)
+    return `<h1>Tell us an artist, a show and a dish you love.</h1><p class="herosub">We’ll send you where AI didn’t.</p>`;
   }
 
   function inputView() {
     if (ctl) { ctl.abort(); ctl = null; }
     topbar({});
     view.innerHTML = `<div class="land"><header class="hero">${heroBlock()}</header><div class="landgrid"><section class="s1">
-      <p class="subline">Tell us an artist, a show and a dish you love. We’ll send you where it didn’t.</p>
       <div class="fields">
         ${FIELDS.map((f, i) => `<div class="fld"><span class="n">0${i + 1}</span><input data-i="${i}" placeholder="${esc(f.ph)}" aria-label="${esc(f.aria)}" autocomplete="off" spellcheck="false"><div class="res" id="res${i}"></div></div>`).join('')}
       </div>
@@ -330,7 +328,7 @@
       // the thesis in one line: half of Claude's mentions here go to K50 places (census.json), then the whole list
       const K = cen && cen.k50 && cen.k50.n;
       a.innerHTML = W == null ? (st.wall.size ? 'counting the places the AIs named…' : '')
-        : (K ? `Half of what ${esc(CEN.provider)} recommends here is the same ${K} places. ` : '') + `All ${W.toLocaleString('en-US')} places the AIs named, crossed out →`;
+        : (K ? `Half of what ${esc(CEN.provider)} recommends here is the same ${K} places. ` : '') + 'Every place the AIs named, crossed out →';
     }
     // the full list, in a sheet: every place the AIs named, crossed out
     async function wallSheet() {
@@ -581,7 +579,7 @@
       if (c.because == null) return '';
       const l = loveOf(c.because), tag = l && (l.kind === 'tag' || /^urn:tag/.test(l.type || ''));
       if (tag || (c.holds != null && c.holds >= 2)) return `Because you love ${tName(c.because)}`;
-      return '';
+      return 'Fits your taste, not everyone’s';
     }
     function metaLine(c) {
       // no distance: there is no visitor location, so "6 mi" would only read as far
@@ -862,7 +860,7 @@
         ${c.what ? `<p class="dim">${esc(c.what)}</p>` : ''}
         ${order.length ? `<p>Order: ${order.map(dish).map(esc).join(', ')}</p>` : ''}
         ${st3 ? `<div class="red">${esc(st3.text)}</div>` : ''}
-        <div class="blk"><div class="sh"><h2>Fits you</h2></div>
+        <div class="blk"><div class="sh"><h2>${/^#/.test(fitLine(c)) ? 'Fits you' : 'Unsaid'}</h2></div>
           <p>${esc(fitLine(c))}</p></div>
         <div class="blk"><div class="sh"><h2>Go</h2></div>
           ${c.address ? `<p>${esc(cleanAddr(c.address))}${hours(c) ? `<br><span class="dim">${hours(c) === 'closed' ? 'Closed today' : `Today ${esc(hours(c))}`}</span>` : ''}</p>` : ''}
