@@ -8,7 +8,10 @@
 - Pacing: ONE global token bucket shared by every client and every run in the process: 8/s steady, bursts of 10
   (the live key's P9 headers: 10/s per key, 50k/month).
 - Transport: pooled keep-alive HTTPS, one SSLContext, gzip (see HttpTransport), sized for a 0.15-CPU host.
-- Retries: up to 2 on 429/5xx/network errors, honouring Retry-After. A 429 is never "not found in Qloo".
+- Retries: up to 2 on 429/5xx/network errors, honouring Retry-After, with jitter. A 429 is never "not found in Qloo".
+  Resolution (C1 city, C2 loves) runs inside `Qloo.window()`: up to 3 retries with jittered exponential backoff,
+  4.5 s per attempt (so a timed-out call still gets a retry) and 12 s in all, retries included (30 Oct: one busy
+  call while resolving used to sink the whole query).
 - Timeouts: 12 s per pool call, 3 s per rescoring call (callers pass `timeout`); a per-run hard deadline (90 s).
 - The "never send" list is enforced here (NeverSend): signal.location*, filter.location.query, Tripadvisor/Resy
   filters, a tag love in a discovery call, tag + entity signals in one call. bias.trends is pinned to "off".
@@ -17,12 +20,14 @@
 - Fake mode swaps the transport for unsaid.fake.FakeQloo; its cache directory is separate (.cache/fake).
 """
 import gzip
+import contextlib
 import hashlib
 import http.client
 import json
 import os
 import random
 import re
+import socket
 import ssl
 import sys
 import threading
@@ -43,6 +48,11 @@ TTL = {"/search": 30 * 86400, "/v2/tags": 30 * 86400, "/v2/insights": 86400, "/e
 DEFAULT_AFFINITY = 0.7649962877984056   # Qloo's default affinity ("0.765"; field-observed value), compared within 1e-6
 TIE_EPS = 1e-6
 QUOTA_LIMIT_FRAC = 0.85
+BUSY = (429, 500, 502, 503, 504, 599)    # transient: retried, and never "not found"
+RESOLVE_BUDGET_S = 12.0                  # a resolution waits at most this long on Qloo, retries included
+TIMEOUT_RESOLVE = 4.5                    # per attempt inside a resolve window (searches answer in 0.2-0.7 s)
+RESOLVE_RETRIES = 3
+RETRY_BASE_S, RETRY_CAP_S = 0.3, 2.4     # resolve-window backoff: 0.3, 0.6, 1.2 s steps, each jittered 50-100 %
 
 
 class QlooError(Exception):
@@ -53,7 +63,7 @@ class QlooError(Exception):
     @property
     def busy(self):
         """429/5xx/timeouts: Qloo is busy, which is never the same as 'not found'."""
-        return self.status in (429, 500, 502, 503, 504, 599)
+        return self.status in BUSY
 
 
 class QlooDeadline(QlooError):
@@ -216,6 +226,10 @@ def quota_state():
 # QLOO_GZIP=0 turns gzip off; QLOO_POOL sets how many idle connections are kept (default 8). Busy calls never wait for
 # a pooled connection: when all are in use a new one is opened, and kept afterwards only if the pool has room.
 POOL_IDLE = int(os.environ.get("QLOO_POOL", "8"))
+# An idle keep-alive connection older than this is closed instead of reused: after minutes of quiet every pooled
+# connection is dead on the server side, and reusing them one after another failed all three attempts of a C2 call
+# on 30 Oct (11:15 UTC, "resolve failed" in 4.2 s). QLOO_IDLE_S overrides.
+IDLE_MAX_S = float(os.environ.get("QLOO_IDLE_S", "20"))
 GZIP_ON = os.environ.get("QLOO_GZIP", "1") != "0"
 _SSL = {"ctx": None}
 _POOLS = {}
@@ -235,21 +249,37 @@ class _Pool:
         self.idle = []
         self.lock = threading.Lock()
 
-    def take(self, timeout):
+    def take(self, timeout, fresh=False):
+        old = []
         with self.lock:
-            while self.idle:
+            while self.idle and not fresh:
                 c = self.idle.pop()
-                if c.sock is not None:
+                if c.sock is not None and time.monotonic() - getattr(c, "_idle_at", 0.0) <= IDLE_MAX_S:
                     c.sock.settimeout(timeout)
-                    return c, True
+                    break
+                old.append(c)
+            else:
+                c = None
+        for x in old:
+            x.close()
+        if c is not None:
+            return c, True
         return http.client.HTTPSConnection(self.host, self.port, timeout=timeout, context=_ssl_ctx()), False
 
     def give(self, c):
         with self.lock:
             if len(self.idle) < POOL_IDLE and c.sock is not None:
+                c._idle_at = time.monotonic()
                 self.idle.append(c)
                 return
         c.close()
+
+    def flush(self):
+        """A pooled connection turned out dead: the others idled as long, so close them all."""
+        with self.lock:
+            old, self.idle = self.idle, []
+        for c in old:
+            c.close()
 
 
 def _pool(host, port):
@@ -281,16 +311,19 @@ class HttpTransport:
         hdrs = {"X-Api-Key": self.key, "Accept": "application/json", "User-Agent": USER_AGENT,
                 "Accept-Encoding": "gzip" if GZIP_ON else "identity"}
         for attempt in (0, 1):
-            conn, reused = pool.take(timeout)
+            conn, reused = pool.take(timeout, fresh=attempt > 0)
             try:
                 conn.request("GET", path, headers=hdrs)
                 r = conn.getresponse()
                 raw = r.read()
-            except (http.client.RemoteDisconnected, http.client.BadStatusLine, ConnectionResetError,
-                    BrokenPipeError) as e:
+            except (socket.timeout, TimeoutError):
                 conn.close()
-                if reused and attempt == 0:      # the server closed an idle keep-alive connection: one fresh retry
+                raise
+            except (http.client.HTTPException, OSError) as e:      # RemoteDisconnected, resets, SSL EOF, ...
+                conn.close()
+                if reused and attempt == 0:      # a dead keep-alive connection: one retry on a NEW connection
                     self._count(stale_retries=1)
+                    pool.flush()
                     continue
                 raise e
             except Exception:
@@ -306,6 +339,25 @@ class HttpTransport:
             raw = gzip.decompress(raw)
         self._count(calls=1, wire_bytes=wire, body_bytes=len(raw), **{"reused" if reused else "new_conns": 1})
         return r.status, raw.decode("utf-8", "replace"), dict(r.headers)
+
+
+def backoff_s(attempt, headers=None, resolve=False):
+    """Seconds to wait before retry number attempt+1. Retry-After (seconds) is honoured as a floor. Jittered, so
+    runs that failed together do not retry together. Runs: 1 s, then 2 s, +0-0.25 s. Resolve windows: exponential
+    from RETRY_BASE_S, capped at RETRY_CAP_S, each step jittered to 50-100 % of itself."""
+    h = headers or {}
+    ra = h.get("Retry-After") if h.get("Retry-After") is not None else h.get("retry-after")
+    try:
+        ra = max(0.0, float(ra))
+    except (TypeError, ValueError):
+        ra = None
+    if resolve:
+        step = min(RETRY_CAP_S, RETRY_BASE_S * (2 ** attempt))
+        wait = step * random.uniform(0.5, 1.0)
+        return wait if ra is None else ra + random.uniform(0, 0.1)
+    if ra is not None:
+        return ra + random.uniform(0, 0.25)
+    return (1.0, 2.0)[min(attempt, 1)] + random.uniform(0, 0.25)
 
 
 def redact(s):
@@ -336,6 +388,8 @@ class Qloo:
         self.headers_seen = {}
         self.lock = threading.Lock()
         self.deadline = None
+        self.win = None         # the open resolve window: (deadline, per-attempt timeout, retries), see window()
+        self.sleep = (lambda s: None) if fake else time.sleep    # tests swap it to record the backoff
         self.on_call = None     # callback(rec) after every call (api streams "calls" events from it)
         if deadline_s:
             self.start_deadline(deadline_s)
@@ -352,6 +406,23 @@ class Qloo:
 
     def start_deadline(self, seconds=HARD_CAP_S):
         self.deadline = time.monotonic() + seconds
+
+    @contextlib.contextmanager
+    def window(self, seconds=RESOLVE_BUDGET_S, attempt_timeout=TIMEOUT_RESOLVE, retries=RESOLVE_RETRIES):
+        """Resolution (C1, C2): every call inside gets `retries` jittered retries on 429/5xx/timeouts, at most
+        `attempt_timeout` per attempt, and all of them together end within `seconds`. Nested windows keep the
+        tighter deadline; the window is on the client, so the threads of one resolution share it."""
+        with self.lock:
+            old = self.win
+            dl = time.monotonic() + seconds
+            if old is not None:
+                dl, attempt_timeout = min(dl, old[0]), min(attempt_timeout, old[1])
+            self.win = (dl, attempt_timeout, retries)
+        try:
+            yield self
+        finally:
+            with self.lock:
+                self.win = old
 
     # ---- core GET -------------------------------------------------------
     def cache_key(self, path, q):
@@ -400,11 +471,21 @@ class Qloo:
             except ValueError:
                 pass
         status, body, headers = None, None, {}
-        for attempt in range(self.retries + 1):
+        win = self.win
+        retries = win[2] if win is not None else self.retries
+        for attempt in range(retries + 1):
             if self.deadline is not None and time.monotonic() >= self.deadline:
                 self._log(label + " (deadline)", url, 599, t0, False, None, key)
                 raise QlooDeadline(url)
-            if self.bucket and not self.bucket.take(self.deadline):
+            if win is not None and time.monotonic() >= win[0] - 0.5:
+                if status is not None:          # out of resolve time: the last answer stands (raised below)
+                    break
+                self._log(label + " (window)", url, 599, t0, False, None, key)
+                raise QlooError(599, "resolve window of %.0f s used up" % RESOLVE_BUDGET_S, url)
+            dl = self.deadline if win is None else (win[0] if self.deadline is None else min(win[0], self.deadline))
+            if self.bucket and not self.bucket.take(dl):
+                if win is not None and status is not None:
+                    break
                 self._log(label + " (deadline)", url, 599, t0, False, None, key)
                 raise QlooDeadline(url)
             with self.lock:
@@ -418,8 +499,11 @@ class Qloo:
                 print("  [qloo] %d of %d budgeted network calls used%s" % (n_net, self.budget,
                                                                          " [FAKE]" if self.fake else ""), flush=True)
             to = timeout or TIMEOUT_DEFAULT
+            if win is not None:
+                to = min(to, win[1], win[0] - time.monotonic())
             if self.deadline is not None:
-                to = max(0.5, min(to, self.deadline - time.monotonic()))
+                to = min(to, self.deadline - time.monotonic())
+            to = max(0.5, to)
             try:
                 status, body, headers = self.transport.get(url, timeout=to) if not self.fake else \
                     self.transport.get(url)
@@ -430,19 +514,15 @@ class Qloo:
                     self.headers_seen[k] = v
             if headers:
                 update_quota(headers, self.fake)
-            if status in (429, 500, 502, 503, 504, 599) and attempt < self.retries:
-                ra = (headers or {}).get("Retry-After") or (headers or {}).get("retry-after")
-                try:
-                    wait = float(ra)
-                except (TypeError, ValueError):
-                    wait = (1.0, 2.0)[min(attempt, 1)]
-                wait += random.uniform(0, 0.25)
+            if status in BUSY and attempt < retries:
+                wait = backoff_s(attempt, headers, resolve=win is not None)
+                if win is not None and time.monotonic() + wait >= win[0] - 0.5:
+                    break                       # a Retry-After past the window: answer now, busy
                 if self.deadline is not None and time.monotonic() + wait >= self.deadline:
                     self._log(label + " (deadline)", url, status, t0, False, None, key)
                     raise QlooDeadline(url)
-                if not self.fake:
-                    time.sleep(wait)
                 self._log(label + " (retry)", url, status, t0, False, None, key)
+                self.sleep(wait)
                 continue
             break
         if status != 200:

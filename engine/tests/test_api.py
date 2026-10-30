@@ -726,6 +726,166 @@ class TestCardLines(unittest.TestCase):
                          ["bf", "bq", "fw1", "rb", "x1", "x2", "x3"])
 
 
+class Flaky:
+    """A fake Qloo transport: the first `fail` calls answer `status` (or raise `exc`), then the fake world answers."""
+
+    def __init__(self, inner, fail=1, status=503, headers=None, exc=None):
+        self.inner, self.fail, self.status, self.headers, self.exc = inner, fail, status, headers or {}, exc
+        self.n = 0
+
+    def get(self, url, *a, **kw):
+        self.n += 1
+        if self.n <= self.fail:
+            if self.exc is not None:
+                raise self.exc
+            return self.status, '{"error": "busy"}', dict(self.headers)
+        return self.inner.get(url)
+
+
+class TestRetries(Tmp):
+    """30 Oct, 11:15 UTC: one failed Qloo call while resolving a love sank the query. Now resolve and search calls
+    retry 429/5xx/timeouts with jittered backoff inside a 12 s window."""
+
+    def flaky(self, **kw):
+        q = QL.Qloo(fake=True, cache_dir=tempfile.mkdtemp(dir=self.dir))     # a cold cache every time
+        q.transport = Flaky(q.transport, **kw)
+        q.waits = []
+        q.sleep = q.waits.append
+        return q
+
+    def test_love_survives_one_failed_call(self):
+        for kw in ({"status": 503}, {"status": 429, "headers": {"Retry-After": "1"}},
+                   {"exc": TimeoutError("timed out")}, {"exc": ConnectionResetError("reset")}):
+            q = self.flaky(**kw)
+            r = api.resolve_love("Sade", "artist", mode="fake", qloo=q)
+            self.assertEqual(r["status"], "ok", kw)
+            self.assertEqual(q.transport.n, 2, kw)                        # failed once, then answered
+            self.assertEqual(len(q.waits), 1, kw)
+            self.assertTrue(any(t["label"].endswith("(retry)") for t in q.trace))
+            self.assertEqual(r["chip"]["c2_calls"], 1)                     # a retry is not a second lookup
+
+    def test_backoff_is_jittered_bounded_and_honours_retry_after(self):
+        waits = [QL.backoff_s(0, resolve=True) for _ in range(200)]
+        self.assertTrue(all(0.5 * QL.RETRY_BASE_S <= w <= QL.RETRY_BASE_S for w in waits))
+        self.assertGreater(len({round(w, 4) for w in waits}), 50)         # jittered, not one fixed step
+        self.assertLessEqual(QL.backoff_s(10, resolve=True), QL.RETRY_CAP_S)
+        self.assertGreaterEqual(QL.backoff_s(0, {"Retry-After": "2"}, resolve=True), 2.0)
+        self.assertGreaterEqual(QL.backoff_s(0, {"retry-after": "3"}), 3.0)
+
+    def test_city_survives_one_failed_call(self):
+        q = self.flaky(status=502)
+        r = api.resolve_city("Chicago, IL", mode="fake", qloo=q)
+        self.assertNotEqual(r["status"], "degraded")
+        self.assertEqual(q.transport.n, 2)
+
+    def test_run_resolves_through_a_failed_call(self):
+        q = self.flaky(status=500)
+        r = api.run_unsaid("St. Louis", CEDRIC, mode="fake", qloo=q, gemini=False, street_check=False)
+        self.assertNotIn(r["status"], ("degraded", "needs_input"))
+
+    def test_still_busy_after_the_retries_is_degraded_never_a_miss(self):
+        q = self.flaky(fail=99, status=503)
+        r = api.resolve_love("Sade", "artist", mode="fake", qloo=q)
+        self.assertEqual((r["status"], r.get("reason")), ("degraded", "Qloo HTTP 503"))
+        self.assertEqual(q.transport.n, QL.RESOLVE_RETRIES + 1)          # bounded: one call, 4 attempts at most
+        self.assertLess(sum(q.waits), QL.RESOLVE_BUDGET_S)
+
+    def test_retry_after_past_the_window_answers_at_once(self):
+        q = self.flaky(fail=99, status=429, headers={"Retry-After": "60"})
+        r = api.resolve_love("Sade", "artist", mode="fake", qloo=q)
+        self.assertEqual(r["status"], "degraded")
+        self.assertEqual((q.transport.n, q.waits), (1, []))               # never sleeps past the 12 s window
+
+    def test_window_caps_attempt_timeout_and_total_time(self):
+        q = self.q()
+        seen = []
+
+        class Slow:
+            def get(self, url, timeout=None):
+                seen.append(timeout)
+                raise TimeoutError("timed out")
+        q.transport, q.fake = Slow(), False            # the live path passes the per-attempt timeout
+        q.bucket, q.sleep = None, lambda s: None
+        with q.window(1.0):
+            t = __import__("time").monotonic()
+            with self.assertRaises(QL.QlooError) as cm:
+                q.search("Sade", label="C2 love")
+            self.assertLess(__import__("time").monotonic() - t, 1.0)
+        self.assertTrue(cm.exception.busy)
+        self.assertTrue(all(x <= QL.TIMEOUT_RESOLVE for x in seen))
+        self.assertIsNone(q.win)                       # closed again: the run's own calls keep their timeouts
+
+
+class TestStalePool(unittest.TestCase):
+    """Qloo closes idle keep-alive connections after 20-70 s (probed 30 Oct). A dead pooled connection is retried
+    on a NEW connection, the pool's other idle ones are dropped, and connections idle too long are never reused."""
+
+    class Conn:
+        made = []
+
+        def __init__(self, host=None, port=None, timeout=None, context=None, dead=False):
+            self.dead, self.sock, self.closed = dead, _Sock(), False
+            if not dead:
+                TestStalePool.Conn.made.append(self)
+
+        def request(self, *a, **kw):
+            if self.dead:
+                raise QL.http.client.RemoteDisconnected("Remote end closed connection without response")
+
+        def getresponse(self):
+            return _Resp()
+
+        def close(self):
+            self.closed, self.sock = True, None
+
+    def setUp(self):
+        self.orig = QL.http.client.HTTPSConnection
+        QL.http.client.HTTPSConnection = TestStalePool.Conn
+        TestStalePool.Conn.made = []
+        QL._POOLS.clear()
+
+    def tearDown(self):
+        QL.http.client.HTTPSConnection = self.orig
+        QL._POOLS.clear()
+
+    def test_dead_pooled_connections_never_fail_a_call(self):
+        pool = QL._pool("h.example", 443)
+        dead = [TestStalePool.Conn(dead=True) for _ in range(8)]
+        for c in dead:
+            pool.give(c)
+        t = QL.HttpTransport("k")
+        status, body, _ = t.get("https://h.example/search?query=x")
+        self.assertEqual((status, body), (200, "{}"))
+        self.assertEqual(t.stats["stale_retries"], 1)
+        self.assertTrue(all(c.closed for c in dead))                     # one dead -> the idle ones all go
+        self.assertEqual(len(TestStalePool.Conn.made), 1)
+
+    def test_long_idle_connection_is_not_reused(self):
+        pool = QL._pool("h.example", 443)
+        old = TestStalePool.Conn()
+        pool.give(old)
+        old._idle_at -= QL.IDLE_MAX_S + 1
+        c, reused = pool.take(5)
+        self.assertFalse(reused)
+        self.assertIsNot(c, old)
+        self.assertTrue(old.closed)
+
+
+class _Sock:
+    def settimeout(self, t):
+        pass
+
+
+class _Resp:
+    status, will_close, headers = 200, False, {}
+
+    def read(self):
+        return b"{}"
+
+    def getheader(self, k, d=None):
+        return d
+
+
 if __name__ == "__main__":
     res = unittest.main(argv=[sys.argv[0], "-v"], exit=False).result
     ok = res.wasSuccessful()

@@ -29,7 +29,7 @@ from unsaid import engine as E
 from unsaid import matcher as M
 from unsaid import seeds as SD
 from unsaid import walls as W
-from unsaid.qloo import HARD_CAP_S, Qloo, QlooError, quota_state, redact
+from unsaid.qloo import HARD_CAP_S, RESOLVE_BUDGET_S, Qloo, QlooError, quota_state, redact
 
 RANKING_AFTER_S = 20.0
 LIVE_BUDGET_S = 15.0       # the server's budget for the live Gemini taste ask, counted from when it starts
@@ -48,7 +48,8 @@ def resolve_city(text, *, mode="fake", qloo=None):
         name, region = [x.strip() for x in name.split(",", 1)]
     key, _ = C.lookup(text)
     try:
-        c = E.resolve_city(q, text if key else name, None if key else region)
+        with q.window(RESOLVE_BUDGET_S):      # jittered retries on 429/5xx/timeouts, 12 s in all
+            c = E.resolve_city(q, text if key else name, None if key else region)
     except QlooError as e:
         return {"status": "degraded", "city": None, "alternatives": [], "reason": "Qloo HTTP %s" % e.status}
     alts = [{"name": x.get("name"), "disamb": x.get("disamb"), "id": x.get("id")} for x in c.get("candidates") or []]
@@ -116,7 +117,8 @@ def resolve_counted(q, text, hint=None):
 def resolve_love(text, hint=None, *, mode="fake", qloo=None):
     q = _client(mode, qloo)
     try:
-        l, n = resolve_counted(q, text, hint)
+        with q.window(RESOLVE_BUDGET_S):      # one busy call never sinks a love: retried, 12 s in all
+            l, n = resolve_counted(q, text, hint)
     except QlooError as e:
         return {"status": "degraded", "chip": None, "alternatives": [], "reason": "Qloo HTTP %s" % e.status}
     chip = dict(_chip(l), text=text, c2_calls=n) if l.get("id") else None
@@ -288,7 +290,8 @@ def run_unsaid(city, loves, *, walls_path=None, mode="fake", on_event=None, qloo
                 text, hint = x[0], x[1]
             typed.append((x, text, hint))
             jobs.append((len(typed) - 1, (lambda t=text, h=hint: E.resolve_love(q, t, h))))
-        got = dict(zip([k for k, _ in jobs], E._pmap(lambda j: j[1](), jobs, max(1, len(jobs)))))
+        with q.window(RESOLVE_BUDGET_S):      # city and loves together: retried, 12 s in all
+            got = dict(zip([k for k, _ in jobs], E._pmap(lambda j: j[1](), jobs, max(1, len(jobs)))))
         if "city" in got:
             rc = got["city"]
             if rc["status"] == "degraded":

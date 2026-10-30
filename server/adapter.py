@@ -4,6 +4,7 @@ If engine/unsaid/api.py exists (Agent D, CONTRACT.md), it is used: run_unsaid, r
 Until then this falls back to the round-3 kit's engine.run (fake mode), mapped onto the CONTRACT result shape.
 The server never imports engine internals anywhere else.
 """
+import contextlib
 import os
 import re
 import sys
@@ -18,6 +19,10 @@ if ENGINE not in sys.path:
 
 from unsaid import engine as E, matcher as M, seeds as SD, walls as W  # noqa: E402
 from unsaid.qloo import Qloo, QlooError, latlon, prop  # noqa: E402
+try:
+    from unsaid.qloo import RESOLVE_BUDGET_S  # noqa: E402
+except ImportError:          # an older engine (UNSAID_ENGINE): no resolve window
+    RESOLVE_BUDGET_S = 12.0
 
 API = None
 API_ERROR = None
@@ -270,11 +275,30 @@ def parse_love(x):
     raise ValueError('each love is text, a [text, hint] pair, {"text", "type"} or a chip {id, label, kind, type}')
 
 
+class ResolveFailed(RuntimeError):
+    """Qloo stayed busy through every retry of the resolve window. `reason` is 'Qloo HTTP <status>' (no URL)."""
+
+    def __init__(self, reason):
+        super().__init__("Qloo unavailable while resolving")
+        self.reason = str(reason or "Qloo busy")[:40]
+
+
+def _window(q):
+    w = getattr(q, "window", None)
+    return w(RESOLVE_BUDGET_S) if w else contextlib.nullcontext()
+
+
 def prepare(city_text, loves, q, mode):
-    """Resolve the city and every love. Returns {"status": "ok"|"needs_input", "city", "loves", ...}."""
+    """Resolve the city and every love. Returns {"status": "ok"|"needs_input", "city", "loves", ...}.
+    All of it shares one resolve window: jittered retries on 429/5xx/timeouts, 12 s in all."""
+    with _window(q):
+        return _prepare(city_text, loves, q, mode)
+
+
+def _prepare(city_text, loves, q, mode):
     rc = resolve_city(city_text, q, mode)
     if rc.get("status") == "degraded":
-        raise RuntimeError("Qloo unavailable while resolving")
+        raise ResolveFailed(rc.get("reason"))
     city_text = city_key(city_text)[1]
     out = {"status": "ok", "city": rc.get("city"), "city_text": city_text, "city_resolution": rc, "loves": [],
            "resolutions": []}
@@ -291,7 +315,7 @@ def prepare(city_text, loves, q, mode):
             text, hint = item["text"], item.get("hint")
         r = resolve_love(text, hint, q, mode)
         if r.get("status") == "degraded":
-            raise RuntimeError("Qloo unavailable while resolving")
+            raise ResolveFailed(r.get("reason"))
         out["resolutions"].append(r)
         if r.get("status") != "ok":
             out["status"] = "needs_input"
@@ -627,6 +651,8 @@ def describe_error(e):
     """A short reason with no URL, body or key in it."""
     if isinstance(e, QlooError):
         return "Qloo HTTP %s" % e.status
+    if isinstance(e, ResolveFailed):
+        return "%s (%s)" % (type(e).__name__, e.reason)
     return type(e).__name__
 
 
