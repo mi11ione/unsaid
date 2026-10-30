@@ -1,30 +1,30 @@
 {
- "pairs": 3562,
- "labelled": 3562,
+ "pairs": 3603,
+ "labelled": 3603,
  "flags": {
-  "sample": 1141,
-  "token": 2421
+  "token": 2368,
+  "sample": 1235
  },
- "unflagged_arm_pairs": 11662,
+ "unflagged_arm_pairs": 12242,
  "sample_rate": 0.1,
  "sample_named": 0,
- "sample_n": 1141,
+ "sample_n": 1235,
  "confusion_weighted": {
-  "tp": 102.0,
-  "fp": 19.0,
-  "fn": 21.0,
-  "tn": 13689.0
+  "tp": 93.0,
+  "fp": 18.0,
+  "fn": 24.0,
+  "tn": 14583.0
  },
  "confusion_raw": {
-  "m_l": 102,
-  "m_notl": 19,
-  "notm_l": 21,
-  "notm_notl": 3420
+  "m_l": 93,
+  "m_notl": 18,
+  "notm_l": 24,
+  "notm_notl": 3468
  },
- "precision": 0.8429752066115702,
- "recall": 0.8292682926829268,
- "agreement": 0.9971079459185886,
- "kappa": 0.8346067770444084,
+ "precision": 0.8378378378378378,
+ "recall": 0.7948717948717948,
+ "agreement": 0.9971463514064411,
+ "kappa": 0.8143525150687932,
  "named_quote_not_found": 0,
  "models": [
   "claude-opus-5-5"
@@ -37,8 +37,8 @@
     "cards": 140
    },
    "plain_rules": {
-    "labeller": 20,
-    "matcher": 21,
+    "labeller": 16,
+    "matcher": 17,
     "cards": 140
    },
    "score_only": {
@@ -47,13 +47,13 @@
     "cards": 140
    },
    "unsaid": {
-    "labeller": 3,
-    "matcher": 3,
+    "labeller": 0,
+    "matcher": 0,
     "cards": 140
    },
    "random": {
-    "labeller": 1.66,
-    "matcher": 2.43,
+    "labeller": 1.65,
+    "matcher": 2.47,
     "cards": 140
    }
   },
@@ -64,23 +64,23 @@
     "cards": 70
    },
    "plain_rules": {
-    "labeller": 7,
-    "matcher": 8,
+    "labeller": 3,
+    "matcher": 4,
     "cards": 70
    },
    "score_only": {
-    "labeller": 1,
-    "matcher": 3,
+    "labeller": 0,
+    "matcher": 2,
     "cards": 70
    },
    "unsaid": {
-    "labeller": 1,
-    "matcher": 1,
+    "labeller": 0,
+    "matcher": 0,
     "cards": 70
    },
    "random": {
-    "labeller": 0.95,
-    "matcher": 1.01,
+    "labeller": 0.97,
+    "matcher": 1.04,
     "cards": 70
    }
   },
@@ -96,21 +96,21 @@
     "cards": 70
    },
    "score_only": {
-    "labeller": 10,
-    "matcher": 9,
+    "labeller": 11,
+    "matcher": 10,
     "cards": 70
    },
    "unsaid": {
-    "labeller": 2,
-    "matcher": 2,
+    "labeller": 0,
+    "matcher": 0,
     "cards": 70
    },
    "random": {
-    "labeller": 0.71,
-    "matcher": 1.42,
+    "labeller": 0.68,
+    "matcher": 1.43,
     "cards": 70
    }
   }
  },
- "k12_sha256": "eec385041873c21e60b802f151785b69ee071f5c8ed983e248935f04f5c37cc7"
+ "k12_sha256": "aea366a2441da5f4b266a1be825395c4a6139b51c9de2bdef25257a6ab651745"
 }

@@ -3,12 +3,12 @@
  "sets": 20,
  "of": 7,
  "named_unsaid": 0.0,
- "named_no_strike": 1.5,
+ "named_no_strike": 2.5,
  "named_plain": 4.5,
  "held_out_cards": 140,
  "held_out_plain": 32,
  "held_out_no_strike": 12,
- "held_out_unsaid": 3,
+ "held_out_unsaid": 0,
  "arms_": "held-out fresh questions only (never used to build the list), one per-place verdict over U, pooled over 20 sets: named = cards some AI named (random: the mean over 200 draws of 7 strike survivors); fit_med = median fit percentile (100 = fits you best). Same source as freeze_numbers K12_<ARM>_FRESH_U / _FIT_MED; kappa = k14 blind labeller vs the matcher (K14_KAPPA), null unless it labelled this k12 run.",
  "arms": {
   "plain": {
