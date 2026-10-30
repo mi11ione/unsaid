@@ -450,3 +450,24 @@ details.dare .out { margin-bottom: 14px; }
 .receipt { font: 12px/1.4 var(--mono); color: var(--red); margin: 10px 0 0; letter-spacing: .02em; }
 .subline { font: 400 19px/1.4 var(--serif); color: #cfccc3; margin: 14px 0 18px; max-width: 560px; }
 @media (max-width: 720px) { .subline { font-size: 17px; } }
+
+/* ---------- round 7: presets by their loves; seven cards with no orphan ---------- */
+.pchip { white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.thumbs .thead .tl { min-width: 0; }
+@media (max-width: 720px) {
+  .pchip .lmid, .thumbs .thead .lmid { display: inline-block; max-width: 7.5em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+}
+/* desktop: three across; card 1 (and a 7th that would sit alone) span two columns, laid out photo-beside-text */
+@media (min-width: 1000px) {
+  .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .cards > .card:first-child:not(:last-child), .cards > .card:nth-child(7):last-child { grid-column: span 2; display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+  .cards > .card:first-child:not(:last-child) .pic, .cards > .card:nth-child(7):last-child .pic { aspect-ratio: auto; height: 100%; min-height: 300px; }
+  .cards > .card:first-child:not(:last-child) .name, .cards > .card:nth-child(7):last-child .name { font-size: 32px; }
+  .cards > .card:first-child:not(:last-child) .body, .cards > .card:nth-child(7):last-child .body { justify-content: center; padding: 22px 24px; }
+}
+/* in between: two across, card 1 spans both, the other six fill three rows */
+@media (min-width: 721px) and (max-width: 999px) {
+  .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cards > .card:first-child:not(:last-child) { grid-column: span 2; }
+}
+.try a.pchip { display: inline-block; flex-direction: row; padding: 4px 9px; }

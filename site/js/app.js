@@ -35,11 +35,14 @@
       `<span class="grow"></span>` + (mock ? `<span class="mock">${esc(mock)}</span>` : '');
   }
 
-  // the presets as two chips ("Or open one:"): each city's first set in data/try.json (Cedric, Khruangbin)
+  // a preset is named by its loves, never by a person: "Frankie Beverly & Maze · The Original Kings of Comedy · rib tips"
+  // (the middle love truncates on a phone)
+  const lovesLabel = s => { const L = (s.loves || []).filter(Boolean); return L.map((l, i) => `<span class="${i === 1 && L.length > 2 ? 'lmid' : 'l'}">${esc(l)}</span>`).join(' · '); };
+  // the presets as two chips ("Or open one:"): each city's first set in data/try.json
   function presetChips(head = 'Or open one:') {
     const ok = TRY.sets.filter(s => s.src && !s.mock);
     const pick = [...new Set(ok.map(s => s.city))].map(c => ok.find(s => s.city === c));
-    return `<div class="try"><span class="dim">${esc(head)}</span> ${pick.map(x => `<a class="pchip" href="#/r?set=${encodeURIComponent(x.id)}">${esc(x.label)}</a>`).join('')}</div>`;
+    return `<div class="try"><span class="dim">${esc(head)}</span> ${pick.map(x => `<a class="pchip" href="#/r?set=${encodeURIComponent(x.id)}">${lovesLabel(x)}</a>`).join('')}</div>`;
   }
   const tryList = (head = 'Or open one:') => presetChips(head || 'Or open one:');
 
@@ -97,8 +100,8 @@
       const R = await UM.result(set.src);
       const ph = (R.picks || []).filter(c => httpUrl(c.image));
       if (ph.length < 4) return;
-      $('#thumbs').innerHTML = `<a class="thead" href="#/r?set=stl-cedric"><span>${esc(set.label)} <span class="dim">· his seven →</span></span></a>
-        <a class="trow" href="#/r?set=stl-cedric" aria-label="Open ${esc(set.label)}">${ph.map(c => `<figure><img src="${esc(c.image)}" alt="" loading="eager" onerror="this.parentNode.remove()"><figcaption>${esc(c.name)}</figcaption></figure>`).join('')}</a>`;
+      $('#thumbs').innerHTML = `<a class="thead" href="#/r?set=stl-cedric"><span class="tl">${lovesLabel(set)}</span><span class="dim">seven in ${esc((CFG.cities[set.city] || {}).name || '')} →</span></a>
+        <a class="trow" href="#/r?set=stl-cedric" aria-label="Open the seven for ${esc(set.loves.filter(Boolean).join(', '))}">${ph.map(c => `<figure><img src="${esc(c.image)}" alt="" loading="eager" onerror="this.parentNode.remove()"><figcaption>${esc(c.name)}</figcaption></figure>`).join('')}</a>`;
     } catch (e) { /* the landing works without it */ }
   }
   // a link we share or copy never carries the API token (it lives only in the visitor's own address bar)
@@ -320,7 +323,7 @@
     }
     function status() {
       $('#stxt').innerHTML = statusLine();
-      $('#status').hidden = st.done && !['partial', 'degraded'].includes(st.result && st.result.status) && !(st.result && (st.result.flags || []).includes('partial'));
+      $('#status').hidden = st.done;      // a status line only while a run is in progress; failures speak in the results area
       $('#status').classList.toggle('busy', !st.done && !st.failed && (!!st.calls || st.order.length > 0));
       const mock = st.fake || st.mock;
       topbar({ city: cityName, loves: tLoves(), mock: mock ? (st.fake ? 'mock data' : 'mock stream · no server') : null });
@@ -454,7 +457,7 @@
       }
       const lead = R.status === 'empty_few'
         ? `<p class="empty">Only ${n} places in ${esc(cityName)} fit you that no AI names. Here they are.</p>`
-        : `<h2 class="lead2"><span class="n">${n}</span> for you</h2><p class="leadsub">No AI named any of these in ${askLine(true)}.</p>`;
+        : `<h2 class="lead2"><span class="n">${n}</span> for you</h2><p class="leadsub">All rated ${CFG.floor.rating}+. No AI named any of them${R.counts && R.counts.asks != null ? ` in ${R.counts.asks} asks` : ''}.</p>`;
       // desktop: "7 for you" sits beside the map, so the cards start above the fold; phone: above the cards
       st.lead = R.status === 'empty_few' ? null : lead; mapDraw();
       body.innerHTML = `<div class="leadhere">${lead}</div>` + `<div class="cards" id="cards"></div>
@@ -719,8 +722,8 @@
       const pos = r => `${pct(r)}%`;
       // a label near either end hangs inward, so it never leaves the sheet
       const lab = r => pct(r) < 12 ? `left:${pct(r)}%;transform:none` : pct(r) > 88 ? `right:${100 - pct(r)}%;transform:none` : `left:${pct(r)}%`;
-      const slider = flat || U == null ? '' : `<div class="slider"><div class="track"></div>
-          ${fit != null ? `<div class="tick" style="left:${pos(fit)}"></div><div class="tl" style="${lab(fit)}">#${fit} for you</div>` : ''}
+      // no "#N for you" here: a mid rank reads as "you're mediocre here" (Cedric juror); the popularity spot stays
+      const slider = flat || U == null || c.any_rank == null ? '' : `<div class="slider"><div class="track"></div>
           ${c.any_rank != null ? `<div class="tick any" style="left:${pos(c.any_rank)}"></div><div class="tl any" style="${lab(c.any_rank)}">${esc(popWords(c, true))}</div>` : ''}
           <div class="end" style="left:0">#1</div><div class="end" style="right:0">#${U}</div></div>`;
       const holds = c.holds != null && c.n_loves != null && c.holds >= c.n_loves ? 'It stays a pick even if you drop any one love.'
@@ -740,7 +743,7 @@
           <div class="big1">${c.because == null ? '' : 'You love ' + esc(tName(c.because)) + '.'}</div>${c.because_detail ? `<p>${esc(cap1(typedText(c.because_detail)))}.</p>` : ''}${holds ? `<p class="dim">${holds}</p>` : ''}</div>
         <div class="blk"><div class="sh"><h2>Fits you</h2></div>${slider}
           ${c.why ? `<p>${esc(cap1(c.why))}.</p>` : ''}
-          <p class="dim">${[fit != null && U != null ? `#${fit} of ${U} for you` : null, flat ? null : popWords(c, true) || null, U != null ? `among places${Rmi != null ? ` within ${Rmi} mi` : ''} rated ${CFG.floor.rating}+` : null].filter(Boolean).map(esc).join(' · ')}. Named 0 times in ${askLine()}.</p>
+          <p class="dim">${[flat ? null : popWords(c) || null, U != null ? `among places${Rmi != null ? ` within ${Rmi} mi` : ''} rated ${CFG.floor.rating}+` : null].filter(Boolean).map(esc).join(' · ')}. Named 0 times in ${askLine()}.</p>
           ${flat ? '<p class="dim">Your loves barely move this city’s order.</p>' : ''}${thin && U != null ? `<p class="dim">Many places tie for you here.</p>` : ''}</div>
         <div class="blk"><div class="sh"><h2>Go</h2></div>
           ${c.address ? `<p>${esc(c.address)}${hours(c) ? `<br><span class="dim">today ${esc(hours(c))}</span>` : ''}</p>` : ''}
