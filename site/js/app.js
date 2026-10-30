@@ -101,7 +101,7 @@
       const ph = (R.picks || []).filter(c => httpUrl(c.image));
       if (ph.length < 4) return;
       $('#thumbs').innerHTML = `<a class="thead" href="#/r?set=stl-cedric"><span class="tl">${lovesLabel(set)}</span><span class="dim">seven in ${esc((CFG.cities[set.city] || {}).name || '')} →</span></a>
-        <a class="trow" href="#/r?set=stl-cedric" aria-label="Open the seven for ${esc(set.loves.filter(Boolean).join(', '))}">${ph.map(c => `<figure><img src="${esc(c.image)}" alt="" loading="eager" onerror="this.parentNode.remove()"><figcaption>${esc(c.name)}</figcaption></figure>`).join('')}</a>`;
+        <a class="trow" href="#/r?set=stl-cedric" aria-label="Open the seven for ${esc(set.loves.filter(Boolean).join(', '))}">${ph.map(c => `<figure><img src="${esc(c.image)}" alt="" loading="eager" onerror="this.parentNode.remove()" onload="if(this.naturalWidth<100)this.parentNode.remove()"><figcaption>${esc(c.name)}</figcaption></figure>`).join('')}</a>`;
     } catch (e) { /* the landing works without it */ }
   }
   // a link we share or copy never carries the API token (it lives only in the visitor's own address bar)
@@ -187,8 +187,9 @@
     const cc = CFG.cities[slug] || null;
     cityName = cityName || (cc && cc.name) || slug;
     const TYPED = set ? set.loves : loves.map(l => l.typed || l.label);         // the loves as the visitor typed them
-    const tLoves = () => st.result ? UM.typedLoves(st.result, TYPED) : loves.map((l, i) => ({ ...l, label: TYPED[i] || l.label }));
-    const tName = label => st.result ? UM.typedName(st.result, label, TYPED) : label;
+    // a love is always shown by its resolved Qloo label (result.loves[].label, or the chip's), never the visitor's own casing
+    const tLoves = () => st.result && Array.isArray(st.result.loves) && st.result.loves.length ? st.result.loves.map(l => ({ ...l })) : loves.map((l, i) => ({ ...l, label: l.label || TYPED[i] }));
+    const tName = label => label;
     const cen = cc && CEN[cc.census];
     if (!src) await API.ping();   // a stored set never waits on the engine: it opens at once
 
@@ -197,7 +198,7 @@
       burned: [], struck: new Map(), slots: [], reserves: [], risen: new Map(), done: false, fake: false,
       mock: false, t0: Date.now(), firstServerEvent: false, order: [], fresh: !src,
     };
-    topbar({ city: cityName, loves: loves.map((l, i) => ({ ...l, label: TYPED[i] || l.label })) });
+    topbar({ city: cityName, loves: loves.map((l, i) => ({ ...l, label: l.label || TYPED[i] })) });
     view.innerHTML = `<div class="res" id="res">
       <div class="maphead" id="maphead"></div>
       <div class="xstrip" id="xstrip"><button class="link" id="xall"></button></div>
@@ -272,8 +273,10 @@
     function counter() {
       const W = st.result ? Share.wallCount(st.result) : null;
       const a = $('#xall'); if (!a) return;
+      // the thesis in one line: half of Claude's mentions here go to K50 places (census.json), then the whole list
+      const K = cen && cen.k50 && cen.k50.n;
       a.innerHTML = W == null ? (st.wall.size ? 'counting the places the AIs named…' : '')
-        : `<span class="ph-only">The AIs named ${W} places in ${esc(cityName)}. All crossed out →</span><span class="dt-only">all ${W}, crossed out →</span>`;
+        : (K ? `Half of what ${esc(CEN.provider)} recommends here is the same ${K} places. ` : '') + `All ${W} the AIs named, crossed out →`;
     }
     // the full list, in a sheet: every place the AIs named, crossed out
     function wallSheet() {
@@ -351,11 +354,13 @@
       const b = $('#burn');
       const asked = (st.result && st.result.burn && st.result.burn.asked) || [];
       const askOf = hood => asked.find(a => a.neighbourhood === hood) || {};
-      if (st.burned.length) {
-        b.innerHTML = st.burned.map(x => {
+      // only burns of cards the visitor saw, each with its name, and the AI by its name (not its lane id)
+      const seen = st.burned.filter(x => st.cards.has(x.card_id) && (st.cards.get(x.card_id) || {}).name);
+      if (seen.length) {
+        b.innerHTML = seen.map(x => {
           const c = st.cards.get(x.card_id) || {}, r = x.replaced_by && st.cards.get(x.replaced_by);
           const hood = c.neighbourhood ?? x.neighbourhood, a = askOf(hood);
-          const who = x.by || a.provider, when = et(x.at || a.asked_at);
+          const who = UM.provider(x.by || a.provider), when = et(x.at || a.asked_at);
           // "⟦provider⟧ named ⟦X⟧ when asked about ⟦Soulard⟧ · ⟦date⟧ · burned. ⟦Y⟧ takes its place."
           return `<span class="red">${ph(who, 'provider')} named ${placeName(c, x.card_id)}</span> when asked about ${ph(hood, 'neighbourhood')} · ${ph(when, 'date')} · burned.` +
             (r ? ` ${placeName(r, r.id)} takes its place.` : '');
@@ -479,7 +484,7 @@
 
     const cap1 = x => String(x).charAt(0).toUpperCase() + String(x).slice(1);
     // engine lines name a love by Qloo's entity name ("Maze Featuring Frankie Beverly"); people typed "Frankie Beverly & Maze"
-    const typedText = x => tLoves().reduce((t, l) => l.qloo_label && l.label && l.qloo_label !== l.label ? t.split(l.qloo_label).join(l.label) : t, String(x));
+    const typedText = x => String(x);
     const dareLabel = () => `Ask any AI yourself. Paste what it says: any of these ${liveIds().length} it names burns.`;
     // the card face: photo, name, "Neighbourhood · 6 mi · $$ · Open now", one line about it, what to order, the love.
     // Ranks, the because detail, the address and the maps live on the card's sheet.
@@ -488,7 +493,7 @@
       // Qloo serves the same photo wider ("-420x-auto" -> "-800x-auto"): the browser picks by the card's width
       const big = /-420x-auto\.jpg$/.test(c.image || '') ? c.image.replace(/-420x-auto\.jpg$/, '-800x-auto.jpg') : null;
       const set = big ? ` srcset="${esc(c.image)} 420w, ${esc(big)} 800w" sizes="(max-width: 720px) 100vw, 420px"` : '';
-      return `<div class="pic${httpUrl(c.image) ? '' : ' none'}">${httpUrl(c.image) ? `<img src="${esc(c.image)}"${set} alt="" ${i < 3 ? 'fetchpriority="high"' : 'loading="lazy"'} onerror="this.parentNode.classList.add('none');this.remove()">` : ''}${fb}` +
+      return `<div class="pic${httpUrl(c.image) ? '' : ' none'}">${httpUrl(c.image) ? `<img src="${esc(c.image)}"${set} alt="" ${i < 3 ? 'fetchpriority="high"' : 'loading="lazy"'} onerror="this.parentNode.classList.add('none');this.remove()" onload="if(this.naturalWidth<100){this.parentNode.classList.add('none');this.remove()}">` : ''}${fb}` +
         `<span class="no">${String(i + 1).padStart(2, '0')}</span>${x || ''}</div>`;
     }
     function metaLine(c) {
@@ -532,9 +537,12 @@
     function openState(c) {
       const h = c.hours; if (!h || typeof h !== 'object' || Array.isArray(h)) return '';
       const { d, m } = nowIn(c.tz); if (d < 0) return '';
-      if (slots(h, d).some(t => m >= t.o && m < (t.c <= t.o ? t.c + 1440 : t.c))) return 'Open now';
-      if (slots(h, (d + 6) % 7).some(t => t.c <= t.o && m < t.c)) return 'Open now';      // last night's hours, past midnight
-      const later = slots(h, d).filter(t => t.o > m).sort((a, b) => a.o - b.o)[0];
+      const now = slots(h, d).find(t => m >= t.o && m < (t.c <= t.o ? t.c + 1440 : t.c))
+        || slots(h, (d + 6) % 7).find(t => t.c <= t.o && m < t.c);      // last night's hours, past midnight
+      if (now) return `Open now · until ${clock(now.c % 1440)}`;
+      const today = slots(h, d);
+      if (!today.length) return 'Closed today';
+      const later = today.filter(t => t.o > m).sort((a, b) => a.o - b.o)[0];
       if (later) return `Opens ${clock(later.o)}`;
       for (let k = 1; k < 7; k++) {
         const n = slots(h, (d + k) % 7).sort((a, b) => a.o - b.o)[0];
@@ -568,7 +576,7 @@
       if (typeof h === 'string') return h;
       const { d } = nowIn(c.tz); if (d < 0) return '';
       const t = slots(h, d);
-      return t.length ? t.map(x => `${clock(x.o)}–${clock(x.c)}`).join(', ') : 'closed today';
+      return t.length ? t.map(x => `${clock(x.o)}–${clock(x.c)}`).join(', ') : 'closed';
     }
     const price = c => { const p = c.price_level ?? c.price; return p == null || p === '' ? '' : typeof p === 'number' ? '$'.repeat(Math.max(1, Math.min(4, Math.round(p)))) : String(p); };
     function mapsLinks(c) {
@@ -711,6 +719,15 @@
     window.__pasteNames = pasteNames;
 
     // ---- S3 · card back
+    // the sheet's one fit line: "Fits you better than 28 of the 30 places more popular than it. No AI named it in 888 asks."
+    function fitLine(c) {
+      const m = String(c.why || '').match(/fits you better than (\d+|all) (?:of )?(?:the )?(\d+)? ?more popular places?/i);
+      const R = st.result || {}, n = R.counts && R.counts.asks;
+      const fit = m ? (m[1] === 'all' ? `Fits you better than all ${m[2]} places more popular than it.` : `Fits you better than ${m[1]} of the ${m[2]} places more popular than it.`)
+        : /one more popular place/i.test(c.why || '') ? 'Fits you better than the one place more popular than it.'
+        : popWords(c) ? `${cap1(popWords(c))}.` : '';
+      return [fit, `No AI named it${n != null ? ` in ${n} asks` : ''}.`].filter(Boolean).join(' ');
+    }
     function cardSheet(id) {
       const c = st.cards.get(id), R = st.result, flags = R.flags || [];
       const flat = flags.includes('flat'), thin = flags.includes('thin_taste');
@@ -731,7 +748,7 @@
       const st3 = st.struck.get(id);
       const order = Array.isArray(c.order) ? c.order.filter(Boolean) : c.order ? [c.order] : [];
       openSheet(`
-        ${httpUrl(c.image) ? `<img class="placeimg" src="${esc(c.image)}" alt="" loading="lazy" onerror="this.remove()">` : ''}
+        ${httpUrl(c.image) ? `<img class="placeimg" src="${esc(c.image)}" alt="" loading="lazy" onerror="this.remove()" onload="if(this.naturalWidth<100)this.remove()">` : ''}
         <div class="cap">${esc(cityName)} · card ${cardNo(id)}</div>
         <h1>${head}</h1>
         <p class="sheetsub">${metaLine(c)}</p>
@@ -741,12 +758,10 @@
         ${st3 ? `<div class="red">${esc(st3.text)}</div>` : ''}
         <div class="blk"><div class="sh"><h2>Because</h2></div>
           <div class="big1">${c.because == null ? '' : 'You love ' + esc(tName(c.because)) + '.'}</div>${c.because_detail ? `<p>${esc(cap1(typedText(c.because_detail)))}.</p>` : ''}${holds ? `<p class="dim">${holds}</p>` : ''}</div>
-        <div class="blk"><div class="sh"><h2>Fits you</h2></div>${slider}
-          ${c.why ? `<p>${esc(cap1(c.why))}.</p>` : ''}
-          <p class="dim">${[flat ? null : popWords(c) || null, U != null ? `among places${Rmi != null ? ` within ${Rmi} mi` : ''} rated ${CFG.floor.rating}+` : null].filter(Boolean).map(esc).join(' · ')}. Named 0 times in ${askLine()}.</p>
-          ${flat ? '<p class="dim">Your loves barely move this city’s order.</p>' : ''}${thin && U != null ? `<p class="dim">Many places tie for you here.</p>` : ''}</div>
+        <div class="blk"><div class="sh"><h2>Fits you</h2></div>
+          <p>${esc(fitLine(c))}</p></div>
         <div class="blk"><div class="sh"><h2>Go</h2></div>
-          ${c.address ? `<p>${esc(c.address)}${hours(c) ? `<br><span class="dim">today ${esc(hours(c))}</span>` : ''}</p>` : ''}
+          ${c.address ? `<p>${esc(c.address)}${hours(c) ? `<br><span class="dim">${hours(c) === 'closed' ? 'Closed today' : `Today ${esc(hours(c))}`}</span>` : ''}</p>` : ''}
           ${c.open === false ? '<p class="red">Qloo marks it closed.</p>' : ''}
           <div class="links">${mapsLinks(c).replace(/<a /g, '<a class="btn solid" ').replace(/<\/a>/g, ' ↗</a>')}${httpUrl(c.url) ? `<a class="btn" href="${esc(c.url)}" target="_blank" rel="noopener">Website ↗</a>` : ''}</div></div>
         <details class="log"><summary>Raw log</summary><div class="logbody">${rawLog(c)}</div></details>`);

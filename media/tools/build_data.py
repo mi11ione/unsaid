@@ -100,6 +100,7 @@ census = {
     'nyc': {
         'city': 'New York',
         'asks': {'n': 64, 'src': cite(92, r'NEW YORK .*: (\d+) asks', 64)},
+        'k50': {'n': 51, 'src': cite(133, r'K50 = (\d+) names', 51)},   # half of Claude's NYC mentions go to these
         'gem': {'name': 'Sripraphai', 'hits': 11, 'of': 16, 'first': 6, 'hood': 'Woodside, Queens',
                 'src': cite(147, r'Sripraphai\s+(\d+)/(\d+)', 11, 16) + ' + ' + cite(136, r'Sripraphai (\d+), Di Fara', 6)},
         'said': {'n': 334, 'src': cite(109, r'SAID \(L2, headline\) = (\d+)', 334)},

@@ -471,3 +471,9 @@ details.dare .out { margin-bottom: 14px; }
   .cards > .card:first-child:not(:last-child) { grid-column: span 2; }
 }
 .try a.pchip { display: inline-block; flex-direction: row; padding: 4px 9px; }
+/* no photo (missing or failed): no empty box; a thin bar keeps the number and the strike button */
+.card .pic.none { aspect-ratio: auto !important; height: 50px !important; min-height: 0 !important; background: none; border-bottom: 1px solid var(--rule); }
+.card .pic.none .fb { display: none !important; }
+@media (min-width: 1000px) { .cards > .card:has(.pic.none) { display: flex !important; flex-direction: column; } }
+.res .xstrip { justify-content: flex-start; }
+.res .xstrip .link { white-space: normal; text-align: left; flex: 1 1 auto; }

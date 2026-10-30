@@ -218,7 +218,8 @@
 
   // provider codes in the data -> the assistant's name on screen
   const PROVIDERS = { anthropic: 'Claude', claude: 'Claude', openai: 'ChatGPT', codex: 'ChatGPT', chatgpt: 'ChatGPT', google: 'Gemini', gemini: 'Gemini' };
-  const provider = p => p == null ? p : (PROVIDERS[String(p).toLowerCase()] || p);
+  // "openai" -> "ChatGPT"; "gemini (live)" -> "Gemini (live)"
+  const provider = p => { if (p == null) return p; const m = String(p).match(/^([A-Za-z]+)(.*)$/); const n = m && PROVIDERS[m[1].toLowerCase()]; return n ? n + m[2] : (PROVIDERS[String(p).toLowerCase()] || p); };
 
   window.UM = { typedLoves, typedName, deadLine, day, days, cleanName, frame, hull, inHull, cityLine, firstOf, provider, C, canvas, projection, discD, dots, disc, seven, ring, stack, leader, el, esc, fmt, ph, param, et, hhmm, json, result };
 })();

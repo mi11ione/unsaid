@@ -49,7 +49,7 @@
     const cg = c.chatgpt && c.chatgpt.gem;
     const two = c.mailee_claude && cg && cg.name === c.mailee_claude.name ? c.mailee_claude : null;
     const g = two || c.gem; if (!g) return null;
-    return { gem: g.name, city: c.city, receipt: `${CEN.provider}: ${g.hits} of ${g.of} times` + (two ? ` · ${CEN.chatgpt_provider}: ${cg.hits} of ${cg.of}` : '') };
+    return { gem: g.name, city: c.city, receipt: `${CEN.provider}: ${g.hits} of ${g.of} hidden-gem asks` + (two ? ` · ${CEN.chatgpt_provider}: ${cg.hits} of ${cg.of}` : '') };
   }
 
   function draw(cv, R) {
