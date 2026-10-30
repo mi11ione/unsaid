@@ -245,7 +245,7 @@ jdump(SITE / 'config.json', {
     'cities': {'st-louis': {'name': 'St. Louis', 'map': 'data/map/stl.json', 'wall': 'data/walls/stl.json', 'census': 'stl', 'from': 'downtown'},
                'new-york': {'name': 'New York', 'map': 'data/map/nyc.json' if NYC_MAP else None, 'wall': 'data/walls/nyc.json', 'census': 'nyc', 'from': 'central Manhattan'}},
     'floor': {'rating': 4.3},
-    'site': 'unsaid-ang.pages.dev',   # the share image's address line and deploy-site.sh's OG card (C, 28 Oct)
+    'site': 'unsaid.mi11ion.io',   # the share image's address line and deploy-site.sh's OG card (C, 28 Oct)
 }, 1)
 SETS = json.load(open(UNSAID / 'data' / 'sets.json'))['sets']
 # live sources only: a preset points at its regenerated result in site/data/live (uploaded with the deploy), else null;

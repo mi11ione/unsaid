@@ -1,6 +1,6 @@
 """The hosted MCP endpoint: POST /mcp, MCP Streamable HTTP, standard library only.
 
-One paste for an agent: add https://unsaid-ang.pages.dev/mcp as a custom connector (Claude: Settings -> Connectors) or
+One paste for an agent: add https://unsaid.mi11ion.io/mcp as a custom connector (Claude: Settings -> Connectors) or
 `claude mcp add --transport http unsaid <url>`. No token is needed: it is open, under the same per-IP limits as
 /api/unsaid (an optional UNSAID token, as `?token=` or `Authorization: Bearer`, gets its own bucket).
 
@@ -29,7 +29,7 @@ AGENT = os.path.join(os.path.dirname(HERE), "agent", "unsaid_mcp.py")
 MAX_BODY = 64 * 1024
 KEEPALIVE_S = 10.0
 ORIGINS = {o.strip() for o in (os.environ.get("UNSAID_MCP_ORIGINS") or
-                               "https://unsaid-ang.pages.dev,https://claude.ai,https://claude.com").split(",") if o.strip()}
+                               "https://unsaid.mi11ion.io,https://unsaid-ang.pages.dev,https://claude.ai,https://claude.com").split(",") if o.strip()}
 
 
 def _load_agent():

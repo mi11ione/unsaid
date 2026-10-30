@@ -21,7 +21,7 @@ An agent is given the same ask as in the meter, with UNSAID as its only tool. Ho
 | Phrasings | M1, M2 verbatim, plus the frozen JSON suffix (12 picks) | the same, byte for byte (`harness/meter.py` PHRASINGS, SUFFIX) |
 | Assistants | Claude (`claude -p --model sonnet`), ChatGPT (`codex exec`, pinned gpt-5.6-terra) | the same instruments and flags, the same system line |
 | Reps | 1 | 1 |
-| Tool | none (alone) / `qloo_places` only (with) | **`unsaid_places` only**, served by `agent/unsaid_mcp.py` in **remote mode** (`UNSAID_MODE=remote`, the hosted API at https://unsaid-ang.pages.dev, `UNSAID_TOKEN` from the env). `qloo_places` is not listed in remote mode. |
+| Tool | none (alone) / `qloo_places` only (with) | **`unsaid_places` only**, served by `agent/unsaid_mcp.py` in **remote mode** (`UNSAID_MODE=remote`, the hosted API at https://unsaid.mi11ion.io, `UNSAID_TOKEN` from the env). `qloo_places` is not listed in remote mode. |
 | Grading | `k10_meter.py`: a pick is on the list if `matcher.match_wall([pick], other assistants' city-wall + census names)` hits; street asks excluded; the run's own provider is excluded | identical code path, unchanged |
 
 That is 10 sets × 2 phrasings × 2 assistants × 1 rep = **40 asks**. Gemini isn't run, as in the frozen meter.

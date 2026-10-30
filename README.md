@@ -6,17 +6,17 @@ Ask Claude for a hidden gem in St. Louis and it says Mai Lee, on 13 of 16 tries;
 
 On 40 public questions never used to build the list, the AIs named 32 of 140 cards from Qloo's plain taste order and 0 of UNSAID's; seven random leftovers are named about as rarely but fit far worse (47th vs 75th fit percentile). Method and every gate, pass or fail: [Gates](#gates).
 
-**Live:** https://unsaid-ang.pages.dev · **Agents:** [MCP](#mcp) · **License:** MIT ([LICENSE](LICENSE)); map data © OpenStreetMap contributors, ODbL 1.0.
+**Live:** https://unsaid.mi11ion.io · **Agents:** [MCP](#mcp) · **License:** MIT ([LICENSE](LICENSE)); map data © OpenStreetMap contributors, ODbL 1.0.
 
 
 ## Five minutes
 
-**1. The live demo.** Open https://unsaid-ang.pages.dev and tap **Frankie Beverly & Maze · The Original Kings of Comedy · rib tips**. Tap a card for its detail; tap ✕ to strike one you know and a reserve takes its place; paste any AI's answer and anything it names is already crossed out. Or type three things you love. Cards arrive in about 33.1 seconds.
+**1. The live demo.** Open https://unsaid.mi11ion.io and tap **Frankie Beverly & Maze · The Original Kings of Comedy · rib tips**. Tap a card for its detail; tap ✕ to strike one you know and a reserve takes its place; paste any AI's answer and anything it names is already crossed out. Or type three things you love. Cards arrive in about 33.1 seconds.
 
-**2. From your agent, no Qloo key, one paste.** Add `https://unsaid-ang.pages.dev/mcp` as a custom connector in Claude (Settings → Connectors), or run the line below.
+**2. From your agent, no Qloo key, one paste.** Add `https://unsaid.mi11ion.io/mcp` as a custom connector in Claude (Settings → Connectors), or run the line below.
 
 ```bash
-claude mcp add --transport http unsaid "https://unsaid-ang.pages.dev/mcp"
+claude mcp add --transport http unsaid "https://unsaid.mi11ion.io/mcp"
 # then ask Claude: "I love Frankie Beverly & Maze, The Original Kings of Comedy and rib tips. Where should I go in St. Louis tonight?"
 ```
 
@@ -240,9 +240,9 @@ The gist postdates both censuses (Claude's from 27 Oct 12:05 UTC), so the census
 
 ## MCP
 
-**Hosted:** `https://unsaid-ang.pages.dev/mcp` is the same tool over MCP Streamable HTTP (`server/mcp_http.py`: POST JSON-RPC, a JSON reply or an SSE stream for `tools/call`, stateless, no session). It runs every call through the same path as `/api/unsaid`, with the same cache and limits (15 fresh runs an hour per IP through 6 Nov), and returns the same `structuredContent` as the stdio server. Add it as a custom connector in Claude (Settings → Connectors), or `claude mcp add --transport http unsaid "https://unsaid-ang.pages.dev/mcp"`. `python3 -I agent/test_client.py --http <url>` checks it.
+**Hosted:** `https://unsaid.mi11ion.io/mcp` is the same tool over MCP Streamable HTTP (`server/mcp_http.py`: POST JSON-RPC, a JSON reply or an SSE stream for `tools/call`, stateless, no session). It runs every call through the same path as `/api/unsaid`, with the same cache and limits (15 fresh runs an hour per IP through 6 Nov), and returns the same `structuredContent` as the stdio server. Add it as a custom connector in Claude (Settings → Connectors), or `claude mcp add --transport http unsaid "https://unsaid.mi11ion.io/mcp"`. `python3 -I agent/test_client.py --http <url>` checks it.
 
-**Local (stdio):** `agent/unsaid_mcp.py` is a stdio MCP server in one file, standard library only. By default (`UNSAID_MODE=remote`) it calls the hosted API at https://unsaid-ang.pages.dev, so an agent gets the same live Qloo ranks and the same dated AI answers as the site. You don't need a Qloo key or the engine. No token is needed.
+**Local (stdio):** `agent/unsaid_mcp.py` is a stdio MCP server in one file, standard library only. By default (`UNSAID_MODE=remote`) it calls the hosted API at https://unsaid.mi11ion.io, so an agent gets the same live Qloo ranks and the same dated AI answers as the site. You don't need a Qloo key or the engine. No token is needed.
 
 Claude Code: the command in *Five minutes* above.
 
@@ -269,7 +269,7 @@ claude -p "I love Frankie Beverly & Maze, The Original Kings of Comedy and rib t
 
 - `unsaid_places(loves, city)` returns the product: it crosses out places named in the dated Claude and GPT answers on file (plus a live Gemini ask where available) and ranks the rest by how much better each fits your loves than its popularity or its fit for most tastes, as above. Up to 7 picks, each with its Qloo id, its two ranks, whether it holds if any one love is dropped, a reason ("fits all three of your loves", or "because you love <love>" when a dish love or two or more loves carry it; none when it rests on one love alone), and the wall's most-named places. Pass loves as `[text, type]` pairs; untyped, "rib tips" can resolve to a restaurant. The hosted API serves St. Louis and New York City and refuses other cities with a note. Run locally, a city with no AI answers on file gets an empty wall and the `no_wall` flag.
 - `qloo_places(loves, city)` returns the top 50 of the same pool with nothing crossed out. It is the meter's "with" arm. Only the local modes list it. It orders places by the first love's pool order, not a joint signal; at meter time it also built a shallower pool than the engine (see *Gates*), and the pool now matches.
-- A real agent run is public on the site: https://unsaid-ang.pages.dev/data/live/agent_demo.json (Claude Code, remote mode, the call and the answer verbatim).
+- A real agent run is public on the site: https://unsaid.mi11ion.io/data/live/agent_demo.json (Claude Code, remote mode, the call and the answer verbatim).
 
 Other modes: `UNSAID_MODE=fake` runs the engine offline on a synthetic Qloo world, and every result is tagged FAKE. `UNSAID_MODE=live` with `QLOO_API_KEY` runs the engine locally, using the walls in `data/walls` (override with `UNSAID_WALLS`). Both local modes call `run_unsaid` in `engine/unsaid/api.py`, as the server does. `python3 -I agent/test_client.py` checks fake mode in both protocol eras, then runs a smoke test against the hosted API. The smoke test is skipped when `UNSAID_TOKEN` isn't set.
 

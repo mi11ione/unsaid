@@ -10,7 +10,7 @@ Dual-era per the MCP spec 2026-07-28 ("Versioning and Compatibility"):
 - legacy clients (Claude Desktop / Claude Code / most SDKs on 2025-11-25 and earlier): `initialize` handshake.
 
 Modes (UNSAID_MODE):
-- remote (the default): the hosted API at UNSAID_URL (default https://unsaid-ang.pages.dev), the same engine, walls
+- remote (the default): the hosted API at UNSAID_URL (default https://unsaid.mi11ion.io), the same engine, walls
   and live Qloo calls as the website. Needs no Qloo key and no engine kit. UNSAID_TOKEN is optional: without
   it, fresh runs share a per-address limit; with it, they get their own bucket. Cached repeats are free. Only unsaid_places is listed: the hosted API has no qloo_places endpoint.
 - fake: the engine kit in ../engine (override with UNSAID_KIT) on its FakeQloo world, offline. Place names and
@@ -44,9 +44,9 @@ if MODE not in ("remote", "fake", "live"):
     MODE = "remote"
 REMOTE = MODE == "remote"
 FAKE = MODE == "fake"
-URL = (os.environ.get("UNSAID_URL") or "https://unsaid-ang.pages.dev").rstrip("/")
+URL = (os.environ.get("UNSAID_URL") or "https://unsaid.mi11ion.io").rstrip("/")
 TOKEN = (os.environ.get("UNSAID_TOKEN") or "").strip()
-UA = "unsaid-mcp/%s (+https://unsaid-ang.pages.dev/agents.html)" % SERVER_INFO["version"]
+UA = "unsaid-mcp/%s (+https://unsaid.mi11ion.io/agents.html)" % SERVER_INFO["version"]
 REMOTE_TIMEOUT_S = float(os.environ.get("UNSAID_REMOTE_TIMEOUT_S", "150"))
 OUT = sys.stdout                      # the protocol channel; nothing else may write here
 

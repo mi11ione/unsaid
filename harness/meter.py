@@ -112,7 +112,7 @@ def opts_for(lane, arm, tool):
 # ---------------------------------------------------------------- post-hoc third arm (harness/meter_unsaid.md)
 OUT_UNSAID = os.path.join(L.RUNS, "meter_unsaid.jsonl")   # never the frozen runs/meter.jsonl
 CFG_UNSAID = os.path.join(L.RUNS, ".meter_unsaid.mcp.json")
-UNSAID_URL_DEFAULT = "https://unsaid-ang.pages.dev"
+UNSAID_URL_DEFAULT = "https://unsaid.mi11ion.io"
 QLOO_CAP_UNSAID = 900  # raised from 370 by the author, 28 Oct (see meter_unsaid.md change log)
 FRESH_PER_HOUR = 3          # the host's per-address limit, unless the agent server sends the bench header
 DRIFT_SETS = ("stl-cedric", "stl-wilco")

@@ -2,7 +2,7 @@
 # Re-render every image, the clip and the site screenshots. Needs Google Chrome, node (no npm packages),
 # python3 with Pillow, ffmpeg for the MP4.
 #   ./render.sh            everything        ./render.sh hero | images | share | clip | video | site | data
-#   URL=<live url> FRAMES=<scratch dir> ./render.sh video     the 60 s video (end-card URL; where its PNG frames go, deleted after)
+#   URL=https://unsaid.mi11ion.io FRAMES=<scratch dir> ./render.sh video     the 60 s video (end-card URL; where its PNG frames go, deleted after)
 #   SRC=../site/data/mock/stl-cedric.ndjson ./render.sh images     force a results file (default: live, else mock)
 set -e
 cd "$(dirname "$0")"

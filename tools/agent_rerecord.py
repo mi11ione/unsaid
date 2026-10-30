@@ -30,7 +30,7 @@ import freeze_numbers as FN  # noqa: E402
 
 DEMO = FN.AGENT_DEMO
 STREAM = os.path.join(ROOT, "agent", "demo", "claude_p_live.jsonl")
-API = os.environ.get("UNSAID_URL") or "https://unsaid-ang.pages.dev"
+API = os.environ.get("UNSAID_URL") or "https://unsaid.mi11ion.io"
 
 
 def env_with_token():

@@ -1,6 +1,6 @@
 # Deploying UNSAID
 
-**Deployed (28 Oct 2026).** Engine: Render free web service `unsaid-engine` (srv-dbgr3fuc6qcc73ce5p3g), https://unsaid-a1wy.onrender.com, Python 3.11, quota 0.15 CPU (read from its cgroup). Site and the `/api/*` proxy: Cloudflare Pages project `unsaid`, https://unsaid-ang.pages.dev, deployed by direct upload, never through git. Secrets live in `~/.config/unsaid/env` (never printed) and in each host's own settings.
+**Deployed (28 Oct 2026).** Engine: Render free web service `unsaid-engine` (srv-dbgr3fuc6qcc73ce5p3g), https://unsaid-a1wy.onrender.com, Python 3.11, quota 0.15 CPU (read from its cgroup). Site and the `/api/*` proxy: Cloudflare Pages project `unsaid`, https://unsaid.mi11ion.io (custom domain; https://unsaid-ang.pages.dev still serves the same deployment), deployed by direct upload, never through git. Secrets live in `~/.config/unsaid/env` (never printed) and in each host's own settings.
 
 Redeploy the engine through the Render API (no dashboard needed):
 
@@ -69,8 +69,8 @@ npx wrangler pages deploy . --cwd site --project-name unsaid --branch main --com
 Check through the proxy:
 
 ```bash
-curl -s https://unsaid-ang.pages.dev/api/health
-curl -sN "https://unsaid-ang.pages.dev/api/unsaid?city=st-louis&loves=%5B%22Frankie%20Beverly%20%26%20Maze%22%5D&token=$UNSAID_TOKEN"
+curl -s https://unsaid.mi11ion.io/api/health
+curl -sN "https://unsaid.mi11ion.io/api/unsaid?city=st-louis&loves=%5B%22Frankie%20Beverly%20%26%20Maze%22%5D&token=$UNSAID_TOKEN"
 ```
 
 A cold engine answers `503` with `{"state":"waking"}` (or a `waking` NDJSON stream) for about a minute; that is expected.

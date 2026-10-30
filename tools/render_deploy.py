@@ -20,7 +20,7 @@ import urllib.request
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SERVICE = os.environ.get("RENDER_SERVICE", "srv-dbgr3fuc6qcc73ce5p3g")
 API = "https://api.render.com/v1/services/" + SERVICE
-HEALTH = os.environ.get("UNSAID_HEALTH", "https://unsaid-ang.pages.dev/api/health")
+HEALTH = os.environ.get("UNSAID_HEALTH", "https://unsaid.mi11ion.io/api/health")
 PATHS = ["engine/unsaid", "server", "data", "render.yaml"]      # what the engine host runs or reads
 PRIORS_MIN = os.environ.get("UNSAID_PRIORS_MIN", "547ab11")   # first engine that reads the 97-anchor priors format
 

@@ -5,7 +5,7 @@
 "First strike" is read as the first wall name on screen (the dated wall streams from static data within 1 s; a red
 strike needs U, ~7 s into a fresh run per §3.4). Both times are printed.
 
-  --url https://<host>/api/unsaid   streams NDJSON; the token (if any) comes from env UNSAID_TOKEN, sent as the query
+  --url https://unsaid.mi11ion.io/api/unsaid streams NDJSON; the token (if any) comes from env UNSAID_TOKEN, sent as the query
                                     param `token` (the Pages proxy forwards the query string as is); loves go as the
                                     set spec's [text, hint] pairs: loves=[["Frankie Beverly & Maze","artist"],...]
   --runs N                          default 5 fake, 3 live (each live in-process run costs ~27 Qloo calls)"""

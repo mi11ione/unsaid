@@ -2,14 +2,14 @@
 """Minimal MCP stdio client: spawns unsaid_mcp.py and drives it like a host would. Standard library only.
   python3 -I test_client.py            -> fake mode checks + a remote smoke test; wire log in out/transcript.jsonl;
                                           exits 1 on any failed check
-  python3 -I test_client.py --http https://unsaid-ang.pages.dev/mcp
+  python3 -I test_client.py --http https://unsaid.mi11ion.io/mcp
                                        -> only the hosted Streamable HTTP endpoint (UNSAID_TOKEN from the env)
   python3 -I test_client.py --record demo/live_transcript.jsonl
                                        -> also records one live agent session against the hosted API (remote mode)
 Fake mode runs both eras: legacy (initialize -> notifications/initialized -> tools/list -> tools/call) and modern
 2026-07-28 (server/discover -> tools/list -> tools/call, per-request _meta), plus error paths. Validates
 structuredContent against the tool's outputSchema with a small JSON-Schema subset validator.
-The remote smoke test calls the hosted API (UNSAID_URL, default https://unsaid-ang.pages.dev) with UNSAID_TOKEN from
+The remote smoke test calls the hosted API (UNSAID_URL, default https://unsaid.mi11ion.io) with UNSAID_TOKEN from
 the environment, and is skipped when there is no token (or with --no-remote). The token is never written anywhere."""
 import ast
 import json
@@ -223,7 +223,7 @@ QUESTION = ("I love Frankie Beverly & Maze, The Original Kings of Comedy and rib
 
 def run_remote():
     """Smoke test of remote mode: the hosted API, real Qloo. Skipped without UNSAID_TOKEN."""
-    print("\n== remote mode (the hosted API, %s)" % (os.environ.get("UNSAID_URL") or "https://unsaid-ang.pages.dev"))
+    print("\n== remote mode (the hosted API, %s)" % (os.environ.get("UNSAID_URL") or "https://unsaid.mi11ion.io"))
     if not os.environ.get("UNSAID_TOKEN"):
         print("  [SKIP] UNSAID_TOKEN is not set (it is in the Devpost testing instructions)")
         return
@@ -277,7 +277,7 @@ def record(path):
     head = {"kind": "session", "recorded_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "user": QUESTION,
             "agent": "agent/test_client.py --record (a scripted MCP host: list tools, call unsaid_places, show)",
             "server": "python3 -I agent/unsaid_mcp.py",
-            "env": {"UNSAID_MODE": "remote", "UNSAID_URL": os.environ.get("UNSAID_URL") or "https://unsaid-ang.pages.dev",
+            "env": {"UNSAID_MODE": "remote", "UNSAID_URL": os.environ.get("UNSAID_URL") or "https://unsaid.mi11ion.io",
                     "UNSAID_TOKEN": "<redacted>"},
             "tools_listed": [t["name"] for t in tools], "server_exit": rc}
     tail = {"kind": "agent_answer", "text": res["content"][0]["text"] if res.get("content") else json.dumps(res)}

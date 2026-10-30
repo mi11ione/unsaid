@@ -25,7 +25,7 @@ import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 QLOO = os.path.dirname(ROOT)
-KNOWN = {"LIVE_URL": ("https://unsaid-ang.pages.dev", "known URL (the flip)"),
+KNOWN = {"LIVE_URL": ("https://unsaid.mi11ion.io", "known URL (the flip)"),
          "REPO_URL": ("https://github.com/mi11ione/unsaid", "known URL (the flip)")}
 ROMAN_ONLY = {"ROMAN_WHY": "Roman's own words only; never drafted",
               "VIDEO_URL": "Roman's upload"}

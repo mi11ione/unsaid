@@ -41,7 +41,7 @@ set -euo pipefail
 MAIN=$(cd "$(dirname "$0")" && pwd)
 LOGS="$MAIN/out/freeze"
 QLOO_DIR=$(dirname "$MAIN")
-LIVE_URL=https://unsaid-ang.pages.dev
+LIVE_URL=https://unsaid.mi11ion.io
 export REGEN_WT=${REGEN_WT:-$QLOO_DIR/wt-regen}
 export REGEN_FRESH=${REGEN_FRESH:-$QLOO_DIR/private/fresh20-freeze}
 FROZEN20=${FROZEN20:-$QLOO_DIR/private/frozen20}

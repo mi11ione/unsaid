@@ -5,12 +5,12 @@ at 3 fresh sets an hour. agent/ is not edited: the MCP server just gets UNSAID_U
 The secret comes from UNSAID_BENCH_SECRET (else PROXY_SECRET) in this process's env only; it is never logged, never
 written, and never reaches the agent. Responses stream through unchanged (NDJSON).
 
-  UNSAID_BENCH_SECRET=... python3 -I bench_proxy.py [port]      # default 8799, upstream https://unsaid-ang.pages.dev
+  UNSAID_BENCH_SECRET=... python3 -I bench_proxy.py [port]      # default 8799, upstream https://unsaid.mi11ion.io
 """
 import os, sys, urllib.error, urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-UPSTREAM = (os.environ.get("UNSAID_UPSTREAM") or "https://unsaid-ang.pages.dev").rstrip("/")
+UPSTREAM = (os.environ.get("UNSAID_UPSTREAM") or "https://unsaid.mi11ion.io").rstrip("/")
 SECRET = (os.environ.get("UNSAID_BENCH_SECRET") or os.environ.get("PROXY_SECRET") or "").strip()
 PASS = ("Authorization", "Accept", "User-Agent", "X-Unsaid-Token")
 

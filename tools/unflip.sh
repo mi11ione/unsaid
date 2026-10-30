@@ -12,7 +12,7 @@ set -uo pipefail
 
 SERVICE="${RENDER_SERVICE:-srv-dbgr3fuc6qcc73ce5p3g}"
 RAPI="https://api.render.com/v1/services/$SERVICE"
-SITE="https://unsaid-ang.pages.dev"
+SITE="https://unsaid.mi11ion.io"
 ENVF="$HOME/.config/unsaid/env"
 UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
 
