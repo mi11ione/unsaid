@@ -1870,6 +1870,14 @@ def clean_order(items, e, vocab, n=3, line=None, loves=()):
     pos = {x: k for k, x in enumerate(uniq)}
     uniq.sort(key=lambda x: (not any(_sing_word(w) in line_words for w in M.norm(x).split()),
                              not any(w in cuisine for w in M.norm(x).split()), pos[x]))
+    special = {M.norm((d.get("name") if isinstance(d, dict) else str(d)) or "") for d in prop(e, "specialty_dishes") or []}
+
+    def strong(x):   # tied to the place: its line, its cuisine, Qloo's dish vocabulary or its specialty dishes
+        ws = M.norm(x).split()
+        return (any(_sing_word(w) in line_words or w in cuisine for w in ws) or M.norm(x) in special
+                or M.norm(x) in vocab or " ".join(_sing_word(w) for w in ws) in vocab)
+    if sum(1 for x in uniq if strong(x)) >= 2:          # "Rooty Tooty" at a Thai noodle shop goes
+        uniq = [x for x in uniq if strong(x)]
     return uniq[:n]
 
 
