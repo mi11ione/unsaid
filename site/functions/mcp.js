@@ -37,10 +37,13 @@ export async function onRequest(ctx) {
     const v = request.headers.get(k);
     if (v) headers.set(k, v);
   }
-  const country = request.headers.get("cf-ipcountry") || (request.cf && request.cf.country) || "";
+  // via the unsaid.mi11ion.io edge Worker, the visitor's IP and country arrive signed with PROXY_SECRET
+  const edge = env.PROXY_SECRET && request.headers.get("x-unsaid-edge-key") === env.PROXY_SECRET;
+  const country = (edge && request.headers.get("x-unsaid-edge-country")) || request.headers.get("cf-ipcountry")
+    || (request.cf && request.cf.country) || "";
   headers.set("cf-ipcountry", country);
   headers.set("x-unsaid-country", country);
-  headers.set("x-unsaid-client-ip", request.headers.get("cf-connecting-ip") || "");
+  headers.set("x-unsaid-client-ip", (edge && request.headers.get("x-unsaid-edge-ip")) || request.headers.get("cf-connecting-ip") || "");
   if (env.PROXY_SECRET) headers.set("x-unsaid-proxy", env.PROXY_SECRET);
 
   const ctrl = new AbortController();

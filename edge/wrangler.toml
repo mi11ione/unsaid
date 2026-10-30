@@ -1,0 +1,4 @@
+name = "unsaid-domain"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+routes = [{ pattern = "unsaid.mi11ion.io", custom_domain = true }]
