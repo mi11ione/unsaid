@@ -54,25 +54,23 @@
   // how the seven are chosen, in one line (D's selection score, 28 Oct): the card sheet and the popularity sheet carry it
   const EXPLAIN = 'Qloo scores every place for each of your loves. We keep the places that fit you much more than they fit most people’s taste, or than their popularity alone would say.';
   const CITIES = Object.entries(CFG.cities).map(([slug, c]) => ({ slug, name: c.name }));
-  // the census hook (UNSAID.md §0), from census.json only: "Ask Claude for a hidden gem in St. Louis: ~~Mai Lee~~, 13 times in 16."
-  function hookLine() {
-    const S = CEN.stl, M = S && S.mailee_claude;
-    if (!M) return '';
-    return `<p class="hook">Ask ${esc(CEN.provider)} for a hidden gem in ${esc(S.city)}: <span class="gx">${esc(M.name)}</span>, <span class="red">${M.hits} times in ${M.of}</span>.</p>`;
+  // the hero (one idea, said once): "AI sends everyone to ~~Mai Lee~~." + its receipt, from census.json (Share.hero)
+  function heroBlock() {
+    const H = Share.hero(CEN, 'stl'); if (!H) return '';
+    return `<h1>AI sends everyone to <span class="gx">${esc(H.gem)}</span>.</h1><p class="receipt">${esc(H.receipt)}</p>
+      <p class="subline">Tell us an artist, a show and a dish you love. We’ll send you where it didn’t.</p>`;
   }
 
   function inputView() {
     if (ctl) { ctl.abort(); ctl = null; }
     topbar({});
     view.innerHTML = `<div class="land"><section class="s1">
-      <h1>Everything the AIs tell everyone, <s>crossed out</s>.</h1>
-      ${hookLine()}
+      ${heroBlock()}
       <div class="fields">
         ${FIELDS.map((f, i) => `<div class="fld"><span class="n">0${i + 1}</span><input data-i="${i}" placeholder="${esc(f.ph)}" autocomplete="off" spellcheck="false"><div class="res" id="res${i}"></div></div>`).join('')}
       </div>
       <div class="fields"><div class="fld"><span class="n">in</span><div class="cityopts" role="radiogroup" aria-label="city">${CITIES.map(c => `<button role="radio" aria-checked="false" data-c="${esc(c.slug)}">${esc(c.name)}</button>`).join('')}</div></div></div>
       <div class="go"><button class="btn solid" id="cross" disabled>Find my seven</button></div>
-      <div class="tagline">Tell it three things you love. Get seven places no AI is sending everyone to.</div>
       ${presetChips()}
       <div class="thumbs" id="thumbs"></div>
     </section></div>`;
@@ -812,7 +810,7 @@
     }
     function shareData() {
       const R = st.result;
-      return { ...R, loves: tLoves(), picks: liveIds().map(id => ({ ...st.cards.get(id), _ph: cardNo(id) ? `place ${cardNo(id)}` : 'burned card' })), wallNames: Share.wallNames(R) };
+      return { ...R, hero: cc && Share.hero(CEN, cc.census), loves: tLoves(), picks: liveIds().map(id => ({ ...st.cards.get(id), _ph: cardNo(id) ? `place ${cardNo(id)}` : 'burned card' })), wallNames: Share.wallNames(R) };
     }
     window.__shareData = shareData;
 

@@ -42,6 +42,16 @@
       .map(o => (window.UM ? UM.cleanName(o.name) : o.name));
   }
 
+  // the hero for a city, from census.json only: St. Louis leads with the gem both AIs give (Mai Lee), elsewhere the
+  // city's own Claude gem. {gem, receipt: "Claude: 13 of 16 times · ChatGPT: 10 of 16"}
+  function hero(CEN, key) {
+    const c = CEN && CEN[key]; if (!c) return null;
+    const cg = c.chatgpt && c.chatgpt.gem;
+    const two = c.mailee_claude && cg && cg.name === c.mailee_claude.name ? c.mailee_claude : null;
+    const g = two || c.gem; if (!g) return null;
+    return { gem: g.name, city: c.city, receipt: `${CEN.provider}: ${g.hits} of ${g.of} times` + (two ? ` · ${CEN.chatgpt_provider}: ${cg.hits} of ${cg.of}` : '') };
+  }
+
   function draw(cv, R) {
     const W = 1080, H = 1350, pad = 72;
     cv.width = W; cv.height = H;
@@ -68,6 +78,21 @@
     // headline
     let y = 210;
     ctx.font = `400 58px ${SERIF}`;
+    if (R.hero && R.hero.gem) {
+      // the site's hero: "AI sends everyone to ~~Mai Lee~~." + its receipt, then "None named these 7."
+      const pre = 'AI sends everyone to ', g = R.hero.gem, fits = ctx.measureText(pre + g + '.').width <= W - 2 * pad;
+      ctx.fillStyle = C.ink; ctx.fillText(fits ? pre : pre.trim(), pad, y);
+      let gx = pad + ctx.measureText(pre).width, gy = y;
+      if (!fits) { gx = pad; gy = y + 68; }
+      ctx.fillStyle = C.red; ctx.fillText(g, gx, gy);
+      const gw = ctx.measureText(g).width;
+      ctx.fillRect(gx - 2, gy - 19, gw + 4, 4);
+      ctx.fillStyle = C.ink; ctx.fillText('.', gx + gw, gy);
+      y = gy + 50;
+      if (R.hero.receipt) { ctx.font = `20px ${MONO}`; ctx.fillStyle = C.red; ctx.fillText(R.hero.receipt, pad, y); y += 74; } else y += 24;
+      ctx.font = `400 58px ${SERIF}`; ctx.fillStyle = C.white; ctx.fillText(`None named these ${N}.`, pad, y);
+      y += 70;
+    } else {
     // "The AIs named WALL places." (wallCount of this result)
     const a = 'The AIs named ', wtxt = WALL == null ? '' : String(WALL);
     const l1 = wrap(ctx, a + wtxt + ' places.', W - 2 * pad);
@@ -85,6 +110,7 @@
     y += l1.length * 68;
     ctx.fillStyle = C.white; ctx.fillText(`None named these ${N}.`, pad, y);
     y += 70;
+    }
 
     // the loves, 32 px
     ctx.font = `400 32px ${SERIF}`; ctx.fillStyle = C.dim;
@@ -137,5 +163,5 @@
     return cv;
   }
 
-  window.Share = { draw, wallCount, wallNames, tier };
+  window.Share = { draw, wallCount, wallNames, tier, hero };
 })();

@@ -445,3 +445,8 @@ details.dare .out { margin-bottom: 14px; }
   .maphead { margin-top: 0; }
 }
 .doc .q { font: 400 19px/1.4 var(--serif); color: var(--white); }
+/* landing hero: one idea, said once */
+.s1 h1 .gx { color: var(--red); }
+.receipt { font: 12px/1.4 var(--mono); color: var(--red); margin: 10px 0 0; letter-spacing: .02em; }
+.subline { font: 400 19px/1.4 var(--serif); color: #cfccc3; margin: 14px 0 18px; max-width: 560px; }
+@media (max-width: 720px) { .subline { font-size: 17px; } }
