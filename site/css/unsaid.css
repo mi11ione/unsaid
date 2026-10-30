@@ -76,7 +76,7 @@ code { font: 400 .88em/1 var(--mono); background: var(--paper2); padding: 2px 5p
 .links { display: flex; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
 
 /* ---------- landing ---------- */
-.hero { padding: clamp(40px, 7vw, 104px) 0 clamp(28px, 4vw, 56px); border-bottom: 1px solid var(--line); }
+.hero { padding: clamp(40px, 7vw, 104px) 0 clamp(8px, 1.5vw, 24px); }
 .hero h1 { font: 600 clamp(44px, 6.4vw, 96px)/.98 var(--sans); letter-spacing: -.042em; margin: 0; max-width: 13em; }
 .herosub { font: 400 clamp(22px, 2.3vw, 34px)/1.25 var(--sans); letter-spacing: -.015em; margin: clamp(18px, 2vw, 28px) 0 0; }
 .gx { position: relative; color: var(--red); white-space: nowrap; }
