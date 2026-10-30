@@ -94,7 +94,7 @@
       y += 70;
     } else {
     // "The AIs named WALL places." (wallCount of this result)
-    const a = 'The AIs named ', wtxt = WALL == null ? '' : String(WALL);
+    const a = 'The AIs named ', wtxt = WALL == null ? '' : Number(WALL).toLocaleString('en-US');
     const l1 = wrap(ctx, a + wtxt + ' places.', W - 2 * pad);
     // draw line 1 with the number in red (the number is at the end of the sentence)
     l1.forEach((line, i) => {

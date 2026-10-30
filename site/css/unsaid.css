@@ -477,3 +477,5 @@ details.dare .out { margin-bottom: 14px; }
 @media (min-width: 1000px) { .cards > .card:has(.pic.none) { display: flex !important; flex-direction: column; } }
 .res .xstrip { justify-content: flex-start; }
 .res .xstrip .link { white-space: normal; text-align: left; flex: 1 1 auto; }
+.doc .answer { background: var(--panel); border: 1px solid var(--rule2); padding: 14px 16px; font: 400 15px/1.55 var(--serif); color: #dcd9d0; white-space: pre-wrap; overflow-wrap: anywhere; max-width: 760px; }
+.doc .answer b { color: var(--white); font-weight: 600; }

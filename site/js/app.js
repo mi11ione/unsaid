@@ -286,12 +286,12 @@
       // the thesis in one line: half of Claude's mentions here go to K50 places (census.json), then the whole list
       const K = cen && cen.k50 && cen.k50.n;
       a.innerHTML = W == null ? (st.wall.size ? 'counting the places the AIs named…' : '')
-        : (K ? `Half of what ${esc(CEN.provider)} recommends here is the same ${K} places. ` : '') + `All ${W} the AIs named, crossed out →`;
+        : (K ? `Half of what ${esc(CEN.provider)} recommends here is the same ${K} places. ` : '') + `All ${W.toLocaleString('en-US')} places the AIs named, crossed out →`;
     }
     // the full list, in a sheet: every place the AIs named, crossed out
     function wallSheet() {
       const W = st.result ? Share.wallCount(st.result) : null, K = st.result && st.result.counts;
-      openSheet(`<div class="cap">${esc(cityName)}</div><h1>${W != null ? W + ' ' : ''}places the AIs named</h1>
+      openSheet(`<div class="cap">${esc(cityName)}</div><h1>${W != null ? W.toLocaleString('en-US') + ' ' : ''}places the AIs named</h1>
         <p class="dim">${K && K.asks ? `In ${K.asks} asks. ` : ''}Good places, all crossed out. Most-named first; tap one to see who named it.</p><div class="wallbox"></div>`);
       const box = document.querySelector('.sheet .wallbox');
       sortField(); box.appendChild(fieldEl);
@@ -472,7 +472,7 @@
       }
       const lead = R.status === 'empty_few'
         ? `<p class="empty">Only ${n} places in ${esc(cityName)} fit you that no AI names. Here they are.</p>`
-        : `<h2 class="lead2"><span class="n">${n}</span> for you</h2><p class="leadsub">All rated ${CFG.floor.rating}+. No AI named any of them${R.counts && R.counts.asks != null ? ` in ${R.counts.asks} asks` : ''}.</p>`;
+        : `<h2 class="lead2"><span class="n">${n}</span> for you</h2><p class="leadsub">All rated ${CFG.floor.rating}+. No AI named any of them${R.counts && R.counts.asks != null ? ` in ${R.counts.asks.toLocaleString('en-US')} asks` : ''}.</p>`;
       // desktop: "7 for you" sits beside the map, so the cards start above the fold; phone: above the cards
       st.lead = R.status === 'empty_few' ? null : lead; mapDraw();
       body.innerHTML = `<div class="leadhere">${lead}</div>` + `<div class="cards" id="cards"></div>
@@ -730,13 +730,20 @@
 
     // ---- S3 · card back
     // the sheet's one fit line: "Fits you better than 28 of the 30 places more popular than it. No AI named it in 888 asks."
+    // the sheet's one fit line states the taste signal without ever reading as mediocre:
+    // top quarter -> "#13 of 77 for your taste · last of 77 by popularity."; top half -> "In the top half for your taste ·
+    // 41st of 77 by popularity."; otherwise the "fits you better than N of the M more popular" line. Then the AI count.
     function fitLine(c) {
-      const m = String(c.why || '').match(/fits you better than (\d+|all) (?:of )?(?:the )?(\d+)? ?more popular places?/i);
       const R = st.result || {}, n = R.counts && R.counts.asks;
-      const fit = m ? (m[1] === 'all' ? `Fits you better than all ${m[2]} places more popular than it.` : `Fits you better than ${m[1]} of the ${m[2]} places more popular than it.`)
-        : /one more popular place/i.test(c.why || '') ? 'Fits you better than the one place more popular than it.'
-        : popWords(c) ? `${cap1(popWords(c))}.` : '';
-      return [fit, `No AI named it${n != null ? ` in ${n} asks` : ''}.`].filter(Boolean).join(' ');
+      const U = c.U ?? (R.counts && R.counts.U), f = c.tied ? null : c.fit_rank, a = c.any_rank;
+      const pop = a == null || U == null ? null : a >= U ? `last of ${U} by popularity` : `${ordinal(a)} of ${U} by popularity`;
+      const m = String(c.why || '').match(/fits you better than (\d+|all) (?:of )?(?:the )?(\d+)? ?more popular places?/i);
+      const better = m ? (m[1] === 'all' ? `Fits you better than all ${m[2]} places more popular than it.` : `Fits you better than ${m[1]} of the ${m[2]} places more popular than it.`)
+        : /one more popular place/i.test(c.why || '') ? 'Fits you better than the one place more popular than it.' : null;
+      const fit = f != null && U != null && f <= U / 4 ? [`#${f} of ${U} for your taste`, pop].filter(Boolean).join(' · ') + '.'
+        : f != null && U != null && f <= U / 2 ? ['In the top half for your taste', pop].filter(Boolean).join(' · ') + '.'
+        : better || (pop ? cap1(pop) + '.' : '');
+      return [fit, `No AI named it${n != null ? ` in ${n.toLocaleString('en-US')} asks` : ''}.`].filter(Boolean).join(' ');
     }
     function cardSheet(id) {
       const c = st.cards.get(id), R = st.result, flags = R.flags || [];
