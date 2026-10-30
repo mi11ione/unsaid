@@ -19,18 +19,18 @@
   "score_only": {
    "named": 12,
    "cards": 140,
-   "fit_med": 80
+   "fit_med": 79
   },
   "random": {
-   "named": 2.4,
+   "named": 2.5,
    "cards": 140,
    "fit_med": 47
   },
   "unsaid": {
-   "named": 3,
+   "named": 0,
    "cards": 140,
-   "fit_med": 77
+   "fit_med": 75
   }
  },
- "kappa": 0.83
+ "kappa": 0.81
 }

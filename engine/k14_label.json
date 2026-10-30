@@ -2,8 +2,8 @@
  "pairs": 3603,
  "labelled": 3603,
  "flags": {
-  "sample": 1235,
-  "token": 2368
+  "token": 2368,
+  "sample": 1235
  },
  "unflagged_arm_pairs": 12242,
  "sample_rate": 0.1,
