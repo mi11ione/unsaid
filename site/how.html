@@ -53,7 +53,7 @@
     const M = S.mailee_claude, G = S.chatgpt && S.chatgpt.gem;
     document.getElementById('census').innerHTML =
       `<p class="big">AI sends everyone to <span class="gx">${esc(M.name)}</span>.</p>
-       <p class="receipt">${Share.hero(CEN, 'stl').receipt.split(' · ').map(x => `<span class="ri">${esc(x)}</span>`).join(' · ')}</p>
+       <p class="receipt">${Share.hero(CEN, 'stl').receipt.split(' · ').map(x => `<span class="ri">${esc(x)}</span>`).join('<span class="sep"> · </span>')}</p>
        <p>We asked ${esc(CEN.provider)} and ${esc(CEN.chatgpt_provider)} for a hidden gem in ${esc(S.city)}, ${M.of} different ways. ` +
       (S.said && S.k50 && S.asks ? `Across ${S.asks.n} questions about ${esc(S.city)}, ${esc(CEN.provider)} named ${S.said.n} places, and half of its mentions went to just ${S.k50.n} of them.` : '') + `</p>`;
   }
