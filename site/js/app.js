@@ -187,9 +187,19 @@
     const cc = CFG.cities[slug] || null;
     cityName = cityName || (cc && cc.name) || slug;
     const TYPED = set ? set.loves : loves.map(l => l.typed || l.label);         // the loves as the visitor typed them
-    // a love is always shown by its resolved Qloo label (result.loves[].label, or the chip's), never the visitor's own casing
-    const tLoves = () => st.result && Array.isArray(st.result.loves) && st.result.loves.length ? st.result.loves.map(l => ({ ...l })) : loves.map((l, i) => ({ ...l, label: l.label || TYPED[i] }));
-    const tName = label => label;
+    // a love's name on screen: the typed text when it equals Qloo's label but for case -> Qloo's label ("succession" ->
+    // "Succession"); typed text with any capital -> as typed ("Frankie Beverly & Maze"); all lower case and different ->
+    // Qloo's label. A preset shows its own love text.
+    const loveName = (typed, label) => {
+      if (set) return typed || label;
+      if (!typed || !label) return label || typed;
+      if (typed.trim().toLowerCase() === String(label).trim().toLowerCase()) return label;
+      return /\p{Lu}/u.test(typed) ? typed.trim() : label;
+    };
+    const tLoves = () => st.result && Array.isArray(st.result.loves) && st.result.loves.length
+      ? st.result.loves.map((l, i) => ({ ...l, qloo_label: l.label, label: loveName(TYPED[i], l.label) }))
+      : loves.map((l, i) => ({ ...l, label: loveName(TYPED[i], l.label) }));
+    const tName = label => { const x = tLoves().find(l => l.qloo_label === label); return x ? x.label : label; };
     const cen = cc && CEN[cc.census];
     if (!src) await API.ping();   // a stored set never waits on the engine: it opens at once
 
@@ -198,7 +208,7 @@
       burned: [], struck: new Map(), slots: [], reserves: [], risen: new Map(), done: false, fake: false,
       mock: false, t0: Date.now(), firstServerEvent: false, order: [], fresh: !src,
     };
-    topbar({ city: cityName, loves: loves.map((l, i) => ({ ...l, label: l.label || TYPED[i] })) });
+    topbar({ city: cityName, loves: tLoves() });
     view.innerHTML = `<div class="res" id="res">
       <div class="maphead" id="maphead"></div>
       <div class="xstrip" id="xstrip"><button class="link" id="xall"></button></div>
@@ -484,7 +494,7 @@
 
     const cap1 = x => String(x).charAt(0).toUpperCase() + String(x).slice(1);
     // engine lines name a love by Qloo's entity name ("Maze Featuring Frankie Beverly"); people typed "Frankie Beverly & Maze"
-    const typedText = x => String(x);
+    const typedText = x => tLoves().reduce((t, l) => l.qloo_label && l.label && l.qloo_label !== l.label ? t.split(l.qloo_label).join(l.label) : t, String(x));
     const dareLabel = () => `Ask any AI yourself. Paste what it says: any of these ${liveIds().length} it names burns.`;
     // the card face: photo, name, "Neighbourhood · 6 mi · $$ · Open now", one line about it, what to order, the love.
     // Ranks, the because detail, the address and the maps live on the card's sheet.
