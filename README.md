@@ -128,7 +128,7 @@ Every gate is printed as measured, pass or fail, with its script. The bars were 
 | B · survivors | 7 cards + 3 reserves, no junk, in 8+ of 10 (NYC) and 6+ of 10 (STL) | `k3_survivors.py` | ⟦GATE_B⟧ | widen R; extra pool pages |
 | C · not a cap | overlap with a popularity cut of the same size ≤ 0.80 | `k3_survivors.py`, `run_query.py` | ⟦GATE_C⟧; by city below | none |
 | D · meter | with Qloo as a tool, 4+ fewer everyone-list picks than alone in 7+ of 10 sets | `k10_meter.py` | **FAIL**: alone a median 6.0 of 12 picks land on the other AIs' lists (the pre-registered grading list: census + wall 1); with Qloo as the tool 4.0; 4+ below alone in 5 of 10 sets. Final re-grade on the rebuilt walls | printed here, not featured |
-| E · fresh asks | median 1 or fewer of 7 cards named | `k5_fresh.py` | **PASS**: 1 of 140, median 0, on the frozen cards; the one hit is a false match (below) | none |
+| E · fresh asks | median 1 or fewer of 7 cards named | `k5_fresh.py` | **PASS**: 1 of 140 (on the frozen cards; k12's stricter check on today's cards finds 3), median 0; the one hit is a false match (below) | none |
 | F · speed | cards p50 20 s or less; first name 1 s or less | `k11_latency.py` | ⟦GATE_F⟧, through the Pages proxy on Render's free tier, at the freeze | none |
 
 - **Gate D's "with Qloo" tool** (`qloo_places`) ordered places by the first love's pool order, not a joint signal, and built its pool the older way at meter time (2 pages, no distance check; 101 places vs the engine's 183 for the same set). It still returned what the frozen protocol asks for, Qloo's top 50 with nothing crossed out, so D stands as measured and was not re-run. Meter protocol: `data/meter.protocol.md`.
@@ -196,7 +196,7 @@ Mostly name rules (exact, alias, brand containment: "Ippudo NY" strikes IPPUDO H
 
 **Not pre-registered.** Written before running (`harness/meter_unsaid.md`), graded by the unchanged `k10_meter.py` (`harness/runs/meter_unsaid_grade.txt`), never mixed with gate D. Same 10 St. Louis sets, same asks.
 
-- Per-set median on the everyone-list, of 12: alone 6.2 · with Qloo 3.2 · **with UNSAID 1.0**.
+- Per-set median on the everyone-list, of 12: alone 6.2 · with Qloo 3.2 (per-set medians; gate D pools runs) · **with UNSAID 1.0**.
 - Claude on its own put a median 6 of 12 picks on the list (20 runs). With the tool, it called it in 20 of 20 runs and put 0 of 12 on the list in every run.
 - ChatGPT didn't call the tool in 12 of its 20 runs (kept, intention to treat).
 - All 95 everyone-list picks in this arm were added by the agent; 0 came from the tool. The tool's own picks score 0 by construction, so the arm shows that the agent sticks to the tool, not that the tool avoids the list.
