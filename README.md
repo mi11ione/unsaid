@@ -12,7 +12,7 @@ On 40 public questions never used to build the list, the AIs named ⟦K12_PLAIN_
 
 ## Five minutes
 
-**1. The live demo.** Open ⟦LIVE_URL⟧ and tap **Frankie Beverly & Maze · The Original Kings of Comedy · rib tips**. Tap a card for its detail; tap ✕ to strike one you know and a reserve takes its place; paste any AI's answer and anything it names is already crossed out. Or type three things you love: cards in about ⟦P50⟧ seconds.
+**1. The live demo.** Open ⟦LIVE_URL⟧ and tap **Frankie Beverly & Maze · The Original Kings of Comedy · rib tips**. Tap a card for its detail; tap ✕ to strike one you know and a reserve takes its place; paste any AI's answer and anything it names is already crossed out. Or type three things you love. Cards arrive in about ⟦P50⟧ seconds.
 
 **2. From your agent, no Qloo key, one paste.** Add `https://unsaid-ang.pages.dev/mcp?token=<token>` as a custom connector in Claude (Settings → Connectors), or run the line below. The token is in the Devpost testing instructions (until 30 Oct 23:45 ET; after that, leave out `?token=…`).
 
