@@ -121,7 +121,7 @@ def main():
     ced = os.path.join(N.get("fresh_dir") or "", "stl_stl-cedric.json")
     gen = os.path.getmtime(ced) if os.path.exists(ced) else float("inf")      # the share card must post-date the regen
     if os.path.exists(SHARE) and os.path.getmtime(SHARE) > gen:
-        vals["IMG_SHARE"] = ("![Cedric's share card (upload this file)](%s)" % SHARE,
+        vals["IMG_SHARE"] = ("![UNSAID share card: Frankie Beverly & Maze · The Original Kings of Comedy · rib tips](%s)" % SHARE,
                              "media/render.sh share, rendered %s" % time.strftime(
                                  "%Y-%m-%d %H:%M", time.localtime(os.path.getmtime(SHARE))), "")
     else:
