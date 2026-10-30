@@ -2,7 +2,7 @@
    faint = absent, hints; red = only what the AIs said (and what got struck); amber = fix one input, or MOCK.
    Motion only for what is happening now: names landing, a strike drawing, a hold in progress. */
 :root {
-  --bg: #0b0b0b; --panel: #111110; --ink: #ecebe5; --white: #f2efe6; --dim: #8e8c85; --faint: #55534e;
+  --bg: #0b0b0b; --panel: #111110; --ink: #ecebe5; --white: #f2efe6; --dim: #8e8c85; --faint: #807e78;
   --rule: #24231f; --rule2: #34332e; --red: #ff2d3d; --amber: #e2a336;
   --mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
   --serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
@@ -480,3 +480,16 @@ details.dare .out { margin-bottom: 14px; }
 .doc .answer { background: var(--panel); border: 1px solid var(--rule2); padding: 14px 16px; font: 400 15px/1.55 var(--serif); color: #dcd9d0; white-space: pre-wrap; overflow-wrap: anywhere; max-width: 760px; }
 .doc .answer b { color: var(--white); font-weight: 600; }
 .receipt .ri { white-space: nowrap; }
+
+/* ---------- accessibility and layout stability (audit, 30 Oct) ---------- */
+main#view { min-height: 100svh; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.fld:focus-within { border-bottom-color: var(--ink); }
+.card .xbtn { width: 44px; height: 44px; }
+.foot a, .mark, .pchip, .cityopts button, .res .links .btn, .xstrip .link { min-height: 44px; display: inline-flex; align-items: center; }
+.foot a { padding: 0 4px; }
+.how .census { min-height: 260px; }
+@media (min-width: 600px) { .res .maphead { min-height: 410px; } }
+@media (max-width: 720px) {
+  .slug, .cap, .chip i, .foot, .maplegend, .logbody, .legal, .counter-cap, .card .tag, .slider .end, .need, .fld .n { font-size: 11px; }
+}

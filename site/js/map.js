@@ -135,7 +135,10 @@
       const done = lines.find(l => l.type === 'done');
       return done && done.result;
     }
-    const j = JSON.parse(t); return j.result || j;
+    const j = JSON.parse(t); const R = j.result || j;
+    // a deployed set keeps its wall in <set>.wall.json (deploy-site.sh); pages that draw it ask for it with withWall
+    if (!R.wall && arguments[1] && arguments[1].withWall) { try { const w = await (await fetch(url.replace(/\.json$/, '.wall.json'))).json(); R.wall = w.wall || w; } catch (e) { R.wall = []; } }
+    return R;
   }
 
   // the map's frame: the city's places plus any extra points (the seven can sit outside the city, e.g. North County).

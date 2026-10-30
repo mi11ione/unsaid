@@ -12,7 +12,7 @@
 <script>
 /* share.html[?src=<results>]: the same share image the site draws on its "share" sheet (site/js/share.js), for render.sh. */
 (async function () {
-  const R = await UM.result((UM.param('src', null) || await UM.firstOf(['data/live/query_stl-cedric.json', '../site/data/mock/stl-cedric.ndjson'])));
+  const R = await UM.result((UM.param('src', null) || await UM.firstOf(['data/live/query_stl-cedric.json', '../site/data/mock/stl-cedric.ndjson'])), { withWall: true });
   await document.fonts.ready;
   const TY = ((await UM.json('../site/data/try.json')).sets.find(x => x.id === 'stl-cedric') || {}).loves;   // loves as typed
   const CEN = await UM.json('../site/data/census.json').catch(() => null);   // the site's hero line (Share.hero)

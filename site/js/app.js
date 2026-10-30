@@ -50,9 +50,9 @@
 
   // ------------------------------------------------------------------ S1 · input
   const FIELDS = [
-    { ph: 'an artist you’d play loud', hint: 'artist' },
-    { ph: 'a film or show you can quote', hint: 'movie' },
-    { ph: 'something you’d order', hint: null },
+    { ph: 'an artist you’d play loud', hint: 'artist', aria: 'An artist you love' },
+    { ph: 'a film or show you can quote', hint: 'movie', aria: 'A film or show you love' },
+    { ph: 'something you’d order', hint: null, aria: 'Something you’d order' },
   ];
   const s1 = { loves: [null, null, null], city: null };
   // the two cities with collected AI answers (a city with none would have nothing to cross out): a choice, not a search
@@ -72,7 +72,7 @@
     view.innerHTML = `<div class="land"><section class="s1">
       ${heroBlock()}
       <div class="fields">
-        ${FIELDS.map((f, i) => `<div class="fld"><span class="n">0${i + 1}</span><input data-i="${i}" placeholder="${esc(f.ph)}" autocomplete="off" spellcheck="false"><div class="res" id="res${i}"></div></div>`).join('')}
+        ${FIELDS.map((f, i) => `<div class="fld"><span class="n">0${i + 1}</span><input data-i="${i}" placeholder="${esc(f.ph)}" aria-label="${esc(f.aria)}" autocomplete="off" spellcheck="false"><div class="res" id="res${i}"></div></div>`).join('')}
       </div>
       <div class="fields"><div class="fld"><span class="n">in</span><div class="cityopts" role="radiogroup" aria-label="city">${CITIES.map(c => `<button role="radio" aria-checked="false" data-c="${esc(c.slug)}">${esc(c.name)}</button>`).join('')}</div></div></div>
       <div class="go"><button class="btn solid" id="cross" disabled>Find my seven</button></div>
@@ -99,8 +99,9 @@
     const set = TRY.sets.find(s => s.id === 'stl-cedric');
     if (!$('#thumbs') || !set || !set.src || set.mock) return;
     try {
-      const R = await UM.result(set.src);
-      const ph = (R.picks || []).filter(c => httpUrl(c.image));
+      // the deployed live index carries each set's thumbnails (stage_site.py); only without them is the set file read
+      const li = LIVE && (LIVE.sets || []).find(x => x.id === set.id);
+      const ph = (li && li.thumbs ? li.thumbs : ((await UM.result(set.src)).picks || [])).filter(c => httpUrl(c.image));
       if (ph.length < 4) return;
       $('#thumbs').innerHTML = `<a class="thead" href="#/r?set=stl-cedric"><span class="tl">${lovesLabel(set)}</span><span class="dim">seven in ${esc((CFG.cities[set.city] || {}).name || '')} →</span></a>
         <a class="trow" href="#/r?set=stl-cedric" aria-label="Open the seven for ${esc(set.loves.filter(Boolean).join(', '))}">${ph.map(c => `<figure><img src="${esc(c.image)}" alt="" loading="eager" onerror="this.parentNode.remove()" onload="if(this.naturalWidth<100)this.parentNode.remove()"><figcaption>${esc(UM.shortName(c.name, c.neighbourhood))}</figcaption></figure>`).join('')}</a>`;
@@ -214,12 +215,12 @@
     view.innerHTML = `<div class="res" id="res">
       <div class="maphead" id="maphead"></div>
       <div class="xstrip" id="xstrip"><button class="link" id="xall"></button></div>
-      <div class="status" id="status"><span class="live"></span><span id="stxt"></span></div>
+      <div class="status" id="status" aria-live="polite"><span class="live"></span><span id="stxt"></span></div>
       <div class="note" id="notes"></div>
       <section class="sec" id="s-left" hidden>
         <div id="leftbody"></div>
       </section>
-      <div class="burnline" id="burn"></div>
+      <div class="burnline" id="burn" aria-live="polite"></div>
     </div>`;
     $('#xall').addEventListener('click', wallSheet);
 
@@ -247,33 +248,48 @@
       const ak = (w.provider || '') + '|' + (w.phrasing_id || '') + '|' + (w.asked_at || '');
       if (st.wall.has(k)) {
         const o = st.wall.get(k); o.n = (o.n || 1) + 1; o.hits.set(ak, w);
-        if (o.lane !== 'live' && w.lane === 'live') { o.lane = 'live'; o.el.classList.add('live'); }
+        if (o.lane !== 'live' && w.lane === 'live') o.lane = 'live';
         return;
       }
-      const o = { ...w, key: k, n: 1, outcome: null, hits: new Map([[ak, w]]) };
-      o.el = el(fieldEl, 'span', null, `<button title="">${wn(w)}</button>`);
-      o.el.className = 'nm x' + (w.lane === 'live' ? ' live' : '');
-      o.el.querySelector('button').addEventListener('click', () => nameSheet(o));
+      const o = { ...w, key: k, n: 1, outcome: null, hits: new Map([[ak, w]]), el: null };   // its DOM node is made only in the list sheet
       st.wall.set(k, o);
     }
     function setOutcome(k, outcome, reason, qid) {
       const o = st.wall.get(k); if (!o) return;
       o.outcome = outcome; o.reason = reason; o.qloo_id = qid ?? o.qloo_id;
-      // every name the AIs gave is crossed out; the ones that were in this person's Qloo pool (and so cost a card) stand out
-      o.el.classList.toggle('inpool', outcome === 'struck');
     }
     // most-named first: the first names on the list are the ones every AI gives everyone
     function sortField() {
       const items = [...st.wall.values()].sort((a, b) => b.hits.size - a.hits.size || String(a.name).localeCompare(String(b.name)));
-      items.forEach(o => fieldEl.appendChild(o.el));
+      fieldEl.innerHTML = '';
+      const frag = document.createDocumentFragment();
+      items.forEach(o => {
+        if (!o.el) {
+          o.el = document.createElement('span'); o.el.innerHTML = `<button title="">${wn(o)}</button>`;
+          o.el.querySelector('button').addEventListener('click', () => nameSheet(o));
+        }
+        o.el.className = 'nm x' + (o.lane === 'live' ? ' live' : '') + (o.outcome === 'struck' ? ' inpool' : '');
+        frag.appendChild(o.el);
+      });
+      fieldEl.appendChild(frag);
+    }
+    // the wall of a stored set lives in its own file (<set>.wall.json): fetched once, when the list, the paste box or
+    // the share sheet needs it; then it fills st.wall exactly as a streamed result would
+    let wallP = null;
+    function ensureWall() {
+      const R = st.result; if (!R) return Promise.resolve();
+      if (st.mock) return Promise.resolve();
+      if (!wallP) wallP = (Array.isArray(R.wall) ? Promise.resolve(R.wall) : R.wall_src ? fetch(R.wall_src).then(r => r.json()).then(j => j.wall || j).catch(() => []) : Promise.resolve([]))
+        .then(W => { R.wall = W; st.wall.clear(); st.asks.clear(); W.forEach(w => { addName(w); setOutcome(wk(w), w.outcome, w.reason, w.qloo_id); }); });
+      return wallP;
     }
 
     // the dated city wall streams from static data first (within 1 s), whatever the engine is doing
-    if (cc && cc.wall) {
+    if (cc && cc.wall && !src) {
       UM.json(cc.wall).then(W => {
         const names = W.answers.flatMap(a => a.names.map(n => ({ name: n, provider: a.provider, model: a.model, phrasing_id: a.phrasing_id, phrasing: a.phrasing, asked_at: a.asked_at, lane: a.lane })));
         // dated names are not happening now: they appear at once, without a landing animation
-        if (!st.reconciled) { names.forEach(addName); sortField(); counter(); status(); }
+        if (!st.reconciled) { names.forEach(addName); counter(); status(); }
       }).catch(() => {});
     }
 
@@ -291,7 +307,8 @@
         : (K ? `Half of what ${esc(CEN.provider)} recommends here is the same ${K} places. ` : '') + `All ${W.toLocaleString('en-US')} places the AIs named, crossed out →`;
     }
     // the full list, in a sheet: every place the AIs named, crossed out
-    function wallSheet() {
+    async function wallSheet() {
+      await ensureWall();
       const W = st.result ? Share.wallCount(st.result) : null, K = st.result && st.result.counts;
       openSheet(`<div class="cap">${esc(cityName)}</div><h1>${W != null ? W.toLocaleString('en-US') + ' ' : ''}places the AIs named</h1>
         <p class="dim">${K && K.asks ? `In ${K.asks} asks. ` : ''}Good places, all crossed out. Most-named first; tap one to see who named it.</p><div class="wallbox"></div>`);
@@ -401,7 +418,8 @@
           burnLine(); mapDraw(); provisional(); break;
         case 'done': finish(e.result); break;
       }
-      counter(); status();
+      if (e.type === 'wall_name' || e.type === 'strike' || e.type === 'calls') { if (!st.raf) st.raf = requestAnimationFrame(() => { st.raf = 0; counter(); status(); }); }
+      else { counter(); status(); }
     }
     // a fresh run: each card shows as it arrives (Qloo has ranked; the street and live AI checks still run). The result
     // replaces this list; a card an AI names meanwhile leaves it and the next one rises.
@@ -418,12 +436,10 @@
       st.result = R; st.done = true;
       if ((R.flags || []).includes('fake')) st.fake = true;
       st.R_mi = R.counts && R.counts.R_mi;
-      if (Array.isArray(R.wall) && !st.mock) {
-        // the static dated wall streamed first; the result's wall is what was actually crossed out, so it replaces it
-        fieldEl.innerHTML = ''; st.wall.clear(); st.asks.clear(); st.reconciled = true;
-        R.wall.forEach(w => { addName(w); setOutcome(wk(w), w.outcome, w.reason, w.qloo_id); });
-      } else (R.wall || []).forEach(w => { if (!st.wall.has(wk(w))) addName(w); setOutcome(wk(w), w.outcome, w.reason, w.qloo_id); });
-      sortField();
+      // the result's wall (inline for a fresh run, or <set>.wall.json for a stored set) replaces the dated preview only
+      // when something needs it (ensureWall: the list sheet, the paste box, the share sheet)
+      st.reconciled = true;
+      if (st.mock) (R.wall || []).forEach(w => { if (!st.wall.has(wk(w))) addName(w); setOutcome(wk(w), w.outcome, w.reason, w.qloo_id); });
       [...(R.picks || []), ...(R.reserves || []), ...(R.known || [])].forEach(c => { st.cards.set(c.id, c); if (!st.order.includes(c.id)) st.order.push(c.id); });
       (R.burn && R.burn.burned || []).forEach(b => { if (!st.burned.find(x => x.card_id === b.card_id)) st.burned.push({ ...b, seen: hhmm() }); if (b.replaced_by) st.risen.set(b.replaced_by, 'rose in its place'); });
       st.slots = (R.picks || []).map(c => c.id);
@@ -480,7 +496,7 @@
       body.innerHTML = `<div class="leadhere">${lead}</div>` + `<div class="cards" id="cards"></div>
         <details class="dare" id="darebox"><summary>Ask your AI. Paste its answer here →</summary>
           <div class="copyrow"><button class="link" id="copyask">copy an ask</button><span class="dim" id="askq">“hidden gems to eat and drink in ${esc(cityName)}”</span></div>
-          <textarea id="dare" placeholder="paste an answer here" spellcheck="false" aria-label="${esc(dareLabel())}"></textarea><div class="out" id="dareout"></div></details>
+          <textarea id="dare" placeholder="paste an answer here" spellcheck="false" aria-label="${esc(dareLabel())}"></textarea><div class="out" id="dareout" aria-live="polite"></div></details>
         <div class="links"><button class="btn" id="lnk-share">Share</button></div>`;
       drawCards();
       $('#cards').after($('#burn'));          // the burn line sits after the seven, never before cards not yet seen
@@ -491,7 +507,8 @@
       });
       $('#lnk-share').addEventListener('click', shareSheet);
       let t = null;
-      $('#dare').addEventListener('input', e => { clearTimeout(t); t = setTimeout(() => dare(e.target.value), 250); });
+      $('#dare').addEventListener('input', e => { clearTimeout(t); const v = e.target.value; t = setTimeout(() => ensureWall().then(() => dare(v)), 250); });
+      $('#darebox').addEventListener('toggle', () => ensureWall(), { once: true });
     }
 
     const cap1 = x => String(x).charAt(0).toUpperCase() + String(x).slice(1);
@@ -504,7 +521,7 @@
       const fb = `<span class="fb">${esc(c.what || '')}</span>`;
       // Qloo serves the same photo wider ("-420x-auto" -> "-800x-auto"): the browser picks by the card's width
       const big = /-420x-auto\.jpg$/.test(c.image || '') ? c.image.replace(/-420x-auto\.jpg$/, '-800x-auto.jpg') : null;
-      const set = big ? ` srcset="${esc(c.image)} 420w, ${esc(big)} 800w" sizes="(max-width: 720px) 100vw, 420px"` : '';
+      const set = big ? ` srcset="${esc(c.image)} 420w, ${esc(big)} 800w" sizes="(max-width: 720px) calc(100vw - 34px), 420px"` : '';
       return `<div class="pic${httpUrl(c.image) ? '' : ' none'}">${httpUrl(c.image) ? `<img src="${esc(c.image)}"${set} alt="" ${i < 3 ? 'fetchpriority="high"' : 'loading="lazy"'} onerror="this.parentNode.classList.add('none');this.remove()" onload="if(this.naturalWidth<100){this.parentNode.classList.add('none');this.remove()}">` : ''}${fb}` +
         `<span class="no">${String(i + 1).padStart(2, '0')}</span>${x || ''}</div>`;
     }
@@ -823,7 +840,9 @@
           ${c.address ? `<p>${esc(c.address)}${hours(c) ? `<br><span class="dim">${hours(c) === 'closed' ? 'Closed today' : `Today ${esc(hours(c))}`}</span>` : ''}</p>` : ''}
           ${c.open === false ? '<p class="red">Qloo marks it closed.</p>' : ''}
           <div class="links">${mapsLinks(c).replace(/<a /g, '<a class="btn solid" ').replace(/<\/a>/g, ' ↗</a>')}${httpUrl(c.url) ? `<a class="btn" href="${esc(c.url)}" target="_blank" rel="noopener">Website ↗</a>` : ''}</div></div>
-        <details class="log"><summary>Raw log</summary><div class="logbody">${rawLog(c)}</div></details>`);
+        <details class="log" id="rawlog"><summary>Raw log</summary><div class="logbody"></div></details>`);
+      // the raw log needs every ask behind the wall: filled when opened (the wall file loads then, once)
+      $('#rawlog').addEventListener('toggle', e => { if (e.target.open) ensureWall().then(() => { e.target.querySelector('.logbody').innerHTML = rawLog(c); }); });
     }
     function rawLog(c) {
       const R = st.result, D = R.diag || {}, U = c.U ?? (R.counts && R.counts.U);
@@ -865,7 +884,8 @@
     }
 
     // ---- share
-    function shareSheet() {
+    async function shareSheet() {
+      await ensureWall();
       const link = set ? `${location.origin}${location.pathname}#/r?set=${encodeURIComponent(set.id)}` : shareUrl();
       const W = Share.wallCount(st.result) ?? st.wall.size, N = liveIds().length;
       const text = `The AIs named ${W} places. None named these ${N}.`;

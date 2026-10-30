@@ -68,7 +68,9 @@
         if (stopped) return;
         const R = j.result || j;
         if (Array.isArray(j.loves)) R.typed = j.loves.map(l => l.text || null);   // the loves as typed for this set
-        (R.wall || []).forEach(w => onEvent({ type: 'wall_name', ...w }));
+        // the stored wall is not replayed name by name (8k events froze the page); the result carries it, or its
+        // <set>.wall.json is fetched when the visitor opens the list, pastes an answer or shares
+        R.wall_src = R.wall ? null : file.replace(/\.json$/, '.wall.json');
         onEvent({ type: 'done', result: R });
         onEnd && onEnd();
       }).catch(e => onEvent({ type: 'status', state: 'degraded', text: null, error: String(e) }));

@@ -51,4 +51,8 @@ done
 [[ $bad == 0 ]] || { echo "not deployed: placeholders would reach visitors"; exit 1; }
 echo "placeholder check: ok"
 [[ -n $CHECK_ONLY ]] && exit 0
-cd site && npx -y wrangler@3 pages deploy . --project-name unsaid --branch main --commit-dirty=true
+# upload a staged copy: each set's wall in its own file, thumbnails in the live index (media/tools/stage_site.py)
+STAGE=$(mktemp -d "${TMPDIR:-/tmp}/unsaid-site.XXXXXX")
+rsync -a --copy-links --exclude '.DS_Store' site/ "$STAGE/"
+python3 -I media/tools/stage_site.py "$STAGE"
+cd "$STAGE" && npx -y wrangler@3 pages deploy . --project-name unsaid --branch main --commit-dirty=true
