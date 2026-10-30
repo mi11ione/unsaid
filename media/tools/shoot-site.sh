@@ -13,7 +13,7 @@ B="http://127.0.0.1:$PORT"
 # a fixed wait: every stored set and ?speed=8 mock settles within ~2 s (polling inside the CDP evaluate can stall)
 DONE='new Promise(r=>setTimeout(r,4000))'
 AT() { echo "new Promise(r=>setTimeout(r,$1))"; }
-shot() { node tools/cdp.mjs shot "$@" >/dev/null && echo "$2"; }
+shot() { { node tools/cdp.mjs shot "$@" >/dev/null || { sleep 2; node tools/cdp.mjs shot "$@" >/dev/null; }; } && echo "$2"; }   # one retry: CDP sometimes loses the target
 FILL='(async()=>{const s=(q,v)=>{const i=document.querySelector(q);if(!i)return;i.focus();i.value=v;i.dispatchEvent(new Event("input"));i.dispatchEvent(new Event("blur"));};
  s("input[data-i=\"0\"]","Frankie Beverly & Maze");s("input[data-i=\"1\"]","Original Kings of Comedy");s("input[data-i=\"2\"]","rib tips");s("#city","Richmond");
  await new Promise(r=>setTimeout(r,600));})()'
