@@ -520,12 +520,13 @@
         ? `<p class="empty">Only ${n} places in ${esc(cityName)} fit you that no AI names. Here they are.</p>`
         : `<h2 class="lead2"><span class="n">${n}</span> for you</h2><p class="leadsub">All rated ${CFG.floor.rating}+. No AI named any of them${R.counts && R.counts.asks != null ? ` in ${R.counts.asks.toLocaleString('en-US')} asks` : ''}.</p>`;
       // desktop: "7 for you" sits beside the map, so the cards start above the fold; phone: above the cards
-      st.lead = R.status === 'empty_few' ? null : lead; mapDraw();
-      body.innerHTML = `<div class="leadhere">${lead}</div>` + `<div class="cards" id="cards"></div>
+      // Share sits in the lead block, under its one line (the map's copy of the lead has the same button, without the id)
+      const share = id => `<div class="leadgo"><button class="btn solid lnk-share"${id ? ' id="lnk-share"' : ''}>Share</button></div>`;
+      st.lead = R.status === 'empty_few' ? null : lead + share(false); mapDraw();
+      body.innerHTML = `<div class="leadhere">${lead}${share(true)}</div>` + `<div class="cards" id="cards"></div>
         <details class="dare" id="darebox"><summary>Ask your AI. Paste its answer here →</summary>
           <div class="copyrow"><button class="link" id="copyask">copy an ask</button><span class="dim" id="askq">“hidden gems to eat and drink in ${esc(cityName)}”</span></div>
-          <textarea id="dare" placeholder="paste an answer here" spellcheck="false" aria-label="${esc(dareLabel())}"></textarea><div class="out" id="dareout" aria-live="polite"></div></details>
-        <div class="links"><button class="btn" id="lnk-share">Share</button></div>`;
+          <textarea id="dare" placeholder="paste an answer here" spellcheck="false" aria-label="${esc(dareLabel())}"></textarea><div class="out" id="dareout" aria-live="polite"></div></details>`;
       drawCards();
       $('#cards').after($('#burn'));          // the burn line sits after the seven, never before cards not yet seen
       $('#copyask').addEventListener('click', () => {
@@ -533,7 +534,7 @@
         (navigator.clipboard ? navigator.clipboard.writeText(q) : Promise.reject()).then(() => { b.textContent = 'copied'; }, () => { b.textContent = 'select the line to copy'; });
         setTimeout(() => { b.textContent = 'copy an ask'; }, 1600);
       });
-      $('#lnk-share').addEventListener('click', shareSheet);
+      if (!st.shareOn) { st.shareOn = true; $('#res').addEventListener('click', e => { if (e.target.closest('.lnk-share')) shareSheet(); }); }
       let t = null;
       $('#dare').addEventListener('input', e => { clearTimeout(t); const v = e.target.value; t = setTimeout(() => ensureWall().then(() => dare(v)), 250); });
       $('#darebox').addEventListener('toggle', () => ensureWall(), { once: true });
@@ -850,15 +851,13 @@
       const order = Array.isArray(c.order) ? c.order.filter(Boolean) : c.order ? [c.order] : [];
       openSheet(`
         ${httpUrl(c.image) ? `<img class="placeimg" src="${esc(c.image)}" alt="" loading="lazy" onerror="this.remove()" onload="if(this.naturalWidth<100)this.remove()">` : ''}
-        <div class="cap">${esc(cityName)} · card ${cardNo(id)}</div>
         <h1>${head}</h1>
+        ${reasonLine(c, true) ? `<p class="sbecause">${esc(reasonLine(c, true))}</p>${c.because_detail ? `<p class="dim">${esc(cap1(typedText(c.because_detail)))}.</p>` : ''}` : ''}
         <p class="sheetsub">${metaLine(c)}</p>
         ${c.blurb_long || c.description || c.blurb ? `<p class="lede">${esc(c.blurb_long || c.description || c.blurb)}</p>` : ''}
         ${c.what ? `<p class="dim">${esc(c.what)}</p>` : ''}
         ${order.length ? `<p>Order: ${order.map(dish).map(esc).join(', ')}</p>` : ''}
         ${st3 ? `<div class="red">${esc(st3.text)}</div>` : ''}
-        ${reasonLine(c, true) ? `<div class="blk">
-          <div class="big1">${esc(reasonLine(c, true))}.</div>${c.because_detail ? `<p>${esc(cap1(typedText(c.because_detail)))}.</p>` : ''}</div>` : ''}
         <div class="blk"><div class="sh"><h2>Fits you</h2></div>
           <p>${esc(fitLine(c))}</p></div>
         <div class="blk"><div class="sh"><h2>Go</h2></div>
@@ -967,24 +966,22 @@
       box.innerHTML = '';
       const W = box.clientWidth, phone = W < 600;
       const resEl = document.getElementById('res');
-      if (phone) {
-        // phone: no map and no hero; the link to everything the AIs named, then "7 for you"
-        box.style.height = '0'; if (resEl) resEl.classList.remove('leadmap');
-        return;
+      // desktop: "7 for you" and its one line sit beside the map, so the cards start above the fold; phone: the map runs
+      // full width above them (the red has to be seen on a phone too), and "7 for you" follows under the list link
+      if (!phone) {
+        const story = el(box, 'div', `position:absolute;left:${Math.round(W * .58)}px;top:${Math.round(440 / 2)}px;transform:translateY(-50%);width:${Math.round(W * .42)}px`);
+        story.className = 'maplead';
+        story.innerHTML = st.lead || '';
       }
-      // desktop: "7 for you" and its one line sit beside the map, so the cards start above the fold
-      const story = el(box, 'div', `position:absolute;left:${Math.round(W * .58)}px;top:50%;transform:translateY(-50%);width:${Math.round(W * .42)}px`);
-      story.className = 'maplead';
-      story.innerHTML = st.lead || '';
-      if (resEl) resEl.classList.toggle('leadmap', !!st.lead);
-      const H = 440, mw = W * .56;
+      if (resEl) resEl.classList.toggle('leadmap', !phone && !!st.lead);
+      const H = phone ? 280 : 440, mw = phone ? W : W * .56;
       const holder = el(box, 'div', `position:absolute;left:0;top:0;height:${H}px;width:${Math.round(mw)}px`);
       holder.className = 'mapfade';      // the dots fade out at the edges instead of stopping at a hard line
       box.style.height = H + 'px';
       const ctx = UM.canvas(holder, mw, H);
       // the frame takes in every card (the pool reaches past the city, e.g. North County) and the gem; a dot is never moved
       const cardsXY = [...st.cards.values()].filter(c => c.lat != null).concat(gemXY ? [gemXY] : []);
-      const P = UM.projection(UM.frame(M, cardsXY), { x: mw * .16, y: 10, w: mw * .8, h: H - 20 });
+      const P = UM.projection(UM.frame(M, cardsXY), phone ? { x: mw * .2, y: 8, w: mw * .78, h: H - 16 } : { x: mw * .16, y: 10, w: mw * .8, h: H - 20 });
       const ai = M.ai, cmax = Math.max(...ai.map(a => a.count)), dmax = 28;
       const dense = M.places.length > 3000;   // New York: ~20k dots, smaller and without the haze
       const paper = document.documentElement.dataset.ground === 'paper';   // on paper: plain dots, no haze
@@ -1019,7 +1016,7 @@
       const lg = el(box, 'div', `position:absolute;left:0;top:${H + 4}px;width:${W}px`,
         `<span><i class="k g"></i>places to eat and drink (OpenStreetMap)</span><span><i class="k r"></i>places the AIs named, by how often</span><span><i class="k w"></i>yours, numbered like the cards</span>`);
       lg.className = 'maplegend';
-      box.style.height = (H + 30) + 'px';
+      box.style.height = (H + 4 + lg.offsetHeight) + 'px';
     }
     draw();
     let raf = 0;
