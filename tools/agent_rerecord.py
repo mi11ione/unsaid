@@ -128,7 +128,7 @@ def record_claude(env):
     import re
     tr = " ".join(str(c.get("content")) for r in rows if r.get("type") == "user"
                   for c in (r.get("message") or {}).get("content") or [] if isinstance(c, dict) and c.get("type") == "tool_result")
-    m = re.search(r"in (\d+) answers", tr)
+    m = re.search(r'"answers":\s*(\d+)', tr) or re.search(r"in (\d+) answers", tr)   # the JSON result, else the text
     doc["wall_answers"] = int(m.group(1)) if m else None
     json.dump(doc, open(DEMO, "w"), indent=1, ensure_ascii=False)
     print("Claude run: %d turns, %.0f s, host %s -> %s" % (doc["turns"] or 0, time.time() - t0, h, DEMO))

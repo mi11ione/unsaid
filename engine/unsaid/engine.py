@@ -2289,6 +2289,16 @@ def popularity_cap(q, city, loves, U, struck_u, pop, pop_rank):
 
 
 # ---------------------------------------------------------------- the whole query
+def n_asks(*answer_lists):
+    """Distinct answers behind a result: the server's street check hands back stored street answers that are already
+    on the wall, so a plain sum counted them twice (954 live vs 942 precomputed for Cedric, 30 Oct)."""
+    seen = set()
+    for xs in answer_lists:
+        for a in xs or []:
+            seen.add(a.get("id") or (a.get("provider"), a.get("phrasing_id"), a.get("asked_at"), a.get("hood")))
+    return len(seen)
+
+
 def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=None, skeptic_fn=None,
         last_seen=None, live_answers=None, emit=None, strict=False, baseline=None, pages=None):
     """city_q: resolved city dict or text. loves_spec: [(text, hint)] or resolved love dicts.
@@ -2893,7 +2903,7 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
                 "url": prop(e, "website") or "", "holds": holds.get(i), "n_loves": n_live, "tied": is_tied,
                 "holds_without": holds_without.get(i), "_pool_urls": list(e.get("_pool_urls") or []),
                 "lift": round(lift[i], 4), "popularity": pop[i],
-                "never_said": {"asks": n_city + len(street_answers), "city_asks": n_city, "street_asks": n_street,
+                "never_said": {"asks": n_asks(all_answers, street_answers), "city_asks": n_city, "street_asks": n_street,
                                "as_of": as_of}}
 
     for i in sorted(picks, key=lambda i: (fit[i], i)):     # candidates light, in for-you order
@@ -3062,7 +3072,7 @@ def run(q, city_q, loves_spec, wall, region=None, use_search=True, street_check=
     res["flags"] = flags
     n_city = len(all_answers)
     as_of = max([a.get("asked_at") or "" for a in all_answers] or [""]) or None
-    res["counts"].update({"wall": n_places, "named_food_count": n_food, "asks": n_city + len(street_answers), "S": len(S),
+    res["counts"].update({"wall": n_places, "named_food_count": n_food, "asks": n_asks(all_answers, street_answers), "S": len(S),
                           "struck_in_U": len(struck_u)})
     res["diag"].update({
         "N": N, "S": len(S), "kept": len(eligible), "flat": flat, "all_dead": all_dead, "thin_taste": thin,
