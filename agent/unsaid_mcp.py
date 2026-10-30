@@ -285,16 +285,20 @@ def _love_name(l):
     return t if any(ch.isupper() for ch in t) else q
 
 
+def _unverified_dishes(c, loves):
+    """Dish loves the place's own text doesn't name: Qloo's link to rib tips is not rib tips on the menu, so they
+    never count toward "fits all" (the site's rule)."""
+    text = " ".join([" ".join(c.get("order") or []), c.get("line") or "", c.get("blurb") or "", c.get("what") or ""]).lower()
+    return sum(1 for l in loves if l.get("kind") == "tag" and l.get("resolved")
+               and not all(w in text for w in re.findall(r"[a-z]{3,}", _love_name(l).lower())))
+
+
 def reason(c, loves):
     """The site's reason rule: holds for every live love -> "fits all three of your loves" ("both"); a dish or tag
     love credits it -> "because you love <dish>"; holds >= 2 (or a single live love) -> "because you love <love>";
     holds 1 with an entity credit -> no reason (None)."""
     holds, nl, b = c.get("holds"), c.get("n_loves") or 0, c.get("because")
-    # a dish love counts toward "all" only when the place's own text names the dish (Qloo's link is not the menu)
-    text = " ".join([" ".join(c.get("order") or []), c.get("line") or "", c.get("blurb") or "", c.get("what") or ""]).lower()
-    dishes_hold = all(all(w in text for w in re.findall(r"[a-z]{3,}", _love_name(l).lower()))
-                      for l in loves if l.get("kind") == "tag" and l.get("resolved"))
-    if holds is not None and nl >= 2 and holds == nl and dishes_hold:
+    if holds is not None and nl >= 2 and holds == nl and not _unverified_dishes(c, loves):
         return "fits %s of your loves" % NUM_WORD.get(nl, "all %d" % nl)
     if not b:
         return None
@@ -314,9 +318,12 @@ def _pick(c, loves=()):
         "address": c.get("address") or None, "url": c.get("url") or None,
         "what": [t for t in (c.get("what") or "").split(" · ") if t], "rating": c.get("rating"),
         "open": c.get("open"), "for_you": fy, "for_anyone": fa, "of": n,
-        "ranks": ("#%d for you · #%d for anyone" % (fy, fa)) if fa is not None else "#%d for you" % fy,
+        # the seven are ordered by lift (fits you over everyone), not by raw fit, so the text gives popularity only:
+        # "#3 for you" on the first pick read as a contradiction
+        "ranks": ("#%d of %d by popularity" % (fa, n)) if fa is not None else "",
         "lift_pts": int(round(100 * lift)) if isinstance(lift, (int, float)) else None,
-        "holds": ("%d of %d" % (holds, nl)) if holds is not None else "n/a (1 love)",
+        "holds": ("%d of %d" % (holds - (_unverified_dishes(c, loves) if holds == nl else 0), nl))
+                 if holds is not None else "n/a (1 love)",
         "because": {"love": c.get("because"), "share": None, "source": "best per-love rank (C6')",
                     "detail": c.get("because_detail"),
                     "line": reason(c, loves)},
