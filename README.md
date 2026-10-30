@@ -8,7 +8,6 @@ On 40 public questions never used to build the list, the AIs named ⟦K12_PLAIN_
 
 **Live:** ⟦LIVE_URL⟧ · **Agents:** [MCP](#mcp) · **License:** MIT ([LICENSE](LICENSE)); map data © OpenStreetMap contributors, ODbL 1.0.
 
-<!-- ⟦X⟧ = a number the 30 Oct 12:00 ET freeze fills, from the script named beside it. None ships. -->
 
 ## Five minutes
 
