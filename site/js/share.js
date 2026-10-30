@@ -150,7 +150,8 @@
       else { ctx.fillStyle = C.faint; ctx.fillText('–', rx + 44, yy + 2); }
       ls('0px');
       ctx.font = `400 16px ${MONO}`; ctx.fillStyle = C.dim;
-      const what = c.what == null ? '' : c.what;
+      // what to order reads like a critic; the category tags only when Qloo lists no dishes
+      const what = c.order && c.order.length ? c.order.slice(0, 2).join(', ') : c.what == null ? '' : c.what;
       const ar = window.UM && UM.area ? UM.area(c, R.city && R.city.slug) : c.neighbourhood;   // the same area as the site's card
       ctx.fillText(wrap(ctx, what + (ar ? ' · ' + ar : ''), rw - 44)[0], rx + 44, yy + 32);
     });

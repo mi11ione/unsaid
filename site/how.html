@@ -20,19 +20,18 @@
     <ol class="steps">
       <li><b>We asked the AIs.</b> ChatGPT, Claude and Gemini, the questions people ask about a city: hidden gems, date nights, where locals go. Every answer is stored with its model and date.</li>
       <li><b>We crossed out every place they named.</b> Famous or tiny, if an AI named it, it’s out.</li>
-      <li><b>Qloo ranks the rest for your loves.</b> Three things you love, an artist, a film, a dish, become Qloo taste signals; Qloo scores every place left for each of them.</li>
-      <li><b>We keep what fits you, not everyone.</b> The seven are the places that fit you much more than they fit most people’s taste, or than their popularity alone would say. Rated <span id="floor">4.3</span>+, nearby. No place can pay to be picked.</li>
+      <li><b>Qloo ranks the rest for your loves.</b> Qloo scores every place left for each of your three loves: an artist, a film, a dish.</li>
+      <li><b>We keep what fits you, not everyone.</b> The seven fit you far better than they fit everyone else. Rated <span id="floor">4.3</span>+, nearby. No place can pay to be picked.</li>
     </ol>
 
-    <h2>Is it just obscure places?</h2>
+    <h2>Questions it never saw</h2>
     <div id="table"></div>
     <p id="overlap"></p>
 
     <h2 id="privacy">Privacy</h2>
     <p>Your three loves go to Qloo, and to Gemini’s free tier for one live AI check (Google may use free-tier prompts to improve its products). Don’t type anything personal.</p>
 
-    <h2>Every number</h2>
-    <p>The checks we set before looking, with every call and every answer: <a class="link" href="https://github.com/mi11ione/unsaid#gates">the gates in the repo →</a></p>
+    <p><a class="link" href="https://github.com/mi11ione/unsaid#gates">Every number, in the repo →</a></p>
     <p><a class="link" href="agents">Use it from your AI agent →</a></p>
   </main>
   <footer class="foot"><a class="link" href="./">UNSAID</a><span>ranked by Qloo</span></footer>
@@ -65,10 +64,9 @@
       `<p>We held back questions the list was never built from, then counted how many cards they name. Over our ${WE.sets} preset taste sets (${A.unsaid ? A.unsaid.cards : ''} cards each way):</p>
        <table class="k12"><thead><tr><th>Seven chosen by…</th><th>named by held-out questions</th><th>fits you</th></tr></thead><tbody>
        ${row('Qloo’s plain taste order', A.plain)}${row('UNSAID', A.unsaid, true)}${row('seven random places that survive the list', A.random)}</tbody></table>
-       <p class="dim">“Fits you” is the median card’s fit percentile for that taste (100 = fits best). Random survivors are named about as rarely, but fit far worse: UNSAID keeps most of the fit${A.unsaid && A.random && A.unsaid.fit_med != null && A.random.fit_med != null ? ` (${ord(A.unsaid.fit_med)} percentile, against ${ord(A.random.fit_med)} for random places)` : ''} and drops what the AIs say.</p>`;
+       <p class="dim">“Fits you” is the median card’s fit percentile for that taste (100 = fits best).</p>`;
   }
   // similar tastes share places; the counts are in the repo (data/overlap.json via build_overlap.py)
-  if (OV) document.getElementById('overlap').textContent = 'Different tastes get different places.';
   window.__ready = true;
 })();
 </script>

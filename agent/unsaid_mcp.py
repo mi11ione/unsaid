@@ -290,7 +290,11 @@ def reason(c, loves):
     love credits it -> "because you love <dish>"; holds >= 2 (or a single live love) -> "because you love <love>";
     holds 1 with an entity credit -> no reason (None)."""
     holds, nl, b = c.get("holds"), c.get("n_loves") or 0, c.get("because")
-    if holds is not None and nl >= 2 and holds == nl:
+    # a dish love counts toward "all" only when the place's own text names the dish (Qloo's link is not the menu)
+    text = " ".join([" ".join(c.get("order") or []), c.get("line") or "", c.get("blurb") or "", c.get("what") or ""]).lower()
+    dishes_hold = all(all(w in text for w in re.findall(r"[a-z]{3,}", _love_name(l).lower()))
+                      for l in loves if l.get("kind") == "tag" and l.get("resolved"))
+    if holds is not None and nl >= 2 and holds == nl and dishes_hold:
         return "fits %s of your loves" % NUM_WORD.get(nl, "all %d" % nl)
     if not b:
         return None

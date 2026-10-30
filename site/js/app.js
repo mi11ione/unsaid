@@ -563,7 +563,13 @@
     // always names them. A dish love by name; another love only when the place holds for at least two; otherwise none.
     function loveOf(label) { return ((st.result && st.result.loves) || []).find(l => l.label === label) || null; }
     const liveLoves = () => tLoves().filter(l => !l.dead).map(l => l.label).filter(Boolean);
-    const fitsAll = c => c && c.n_loves >= 2 && c.holds != null && c.holds >= c.n_loves && liveLoves().length >= 2;
+    // a dish love counts toward "all" only when the place's own text names the dish: Qloo's link to rib tips is not rib tips
+    // on the menu, and a reason that names a dish the card's own Order line lacks reads as false
+    const inText = (c, label) => { const t = [(c.order || []).join(' '), c.line, c.blurb, c.what].filter(Boolean).join(' ').toLowerCase();
+      return (String(label).toLowerCase().match(/[a-z]{3,}/g) || []).every(w => t.includes(w)); };
+    const dishesHold = c => tLoves().filter(l => !l.dead && l.label).every(l => { const q = loveOf(l.qloo_label || l.label);
+      return !(q && (q.kind === 'tag' || /^urn:tag/.test(q.type || ''))) || inText(c, l.label); });
+    const fitsAll = c => c && c.n_loves >= 2 && c.holds != null && c.holds >= c.n_loves && liveLoves().length >= 2 && dishesHold(c);
     // the card that names them: the first one, not struck, that fits every love, in the order on screen
     const namerOf = ids => ids.find(id => !st.struck.has(id) && fitsAll(st.cards.get(id))) || null;
     function reasonLine(c, full) {
@@ -817,8 +823,8 @@
     // ---- S3 · card back
     // the sheet's one fit line: "Fits you better than 28 of the 30 places more popular than it. No AI named it in 888 asks."
     // the sheet's one fit line states the taste signal without ever reading as mediocre:
-    // top quarter -> "#13 of 77 for your taste · last of 77 by popularity."; otherwise the "fits you better than N of
-    // the M more popular" line, or the popularity rank alone. Then the AI count.
+    // top quarter -> "#13 of 77 for your taste · last of 77 by popularity."; otherwise no rank (one format, never a
+    // middling one). Then the AI count.
     function fitLine(c) {
       const R = st.result || {}, n = R.counts && R.counts.asks;
       const U = c.U ?? (R.counts && R.counts.U), f = c.tied ? null : c.fit_rank, a = c.any_rank;
@@ -826,8 +832,7 @@
       const m = String(c.why || '').match(/fits you better than (\d+|all) (?:of )?(?:the )?(\d+)? ?more popular places?/i);
       const better = m ? (m[1] === 'all' ? `Fits you better than all ${m[2]} places more popular than it.` : `Fits you better than ${m[1]} of the ${m[2]} places more popular than it.`)
         : /one more popular place/i.test(c.why || '') ? 'Fits you better than the one place more popular than it.' : null;
-      const fit = f != null && U != null && f <= U / 4 ? [`#${f} of ${U} for your taste`, pop].filter(Boolean).join(' · ') + '.'
-        : better || (pop ? cap1(pop) + '.' : '');
+      const fit = f != null && U != null && f <= U / 4 ? [`#${f} of ${U} for your taste`, pop].filter(Boolean).join(' · ') + '.' : '';
       return [fit, `No AI named it${n != null ? ` in ${n.toLocaleString('en-US')} asks` : ''}.`].filter(Boolean).join(' ');
     }
     function cardSheet(id) {
