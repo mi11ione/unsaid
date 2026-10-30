@@ -42,6 +42,7 @@
   const { esc } = UM;
   const [CEN, WE, OV, CFG] = await Promise.all(['data/census.json', 'data/wall_effect.json', 'data/overlap.json', 'data/config.json']
     .map(u => UM.json(u).catch(() => null)));
+  const ord = n => { const t = n % 100, u = n % 10; return n + (t >= 11 && t <= 13 ? 'th' : u === 1 ? 'st' : u === 2 ? 'nd' : u === 3 ? 'rd' : 'th'); };
   const fmt1 = x => Number.isInteger(+x) ? String(+x) : (+x).toFixed(1);
   if (CFG && CFG.floor) document.getElementById('floor').textContent = CFG.floor.rating;
   // the census (census.json only): the gem both AIs give, and how concentrated Claude's answers are
@@ -51,9 +52,8 @@
     document.getElementById('census').innerHTML =
       `<p class="big">AI sends everyone to <span class="gx">${esc(M.name)}</span>.</p>
        <p class="receipt">${esc(Share.hero(CEN, 'stl').receipt)}</p>
-       <p>We asked each AI for a hidden gem in ${esc(S.city)}, ${M.of} different ways. ` +
-      (S.said && S.k50 && S.asks ? `Across ${S.asks.n} questions about ${esc(S.city)}, ${esc(CEN.provider)} named ${S.said.n} places, and half of its mentions went to just ${S.k50.n} of them.` : '') +
-      ` Everyone who asks gets the same short list.</p>`;
+       <p>We asked ${esc(CEN.provider)} and ${esc(CEN.chatgpt_provider)} for a hidden gem in ${esc(S.city)}, ${M.of} different ways. ` +
+      (S.said && S.k50 && S.asks ? `Across ${S.asks.n} questions about ${esc(S.city)}, ${esc(CEN.provider)} named ${S.said.n} places, and half of its mentions went to just ${S.k50.n} of them.` : '') + `</p>`;
   }
   // the k12 table (wall_effect.json arms, built from the k12 run the Devpost reads)
   const A = WE && WE.arms;
@@ -63,7 +63,7 @@
       `<p>We held back questions the list was never built from, then counted how many cards they name. Over our ${WE.sets} preset taste sets (${A.unsaid ? A.unsaid.cards : ''} cards each way):</p>
        <table class="k12"><thead><tr><th>Seven chosen by…</th><th>named by held-out questions</th><th>fits you</th></tr></thead><tbody>
        ${row('Qloo’s plain taste order', A.plain)}${row('UNSAID', A.unsaid, true)}${row('seven random places that survive the list', A.random)}</tbody></table>
-       <p class="dim">“Fits you” is the median card’s fit percentile for that taste (100 = fits best). Random survivors are named about as rarely, but fit far worse: UNSAID keeps the fit and drops what the AIs say.</p>`;
+       <p class="dim">“Fits you” is the median card’s fit percentile for that taste (100 = fits best). Random survivors are named about as rarely, but fit far worse: UNSAID keeps most of the fit${A.unsaid && A.random && A.unsaid.fit_med != null && A.random.fit_med != null ? ` (${ord(A.unsaid.fit_med)} percentile, against ${ord(A.random.fit_med)} for random places)` : ''} and drops what the AIs say.</p>`;
   }
   // similar tastes share places; the counts are in the repo (data/overlap.json via build_overlap.py)
   if (OV) document.getElementById('overlap').textContent = 'Different tastes get different places.';

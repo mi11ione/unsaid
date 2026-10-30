@@ -12,8 +12,8 @@
     "stl-nelly"
    ],
    "n": 4,
-   "min": 3,
-   "max": 4
+   "min": 2,
+   "max": 3
   },
   {
    "label": "indie",
@@ -30,7 +30,7 @@
  "other_median": 0,
  "other_max": 3,
  "other_max_pair": [
-  "stl-morganwallen",
+  "stl-jason",
   "stl-taylorswift"
  ]
 }
