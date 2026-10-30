@@ -9,7 +9,7 @@
 
 :root {
   --paper: #f4f3ee; --paper2: #ebe9e2; --ink: #0d0d0c; --grey: #5a5954; --mute: #6b6a64; --line: #d6d4cc; --line2: #bdbbb3;
-  --red: #e30613; --amber: #a35f00;
+  --red: #d70412; --amber: #a35f00;
   --sans: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   --mono: 'Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
   --ease: cubic-bezier(.2, .8, .2, 1);
@@ -86,7 +86,7 @@ code { font: 400 .88em/1 var(--mono); background: var(--paper2); padding: 2px 5p
 .fld:focus-within { border-bottom-color: var(--ink); }
 .fld .n { color: var(--mute); font-size: 11px; letter-spacing: .08em; padding-top: 12px; text-transform: uppercase; }
 .fld input { width: 100%; background: none; border: 0; outline: 0; font: 400 26px/1.35 var(--sans); letter-spacing: -.015em; padding: 2px 0; color: var(--ink); }
-.fld input::placeholder { color: #9b9992; }
+.fld input::placeholder { color: var(--mute); }
 .fld .res { grid-column: 2; min-height: 0; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font: 12px/1.4 var(--mono); }
 .fld .res:not(:empty) { margin-top: 6px; }
 .fld .res .t { color: var(--grey); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; }
@@ -196,7 +196,7 @@ code { font: 400 .88em/1 var(--mono); background: var(--paper2); padding: 2px 5p
 .card.struck .pic img { filter: grayscale(1); opacity: .35; }
 .card.struck .blurb, .card.struck .order, .card.struck .meta, .card.struck .because { color: var(--mute); }
 .card.flash { animation: flash 1.6s var(--ease) 1; }
-@keyframes flash { 0%, 30% { box-shadow: 0 0 0 10px rgba(227, 6, 19, .14); background: rgba(227, 6, 19, .14); } 100% { box-shadow: 0 0 0 10px transparent; } }
+@keyframes flash { 0%, 30% { box-shadow: 0 0 0 10px rgba(215, 4, 18, .14); background: rgba(215, 4, 18, .14); } 100% { box-shadow: 0 0 0 10px transparent; } }
 .cards.prov .card { cursor: default; }
 .known .card { cursor: default; }
 .known .card .name::after { transform: scaleX(1); background: var(--red); }

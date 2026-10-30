@@ -3,7 +3,7 @@
    the left, the seven with what each is on the right; footer "ranked by Qloo for what fits you · date" and the site's address.
    data: a result (CONTRACT.md) plus optional wallNames (struck names) and picks override. */
 (function () {
-  const C = { bg: '#f4f3ee', ink: '#0d0d0c', white: '#0d0d0c', dim: '#5a5954', faint: '#8a8882', red: '#e30613', amber: '#a35f00', rule: '#bdbbb3' };
+  const C = { bg: '#f4f3ee', ink: '#0d0d0c', white: '#0d0d0c', dim: '#5a5954', faint: '#8a8882', red: '#d70412', amber: '#a35f00', rule: '#bdbbb3' };
   const SANS = "Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif";
   const MONO = "'Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace";
   // the image is drawn with the site's own faces: loaded from site/fonts next to this script, then Share.ready resolves

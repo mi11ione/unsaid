@@ -7,7 +7,7 @@
   };
   // the site is printed on paper (<html data-ground="paper">): the seven in ink, the city in grey, red stays the AIs'
   const PAPER = typeof document !== 'undefined' && document.documentElement.dataset.ground === 'paper';
-  if (PAPER) Object.assign(C, { bg: '#f4f3ee', dot: '#b4b2aa', red: '#e30613', white: '#0d0d0c', ink: '#0d0d0c', dim: '#5a5954', faint: '#b4b2aa', amber: '#a35f00' });
+  if (PAPER) Object.assign(C, { bg: '#f4f3ee', dot: '#b4b2aa', red: '#d70412', white: '#0d0d0c', ink: '#0d0d0c', dim: '#5a5954', faint: '#b4b2aa', amber: '#a35f00' });
 
   function canvas(el, w, h) {
     const c = document.createElement('canvas');
