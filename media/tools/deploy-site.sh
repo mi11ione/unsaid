@@ -46,7 +46,7 @@ for w in 390 1440; do
   for s in ${=SETS}; do check "$B/index.html#/r?set=$s" $w; done
   check "$B/index.html#/r?set=stl-cedric" $w "document.querySelector('.card').click()"
   check "$B/index.html#/r?set=stl-cedric" $w "document.getElementById('xall').click()"
-  check "$B/index.html#/r?set=stl-cedric" $w "(document.getElementById('xall').click(),document.querySelector('.sheet .nm button').click())"
+  check "$B/index.html#/r?set=stl-cedric" $w "(async()=>{document.getElementById('xall').click();await new Promise(r=>setTimeout(r,2500));document.querySelector('.sheet .nm button').click()})()"
 done
 [[ $bad == 0 ]] || { echo "not deployed: placeholders would reach visitors"; exit 1; }
 echo "placeholder check: ok"
