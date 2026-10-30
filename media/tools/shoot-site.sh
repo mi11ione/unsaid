@@ -25,18 +25,18 @@ for W in 1600 390; do
   shot "$B/index.html?mock=stl-cedric#/r?city=st-louis" $OUT/s2-run-2s-$W.png $W 0 $D "$(AT 2300)"
   shot "$B/index.html?mock=stl-cedric#/r?city=st-louis" $OUT/s2-run-burn-$W.png $W 0 $D "$(AT 11500)"
   shot "$B/index.html?speed=8#/r?set=stl-cedric" $OUT/s2-result-$W.png $W 0 $D "$DONE"
-  shot "$B/index.html?speed=8#/r?set=stl-cedric" $OUT/s3-card-back-$W.png $W 1000 $D "$DONE.then(()=>{document.querySelector('.card').click();document.querySelector('details.log').open=true})"
-  shot "$B/index.html?speed=8#/r?set=stl-cedric" $OUT/s4-popularity-$W.png $W 1000 $D "$DONE.then(()=>document.getElementById('lnk-pop').click())"
+  shot "$B/index.html?speed=8#/r?set=stl-cedric" $OUT/s3-card-back-$W.png $W 1000 $D "$DONE.then(()=>{document.querySelector('.card')?.click();const d=document.querySelector('details.log');if(d)d.open=true})"
+  shot "$B/index.html?speed=8#/r?set=stl-cedric" $OUT/s4-popularity-$W.png $W 1000 $D "$DONE.then(()=>document.getElementById('lnk-pop')?.click())"
   shot "$B/index.html?speed=8#/r?set=stl-cedric" $OUT/s2-human-strike-$W.png $W 0 $D "$DONE.then(()=>{const c=document.querySelectorAll('.card')[1];c.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}));return new Promise(r=>setTimeout(r,1300))})"
-  shot "$B/index.html?speed=8#/r?set=stl-cedric" $OUT/s2-share-sheet-$W.png $W 1000 $D "$DONE.then(()=>document.getElementById('lnk-share').click())"
+  shot "$B/index.html?speed=8#/r?set=stl-cedric" $OUT/s2-share-sheet-$W.png $W 1000 $D "$DONE.then(()=>document.getElementById('lnk-share')?.click())"
   shot "$B/agents.html" $OUT/agents-$W.png $W 0 $D
 done
 shot "$B/index.html?speed=8#/r?set=stl-cedric" $OUT/s2-result-600.png 600 0 1 "$DONE"
 for M in stl-few stl-none stl-partial stl-dated stl-degraded stl-down stl-limited stl-flat stl-thin stl-dead; do
   shot "$B/index.html?mock=$M&speed=8#/r?city=st-louis" $OUT/state-$M-1600.png 1600 0 1 "$DONE"
 done
-shot "$B/index.html?mock=stl-thin&speed=8#/r?city=st-louis" $OUT/state-stl-thin-card-1600.png 1600 1000 1 "$DONE.then(()=>document.querySelectorAll('.card')[1].click())"
-shot "$B/index.html?mock=stl-flat&speed=8#/r?city=st-louis" $OUT/state-stl-flat-card-1600.png 1600 1000 1 "$DONE.then(()=>document.querySelector('.card').click())"
+shot "$B/index.html?mock=stl-thin&speed=8#/r?city=st-louis" $OUT/state-stl-thin-card-1600.png 1600 1000 1 "$DONE.then(()=>document.querySelectorAll('.card')[1]?.click())"
+shot "$B/index.html?mock=stl-flat&speed=8#/r?city=st-louis" $OUT/state-stl-flat-card-1600.png 1600 1000 1 "$DONE.then(()=>document.querySelector('.card')?.click())"
 shot "$B/index.html?mock=stl-queued#/r?city=st-louis" $OUT/state-queued-1600.png 1600 0 1 "$(AT 700)"
 shot "$B/index.html?mock=stl-cedric&health=waking#/r?city=st-louis" $OUT/state-waking-1600.png 1600 0 1 "$(AT 1500)"
 shot "$B/index.html?mock=stl-slow#/r?city=st-louis" $OUT/state-ranking-21s-1600.png 1600 0 1 "$(AT 21000)"
