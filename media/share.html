@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>UNSAID share</title>
-<style>html, body { margin: 0; background: #0b0b0b; overflow: hidden; } #stage { width: 1080px; height: 1350px; } canvas { display: block; width: 1080px; height: 1350px; }</style>
+<style>html, body { margin: 0; background: #f4f3ee; overflow: hidden; } #stage { width: 1080px; height: 1350px; } canvas { display: block; width: 1080px; height: 1350px; }</style>
 </head>
 <body>
 <div id="stage"><canvas id="cv"></canvas></div>
@@ -13,7 +13,7 @@
 /* share.html[?src=<results>]: the same share image the site draws on its "share" sheet (site/js/share.js), for render.sh. */
 (async function () {
   const R = await UM.result((UM.param('src', null) || await UM.firstOf(['data/live/query_stl-cedric.json', '../site/data/mock/stl-cedric.ndjson'])), { withWall: true });
-  await document.fonts.ready;
+  await Share.ready; await document.fonts.ready;
   const TY = ((await UM.json('../site/data/try.json')).sets.find(x => x.id === 'stl-cedric') || {}).loves;   // loves as typed
   const CEN = await UM.json('../site/data/census.json').catch(() => null);   // the site's hero line (Share.hero)
   Share.draw(document.getElementById('cv'), { ...R, hero: Share.hero(CEN, 'stl'), loves: UM.typedLoves(R, TY), site: UM.param('site', null) });   // ?site=<host> prints the address

@@ -1,11 +1,16 @@
-/* UNSAID · the share image, 1080×1350, dark, drawn client-side on a canvas (UNSAID.md §2.1).
-   "The AIs named WALL places. None named these 7."; the loves at 32 px; the struck wall as texture on
+/* UNSAID · the share image, 1080×1350, on paper, drawn client-side on a canvas (UNSAID.md §2.1).
+   the site's hero, its receipt and "None named these 7."; the loves in mono; the struck wall as texture on
    the left, the seven with what each is on the right; footer "ranked by Qloo for what fits you · date" and the site's address.
    data: a result (CONTRACT.md) plus optional wallNames (struck names) and picks override. */
 (function () {
-  const C = { bg: '#0b0b0b', ink: '#ecebe5', white: '#f2efe6', dim: '#8e8c85', faint: '#55534e', red: '#ff2d3d', amber: '#e2a336', rule: '#34332e' };
-  const SERIF = "'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif";
-  const MONO = "ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace";
+  const C = { bg: '#f4f3ee', ink: '#0d0d0c', white: '#0d0d0c', dim: '#5a5954', faint: '#8a8882', red: '#e30613', amber: '#a35f00', rule: '#bdbbb3' };
+  const SANS = "Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif";
+  const MONO = "'Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace";
+  // the image is drawn with the site's own faces: loaded from site/fonts next to this script, then Share.ready resolves
+  const base = (document.currentScript && document.currentScript.src) || location.href;
+  const face = (fam, file, w) => { try { const f = new FontFace(fam, `url(${new URL('../fonts/' + file, base)})`, { weight: w }); document.fonts.add(f); return f.load(); } catch (e) { return Promise.resolve(); } };
+  const ready = Promise.all([face('Inter', 'inter-latin-opsz.woff2', '100 900'), face('Plex Mono', 'plex-mono-400.woff2', '400'),
+    face('Plex Mono', 'plex-mono-500.woff2', '500'), face('Plex Mono', 'plex-mono-600.woff2', '600 700')]).catch(() => {});
 
   function wrap(ctx, text, maxW) {
     const words = text.split(' '), lines = [];
@@ -56,6 +61,7 @@
     const W = 1080, H = 1350, pad = 72;
     cv.width = W; cv.height = H;
     const ctx = cv.getContext('2d');
+    const ls = v => { if ('letterSpacing' in ctx) ctx.letterSpacing = v; };   // tracking, where the canvas has it
     ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, H);
     ctx.textBaseline = 'alphabetic';
     const fake = (R.flags || []).includes('fake');
@@ -63,105 +69,100 @@
     const N = picks.length;
     const WALL = wallCount(R);
 
-    // mark
-    ctx.font = `700 22px ${MONO}`; ctx.fillStyle = C.ink;
-    let x = pad; const my = 96;
-    'UNSAID'.split('').forEach(ch => { ctx.fillText(ch, x, my); x += ctx.measureText(ch).width + 7; });
-    const unW = ctx.measureText('UN').width + 7;
-    ctx.fillStyle = C.ink; ctx.fillRect(pad - 1, my - 9, unW, 3);   // the logo's strike is ours: ink
+    // mark, and a hairline under it
+    ctx.font = `600 20px ${MONO}`; ctx.fillStyle = C.ink; ls('5px');
+    const my = 92; ctx.fillText('UNSAID', pad, my);
+    const unW = (() => { ls('5px'); return ctx.measureText('UN').width; })();
+    ls('0px'); ctx.fillRect(pad - 1, my - 8, unW - 4, 2);   // the logo's strike is ours: ink
     if (fake) {
       ctx.font = `14px ${MONO}`; const t = 'MOCK DATA · NOT REAL CARDS', tw = ctx.measureText(t).width;
       ctx.strokeStyle = C.amber; ctx.setLineDash([4, 3]); ctx.strokeRect(W - pad - tw - 24, my - 22, tw + 24, 30); ctx.setLineDash([]);
       ctx.fillStyle = C.amber; ctx.fillText(t, W - pad - tw - 12, my - 2);
     }
+    ctx.fillStyle = C.ink; ctx.fillRect(pad, 124, W - 2 * pad, 1.5);
 
-    // headline
-    let y = 210;
-    ctx.font = `400 58px ${SERIF}`;
+    // headline: "AI sends everyone / to ~~Mai Lee~~." then the receipt, then "None named these 7."
+    let y = 252;
+    const big = 100, lh = 94;
+    ctx.font = `600 ${big}px ${SANS}`; ls('-4.5px');
     if (R.hero && R.hero.gem) {
-      // the site's hero: "AI sends everyone to ~~Mai Lee~~." + its receipt, then "None named these 7."
-      const pre = 'AI sends everyone to ', g = R.hero.gem, fits = ctx.measureText(pre + g + '.').width <= W - 2 * pad;
-      ctx.fillStyle = C.ink; ctx.fillText(fits ? pre : pre.trim(), pad, y);
+      const g = R.hero.gem;
+      ctx.fillStyle = C.ink; ctx.fillText('AI sends everyone', pad, y);
+      y += lh;
+      const pre = 'to ', fits = ctx.measureText(pre + g + '.').width <= W - 2 * pad;
       let gx = pad + ctx.measureText(pre).width, gy = y;
-      if (!fits) { gx = pad; gy = y + 68; }
+      ctx.fillText(pre, pad, y);
+      if (!fits) { gx = pad; gy = y + lh; }
       ctx.fillStyle = C.red; ctx.fillText(g, gx, gy);
       const gw = ctx.measureText(g).width;
-      ctx.fillRect(gx - 2, gy - 19, gw + 4, 4);
+      ctx.fillRect(gx - 3, gy - big * .34, gw + 2, big * .075);
       ctx.fillStyle = C.ink; ctx.fillText('.', gx + gw, gy);
-      y = gy + 50;
-      if (R.hero.receipt) { ctx.font = `20px ${MONO}`; ctx.fillStyle = C.red; ctx.fillText(R.hero.receipt, pad, y); y += 74; } else y += 24;
-      ctx.font = `400 58px ${SERIF}`; ctx.fillStyle = C.white; ctx.fillText(`None named these ${N}.`, pad, y);
-      y += 70;
+      y = gy + 58;
+      ls('0px');
+      if (R.hero.receipt) { ctx.font = `400 22px ${MONO}`; ctx.fillStyle = C.red; ctx.fillText(R.hero.receipt, pad, y); y += 96; } else y += 40;
     } else {
-    // "The AIs named WALL places." (wallCount of this result)
-    const a = 'The AIs named ', wtxt = WALL == null ? '' : Number(WALL).toLocaleString('en-US');
-    const l1 = wrap(ctx, a + wtxt + ' places.', W - 2 * pad);
-    // draw line 1 with the number in red (the number is at the end of the sentence)
-    l1.forEach((line, i) => {
-      // the count is red wherever the wrap puts it
-      const yy = y + i * 68, k = line.indexOf(wtxt);
-      if (k < 0) { ctx.fillStyle = C.ink; ctx.fillText(line, pad, yy); return; }
-      const pre = line.slice(0, k), post = line.slice(k + wtxt.length);
-      ctx.fillStyle = C.ink; ctx.fillText(pre, pad, yy);
-      const px = pad + ctx.measureText(pre).width;
-      ctx.fillStyle = WALL == null ? C.amber : C.red; ctx.fillText(wtxt, px, yy);
-      ctx.fillStyle = C.ink; ctx.fillText(post, px + ctx.measureText(wtxt).width, yy);
-    });
-    y += l1.length * 68;
-    ctx.fillStyle = C.white; ctx.fillText(`None named these ${N}.`, pad, y);
-    y += 70;
+      // "The AIs named WALL places." (wallCount of this result), the count in red
+      const wtxt = WALL == null ? '–' : Number(WALL).toLocaleString('en-US');
+      ctx.fillStyle = C.ink; ctx.fillText('The AIs named', pad, y); y += lh;
+      ctx.fillStyle = WALL == null ? C.amber : C.red; ctx.fillText(wtxt, pad, y);
+      ctx.fillStyle = C.ink; ctx.fillText(' places.', pad + ctx.measureText(wtxt).width, y);
+      y += 120; ls('0px');
     }
+    ctx.font = `600 56px ${SANS}`; ls('-2px'); ctx.fillStyle = C.ink; ctx.fillText(`None named these ${N}.`, pad, y); ls('0px');
+    y += 46;
 
-    // the loves, 32 px
-    ctx.font = `400 32px ${SERIF}`; ctx.fillStyle = C.dim;
+    // the loves
+    ctx.font = `400 22px ${MONO}`; ctx.fillStyle = C.dim;
     const loves = (R.loves || []).filter(l => !l.dead).map(l => l.label);
-    wrap(ctx, 'for ' + loves.join(' · '), W - 2 * pad).forEach((line, i) => ctx.fillText(line, pad, y + i * 42));
-    y += Math.max(1, wrap(ctx, 'for ' + loves.join(' · '), W - 2 * pad).length) * 42 + 26;
-    ctx.fillStyle = C.rule; ctx.fillRect(pad, y, W - 2 * pad, 1);
-    y += 40;
+    const LL = wrap(ctx, 'for ' + loves.join(' · '), W - 2 * pad);
+    LL.forEach((line, i) => ctx.fillText(line, pad, y + i * 32));
+    y += LL.length * 32 + 30;
+    ctx.fillStyle = C.ink; ctx.fillRect(pad, y, W - 2 * pad, 1.5);
+    y += 48;
 
-    // left: the struck wall as texture
-    const top = y, bottom = H - 150, colW = 400;
-    ctx.save(); ctx.beginPath(); ctx.rect(pad, top - 24, colW, bottom - top + 24); ctx.clip();
-    ctx.font = `400 19px ${SERIF}`;
+    // left: the struck wall as texture; right: the seven, numbered
+    const top = y, bottom = H - 138, colW = 360, gut = 48;
+    ctx.save(); ctx.beginPath(); ctx.rect(pad, top - 26, colW, bottom - top + 26); ctx.clip();
+    ctx.font = `400 19px ${SANS}`;
     let wx = pad, wy = top;
     const names = R.wallNames || wallNames(R);
     for (const n of names) {
       const tw = ctx.measureText(n).width;
-      if (wx + tw > pad + colW && wx > pad) { wx = pad; wy += 29; }
+      if (wx + tw > pad + colW && wx > pad) { wx = pad; wy += 30; }
       if (wy > bottom + 30) break;
-      ctx.fillStyle = '#76746d'; ctx.fillText(n, wx, wy);
-      ctx.fillStyle = C.red; ctx.globalAlpha = .9; ctx.fillRect(wx - 1, wy - 7, tw + 2, 1.6); ctx.globalAlpha = 1;
+      ctx.fillStyle = C.dim; ctx.fillText(n, wx, wy);
+      ctx.fillStyle = C.red; ctx.fillRect(wx - 1, wy - 7, tw + 2, 1.8);
       wx += tw + 16;
     }
     ctx.restore();
-    const fade = ctx.createLinearGradient(0, bottom - 120, 0, bottom + 10);
-    fade.addColorStop(0, 'rgba(11,11,11,0)'); fade.addColorStop(1, 'rgba(11,11,11,1)');
-    ctx.fillStyle = fade; ctx.fillRect(pad, bottom - 120, colW + 4, 140);
+    const fade = ctx.createLinearGradient(0, bottom - 140, 0, bottom + 6);
+    fade.addColorStop(0, 'rgba(244,243,238,0)'); fade.addColorStop(1, 'rgba(244,243,238,1)');
+    ctx.fillStyle = fade; ctx.fillRect(pad, bottom - 140, colW + 4, 148);
 
-    // right: the seven with what each is
-    const rx = pad + colW + 48, rw = W - pad - rx;
-    const rowH = Math.min(96, (bottom - top + 20) / Math.max(1, N));
+    const rx = pad + colW + gut, rw = W - pad - rx;
+    ctx.fillStyle = C.rule; ctx.fillRect(rx - gut / 2, top - 26, 1, bottom - top + 26);
+    const rowH = Math.min(98, (bottom - top + 20) / Math.max(1, N));
     picks.forEach((c, i) => {
       const yy = top + i * rowH;
-      ctx.font = `14px ${MONO}`; ctx.fillStyle = C.faint; ctx.fillText(String(i + 1).padStart(2, '0'), rx, yy);
-      ctx.font = `400 30px ${SERIF}`;
-      if (c.name) { const nm = window.UM && UM.shortName ? UM.shortName(c.name, c.neighbourhood) : c.name; ctx.fillStyle = C.white; ctx.fillText(wrap(ctx, nm, rw - 40)[0], rx + 36, yy + 4); }
-      else { ctx.fillStyle = C.faint; ctx.fillText('–', rx + 36, yy + 4); }
-      ctx.font = `16px ${MONO}`; ctx.fillStyle = C.dim;
+      ctx.font = `500 15px ${MONO}`; ctx.fillStyle = C.faint; ctx.fillText(String(i + 1).padStart(2, '0'), rx, yy);
+      ctx.font = `600 30px ${SANS}`; ls('-.8px');
+      if (c.name) { const nm = window.UM && UM.shortName ? UM.shortName(c.name, c.neighbourhood) : c.name; ctx.fillStyle = C.ink; ctx.fillText(wrap(ctx, nm, rw - 44)[0], rx + 44, yy + 2); }
+      else { ctx.fillStyle = C.faint; ctx.fillText('–', rx + 44, yy + 2); }
+      ls('0px');
+      ctx.font = `400 16px ${MONO}`; ctx.fillStyle = C.dim;
       const what = c.what == null ? '' : c.what;
-      ctx.fillText(wrap(ctx, what + (c.neighbourhood ? ' · ' + c.neighbourhood : ''), rw - 36)[0], rx + 36, yy + 34);
+      ctx.fillText(wrap(ctx, what + (c.neighbourhood ? ' · ' + c.neighbourhood : ''), rw - 44)[0], rx + 44, yy + 32);
     });
 
     // footer
-    ctx.fillStyle = C.rule; ctx.fillRect(pad, H - 112, W - 2 * pad, 1);
-    ctx.font = `18px ${MONO}`; ctx.fillStyle = C.dim;
+    ctx.fillStyle = C.ink; ctx.fillRect(pad, H - 104, W - 2 * pad, 1.5);
+    ctx.font = `400 18px ${MONO}`; ctx.fillStyle = C.dim;
     const d = dateOf(R.diag && R.diag.as_of);
-    ctx.fillText(['ranked by Qloo for what fits you', d].filter(Boolean).join(' · '), pad, H - 70);
+    ctx.fillText(['ranked by Qloo for what fits you', d].filter(Boolean).join(' · '), pad, H - 62);
     // the site's address, so a shared image leads back (R.site: the host the page runs on, else config.site)
-    if (R.site) { ctx.font = `600 22px ${MONO}`; ctx.fillStyle = C.ink; const t = String(R.site); ctx.fillText(t, W - pad - ctx.measureText(t).width, H - 70); }
+    if (R.site) { ctx.font = `600 20px ${MONO}`; ctx.fillStyle = C.ink; const t = String(R.site); ctx.fillText(t, W - pad - ctx.measureText(t).width, H - 62); }
     return cv;
   }
 
-  window.Share = { draw, wallCount, wallNames, tier, hero };
+  window.Share = { draw, wallCount, wallNames, tier, hero, ready };
 })();

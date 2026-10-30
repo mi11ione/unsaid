@@ -5,6 +5,9 @@
   const C = {
     bg: '#0b0b0b', dot: '#6a6a6a', red: '#ff2d3d', white: '#f2efe6', ink: '#ecebe5', dim: '#8e8c85', faint: '#4b4a46', amber: '#e2a336',
   };
+  // the site is printed on paper (<html data-ground="paper">): the seven in ink, the city in grey, red stays the AIs'
+  const PAPER = typeof document !== 'undefined' && document.documentElement.dataset.ground === 'paper';
+  if (PAPER) Object.assign(C, { bg: '#f4f3ee', dot: '#b4b2aa', red: '#e30613', white: '#0d0d0c', ink: '#0d0d0c', dim: '#5a5954', faint: '#b4b2aa', amber: '#a35f00' });
 
   function canvas(el, w, h) {
     const c = document.createElement('canvas');

@@ -62,23 +62,21 @@
   // the hero (one idea, said once): "AI sends everyone to ~~Mai Lee~~." + its receipt, from census.json (Share.hero)
   function heroBlock() {
     const H = Share.hero(CEN, 'stl'); if (!H) return '';
-    return `<h1>AI sends everyone to <span class="gx">${esc(H.gem)}</span>.</h1><p class="receipt">${H.receipt.split(' · ').map(x => `<span class="ri">${esc(x)}</span>`).join(' · ')}</p>
-      <p class="subline">Tell us an artist, a show and a dish you love. We’ll send you where it didn’t.</p>`;
+    return `<h1>AI sends everyone to <span class="gx">${esc(H.gem)}</span>.</h1><p class="receipt">${H.receipt.split(' · ').map(x => `<span class="ri">${esc(x)}</span>`).join('<span class="sep"> · </span>')}</p>`;
   }
 
   function inputView() {
     if (ctl) { ctl.abort(); ctl = null; }
     topbar({});
-    view.innerHTML = `<div class="land"><section class="s1">
-      ${heroBlock()}
+    view.innerHTML = `<div class="land"><header class="hero">${heroBlock()}</header><div class="landgrid"><section class="s1">
+      <p class="subline">Tell us an artist, a show and a dish you love. We’ll send you where it didn’t.</p>
       <div class="fields">
         ${FIELDS.map((f, i) => `<div class="fld"><span class="n">0${i + 1}</span><input data-i="${i}" placeholder="${esc(f.ph)}" aria-label="${esc(f.aria)}" autocomplete="off" spellcheck="false"><div class="res" id="res${i}"></div></div>`).join('')}
       </div>
-      <div class="fields"><div class="fld"><span class="n">in</span><div class="cityopts" role="radiogroup" aria-label="city">${CITIES.map(c => `<button role="radio" aria-checked="false" data-c="${esc(c.slug)}">${esc(c.name)}</button>`).join('')}</div></div></div>
-      <div class="go"><button class="btn solid" id="cross" disabled>Find my seven</button></div>
+      <div class="fields"><div class="fld city"><span class="n">in</span><div class="cityopts" role="radiogroup" aria-label="city">${CITIES.map(c => `<button role="radio" aria-checked="false" data-c="${esc(c.slug)}">${esc(c.name)}</button>`).join('')}</div></div></div>
+      <div class="go"><button class="btn solid big" id="cross" disabled>Find my seven <span aria-hidden="true">→</span></button></div>
       ${presetChips('Or open one:', 'stl-cedric')}
-      <div class="thumbs" id="thumbs"></div>
-    </section></div>`;
+    </section><aside class="thumbs" id="thumbs"></aside></div></div>`;
     view.querySelectorAll('input[data-i]').forEach(inp => {
       const i = +inp.dataset.i;
       if (s1.loves[i]) { inp.value = s1.loves[i].text; drawLove(i); }
@@ -103,10 +101,11 @@
       const li = LIVE && (LIVE.sets || []).find(x => x.id === set.id);
       const ph = (li && li.thumbs ? li.thumbs : ((await UM.result(set.src)).picks || [])).filter(c => httpUrl(c.image));
       if (ph.length < 4) return;
-      $('#thumbs').innerHTML = `<a class="thead" href="#/r?set=stl-cedric"><span class="tl">${lovesLabel(set)}</span><span class="dim">seven in ${esc((CFG.cities[set.city] || {}).name || '')} →</span></a>
-        <a class="trow" href="#/r?set=stl-cedric" aria-label="Open the seven for ${esc(set.loves.filter(Boolean).join(', '))}">${ph.map(c => `<figure><img src="${esc(c.image)}" alt="" loading="eager" onerror="this.parentNode.remove()" onload="if(this.naturalWidth<100)this.parentNode.remove()"><figcaption>${esc(UM.shortName(c.name, c.neighbourhood))}</figcaption></figure>`).join('')}</a>`;
-      const row = $('#thumbs .trow'), figs = row ? [...row.querySelectorAll('figure')] : [];
-      requestAnimationFrame(() => { const top = figs.length ? figs[0].offsetTop : 0; figs.forEach(f => { if (f.offsetTop > top) f.remove(); }); });
+      // whole rows of three only (six, or three), numbered like the cards they open
+      const six = ph.slice(0, ph.length >= 6 ? 6 : 3);
+      $('#thumbs').innerHTML = `<a class="thead" href="#/r?set=stl-cedric"><span class="tl">${lovesLabel(set)}</span></a>
+        <a class="trow" href="#/r?set=stl-cedric" aria-label="Open the seven for ${esc(set.loves.filter(Boolean).join(', '))}">${six.map((c, i) => `<figure><div class="ti"><img src="${esc(c.image)}" alt="" loading="eager" onerror="this.parentNode.classList.add('none');this.remove()" onload="if(this.naturalWidth<100){this.parentNode.classList.add('none');this.remove()}"></div><figcaption><span class="no">${String(i + 1).padStart(2, '0')}</span>${esc(UM.shortName(c.name, c.neighbourhood))}</figcaption></figure>`).join('')}</a>
+        <a class="tmore" href="#/r?set=stl-cedric">Seven in ${esc((CFG.cities[set.city] || {}).name || '')} →</a>`;
     } catch (e) { /* the landing works without it */ }
   }
   // a link we share or copy never carries the API token (it lives only in the visitor's own address bar)
@@ -523,9 +522,10 @@
       const fb = `<span class="fb">${esc(c.what || '')}</span>`;
       // Qloo serves the same photo wider ("-420x-auto" -> "-800x-auto"): the browser picks by the card's width
       const big = /-420x-auto\.jpg$/.test(c.image || '') ? c.image.replace(/-420x-auto\.jpg$/, '-800x-auto.jpg') : null;
-      const set = big ? ` srcset="${esc(c.image)} 420w, ${esc(big)} 800w" sizes="(max-width: 720px) calc(100vw - 34px), 420px"` : '';
-      return `<div class="pic${httpUrl(c.image) ? '' : ' none'}">${httpUrl(c.image) ? `<img src="${esc(c.image)}"${set} alt="" ${i < 3 ? 'fetchpriority="high"' : 'loading="lazy"'} onerror="this.parentNode.classList.add('none');this.remove()" onload="if(this.naturalWidth<100){this.parentNode.classList.add('none');this.remove()}">` : ''}${fb}` +
-        `<span class="no">${String(i + 1).padStart(2, '0')}</span>${x || ''}</div>`;
+      const set = big ? ` srcset="${esc(c.image)} 420w, ${esc(big)} 800w" sizes="(max-width: 720px) calc(100vw - 32px), 420px"` : '';
+      // the index row (number, strike) sits above the photo, so a card with no photo keeps it
+      return `<div class="idx"><span class="no">${String(i + 1).padStart(2, '0')}</span>${x || ''}</div>` +
+        `<div class="pic${httpUrl(c.image) ? '' : ' none'}">${httpUrl(c.image) ? `<img src="${esc(c.image)}"${set} alt="" ${i < 3 ? 'fetchpriority="high"' : 'loading="lazy"'} onerror="this.parentNode.classList.add('none');this.remove()" onload="if(this.naturalWidth<100){this.parentNode.classList.add('none');this.remove()}">` : ''}${fb}</div>`;
     }
     // the area: in St. Louis, a place whose address is in another municipality ("8017 Airport Rd Berkeley, MO") shows that
     // municipality; otherwise Qloo's neighbourhood
@@ -907,6 +907,7 @@
         <p>${esc(text)}<br><span class="dim">${esc(link)}</span></p>
         <div class="links">${navigator.share ? '<button class="btn solid" id="sh">Share</button>' : ''}<a class="btn" id="dl" download="unsaid.png" href="#">Save image</a><button class="btn" id="cp">Copy link</button></div>`);
       const cv = $('#sharecv');
+      await Share.ready;
       Share.draw(cv, { ...shareData(), site: siteHost() });
       $('#cp').addEventListener('click', () => { const b = $('#cp'); (navigator.clipboard ? navigator.clipboard.writeText(link) : Promise.reject()).then(() => { b.textContent = 'Copied'; }, () => { b.textContent = 'Select the link above'; }); });
       cv.toBlob(b => {
@@ -974,8 +975,9 @@
       const P = UM.projection(UM.frame(M, cardsXY), { x: mw * .22, y: 10, w: mw * .7, h: H - 20 });
       const ai = M.ai, cmax = Math.max(...ai.map(a => a.count)), dmax = 28;
       const dense = M.places.length > 3000;   // New York: ~20k dots, smaller and without the haze
-      UM.dots(ctx, M, P, dense ? { d: 1.3, alpha: .55 } : { d: 2.8, glow: 10 });
-      ai.slice().sort((a, b) => a.count - b.count).forEach(a => { const [x, y] = P(a.lon, a.lat); UM.disc(ctx, x, y, UM.discD(a.count, cmax, dmax, 3), st.done ? .55 : .85); });
+      const paper = document.documentElement.dataset.ground === 'paper';   // on paper: plain dots, no haze
+      UM.dots(ctx, M, P, paper ? (dense ? { d: 1.2, alpha: .75 } : { d: 2.4 }) : dense ? { d: 1.3, alpha: .55 } : { d: 2.8, glow: 10 });
+      ai.slice().sort((a, b) => a.count - b.count).forEach(a => { const [x, y] = P(a.lon, a.lat); UM.disc(ctx, x, y, UM.discD(a.count, cmax, dmax, 3), paper ? .62 : st.done ? .55 : .85); });
       // the seven's pins and number labels; a label that would sit on another pin or label moves round its pin
       const boxes = [], hit = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
       const ids = st.done ? st.slots : st.order.slice(0, 7);
