@@ -12,7 +12,7 @@ On 40 public questions never used to build the list, the AIs named ⟦K12_PLAIN_
 
 ## Five minutes
 
-**1. The live demo.** Open ⟦LIVE_URL⟧ and tap **Cedric · St. Louis**. Tap a card for its detail; tap ✕ to strike one you know and a reserve takes its place; paste any AI's answer and anything it names is already crossed out. Or type three things you love: cards in about ⟦P50⟧ seconds.
+**1. The live demo.** Open ⟦LIVE_URL⟧ and tap **Frankie Beverly & Maze · The Original Kings of Comedy · rib tips**. Tap a card for its detail; tap ✕ to strike one you know and a reserve takes its place; paste any AI's answer and anything it names is already crossed out. Or type three things you love: cards in about ⟦P50⟧ seconds.
 
 **2. From your agent, no Qloo key, one paste.** Add `https://unsaid-ang.pages.dev/mcp?token=<token>` as a custom connector in Claude (Settings → Connectors), or run the line below. The token is in the Devpost testing instructions (until 30 Oct 23:45 ET; after that, leave out `?token=…`).
 
@@ -59,7 +59,7 @@ Keys come only from environment variables, and the Qloo key goes only in the `X-
 
 ## Call trace
 
-**Regenerated at the freeze.** The block below is the 28 Oct snapshot of one query (St. Louis; Frankie Beverly & Maze, *The Original Kings of Comedy*, rib tips) from the engine as it was then: 43 calls, before the ranking change, the dish sub-pools and the 20-lookup cap. The freeze replaces it with the final engine's trace (`engine/readme_trace.py`). A fresh query now takes about 40–50 Qloo calls.
+One query (St. Louis; Frankie Beverly & Maze, *The Original Kings of Comedy*, rib tips), every request in order, keys redacted:
 
 <!-- trace:start -->
 
