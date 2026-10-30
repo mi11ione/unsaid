@@ -26,6 +26,17 @@ def call(method, body=None):
         return r.status, json.loads(r.read().decode() or "null")
 
 
+def slim_lines(path):
+    """Only what the engine reads (lines[id] = {line, dishes}), compact: Render caps ALL secret files together at
+    1,048,576 bytes, and the full file (failed lines, pre-fix text, names) is ~900 KB for 3,371 lines."""
+    with open(path) as fh:
+        d = json.load(fh)
+    return json.dumps({"city": d.get("city"), "built_at": d.get("built_at"),
+                       "lines": {i: {"line": x["line"], "dishes": x.get("dishes") or []}
+                                 for i, x in (d.get("lines") or {}).items() if x.get("line")}},
+                      ensure_ascii=False, separators=(",", ":"))
+
+
 def main():
     files = sorted(glob.glob(os.path.join(ROOT, "data", "priors", "*.json")))
     if not files:
@@ -39,8 +50,7 @@ def main():
         with open(p) as fh:
             keep[os.path.basename(p)] = fh.read()
     for p in sorted(glob.glob(os.path.join(ROOT, "data", "lines", "*.json"))):   # card lines -> lines-<city>.json
-        with open(p) as fh:
-            keep["lines-" + os.path.basename(p)] = fh.read()
+        keep["lines-" + os.path.basename(p)] = slim_lines(p)
     for p in sorted(glob.glob(os.path.join(ROOT, "data", "namemap", "*.json"))):   # C7 name map -> namemap-<city>
         with open(p) as fh:
             keep["namemap-" + os.path.basename(p)] = fh.read()
