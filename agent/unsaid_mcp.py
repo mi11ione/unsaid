@@ -11,9 +11,8 @@ Dual-era per the MCP spec 2026-07-28 ("Versioning and Compatibility"):
 
 Modes (UNSAID_MODE):
 - remote (the default): the hosted API at UNSAID_URL (default https://unsaid-ang.pages.dev), the same engine, walls
-  and live Qloo calls as the website. Needs no Qloo key and no engine kit. UNSAID_TOKEN is the bearer token from
-  the Devpost testing instructions (until 30 Oct 23:45 ET; after that the API is open, 3 fresh runs per hour per
-  address, cached repeats free). Only unsaid_places is listed: the hosted API has no qloo_places endpoint.
+  and live Qloo calls as the website. Needs no Qloo key and no engine kit. UNSAID_TOKEN is optional: without
+  it, fresh runs share a per-address limit; with it, they get their own bucket. Cached repeats are free. Only unsaid_places is listed: the hosted API has no qloo_places endpoint.
 - fake: the engine kit in ../engine (override with UNSAID_KIT) on its FakeQloo world, offline. Place names and
   numbers prove code paths, not Qloo. The wall is real saved AI answers.
 - live + QLOO_API_KEY: the same local kit against hackathon.api.qloo.com.
